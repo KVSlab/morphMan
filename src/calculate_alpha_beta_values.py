@@ -17,10 +17,17 @@ def read_command_line():
     parser.add_argument("-p", "--param", type=str, default="curvature",
                         help="Parameter to compute.")
 
-    args = parser.parse_args()
-    return args.dir_path, args.param
+    parser.add_argument("-p", "--param", type=str, default="curvature",
+                        help="Parameter to compute.")
+    parser.add_argument('-r', '--radius', type=float, default=0.15,
+                        help="Radius of bounding circle, limiting the choice of alpha and beta")
 
-def get_alpha_beta(dirpath, i, files, param):
+    parser.add_argument('-b','--boundary', nargs='+', default=None, help='Boundary of grid, as a list: [alpha_min, alpha_max, beta_min, beta_max]', required=True)
+
+    args = parser.parse_args()
+    return args.dir_path, args.param, args.boundary, args.radius
+
+def get_alpha_beta(dirpath, i, files, param, boundary):
     """
     Imports a matrix of parameter values corresponding
     to a (alpha,beta) point and perform spline interpolation
@@ -41,8 +48,7 @@ def get_alpha_beta(dirpath, i, files, param):
     print "Working on case %s" % case
 
     # Get boundaries
-    alphabeta_bound = np.loadtxt("alphabeta_bound.txt")
-    amin, amax, bmin, bmax = alphabeta_bound[i][0],alphabeta_bound[i][1],alphabeta_bound[i][2],alphabeta_bound[i][3]
+    amin, amax, bmin, bmax = boundary[0], boundary[1], boundary[2], boundary[3]
 
     # Set standard deviations used to find intersetcion
     if param == "curvature":
@@ -205,7 +211,7 @@ def alpha_beta_intersection(method, f,alphas, betas, tol=0.0):
     return zeros
 
 
-def main(dirpath, param):
+def main(dirpath, param, boundary, radius):
     """
     Get files containing parameter values
     and find suggested choice for alpha and beta,
@@ -214,18 +220,23 @@ def main(dirpath, param):
     Args:
         dirpath (str): Location of parameter text.
         param (str): Parameter to calculate.
+        boundary (list): Boundary of alpha-beta grid.
+        radius (float): Radius of bounding circle, limiting the choice of alpha and beta.
     """
+    if boundary is None:
+        boundary = [-0.2, 1, -0.2, 1]
+
     files = listdir(dirpath)
     if param == "curvature":
         files_curv = sorted([f for f in listdir(dirpath) if f[4:8] in ["curv"] ])
         for i in range(len(files_curv)):
-            get_alpha_beta(dirpath, i, files_curv[i], param)
+            get_alpha_beta(dirpath, i, files_curv[i], param, boundary, radius)
     elif param == "angle":
         files_angle = sorted([f for f in listdir(dirpath) if f[4:9] in ["angle"] ])
         for i in range(len(files_angle)):
-            get_alpha_beta(dirpath, i, files_angle[i], param)
+            get_alpha_beta(dirpath, i, files_angle[i], param, boundary, radius)
 
 
 if __name__ == "__main__":
-    dirpath,  param = read_command_line()
-    main(dirpath, param)
+    dirpath,  param, boundary, radius = read_command_line()
+    main(dirpath, param, boundary, radius)
