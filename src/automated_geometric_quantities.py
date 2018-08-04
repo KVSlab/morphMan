@@ -3,7 +3,6 @@ from os import path, remove, listdir
 from scipy.signal import argrelextrema, resample
 from scipy.ndimage.filters import gaussian_filter as gauss
 
-import matlab.engine
 import operator
 import sys
 import numpy.linalg as la
@@ -515,14 +514,6 @@ def compute_curvature(dirpath, point_path, name, alpha, beta, method):
             filtercurv = gauss(curv_di, 5)
             maxcurv = max(filtercurv[ID1_new + 10:ID2_new - 10])
 
-        # 5) Knot free regression splines
-        if method == "knotfree":
-            clfile = write_centerline(new_centerline)
-            inits = 20
-            curv_kf = spline_matlab_noload(".", clfile, init_knots=inits, order=float(5))
-            curv_kf = gauss(curv_kf, 5)
-            maxcurv = max(curv_kf[ID1_new + 10:ID2_new - 10])
-
         # 6) Splines
         if method == "spline":
             nknots = 50
@@ -766,36 +757,6 @@ def save_angle_or_curvature(values, case, param):
             np.savetxt(f, line, fmt='%.3f')
 
 
-def spline_matlab_noload(path, filename, init_knots, order):
-    """
-    Perform Knot-free regresion spline on input centerline
-    extracted from input filename.
-    Excludes loading of matlab engine.
-
-    Args:
-        path (str): Path to centerline-text location.
-        filename (str): Filename of text where centerlines is stored.
-        init_knots (int): Number of initial knots.
-        order (int): Order of spline.
-
-    Returns:
-        curv_p (ndarray): Array of curvature values.
-    """
-
-    print("Computing knot free regression spline")
-    order = float(order)
-    init_knots = float(init_knots)
-    curv_m = mlab.CenterlineCharacterization(path, filename, init_knots, order, nargout=1)
-
-    n = len(curv_m)
-    curv_p = np.zeros(n)
-
-    for i in range(n):
-        curv_p[i] = curv_m[i][0]
-
-    return curv_p
-
-
 def main(basedir, case, kappa, theta, alpha, beta, method_curv, method_angle, n=50):
     """
     Initilization for computing curvature and angle.
@@ -870,6 +831,4 @@ def main(basedir, case, kappa, theta, alpha, beta, method_curv, method_angle, n=
 
 if __name__ == "__main__":
     basedir, case, kappa, theta, alpha, beta, method_curv, method_angle = read_command_line()
-    if method_curv == "knotfree":
-        mlab = matlab.engine.start_matlab()
     main(basedir, case, kappa, theta, alpha, beta, method_curv, method_angle)
