@@ -330,6 +330,19 @@ def rotationMatrix(data, angle, leave1, leave2):
 
     return R, m
 
+def get_startpoint(centerline):
+    """
+    Finds start point of a given centerline.
+
+    Args:
+        centerline (vtkPolyData): Centerline data.
+
+    Returns:
+        start_point (vtkPoint): Start point of centerline.
+    """
+    line = extract_single_line(centerline, 0)
+    start_point = line.GetPoints().GetPoint(0)
+    return start_point
 
 def merge_cl(centerline, end_point, div_point):
     """
@@ -554,24 +567,8 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
         aneurysm_type = parameters["aneurysm_type"]
         print("Aneurysm type read from info.txt file: %s" % aneurysm_type)
 
-    # Clean surface
-    surface = read_polydata(model_path)
-    surface = surface_cleaner(surface)
-    surface = triangulate_surface(surface)
-
-   # Check connectivity and only choose the surface with the largest area
-    if not "check_surface" in parameters.keys():
-        connected_surface = getConnectivity(surface, mode="Largest")
-        if connected_surface.GetNumberOfPoints() != surface.GetNumberOfPoints():
-            WritePolyData(surface, model_path.replace(".vtp", "_test.vtp"))
-
-    # Get a capped and uncapped version of the surface
-    if is_surface_capped(surface):
-        open_surface = uncapp_surface(surface)
-        capped_surface = surface
-    else:
-        open_surface = surface
-        capped_surface = capp_surface(surface)
+    # Clean and capp / uncapp surface
+    open_surface, capped_surface = preare_surface(model_path, parameters)
 
     # Get aneurysm "end point"
     if aneurysm:
@@ -618,7 +615,7 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
         parameters = get_parameters(dirpath)
         number_of_aneurysms = len([a for a in parameters.keys() if "aneurysm_" in a])
         if number_of_aneurysms == 1:
-            voronoi_smoothed = smooth_voronoi_diagram(voronoi, centerline_par, smooth_factor)
+            voronoi_smoothed = SmoothClippedVoronoiDiagram(voronoi, centerline_par, smooth_factor)
         else:
             aneu_centerline = extract_single_line(centerline_complete,
                                                 centerline_complete.GetNumberOfCells() - 1)
@@ -628,7 +625,7 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
                                                   extract_single_line(centerline_complete, i)))
             div_aneu_id = max(div_aneu_id)
             aneu_centerline = extract_single_line(aneu_centerline, start=div_aneu_id)
-            voronoi_smoothed = smooth_voronoi_diagram(voronoi,
+            voronoi_smoothed = SmoothClippedVoronoiDiagram(voronoi,
                                                           centerline_par, smooth_factor,
                                                           no_smooth=aneu_centerline)
 
