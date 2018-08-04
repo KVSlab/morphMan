@@ -1,11 +1,7 @@
+import operator
+import numpy.linalg as la
 from common import *
 from argparse import ArgumentParser
-from os import path, listdir
-
-import matlab.engine
-import operator
-import sys
-import numpy.linalg as la
 from scipy.signal import argrelextrema, resample
 from scipy.ndimage.filters import gaussian_filter as gauss
 
@@ -29,6 +25,7 @@ def get_clipping_points(dirpath, filename):
     particles = path.join(dirpath, filename)
     all_points = np.loadtxt(particles)
     clipping_points = all_points
+
     return clipping_points
 
 

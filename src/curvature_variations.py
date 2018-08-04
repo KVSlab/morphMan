@@ -1,9 +1,6 @@
 from common import *
 from argparse import ArgumentParser
 from os import path, listdir
-from IPython import embed
-
-import matplotlib.pyplot as plt
 
 # Local import
 from patchandinterpolatecenterlines import *
@@ -80,7 +77,7 @@ def main(dirpath, name,smooth,  smoothingfactor, iterations, smoothmode):
     surface = surface_cleaner(surface)
     surface = triangulate_surface(surface)
 
-    #Get a capped and uncapped version of the surface
+    # Get a capped and uncapped version of the surface
     open_surface = surface
     capped_surface = capp_surface(surface)
 
@@ -96,12 +93,12 @@ def main(dirpath, name,smooth,  smoothingfactor, iterations, smoothmode):
     print("Compute voronoi diagram")
     voronoi = make_voronoi_diagram(surface, voronoi_path)
     if not path.exists(voronoi_smoothed_path) and smooth:
-        voronoi_smoothed = SmoothClippedVoronoiDiagram(voronoi, centerlines_complete, 0.25)
+        voronoi_smoothed = smooth_voronoi_diagram(voronoi, centerlines_complete, 0.25)
         write_polydata(voronoi_smoothed, voronoi_smoothed_path)
         surface_smoothed = create_new_surface(voronoi_smoothed)
         write_polydata(surface_smoothed, model_smoothed_path)
 
-    voronoi = SmoothClippedVoronoiDiagram(voronoi, centerlines_complete, 0.25)
+    voronoi = smooth_voronoi_diagram(voronoi, centerlines_complete, 0.25)
 
     # Get Carotid Siphon
     if path.exists(carotid_siphon_path):

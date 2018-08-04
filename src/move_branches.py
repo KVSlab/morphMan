@@ -330,19 +330,6 @@ def rotationMatrix(data, angle, leave1, leave2):
 
     return R, m
 
-def get_startpoint(centerline):
-    """
-    Finds start point of a given centerline.
-
-    Args:
-        centerline (vtkPolyData): Centerline data.
-
-    Returns:
-        start_point (vtkPoint): Start point of centerline.
-    """
-    line = extract_single_line(centerline, 0)
-    start_point = line.GetPoints().GetPoint(0)
-    return start_point
 
 def merge_cl(centerline, end_point, div_point):
     """
@@ -631,7 +618,7 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
         parameters = get_parameters(dirpath)
         number_of_aneurysms = len([a for a in parameters.keys() if "aneurysm_" in a])
         if number_of_aneurysms == 1:
-            voronoi_smoothed = SmoothClippedVoronoiDiagram(voronoi, centerline_par, smooth_factor)
+            voronoi_smoothed = smooth_voronoi_diagram(voronoi, centerline_par, smooth_factor)
         else:
             aneu_centerline = extract_single_line(centerline_complete,
                                                 centerline_complete.GetNumberOfCells() - 1)
@@ -641,7 +628,7 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
                                                   extract_single_line(centerline_complete, i)))
             div_aneu_id = max(div_aneu_id)
             aneu_centerline = extract_single_line(aneu_centerline, start=div_aneu_id)
-            voronoi_smoothed = SmoothClippedVoronoiDiagram(voronoi,
+            voronoi_smoothed = smooth_voronoi_diagram(voronoi,
                                                           centerline_par, smooth_factor,
                                                           no_smooth=aneu_centerline)
 
