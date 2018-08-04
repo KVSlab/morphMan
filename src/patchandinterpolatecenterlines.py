@@ -135,8 +135,7 @@ def ExtractPatchesIds(parentCl, clipPts):
         else:
             clipIds.append(ID)
             numberOfPoints += cellLine.GetNumberOfPoints() - ID
-    print clipIds
-    print numberOfPoints
+
     return clipIds, numberOfPoints
 
 

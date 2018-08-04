@@ -20,6 +20,10 @@ def read_command_line():
                         "smoothed before it is manipulated", metavar="smooth")
     parser.add_argument("-sf", "--smoothingfactor", type=float, default=1.0,
                         help="Smoothing factor of centerline curve.")
+    parser.add_argument("-sf_voro", "--smoothingfactor_voro", type=float, default=0.25,
+                         help="If smooth option is true then each voronoi point" + \
+                         " that has a radius less then MISR*(1-smooth_factor) at" + \
+                         " the closest centerline point is removes" metavar="smoothening_factor")
     parser.add_argument("-sm", "--smoothmode", type=str2bool, default=True,
                         help="Smoothes centerline if True, anti-smoothes if False", metavar="smoothmode")
     parser.add_argument("-it", "--iterations", type=int, default=100,
@@ -27,10 +31,10 @@ def read_command_line():
 
     args = parser.parse_args()
 
-    return args.smooth, args.dir_path, args.case, args.smoothmode, args.smoothingfactor, args.iterations
+    return args.smooth, args.dir_path, args.case, args.smoothmode, args.smoothingfactor, args.iterations, args.smoothingfactor_voro
 
 
-def main(dirpath, name, smooth, smoothingfactor, iterations, smoothmode):
+def change_curvature(dirpath, name,smooth,  smoothingfactor, iterations, smoothmode, smooth_factor_voro):
     """
     Create a sharper or smoother version of the input geometry,
     determined by a smoothed version of the siphon centerline.
@@ -51,8 +55,8 @@ def main(dirpath, name, smooth, smoothingfactor, iterations, smoothmode):
 
     # Output names
     model_smoothed_path = path.join(dirpath, name, "model_smoothed.vtp")
-    model_new_surface = path.join(dirpath, name, "model_smooth_%s_fac_%s_it_%s.vtp" %
-                                  (smoothmode, sf, it))
+    method = "smoothed" if smoothmode else "extended"
+    model_new_surface = path.join(dirpath, name , "model_%s_fac_%s_it_%s.vtp" % ( method, sf, it))
 
     # Centerlines
     centerline_complete_path = path.join(dirpath, name, "centerline_complete.vtp")
@@ -73,14 +77,9 @@ def main(dirpath, name, smooth, smoothingfactor, iterations, smoothmode):
     if not path.exists(model_path):
         RuntimeError("The given directory: %s did not contain the file: model.vtp" % dirpath)
 
-    # Clean surface
-    surface = read_polydata(model_path)
-    surface = surface_cleaner(surface)
-    surface = triangulate_surface(surface)
-
-    # Get a capped and uncapped version of the surface
-    open_surface = surface
-    capped_surface = capp_surface(surface)
+    # Clean and capp / uncapp surface
+    parameters = get_parameters(dirpath)
+    surface, capped_surface = preare_surface(model_path, parameters)
 
     # Get inlet and outlets
     inlet, outlets = get_centers(open_surface, dirpath)
@@ -92,14 +91,8 @@ def main(dirpath, name, smooth, smoothingfactor, iterations, smoothmode):
     centerlines_in_order = sort_centerlines(centerlines_complete)
 
     print("Compute voronoi diagram")
-    voronoi = make_voronoi_diagram(surface, voronoi_path)
-    if not path.exists(voronoi_smoothed_path) and smooth:
-        voronoi_smoothed = smooth_voronoi_diagram(voronoi, centerlines_complete, 0.25)
-        write_polydata(voronoi_smoothed, voronoi_smoothed_path)
-        surface_smoothed = create_new_surface(voronoi_smoothed)
-        write_polydata(surface_smoothed, model_smoothed_path)
-
-    voronoi = smooth_voronoi_diagram(voronoi, centerlines_complete, 0.25)
+    voronoi = prepare_voronoi_diagram(model_path, voronoi_path, voronoi_smoothed_path,
+                                    smooth, smooth_factor_voro, centerlines_complete)
 
     # Get Carotid Siphon
     if path.exists(carotid_siphon_path):
@@ -109,7 +102,8 @@ def main(dirpath, name, smooth, smoothingfactor, iterations, smoothmode):
 
     # Search for diverging clipping points along the siphon
     siphon_end_point = carotid_siphon.GetPoint(carotid_siphon.GetNumberOfPoints()-1)
-    div_ids, div_points, centerlines_in_order, div_lines = find_diverging_centerlines(centerlines_in_order, siphon_end_point)
+    div_ids, div_points, centerlines_in_order, div_lines = find_diverging_centerlines(centerlines_in_order,
+                                                                                      siphon_end_point)
 
     if div_ids != []:
         print("Clipping diverging centerlines")
@@ -165,7 +159,11 @@ def main(dirpath, name, smooth, smoothingfactor, iterations, smoothmode):
     # Move diverging centerlines
     moved_clipped_voronoi_div = []
     for i, clipped_voronoi_div_i in enumerate(clipped_voronoi_div):
-        moved_clipped_voronoi_div.append(make_voronoi_smooth(clipped_voronoi_div_i, carotid_siphon, smooth_carotid_siphon, smoothmode, div=True, div_point = div_points[i]))
+        moved_clipped_voronoi_div.append(make_voronoi_smooth(clipped_voronoi_div_i,
+                                                             carotid_siphon,
+                                                             smooth_carotid_siphon,
+                                                             smoothmode, div=True,
+                                                             div_point = div_points[i]))
 
     moved_clipped_voronoi_div.append(moved_clipped_voronoi)
     moved_clipped_voronoi_div.append(clipped_voronoi_end)
@@ -176,9 +174,10 @@ def main(dirpath, name, smooth, smoothingfactor, iterations, smoothmode):
     # Create new surface
     print("Create new surface")
     new_surface = create_new_surface(newVoronoi)
+    # TODO: Add Automated clipping of newmodel 
+    new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100)
     write_polydata(new_surface, model_new_surface)
 
-    # TODO: Add clipping of in and outlets
 
 def make_voronoi_smooth(voronoi, old_cl, new_cl, smoothmode, div=False, div_point=None):
     """
@@ -240,10 +239,10 @@ def make_voronoi_smooth(voronoi, old_cl, new_cl, smoothmode, div=False, div_poin
 
 
 if  __name__ == "__main__":
-    smooth, basedir, case, smoothmode, smoothingfactor, iterations = read_command_line()
+    smooth, basedir, case, smoothmode, smoothingfactor, iterations, smooth_factor_voro = read_command_line()
     name = "surface"
     folders = listdir(basedir) if case is None else [case]
     for folder in folders:
         print("==== Working on case %s ====" % folder)
-        dirpath = path.join(basedir, folder)
-        main(dirpath, name, smooth, smoothingfactor, iterations, smoothmode)
+        dirpath = path.join(basedir,folder)
+        change_curvature(dirpath, name, smooth, smoothingfactor, iterations, smoothmode, smooth_factor_voro)

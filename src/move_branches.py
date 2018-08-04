@@ -1,11 +1,9 @@
 from common import *
 from argparse import ArgumentParser
 from os import path, listdir
-from subprocess import STDOUT, check_output
 from time import time
 from copy import deepcopy
 
-from IPython import embed
 import sys
 import math
 
@@ -13,22 +11,11 @@ import math
 from patchandinterpolatecenterlines import *
 from clipvoronoidiagram import *
 from paralleltransportvoronoidiagram import *
-import ToolRepairSTL
 
 def read_command_line():
     """
     Read arguments from commandline
     """
-    # TODO: Change to --feature --no-feature for bool agruments
-    # Ex.
-    # feature_parser = parser.add_mutually_exclusive_group(required=False)
-    # feature_parser.add_argument('--feature', dest='feature', action='store_true')
-    # feature_parser.add_argument('--no-feature', dest='feature', action='store_false')
-    # parser.set_defaults(feature=True)
-
-    # Also add choise when that is approporiate
-
-    # Could also make bool be int and add choise 0, 1 to be true false...
     parser = ArgumentParser()
 
     parser.add_argument('-d', '--dir_path', type=str, default=".",
@@ -74,7 +61,6 @@ def read_command_line():
     return args.s, ang_, args.smooth_factor, args.leave1, args.leave2, \
            args.bif, args.dir_path, args.case, args.lower, \
            args.cylinder_factor, args.version, args.aneurysm, args.anu_num, args.step
-
 
 
 def get_points(data, key, R, m, rotated=True, bif=False):
@@ -432,6 +418,7 @@ def merge_cl(centerline, end_point, div_point):
 
     return merge
 
+
 def sort_outlets(outlets, outlet1, outlet2, dirpath):
     """
     Sort all outlets of the geometry given the two relevant outlets
@@ -554,24 +541,9 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
         aneurysm_type = parameters["aneurysm_type"]
         print("Aneurysm type read from info.txt file: %s" % aneurysm_type)
 
-    # Clean surface
-    surface = read_polydata(model_path)
-    surface = surface_cleaner(surface)
-    surface = triangulate_surface(surface)
-
-    # Check connectivity and only choose the surface with the largest area
-    if not "check_surface" in parameters.keys():
-        connected_surface = getConnectivity(surface, mode="Largest")
-        if connected_surface.GetNumberOfPoints() != surface.GetNumberOfPoints():
-            WritePolyData(surface, model_path.replace(".vtp", "_test.vtp"))
-
-    # Get a capped and uncapped version of the surface
-    if is_surface_capped(surface):
-        open_surface = uncapp_surface(surface)
-        capped_surface = surface
-    else:
-        open_surface = surface
-        capped_surface = capp_surface(surface)
+    # Clean and capp / uncapp surface
+    open_surface, capped_surface = prepare_surface(model_path, parameters)
+    surface = open_surface
 
     # Get aneurysm "end point"
     if aneurysm:
@@ -618,7 +590,7 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
         parameters = get_parameters(dirpath)
         number_of_aneurysms = len([a for a in parameters.keys() if "aneurysm_" in a])
         if number_of_aneurysms == 1:
-            voronoi_smoothed = smooth_voronoi_diagram(voronoi, centerline_par, smooth_factor)
+            voronoi_smoothed = SmoothClippedVoronoiDiagram(voronoi, centerline_par, smooth_factor)
         else:
             aneu_centerline = extract_single_line(centerline_complete,
                                                 centerline_complete.GetNumberOfCells() - 1)
@@ -628,7 +600,7 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
                                                   extract_single_line(centerline_complete, i)))
             div_aneu_id = max(div_aneu_id)
             aneu_centerline = extract_single_line(aneu_centerline, start=div_aneu_id)
-            voronoi_smoothed = smooth_voronoi_diagram(voronoi,
+            voronoi_smoothed = SmoothClippedVoronoiDiagram(voronoi,
                                                           centerline_par, smooth_factor,
                                                           no_smooth=aneu_centerline)
 
@@ -739,6 +711,8 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
     new_surface = create_new_surface(interpolated_voronoi)
 
     print("Surface saved in: {}".format(model_new_surface.split("/")[-1]))
+    # TODO: Add Automated clipping of newmodel 
+    new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100)
     write_polydata(new_surface, model_new_surface)
 
 
