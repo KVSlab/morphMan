@@ -330,19 +330,6 @@ def rotationMatrix(data, angle, leave1, leave2):
 
     return R, m
 
-def get_startpoint(centerline):
-    """
-    Finds start point of a given centerline.
-
-    Args:
-        centerline (vtkPolyData): Centerline data.
-
-    Returns:
-        start_point (vtkPoint): Start point of centerline.
-    """
-    line = extract_single_line(centerline, 0)
-    start_point = line.GetPoints().GetPoint(0)
-    return start_point
 
 def merge_cl(centerline, end_point, div_point):
     """

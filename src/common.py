@@ -131,50 +131,6 @@ def write_polydata(input_data, filename):
     writer.Write()
 
 
-def automatic_surface_clipping(surface, centerlines, filename, clipspheres=0):
-    """
-    Clips inlet and outlets of newly enveloped surface
-    model using centerline as reference.
-
-    Args:
-        surface (vtkPolyData): Input surface.
-        centerliens (vtkPolyData): Complete set of centerlines.
-        filename (str): Path where surface is saved.
-        clipspheres (int): Determines how many spheres to clip away form in-/out-let.
-
-    Returns:
-        surface (vtkPolyData): Clipped surface model
-    """
-    extractor = vmtkscripts.vmtkEndpointExtractor()
-    extractor.Centerlines = centerlines
-    extractor.RadiusArrayName = radiusArrayName
-    extractor.GroupIdsArrayName = groupIDsArrayName
-    extractor.BlankingArrayName = branchClippingArrayName
-    extractor.NumberOfEndPointSpheres = clipspheres
-    extractor.Execute()
-    clipped_centerlines = extractor.Centerlines
-
-    clipper = vmtkscripts.vmtkBranchClipper()
-    clipper.Surface = surface
-    clipper.Centerlines = clipped_centerlines
-    clipper.RadiusArrayName = radiusArrayName
-    clipper.GroupIdsArrayName = groupIDsArrayName
-    clipper.BlankingArrayName = branchClippingArrayName
-    clipper.Execute()
-    surface = clipper.Surface
-
-    connector = vmtkscripts.vmtkSurfaceConnectivity()
-    connector.Surface = surface
-    connector.CleanOutput = 1
-    connector.Execute()
-    surface = connector.Surface
-
-    if filename is not None:
-        write_polydata(surface, filename)
-
-    return surface
-
-
 def make_voronoi_diagram(surface, filename):
     """
     Creates a surface model's
@@ -201,34 +157,24 @@ def make_voronoi_diagram(surface, filename):
     return newVoronoi
 
 
-def write_spheres(points, dirpath, radius=None, name="sphere%s.vtp", base=0.2):
-    radius = [base]*len(points) if radius is None else radius
-    for counter, point in enumerate(points):
-        sphere = vtk.vtkSphereSource()
-        sphere.SetCenter(point)
-        sphere.SetPhiResolution(100)
-        sphere.SetThetaResolution(100)
-        sphere.SetRadius(radius[counter])
-        sphere_ = sphere.GetOutput()
-
-        write_polydata(sphere_, path.join(dirpath, name % counter))
-
-
-def get_tolerance(centerline):
+def get_tolerance(centerline, N=50):
     """
     Finds tolerance based on
-    average length between points
+    average length between first N points
     along the input centerline.
 
     Args:
         centerline (vtkPolyData): Centerline data.
+        N (int): Number of points
 
     Returns:
         tolerance (float): Tolerance value.
     """
+
     line = extract_single_line(centerline, 0)
     length = get_curvilinear_coordinate(line)
-    tolerance = np.mean(length[1:] - length[:-1]) / divergingRatioToSpacingTolerance
+    tolerance = np.mean(length[1:N] - length[:N-1]) / divergingRatioToSpacingTolerance
+
     return tolerance
 
 
@@ -468,48 +414,6 @@ def create_new_surface(completeVoronoiDiagram, polyBallImageSize=[120, 120, 120]
     envelope = marchingCube.GetOutput()
 
     return envelope
-
-
-def get_relevant_outlets_tavel(surface, dir_path):
-    # Check if info exists
-    if not path.isfile(path.join(dir_path, "info.txt")):
-        provide_relevant_outlets_tawss(surface, dir_path)
-
-    # Open info
-    parameters = get_parameters(dir_path)
-    relevant_outlets = []
-    inlet = []
-    for key, value in list(parameters.items()):
-        if key.startswith("tavel_relevant_outlet_"):
-            relevant_outlets.append(value)
-        elif key.startswith("tavel_inlet"):
-            inlet = value
-
-    if relevant_outlets == []:
-        inlet, relevant_outlets = provide_relevant_outlets_inlet_tavel(surface, dir_path)
-
-    return inlet, relevant_outlets
-
-
-def get_relevant_outlets_tawss(surface, dir_path):
-    # Check if info exists
-    if not path.isfile(path.join(dir_path, "info.txt")):
-        provide_relevant_outlets_tawss(surface, dir_path)
-
-    # Open info
-    parameters = get_parameters(dir_path)
-    relevant_outlets = []
-    inlet = []
-    for key, value in list(parameters.items()):
-        if key.startswith("tawss_relevant_outlet_"):
-            relevant_outlets.append(value)
-        elif key.startswith("tawss_inlet"):
-            inlet = value
-
-    if relevant_outlets == []:
-        inlet, relevant_outlets = provide_relevant_outlets_inlet_tawss(surface, dir_path)
-
-    return inlet, relevant_outlets
 
 
 def get_aneurysm_dome(surface, dir_path, anu_num):
@@ -770,29 +674,6 @@ def surface_cleaner(surface):
     return cleanSurface
 
 
-
-def get_area(dir_path):
-    # Check if info exists
-    if not path.isfile(path.join(dir_path, "info.txt")):
-        compute_centers(surface, dir_path)
-
-    # Open info
-    parameters = get_parameters(dir_path)
-    outlets_area = []
-    for key, value in list(parameters.items()):
-        if key == "inlet_area":
-            inlet_area = value
-        elif "outlet" in key and "area" in key and "relevant" not in key:
-            outlets_area.append(value)
-
-    if len(outlets_area) != 0:
-        outlet_area = []
-        for i in range(len(outlets_area)):
-            outlet_area.append(parameters["outlet%d_area" % i])
-
-    return inlet_area, outlet_area
-
-
 def get_centers(surface, dir_path, flowext=False):
     # Check if info exists
     if flowext or not path.isfile(path.join(dir_path, "info.txt")):
@@ -924,7 +805,7 @@ def uncapp_surface_old(surface):
     for i in range(int(region_array.max())+1):
         regions.append(threshold(end_capps_connectivity, "RegionId",  lower=(i-limit),
                             upper=(i+limit), type="between", source=0))
-        circ, center = computeCircleness(regions[-1])
+        circ, center = compute_circleness(regions[-1])
         circleness.append(circ)
         centers_edge.append(center)
         area.append(compute_area(regions[-1]))
@@ -990,50 +871,6 @@ def capp_surface(surface):
     surfaceCapper.Update()
 
     return surfaceCapper.GetOutput()
-
-
-def compute_distance_to_sphere(surface, centerSphere, radiusSphere=0.0,
-                               distanceOffset=0.0, distanceScale=0.01,
-                               minDistance=0.2, maxDistance=0.30,
-                               distanceToSpheresArrayName="DistanceToSpheres"):
-
-    # Check if there allready exists a distance to spheres
-    N = surface.GetNumberOfPoints()
-    number, names = get_number_of_arrays(surface)
-    add = False
-    if distanceToSpheresArrayName not in names: add = True
-
-    # Get array
-    if add:
-        dist_array = get_vtk_array(distanceToSpheresArrayName, 1, N)
-        surface.GetPointData().AddArray(dist_array)
-    else:
-        dist_array = surface.GetPointData().GetArray("DistanceToSpheres")
-
-    # Compute distance
-    for i in range(N):
-        distanceToSphere = dist_array.GetComponent(i, 0)
-
-        # Get distance, but factor in size of sphere
-        newDist = distance(centerSphere, surface.GetPoints().GetPoint(i)) - radiusSphere
-
-        # Set offset and scale distance
-        newDist = distanceOffset + newDist * distanceScale
-
-        # Capp to min distance
-        if newDist < minDistance:
-            newDist = minDistance
-
-        # Capp to max distance
-        if newDist > maxDistance:
-            newDist = maxDistance
-
-        # Keep smallest distance
-        newDist = min(newDist, distanceToSphere) if not add else newDist
-
-        dist_array.SetComponent(i, 0, newDist)
-
-    return surface
 
 
 def is_surface_capped(surface):
@@ -1334,33 +1171,6 @@ def vmtk_compute_centerlines(inlet, outlet, filepath, surface, resampling=1,
     return centerlines
 
 
-def generate_mesh(surface):
-        # Compute the mesh.
-    meshGenerator = vmtkscripts.vmtkMeshGenerator()
-    meshGenerator.Surface = surface
-    meshGenerator.ElementSizeMode = "edgelengtharray"
-    meshGenerator.TargetEdgeLengthArrayName = "Size"
-    meshGenerator.BoundaryLayer = 1
-    meshGenerator.NumberOfSubLayers = 4
-    meshGenerator.BoundaryLayerOnCaps = 0
-    meshGenerator.BoundaryLayerThicknessFactor = 0.85
-    meshGenerator.SubLayerRatio = 0.75
-    meshGenerator.Tetrahedralize = 1
-    meshGenerator.VolumeElementScaleFactor = 0.8
-    meshGenerator.EndcapsEdgeLengthFactor = 1.0
-
-    # Mesh
-    meshGenerator.Execute()
-
-    # Remeshed surface, store for later
-    remeshSurface = meshGenerator.RemeshedSurface
-
-    # Full mesh
-    mesh = meshGenerator.Mesh
-
-    return mesh, remeshSurface
-
-
 def create_vtk_array(values, name, k=1):
     vtkArray = get_vtk_array(name, k, values.shape[0])
 
@@ -1575,131 +1385,6 @@ def move_past_sphere(centerline, center, r, start, step=-1, stop=0, X=0.8):
     r = centerline.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
 
     return tempPoint, r
-
-
-def dist_sphere_curv(surface, centerlines, sac_center, misr_max, fileName):
-    # Get longest centerline
-    length = []
-    for i in range(centerlines.GetNumberOfLines()):
-        line = extract_single_line(centerlines, i)
-    length.append(get_curvilinear_coordinate(line)[-1])
-    ind_longest = length.index(max(length))
-
-    # Get all bifurcations along the longest centerline
-    bif = []
-    bif_id = []
-    longest_line = extract_single_line(centerlines, ind_longest)
-    tol = get_tolerance(centerlines)
-
-    for i in range(centerlines.GetNumberOfLines()):
-        if i == ind_longest: continue
-        comp_line = extract_single_line(centerlines, i)
-        for j in range(comp_line.GetNumberOfPoints()):
-            pnt1 = longest_line.GetPoints().GetPoint(j)
-            pnt2 = comp_line.GetPoints().GetPoint(j)
-            if distance(pnt1, pnt2) > tol:
-                bif.append(pnt1)
-                bif_id.append(j)
-                break
-
-    # Remove bifurcations detected twice
-    pop = []
-    for i in range(len(bif)):
-        for j in range(i + 1, len(bif)):
-            dist = distance(bif[i], bif[j])
-            if dist < tol * 6:
-                pop.append(j)
-
-    for i in sorted(set(pop))[::-1]:
-        bif.pop(i)
-        bif_id.pop(i)
-
-    # Set siphon to be the location of the first branch, assumes ICA as
-    # inlet, and that the ophthalmic is segmented.
-    bif_id.sort()
-    siphon_point = line.GetPoints().GetPoint(bif_id[0])
-    distance_to_sphere = compute_distance_to_sphere(surface, siphon_point)
-
-    # Add the center of the sac
-    for i in range(len(sac_center)):
-        distance_to_sphere = compute_distance_to_sphere(distance_to_sphere, sac_center[i],
-                                                        distanceScale=0.2 / (misr_max[i] * 2.5))
-
-    # Compute curvature
-    curvatureFilter = vmtkscripts.vmtkSurfaceCurvature()
-    curvatureFilter.AbsoluteCurvature = 1
-    curvatureFilter.MedianFiltering = 1
-    curvatureFilter.CurvatureType = "gaussian"
-    curvatureFilter.Offset = 0.15
-    curvatureFilter.BoundedReciprocal = 1
-    curvatureFilter.Surface = distance_to_sphere
-    curvatureFilter.Execute()
-
-    # Multiple the surface
-    curvatureSurface = curvatureFilter.Surface
-    curvatureArray = get_array("Curvature", curvatureSurface)
-    distance_to_sphere_array = get_array("DistanceToSpheres", distance_to_sphere)
-    size_array = curvatureArray * distance_to_sphere_array
-
-    size_vtk_array = create_vtk_array(size_array, "Size")
-    curvatureSurface.GetPointData().AddArray(size_vtk_array)
-
-    write_polydata(curvatureSurface, fileName)
-
-    return distance_to_sphere
-
-
-def dist_sphere_diam(surface, centerlines, sac_center, misr_max, fileName):
-    # Meshing method following Owais way.
-    # --- Compute the distanceToCenterlines
-    distTocenterlines = vmtkscripts.vmtkDistanceToCenterlines()
-    distTocenterlines.Surface = surface
-    distTocenterlines.Centerlines = centerlines
-    distTocenterlines.Execute()
-    distance_to_sphere = distTocenterlines.Surface
-
-    # Compute element size based on diameter
-    upper = 20
-    lower = 6
-    diameter_array = 2 * get_array("DistanceToCenterlines", distance_to_sphere)
-    element_size = 13. / 35 * diameter_array**2 + lower
-    element_size[element_size > upper] = upper
-    element_size[element_size < lower] = lower
-    elements_vtk = create_vtk_array(element_size, "Num elements")
-    distance_to_sphere.GetPointData().AddArray(elements_vtk)
-    element_size = diameter_array / element_size
-    #element_size[element_size < 0.12] = 0.12
-
-    #distance_to_sphere = compute_distance_to_sphere(surface, siphon_point)
-    # Reduce element size in aneurysm
-    for i in range(len(sac_center)):
-        distance_to_sphere = compute_distance_to_sphere(distance_to_sphere,
-                                                        sac_center[i],
-                                                        #maxDistance=0.3,
-                                                        distanceScale=0.045) # / (misr_max[i] * 2.))
-
-    distance_to_spheres_array = get_array("DistanceToSpheres", distance_to_sphere)
-    element_size = np.minimum(element_size, distance_to_spheres_array)
-    vtk_array = create_vtk_array(element_size, "Size")
-    distance_to_sphere.GetPointData().AddArray(vtk_array)
-    #distance_to_sphere.GetPointData().RemoveArray("DistanceToCenterlines")
-    write_polydata(distance_to_sphere, fileName)
-
-    return distance_to_sphere
-
-
-def mesh_alternative(surface):
-    print("--- Meshing failed.")
-    print("--- Proceeding with surface smooting and meshing.")
-    surface = vmtkSmoother(surface, "laplace", iterations=500)
-
-    subdiv = vmtkscripts.vmtkSurfaceSubdivision()
-    subdiv.Surface = surface
-    subdiv.Method = "butterfly"
-    subdiv.Execute()
-    surface = subdiv.Surface
-
-    return vmtkSmoother(surface, "laplace", iterations=500)
 
 
 def vmtk_surface_smoother(surface, method, iterations=800):
