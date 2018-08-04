@@ -1,0 +1,7 @@
+# Compiled files
+*.pyc
+
+# Temporary files
+*.vtp
+*.swp
+*~

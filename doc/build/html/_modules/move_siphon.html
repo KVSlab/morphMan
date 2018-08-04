@@ -1,0 +1,704 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>move_siphon &mdash; VMTK TOOLS 0.1 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="VMTK TOOLS 0.1 documentation" href="../index.html"/>
+        <link rel="up" title="Module code" href="index.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../vmtktools_docs.html" class="icon icon-home"> VMTK TOOLS
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Using VMTK Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../scripts.html">Documentation for the Python Scripts</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../vmtktools_docs.html">VMTK TOOLS</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../vmtktools_docs.html">Docs</a> &raquo;</li>
+      
+          <li><a href="index.html">Module code</a> &raquo;</li>
+      
+    <li>move_siphon</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for move_siphon</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">argparse</span> <span class="kn">import</span> <span class="n">ArgumentParser</span>
+<span class="kn">from</span> <span class="nn">os</span> <span class="kn">import</span> <span class="n">path</span><span class="p">,</span> <span class="n">listdir</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">numpy.linalg</span> <span class="kn">as</span> <span class="nn">la</span>
+
+<span class="c1"># Local import</span>
+<span class="kn">from</span> <span class="nn">common</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">patchandinterpolatecenterlines</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">clipvoronoidiagram</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">paralleltransportvoronoidiagram</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">moveandmanipulatetools</span> <span class="kn">import</span> <span class="o">*</span>
+
+<div class="viewcode-block" id="read_command_line"><a class="viewcode-back" href="../scripts.html#move_siphon.read_command_line">[docs]</a><span class="k">def</span> <span class="nf">read_command_line</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Read arguments from commandline</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">ArgumentParser</span><span class="p">()</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-d&#39;</span><span class="p">,</span> <span class="s1">&#39;--dir_path&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to the folder with all the cases&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--case&#39;</span><span class="p">,</span><span class="s1">&#39;-c&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Choose case&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-s&#39;</span><span class="p">,</span> <span class="s1">&#39;--smooth&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;If the original voronoi diagram (surface) should be&quot;</span> <span class="o">+</span> \
+                        <span class="s2">&quot;smoothed before it is manipulated&quot;</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="s2">&quot;smooth&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;-a&quot;</span><span class="p">,</span> <span class="s2">&quot;--alpha&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Compression factor in vertical direction, ranging from -1.0 to 1.0&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;-b&quot;</span><span class="p">,</span> <span class="s2">&quot;--beta&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Compression factor in horizontal direction, ranging from -1.0 to 1.0&quot;</span><span class="p">)</span>
+
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">args</span><span class="o">.</span><span class="n">smooth</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">dir_path</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">case</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">alpha</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">beta</span></div>
+
+
+<div class="viewcode-block" id="move_vessel"><a class="viewcode-back" href="../scripts.html#move_siphon.move_vessel">[docs]</a><span class="k">def</span> <span class="nf">move_vessel</span><span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">smooth</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">point_path</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mf">0.0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Primary script for moving a selected part of any blood vessel.</span>
+<span class="sd">    Relies on an input centerline, a surface geometry of a 3D blood vessel network,</span>
+<span class="sd">    and the magnitude of movement (alpha, beta) in horizontal and vertical direction respectively. </span>
+
+<span class="sd">    Defines in- and out-put files, computes voronoi diagram, and </span>
+<span class="sd">    moves voronoi diagram in the horizontal direction based on the </span>
+<span class="sd">    definitions in &quot;Investigating the Interaction Between Morphology </span>
+<span class="sd">    of the Anterior Bend and Aneurysm Initiation&quot; (2018).</span>
+<span class="sd">    Procedes by computing the corresponding centerline in the new</span>
+<span class="sd">    geometries, used for postprocessing, geometric analysis and</span>
+<span class="sd">    meshing. </span>
+
+<span class="sd">    Continuation in the move_vessel_vertically-method for vertical movement.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        dirpath (str): Directory where case is located.</span>
+<span class="sd">        smooth (bool): Adjusts smoothing of the voronoi diagram.</span>
+<span class="sd">        name (str): Directory where surface models are located.</span>
+<span class="sd">        point_path (str): Location of boundary points of the vessel to be manipulated.</span>
+<span class="sd">        alpha (float): Extension / Compression factor in vertical direction.</span>
+<span class="sd">        beta (float): Extension / Compression factor in horizontal direction.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Input filenames</span>
+    <span class="n">model_path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="s2">&quot;model.vtp&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Output names</span>
+    <span class="n">model_smoothed_path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="s2">&quot;model_smoothed.vtp&quot;</span><span class="p">)</span>
+    <span class="n">model_new_surface</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="s2">&quot;new_model_alpha_</span><span class="si">%s</span><span class="s2">_beta_</span><span class="si">%s</span><span class="s2">.vtp&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">alpha</span><span class="p">,</span><span class="n">beta</span><span class="p">))</span>
+    <span class="n">model_new_surface_tmp</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="s2">&quot;new_model_alpha_</span><span class="si">%s</span><span class="s2">_beta_</span><span class="si">%s</span><span class="s2">_tmp.vtp&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">))</span>
+
+    <span class="c1"># Centerlines</span>
+    <span class="n">centerline_complete_path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="s2">&quot;centerline_complete.vtp&quot;</span><span class="p">)</span>
+    <span class="n">centerline_clipped_path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span>  <span class="s2">&quot;centerline_clipped.vtp&quot;</span><span class="p">)</span>
+    <span class="n">centerline_clipped_part_path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span>  <span class="s2">&quot;centerline_clipped_part.vtp&quot;</span><span class="p">)</span>
+    <span class="n">new_centerlines_path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="s2">&quot;new_centerlines_alpha_</span><span class="si">%s</span><span class="s2">_beta_</span><span class="si">%s</span><span class="s2">.vtp&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">))</span>
+    <span class="n">new_centerlines_path_tmp</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="s2">&quot;new_centerlines_alpha_</span><span class="si">%s</span><span class="s2">_beta_</span><span class="si">%s</span><span class="s2">_tmp.vtp&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">))</span>
+
+    <span class="c1"># Voronoi diagrams</span>
+    <span class="n">voronoi_path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="s2">&quot;model_voronoi.vtp&quot;</span><span class="p">)</span>
+    <span class="n">voronoi_smoothed_path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span>  <span class="s2">&quot;model_voronoi_smoothed.vtp&quot;</span><span class="p">)</span>
+    <span class="n">voronoi_remaining_path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="s2">&quot;model_voronoi_remaining.vtp&quot;</span><span class="p">)</span>
+    <span class="n">voronoi_siphon_path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="s2">&quot;model_voronoi_siphon.vtp&quot;</span><span class="p">)</span>
+    
+    <span class="c1"># Extract Clipping points</span>
+    <span class="n">clipping_points</span> <span class="o">=</span> <span class="n">get_clipping_points</span><span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">point_path</span><span class="p">)</span>
+
+    <span class="c1"># Read and check model</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">model_path</span><span class="p">):</span>
+        <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;The given directory: </span><span class="si">%s</span><span class="s2"> did not contain the file: model.vtp&quot;</span> <span class="o">%</span> <span class="n">dirpath</span><span class="p">)</span>
+
+    <span class="c1"># Clean surface</span>
+    <span class="n">surface</span> <span class="o">=</span> <span class="n">read_polydata</span><span class="p">(</span><span class="n">model_path</span><span class="p">)</span>
+    <span class="n">surface</span> <span class="o">=</span> <span class="n">surface_cleaner</span><span class="p">(</span><span class="n">surface</span><span class="p">)</span>
+    <span class="n">surface</span> <span class="o">=</span> <span class="n">triangulate_surface</span><span class="p">(</span><span class="n">surface</span><span class="p">)</span>
+
+    <span class="c1">#Get a capped and uncapped version of the surface</span>
+    <span class="n">open_surface</span> <span class="o">=</span> <span class="n">surface</span>
+    <span class="n">capped_surface</span> <span class="o">=</span> <span class="n">capp_surface</span><span class="p">(</span><span class="n">surface</span><span class="p">)</span>
+
+    <span class="c1"># Get inlet and outlets</span>
+    <span class="n">inlet</span><span class="p">,</span> <span class="n">outlets</span> <span class="o">=</span> <span class="n">get_centers</span><span class="p">(</span><span class="n">open_surface</span><span class="p">,</span> <span class="n">dirpath</span><span class="p">)</span>
+    
+    <span class="c1"># Compute all centerlines</span>
+    <span class="n">centerlines_complete</span> <span class="o">=</span> <span class="n">vmtk_compute_centerlines</span><span class="p">(</span><span class="n">inlet</span><span class="p">,</span> <span class="n">outlets</span><span class="p">,</span>
+                                               <span class="n">centerline_complete_path</span><span class="p">,</span>
+                                               <span class="n">capped_surface</span><span class="p">,</span> <span class="n">resampling</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+    <span class="n">centerlines_in_order</span> <span class="o">=</span> <span class="n">sort_centerlines</span><span class="p">(</span><span class="n">centerlines_complete</span><span class="p">)</span>
+
+    <span class="c1"># Set clipping points in order and make VTK objects</span>
+    <span class="n">line</span> <span class="o">=</span> <span class="n">extract_single_line</span><span class="p">(</span><span class="n">centerlines_in_order</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">,</span> <span class="n">ID1</span><span class="p">,</span> <span class="n">ID2</span><span class="p">,</span> <span class="n">vtk_clipping_points</span><span class="p">,</span> <span class="n">clipping_points</span> <span class="o">=</span> <span class="n">get_vtk_clipping_points</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">clipping_points</span><span class="p">)</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Compute Voronoi diagram&quot;</span><span class="p">)</span>
+    <span class="n">voronoi</span> <span class="o">=</span> <span class="n">make_voronoi_diagram</span><span class="p">(</span><span class="n">surface</span><span class="p">,</span> <span class="n">voronoi_path</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">voronoi_smoothed_path</span><span class="p">)</span> <span class="ow">and</span> <span class="n">smooth</span><span class="p">:</span>
+        <span class="n">voronoi_smoothed</span> <span class="o">=</span> <span class="n">SmoothClippedVoronoiDiagram</span><span class="p">(</span><span class="n">voronoi</span><span class="p">,</span> <span class="n">centerlines_complete</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">)</span>
+        <span class="n">write_polydata</span><span class="p">(</span><span class="n">voronoi_smoothed</span><span class="p">,</span> <span class="n">voronoi_smoothed_path</span><span class="p">)</span>
+        <span class="n">surface_smoothed</span> <span class="o">=</span> <span class="n">create_new_surface</span><span class="p">(</span><span class="n">voronoi_smoothed</span><span class="p">)</span>
+        <span class="n">write_polydata</span><span class="p">(</span><span class="n">surface_smoothed</span><span class="p">,</span> <span class="n">model_smoothed_path</span><span class="p">)</span>
+
+    <span class="c1"># Check if case includs the opthalmic artery</span>
+    <span class="n">eye</span><span class="p">,</span> <span class="n">clip_ID</span><span class="p">,</span> <span class="n">centerlines_in_order</span><span class="p">,</span> <span class="n">eyeline</span> <span class="o">=</span> <span class="n">find_ophthalmic_artery</span><span class="p">(</span><span class="n">centerlines_in_order</span><span class="p">,</span> <span class="n">clipping_points</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">eye</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Clipping opthamlic artery&quot;</span><span class="p">)</span>
+        <span class="n">patch_eye</span> <span class="o">=</span> <span class="n">clip_eyeline</span><span class="p">(</span><span class="n">eyeline</span><span class="p">,</span> <span class="n">clipping_points</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">clip_ID</span><span class="p">)</span>
+
+    <span class="c1"># Clip centerline</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Clipping centerlines.&quot;</span><span class="p">)</span>
+    <span class="n">centerline_remaining</span> <span class="o">=</span> <span class="n">CreateParentArteryPatches</span><span class="p">(</span><span class="n">centerlines_in_order</span><span class="p">,</span> <span class="n">vtk_clipping_points</span><span class="p">,</span> <span class="n">siphon</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">centerline_siphon</span> <span class="o">=</span> <span class="n">extract_single_line</span><span class="p">(</span><span class="n">centerlines_in_order</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">startID</span><span class="o">=</span><span class="n">ID1</span><span class="p">,</span> <span class="n">endID</span><span class="o">=</span><span class="n">ID2</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">eye</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="n">eyeline_end</span> <span class="o">=</span> <span class="n">extract_single_line</span><span class="p">(</span><span class="n">patch_eye</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">centerline_siphon</span> <span class="o">=</span> <span class="n">merge_data</span><span class="p">([</span><span class="n">centerline_siphon</span><span class="p">,</span> <span class="n">eyeline_end</span><span class="p">])</span>
+
+    <span class="n">write_polydata</span><span class="p">(</span><span class="n">centerline_remaining</span><span class="p">,</span> <span class="n">centerline_clipped_path</span><span class="p">)</span>
+    <span class="n">write_polydata</span><span class="p">(</span><span class="n">centerline_siphon</span><span class="p">,</span> <span class="n">centerline_clipped_part_path</span><span class="p">)</span>
+
+    <span class="c1"># Clip Voronoi diagram into</span>
+    <span class="c1"># siphon and remaining part of geometry</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Clipping Voronoi diagrams&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">voronoi_siphon_path</span><span class="p">):</span>
+        <span class="n">masked_voronoi_clip</span>  <span class="o">=</span> <span class="n">MaskVoronoiDiagram</span><span class="p">(</span><span class="n">voronoi</span><span class="p">,</span> <span class="n">centerline_siphon</span><span class="p">)</span>
+        <span class="n">voronoi_siphon</span> <span class="o">=</span> <span class="n">ExtractMaskedVoronoiPoints</span><span class="p">(</span><span class="n">voronoi</span><span class="p">,</span> <span class="n">masked_voronoi_clip</span><span class="p">)</span>
+        <span class="n">write_polydata</span><span class="p">(</span><span class="n">voronoi_siphon</span><span class="p">,</span> <span class="n">voronoi_siphon_path</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">voronoi_siphon</span> <span class="o">=</span> <span class="n">read_polydata</span><span class="p">(</span><span class="n">voronoi_siphon_path</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">voronoi_remaining_path</span><span class="p">):</span>
+        <span class="n">masked_voronoi</span>  <span class="o">=</span> <span class="n">MaskVoronoiDiagram</span><span class="p">(</span><span class="n">voronoi</span><span class="p">,</span> <span class="n">centerline_remaining</span><span class="p">)</span>
+        <span class="n">voronoi_remaining</span> <span class="o">=</span> <span class="n">ExtractMaskedVoronoiPoints</span><span class="p">(</span><span class="n">voronoi</span><span class="p">,</span> <span class="n">masked_voronoi</span><span class="p">)</span>
+        <span class="n">write_polydata</span><span class="p">(</span><span class="n">voronoi_remaining</span><span class="p">,</span> <span class="n">voronoi_remaining_path</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">voronoi_remaining</span> <span class="o">=</span> <span class="n">read_polydata</span><span class="p">(</span><span class="n">voronoi_remaining_path</span><span class="p">)</span>
+    
+    <span class="c1"># Extract translation vectors</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Computing translation directions.&quot;</span><span class="p">)</span>
+    <span class="n">direction</span> <span class="o">=</span> <span class="s2">&quot;horizont&quot;</span>
+    <span class="n">middle_points</span><span class="p">,</span> <span class="n">middleIds</span> <span class="o">=</span> <span class="n">get_spline_points</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">vtk_clipping_points</span><span class="p">)</span>
+    <span class="n">dx_p1</span> <span class="o">=</span> <span class="n">middle_points</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">p1</span>
+    <span class="n">dx_p2</span> <span class="o">=</span> <span class="n">middle_points</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">p2</span>
+    <span class="n">middle_points</span> <span class="o">=</span> <span class="n">middle_points</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="c1"># Move centerline manually for updating inlet</span>
+    <span class="c1"># and outlet positions used to compute </span>
+    <span class="c1"># new centerlines</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Adjusting line manually&quot;</span><span class="p">)</span>
+    <span class="n">line1</span> <span class="o">=</span> <span class="n">extract_single_line</span><span class="p">(</span><span class="n">centerline_remaining</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">newpoints</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">n</span> <span class="o">=</span> <span class="n">centerline_remaining</span><span class="o">.</span><span class="n">GetNumberOfCells</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">n</span><span class="p">):</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">extract_single_line</span><span class="p">(</span><span class="n">centerline_remaining</span><span class="p">,</span> <span class="n">i</span><span class="p">))</span>
+        
+    <span class="n">centerline_remaining_start</span> <span class="o">=</span> <span class="n">move_line_horizontally</span><span class="p">(</span><span class="n">line1</span><span class="p">,</span> <span class="n">ID1</span><span class="p">,</span> <span class="n">ID2</span><span class="p">,</span> <span class="n">dx_p1</span><span class="p">,</span> <span class="n">clip</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">beta</span> <span class="o">!=</span> <span class="mf">0.0</span> <span class="k">else</span> <span class="n">line1</span>
+    <span class="n">centerline_remaining_ends</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">line_</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">beta</span> <span class="o">!=</span> <span class="mf">0.0</span><span class="p">:</span>
+            <span class="n">centerline_remaining_end</span> <span class="o">=</span> <span class="n">move_line_horizontally</span><span class="p">(</span><span class="n">line_</span><span class="p">,</span> <span class="n">ID1</span><span class="p">,</span> <span class="n">ID2</span><span class="p">,</span> <span class="n">dx_p1</span><span class="p">,</span> <span class="n">clip</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s2">&quot;right&quot;</span><span class="p">)</span>
+            <span class="n">newpoints</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">centerline_remaining_end</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">centerline_remaining_end</span><span class="o">.</span><span class="n">GetNumberOfCells</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span> 
+            <span class="n">centerline_remaining_end</span> <span class="o">=</span> <span class="n">line_</span>
+            <span class="n">newpoints</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">centerline_remaining_end</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">centerline_remaining_end</span><span class="o">.</span><span class="n">GetNumberOfPoints</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">centerline_remaining_ends</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">centerline_remaining_end</span><span class="p">)</span>
+
+
+    <span class="n">centerline_siphon_new</span> <span class="o">=</span> <span class="n">move_line_horizontally</span><span class="p">(</span><span class="n">centerline_siphon</span><span class="p">,</span> <span class="n">ID1</span><span class="p">,</span> <span class="n">ID2</span><span class="p">,</span> <span class="n">dx_p1</span><span class="p">,</span> <span class="n">clip</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">eye</span><span class="o">=</span><span class="n">eye</span><span class="p">)</span> <span class="k">if</span> <span class="n">beta</span> <span class="o">!=</span> <span class="mf">0.0</span> <span class="k">else</span> <span class="n">centerline_siphon</span>
+
+    <span class="k">if</span> <span class="n">eye</span><span class="p">:</span>
+        <span class="n">newpoints</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">centerline_siphon_new</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">centerline_siphon_new</span><span class="o">.</span><span class="n">GetNumberOfCells</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+    
+    <span class="n">newpoints</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">centerline_remaining_start</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+
+
+    <span class="k">if</span> <span class="n">beta</span> <span class="o">!=</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="c1"># Move anterior bend horizontally. </span>
+        <span class="c1"># Iterate over points P from Voronoi diagram,</span>
+        <span class="c1"># and move them </span>
+        <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Adjusting Voronoi diagram&quot;</span><span class="p">)</span>
+        <span class="n">voronoi_remaining</span> <span class="o">=</span> <span class="n">move_voronoi_horizontally</span><span class="p">(</span><span class="n">dx_p1</span><span class="p">,</span> <span class="n">dx_p2</span><span class="p">,</span> <span class="n">voronoi_remaining</span><span class="p">,</span> <span class="n">centerline_remaining</span><span class="p">,</span> <span class="n">ID1</span><span class="p">,</span><span class="n">ID2</span><span class="p">,</span> <span class="n">clip_ID</span><span class="p">,</span> <span class="n">clip</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>   
+        <span class="n">voronoi_siphon</span> <span class="o">=</span> <span class="n">move_voronoi_horizontally</span><span class="p">(</span><span class="n">dx_p1</span><span class="p">,</span> <span class="n">dx_p2</span><span class="p">,</span> <span class="n">voronoi_siphon</span><span class="p">,</span> <span class="n">centerline_siphon</span><span class="p">,</span> <span class="n">ID1</span><span class="p">,</span><span class="n">ID2</span><span class="p">,</span> <span class="n">clip_ID</span><span class="p">,</span> <span class="n">clip</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">eye</span><span class="o">=</span><span class="n">eye</span><span class="p">)</span>   
+
+        <span class="n">newVoronoi</span> <span class="o">=</span> <span class="n">merge_data</span><span class="p">([</span><span class="n">voronoi_remaining</span><span class="p">,</span><span class="n">voronoi_siphon</span><span class="p">])</span>
+        <span class="n">new_surface</span> <span class="o">=</span> <span class="n">create_new_surface</span><span class="p">(</span><span class="n">newVoronoi</span><span class="p">)</span>
+        <span class="n">write_polydata</span><span class="p">(</span><span class="n">new_surface</span><span class="p">,</span> <span class="n">model_new_surface_tmp</span><span class="p">)</span>
+
+        <span class="k">print</span> <span class="s2">&quot;Creating new_centerline_complete.vtp of horizontally moved model&quot;</span>
+        <span class="n">new_centerline</span> <span class="o">=</span> <span class="n">make_centerline</span><span class="p">(</span><span class="n">model_new_surface_tmp</span><span class="p">,</span> <span class="n">new_centerlines_path_tmp</span><span class="p">,</span> <span class="n">smooth</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">resampling</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">newpoints</span><span class="o">=</span><span class="n">newpoints</span><span class="p">,</span> <span class="n">recompute</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">store_points</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="s2">&quot;No horizontal movement. Initiating vertical movement&quot;</span><span class="p">)</span>
+        <span class="n">new_centerline</span> <span class="o">=</span> <span class="n">centerlines_complete</span>
+        <span class="n">write_polydata</span><span class="p">(</span><span class="n">new_centerline</span><span class="p">,</span> <span class="n">new_centerlines_path_tmp</span><span class="p">)</span> 
+
+    <span class="k">if</span> <span class="n">alpha</span> <span class="o">!=</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="c1"># Vertical movement</span>
+        <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Moving geometry vertically&quot;</span><span class="p">)</span>
+        <span class="n">move_vessel_vertically</span><span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">newpoints</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">voronoi_remaining</span><span class="p">,</span> <span class="n">voronoi_siphon</span><span class="p">,</span> <span class="n">new_centerline</span><span class="p">,</span> <span class="n">eye</span><span class="p">,</span> <span class="n">vtk_clipping_points</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">write_polydata</span><span class="p">(</span><span class="n">new_centerline</span><span class="p">,</span> <span class="n">new_centerlines_path</span><span class="p">)</span> 
+        <span class="n">write_polydata</span><span class="p">(</span><span class="n">new_surface</span><span class="p">,</span> <span class="n">model_new_surface</span><span class="p">)</span></div>
+
+
+<span class="c1">#def move_vessel(dirpath, smooth, name, point_path, alpha=0.0, beta=0.0):</span>
+
+<div class="viewcode-block" id="move_vessel_vertically"><a class="viewcode-back" href="../scripts.html#move_siphon.move_vessel_vertically">[docs]</a><span class="k">def</span> <span class="nf">move_vessel_vertically</span><span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">oldpoints</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span>  <span class="n">voronoi_remaining</span><span class="p">,</span> <span class="n">voronoi_siphon</span><span class="p">,</span> <span class="n">centerline</span><span class="p">,</span> <span class="n">eye</span><span class="p">,</span> <span class="n">vtk_clipping_points</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Secondary script used for vertical displacement of</span>
+<span class="sd">    the blood vessel. Moves the input voronoi diagram and</span>
+<span class="sd">    centerline in the vertical direction. </span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        dirpath (str): Directory where case is located.</span>
+<span class="sd">        name (str): Directory where surface models are located.</span>
+<span class="sd">        oldpoints (list): Points defining the inlet/outlets of the geometry.</span>
+<span class="sd">        centerline (vtkPolyData): Centerline through the geometry.</span>
+<span class="sd">        alpha (float): Extension / Compression factor in vertical direction.</span>
+<span class="sd">        voronoi (vtkPolyData): Complete Voronoi diagram.</span>
+<span class="sd">        voronoi_remaining (vtkPolyData): Voronoi diagram excluding siphon.</span>
+<span class="sd">        voronoi_siphon (vtkPolyData): Voronoi diagram representing siphon.</span>
+<span class="sd">        centerline (vtkPolyData): Centerline through the geometry.</span>
+<span class="sd">        eye (bool): Determines if opthalmic artery is present. </span>
+<span class="sd">        vtk_clipping_points (vtkPoints): Points defining the siphon to be manipulated.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Filenames</span>
+    <span class="n">new_centerlines_path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="s2">&quot;new_centerlines_alpha_</span><span class="si">%s</span><span class="s2">_beta_</span><span class="si">%s</span><span class="s2">.vtp&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">))</span>
+    <span class="n">model_new_surface</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="s2">&quot;new_model_alpha_</span><span class="si">%s</span><span class="s2">_beta_</span><span class="si">%s</span><span class="s2">.vtp&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">alpha</span><span class="p">,</span><span class="n">beta</span><span class="p">))</span>
+
+    <span class="c1"># Set clipping points in order and make VTK objects</span>
+    <span class="n">p1</span>      <span class="o">=</span> <span class="n">vtk_clipping_points</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">p2</span>      <span class="o">=</span> <span class="n">vtk_clipping_points</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">centerline_clippedipping_points</span> <span class="o">=</span> <span class="p">[</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">]</span>
+    <span class="n">line</span> <span class="o">=</span> <span class="n">extract_single_line</span><span class="p">(</span><span class="n">centerline</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">,</span> <span class="n">ID1</span><span class="p">,</span> <span class="n">ID2</span><span class="p">,</span> <span class="n">vtk_clipping_points</span><span class="p">,</span> <span class="n">clipping_points</span> <span class="o">=</span> <span class="n">get_vtk_clipping_points</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">centerline_clippedipping_points</span><span class="p">)</span>
+    
+    <span class="c1"># Sort centerlines</span>
+    <span class="n">centerlines_in_order</span> <span class="o">=</span> <span class="n">sort_centerlines</span><span class="p">(</span><span class="n">centerline</span><span class="p">)</span>
+
+    <span class="c1"># Special cases including the ophthalmic artery</span>
+    <span class="n">clip_ID</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">if</span> <span class="n">eye</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="n">eye</span><span class="p">,</span> <span class="n">clip_ID</span><span class="p">,</span> <span class="n">centerlines_in_order</span><span class="p">,</span> <span class="n">eyeline</span> <span class="o">=</span> <span class="n">find_ophthalmic_artery</span><span class="p">(</span><span class="n">centerlines_in_order</span><span class="p">,</span> <span class="n">clipping_points</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">eye</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Clipping opthamlic artery&quot;</span><span class="p">)</span>
+        <span class="n">patch_eye</span> <span class="o">=</span> <span class="n">clip_eyeline</span><span class="p">(</span><span class="n">eyeline</span><span class="p">,</span> <span class="n">clipping_points</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">clip_ID</span><span class="p">)</span>
+
+    
+    <span class="c1"># Get clipped curve </span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Clipping centerlines.&quot;</span><span class="p">)</span>
+    <span class="n">centerline_remaining</span> <span class="o">=</span> <span class="n">CreateParentArteryPatches</span><span class="p">(</span><span class="n">centerlines_in_order</span><span class="p">,</span> <span class="n">vtk_clipping_points</span><span class="p">,</span> <span class="n">siphon</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">centerline_siphon</span> <span class="o">=</span> <span class="n">extract_single_line</span><span class="p">(</span><span class="n">centerlines_in_order</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">startID</span><span class="o">=</span><span class="n">ID1</span><span class="p">,</span> <span class="n">endID</span><span class="o">=</span><span class="n">ID2</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">eye</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="n">eyeline_end</span> <span class="o">=</span> <span class="n">extract_single_line</span><span class="p">(</span><span class="n">patch_eye</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">centerline_siphon</span> <span class="o">=</span> <span class="n">merge_data</span><span class="p">([</span><span class="n">centerline_siphon</span><span class="p">,</span> <span class="n">eyeline_end</span><span class="p">])</span>
+
+    <span class="c1"># Find ID of middle pooint:</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Finding points to spline through.&quot;</span><span class="p">)</span>
+    <span class="n">line</span> <span class="o">=</span> <span class="n">extract_single_line</span><span class="p">(</span><span class="n">centerlines_in_order</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">loc</span> <span class="o">=</span> <span class="n">get_locator</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+    <span class="n">ID1</span> <span class="o">=</span> <span class="n">loc</span><span class="o">.</span><span class="n">FindClosestPoint</span><span class="p">(</span><span class="n">p1</span><span class="p">)</span>
+
+    <span class="n">direction</span> <span class="o">=</span> <span class="s2">&quot;vertical&quot;</span>
+    <span class="n">middle_points</span><span class="p">,</span> <span class="n">middleIds</span><span class="p">,</span> <span class="n">dx</span> <span class="o">=</span> <span class="n">get_spline_points</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">vtk_clipping_points</span><span class="p">)</span>
+
+    <span class="c1"># Iterate over points P from Voronoi diagram,</span>
+    <span class="c1"># and move them </span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Adjust voronoi diagram&quot;</span><span class="p">)</span>
+    <span class="n">voronoi_siphon</span> <span class="o">=</span>  <span class="n">move_voronoi_vertically</span><span class="p">(</span><span class="n">voronoi_siphon</span><span class="p">,</span><span class="n">centerline_siphon</span><span class="p">,</span> <span class="n">ID1</span><span class="p">,</span>  <span class="n">clip_ID</span><span class="p">,</span> <span class="n">dx</span><span class="p">,</span>  <span class="n">eye</span><span class="p">)</span>
+    <span class="n">newVoronoi</span> <span class="o">=</span> <span class="n">merge_data</span><span class="p">([</span><span class="n">voronoi_remaining</span><span class="p">,</span> <span class="n">voronoi_siphon</span><span class="p">])</span> 
+
+    <span class="c1"># Move centerline manually for postprocessing  </span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Adjusting line manually&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">eye</span><span class="p">:</span>
+        <span class="n">newpoints</span> <span class="o">=</span> <span class="n">oldpoints</span><span class="p">[:</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">oldpoints</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">newpoints</span> <span class="o">=</span> <span class="n">oldpoints</span>
+    <span class="n">centerline_siphon_new</span> <span class="o">=</span> <span class="n">move_line_vertically</span><span class="p">(</span><span class="n">centerline_siphon</span><span class="p">,</span> <span class="n">dx</span><span class="p">,</span> <span class="n">ID1</span><span class="p">,</span> <span class="n">clip_ID</span><span class="p">,</span> <span class="n">eye</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">eye</span><span class="p">:</span>
+        <span class="n">newpoints</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">centerline_siphon_new</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">centerline_siphon_new</span><span class="o">.</span><span class="n">GetNumberOfCells</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+
+    <span class="c1"># Write a new surface from the new voronoi diagram</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Writing new surface&quot;</span><span class="p">)</span>
+    <span class="n">new_surface</span> <span class="o">=</span> <span class="n">create_new_surface</span><span class="p">(</span><span class="n">newVoronoi</span><span class="p">)</span>
+    <span class="n">write_polydata</span><span class="p">(</span><span class="n">new_surface</span><span class="p">,</span> <span class="n">model_new_surface</span><span class="p">)</span>
+
+    <span class="k">print</span> <span class="s2">&quot;Creating new_centerline_complete.vtp of vertically moved model&quot;</span></div>
+    <span class="c1">#new_centerline = make_centerline(model_new_surface, new_centerlines_path, smooth=False, resampling=False, newpoints=newpoints, recompute=True)</span>
+    <span class="c1">#write_polydata(new_centerline, new_centerlines_path) </span>
+
+
+<div class="viewcode-block" id="clip_eyeline"><a class="viewcode-back" href="../scripts.html#move_siphon.clip_eyeline">[docs]</a><span class="k">def</span> <span class="nf">clip_eyeline</span><span class="p">(</span><span class="n">eyeline</span><span class="p">,</span> <span class="n">clip_start_point</span><span class="p">,</span> <span class="n">clip_end_ID</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Clip the opthamlic artery if present.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        eyeline (vtkPolyData): Line representing the opthalmic artery centerline.</span>
+<span class="sd">        clip_star_point (tuple): Point at entrance of opthalmic artery.</span>
+<span class="sd">        cip_end_ID (int): ID of point at end of opthalmic artery.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        patch_eye (vtkPolyData): Voronoi diagram representing opthalmic artery.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">points</span> <span class="o">=</span> <span class="p">[</span><span class="n">clip_start_point</span><span class="p">,</span> <span class="n">eyeline</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">clip_end_ID</span><span class="p">)]</span>
+    <span class="n">eye_points</span> <span class="o">=</span> <span class="n">vtk</span><span class="o">.</span><span class="n">vtkPoints</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">points</span><span class="p">:</span>
+        <span class="n">eye_points</span><span class="o">.</span><span class="n">InsertNextPoint</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
+    <span class="n">patch_eye</span> <span class="o">=</span> <span class="n">CreateParentArteryPatches</span><span class="p">(</span><span class="n">eyeline</span><span class="p">,</span> <span class="n">eye_points</span><span class="p">,</span> <span class="n">siphon</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span> 
+    <span class="k">return</span> <span class="n">patch_eye</span></div>
+
+<div class="viewcode-block" id="move_voronoi_horizontally"><a class="viewcode-back" href="../scripts.html#move_siphon.move_voronoi_horizontally">[docs]</a><span class="k">def</span> <span class="nf">move_voronoi_horizontally</span><span class="p">(</span><span class="n">dx_p1</span><span class="p">,</span> <span class="n">dx_p2</span><span class="p">,</span> <span class="n">voronoi_clipped</span><span class="p">,</span> <span class="n">centerline_clipped</span><span class="p">,</span> <span class="n">ID1</span><span class="p">,</span><span class="n">ID2</span><span class="p">,</span> <span class="n">clip_ID</span><span class="p">,</span> <span class="n">clip</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">eye</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>   
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Iterate through voronoi diagram and move based on a profile</span>
+<span class="sd">    for horizontal movement. Includes special treatment of </span>
+<span class="sd">    opthalmic artery if present. </span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        dx_p1 (ndarray): Direction to move upstream.</span>
+<span class="sd">        dx_p2 (ndarray): Direction to move downstream.</span>
+<span class="sd">        voronoi_clipped (vtkPolyData): Voronoi diagram to be moved. </span>
+<span class="sd">        centerline_clipped (vtkPolyData): Centerline corresponding voronoi diagram. </span>
+<span class="sd">        ID1 (int): Index of first clipping point.</span>
+<span class="sd">        ID2 (int): Index of second clipping point.</span>
+<span class="sd">        clip_ID (int): Index where opthamlic artery is located (if present)</span>
+<span class="sd">        clip (bool): Determines which part of geometry is being moved, True if siphon. </span>
+<span class="sd">        eye (bool): Determines presence of opthamlic artery.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        newDataSet (vtkPolyData): Manipulated Voronoi diagram.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">centerline_loc</span> <span class="o">=</span> <span class="n">get_locator</span><span class="p">(</span><span class="n">centerline_clipped</span><span class="p">)</span>
+    <span class="n">newDataSet</span> <span class="o">=</span> <span class="n">vtk</span><span class="o">.</span><span class="n">vtkPolyData</span><span class="p">()</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="n">vtk</span><span class="o">.</span><span class="n">vtkPoints</span><span class="p">()</span>
+    <span class="n">verts</span> <span class="o">=</span> <span class="n">vtk</span><span class="o">.</span><span class="n">vtkCellArray</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">clip</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="c1"># Find boundaries</span>
+        <span class="n">idmid_0</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">ID1</span> <span class="o">+</span> <span class="n">ID2</span><span class="p">)</span><span class="o">/</span><span class="mf">2.</span><span class="p">)</span>
+        <span class="n">ID1_0</span> <span class="o">=</span> <span class="n">ID1</span>
+        <span class="n">ID1</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">eye</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="n">l1</span> <span class="o">=</span> <span class="n">extract_single_line</span><span class="p">(</span><span class="n">centerline_clipped</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">ID2</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">get_curvilinear_coordinate</span><span class="p">(</span><span class="n">l1</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ID2</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">get_curvilinear_coordinate</span><span class="p">(</span><span class="n">centerline_clipped</span><span class="p">))</span>
+        <span class="n">idmid</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span> <span class="p">(</span><span class="n">ID1</span> <span class="o">+</span> <span class="n">ID2</span><span class="p">)</span><span class="o">/</span><span class="mf">2.</span><span class="p">)</span>
+
+        <span class="c1"># Manpipulation of voronoi diagram..</span>
+        <span class="k">if</span> <span class="n">eye</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="c1"># ..with opthalmic artery</span>
+            <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">voronoi_clipped</span><span class="o">.</span><span class="n">GetNumberOfPoints</span><span class="p">()):</span>
+                <span class="n">cl_id</span> <span class="o">=</span> <span class="n">centerline_loc</span><span class="o">.</span><span class="n">FindClosestPoint</span><span class="p">(</span><span class="n">voronoi_clipped</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
+
+                <span class="k">if</span> <span class="n">cl_id</span> <span class="o">&lt;</span> <span class="n">idmid</span><span class="p">:</span>
+                    <span class="n">dist</span> <span class="o">=</span> <span class="n">dx_p1</span> <span class="o">*</span> <span class="p">(</span><span class="n">idmid</span><span class="o">**</span><span class="mi">2</span><span class="o">-</span><span class="n">cl_id</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">idmid</span><span class="o">**</span><span class="mi">2</span><span class="o">-</span><span class="n">ID1</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">cl_id</span> <span class="o">&lt;=</span> <span class="p">(</span><span class="n">ID2</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+                        <span class="n">dist</span> <span class="o">=</span> <span class="o">-</span><span class="n">dx_p1</span> <span class="o">*</span> <span class="p">(</span><span class="n">cl_id</span><span class="o">-</span><span class="n">idmid</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">ID2</span><span class="o">-</span><span class="n">idmid</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span> 
+                        <span class="c1"># Move opthalmic artery based on its discovery ID</span>
+                        <span class="k">if</span> <span class="n">clip_ID</span> <span class="o">&lt;</span> <span class="n">idmid_0</span><span class="p">:</span>
+                            <span class="n">cl_id</span> <span class="o">=</span>  <span class="n">clip_ID</span> <span class="o">-</span> <span class="n">ID1_0</span>  
+                            <span class="n">dist</span> <span class="o">=</span> <span class="n">dx_p1</span> <span class="o">*</span> <span class="p">(</span><span class="n">idmid</span><span class="o">**</span><span class="mi">2</span><span class="o">-</span><span class="n">cl_id</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">idmid</span><span class="o">**</span><span class="mi">2</span><span class="o">-</span><span class="n">ID1</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">cl_id</span> <span class="o">=</span> <span class="n">clip_ID</span> <span class="o">-</span> <span class="n">ID1_0</span> 
+                            <span class="n">dist</span> <span class="o">=</span> <span class="o">-</span><span class="n">dx_p1</span> <span class="o">*</span> <span class="p">(</span><span class="n">cl_id</span><span class="o">-</span><span class="n">idmid</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">ID2</span><span class="o">-</span><span class="n">idmid</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+
+                <span class="n">points</span><span class="o">.</span><span class="n">InsertNextPoint</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">voronoi_clipped</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">p</span><span class="p">))</span> <span class="o">+</span> <span class="n">dist</span><span class="p">)</span>
+                <span class="n">verts</span><span class="o">.</span><span class="n">InsertNextCell</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">verts</span><span class="o">.</span><span class="n">InsertCellPoint</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># ..without opthalmic artery</span>
+            <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">voronoi_clipped</span><span class="o">.</span><span class="n">GetNumberOfPoints</span><span class="p">()):</span>
+                <span class="n">cl_id</span> <span class="o">=</span> <span class="n">centerline_loc</span><span class="o">.</span><span class="n">FindClosestPoint</span><span class="p">(</span><span class="n">voronoi_clipped</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
+
+                <span class="k">if</span> <span class="n">cl_id</span> <span class="o">&lt;</span> <span class="n">idmid</span><span class="p">:</span>
+                    <span class="n">dist</span> <span class="o">=</span> <span class="n">dx_p1</span> <span class="o">*</span> <span class="p">(</span><span class="n">idmid</span><span class="o">**</span><span class="mi">2</span><span class="o">-</span><span class="n">cl_id</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">idmid</span><span class="o">**</span><span class="mi">2</span><span class="o">-</span><span class="n">ID1</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">dist</span> <span class="o">=</span> <span class="o">-</span><span class="n">dx_p1</span> <span class="o">*</span> <span class="p">(</span><span class="n">cl_id</span><span class="o">-</span><span class="n">idmid</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">ID2</span><span class="o">-</span><span class="n">idmid</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+
+                <span class="n">points</span><span class="o">.</span><span class="n">InsertNextPoint</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">voronoi_clipped</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">p</span><span class="p">))</span> <span class="o">+</span> <span class="n">dist</span><span class="p">)</span>
+                <span class="n">verts</span><span class="o">.</span><span class="n">InsertNextCell</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">verts</span><span class="o">.</span><span class="n">InsertCellPoint</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Move reamining part of the voronoi diagram </span>
+        <span class="c1"># representing the geometry excluding the siphon to be moved </span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">voronoi_clipped</span><span class="o">.</span><span class="n">GetNumberOfPoints</span><span class="p">()</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">cl_id</span> <span class="o">=</span> <span class="n">centerline_loc</span><span class="o">.</span><span class="n">FindClosestPoint</span><span class="p">(</span><span class="n">voronoi_clipped</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="n">cl_id</span> <span class="o">&lt;=</span> <span class="n">ID1</span><span class="p">:</span>
+                <span class="n">dist</span> <span class="o">=</span> <span class="n">dx_p1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">dist</span> <span class="o">=</span>  <span class="o">-</span><span class="n">dx_p1</span>
+            
+            <span class="n">points</span><span class="o">.</span><span class="n">InsertNextPoint</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">voronoi_clipped</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">p</span><span class="p">))</span> <span class="o">+</span> <span class="n">dist</span><span class="p">)</span>
+            <span class="n">verts</span><span class="o">.</span><span class="n">InsertNextCell</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">verts</span><span class="o">.</span><span class="n">InsertCellPoint</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
+    <span class="c1"># Insert points and create new voronoi diagram</span>
+    <span class="n">newDataSet</span><span class="o">.</span><span class="n">SetPoints</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
+    <span class="n">newDataSet</span><span class="o">.</span><span class="n">SetVerts</span><span class="p">(</span><span class="n">verts</span><span class="p">)</span>
+    <span class="n">newDataSet</span><span class="o">.</span><span class="n">GetPointData</span><span class="p">()</span><span class="o">.</span><span class="n">AddArray</span><span class="p">(</span><span class="n">voronoi_clipped</span><span class="o">.</span><span class="n">GetPointData</span><span class="p">()</span><span class="o">.</span><span class="n">GetArray</span><span class="p">(</span><span class="n">radiusArrayName</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">newDataSet</span></div>
+
+
+<div class="viewcode-block" id="move_voronoi_vertically"><a class="viewcode-back" href="../scripts.html#move_siphon.move_voronoi_vertically">[docs]</a><span class="k">def</span> <span class="nf">move_voronoi_vertically</span><span class="p">(</span><span class="n">voronoi_clipped</span><span class="p">,</span> <span class="n">centerline_clipped</span><span class="p">,</span> <span class="n">ID1_0</span><span class="p">,</span> <span class="n">clip_ID</span><span class="p">,</span> <span class="n">dx</span><span class="p">,</span><span class="n">eye</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Iterate through voronoi diagram and move based on a profile</span>
+<span class="sd">    for vertical movement. Includes special treatment of </span>
+<span class="sd">    opthalmic artery if present. </span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        voronoi_clipped (vtkPolyData): Voronoi diagram to be moved. </span>
+<span class="sd">        centerline_clipped (vtkPolyData): Centerline corresponding voronoi diagram. </span>
+<span class="sd">        ID1 (int): Index of first clipping point.</span>
+<span class="sd">        clip_ID (int): Index where opthamlic artery is located (if present)</span>
+<span class="sd">        dx (ndarray): Direction to move.</span>
+<span class="sd">        eye (bool): Determines presence of opthamlic artery.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        newDataSet (vtkPolyData): Manipulated Voronoi diagram.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">centerline_loc</span> <span class="o">=</span> <span class="n">get_locator</span><span class="p">(</span><span class="n">centerline_clipped</span><span class="p">)</span>
+    <span class="n">newDataSet</span> <span class="o">=</span> <span class="n">vtk</span><span class="o">.</span><span class="n">vtkPolyData</span><span class="p">()</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="n">vtk</span><span class="o">.</span><span class="n">vtkPoints</span><span class="p">()</span>
+    <span class="n">verts</span> <span class="o">=</span> <span class="n">vtk</span><span class="o">.</span><span class="n">vtkCellArray</span><span class="p">()</span>
+    
+    <span class="c1"># Manpipulation of voronoi diagram..</span>
+    <span class="k">if</span> <span class="n">eye</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="c1"># ..with opthalmic artery </span>
+        <span class="n">ID1</span> <span class="o">=</span> <span class="n">I1</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">l1</span> <span class="o">=</span> <span class="n">extract_single_line</span><span class="p">(</span><span class="n">centerline_clipped</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">ID2</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">get_curvilinear_coordinate</span><span class="p">(</span><span class="n">l1</span><span class="p">))</span> 
+        <span class="n">I2</span> <span class="o">=</span> <span class="n">ID2</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="n">IDmid</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span> <span class="p">(</span><span class="n">ID1</span> <span class="o">+</span> <span class="n">ID2</span><span class="p">)</span><span class="o">/</span><span class="mf">2.</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">voronoi_clipped</span><span class="o">.</span><span class="n">GetNumberOfPoints</span><span class="p">()):</span>
+            <span class="n">cl_id</span> <span class="o">=</span> <span class="n">centerline_loc</span><span class="o">.</span><span class="n">FindClosestPoint</span><span class="p">(</span><span class="n">voronoi_clipped</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="n">cl_id</span> <span class="o">&lt;=</span> <span class="n">I2</span><span class="p">:</span>
+                <span class="n">dist</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">dx</span> <span class="o">*</span> <span class="p">(</span><span class="n">cl_id</span> <span class="o">-</span> <span class="n">I1</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">I2</span> <span class="o">-</span> <span class="n">cl_id</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span> <span class="n">I2</span> <span class="o">-</span> <span class="n">I1</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">cl_id</span> <span class="o">=</span> <span class="n">clip_ID</span> <span class="o">-</span> <span class="n">ID1_0</span> 
+                <span class="n">dist</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">dx</span> <span class="o">*</span> <span class="p">(</span><span class="n">cl_id</span> <span class="o">-</span> <span class="n">ID1</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">ID2</span> <span class="o">-</span> <span class="n">cl_id</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span> <span class="n">ID2</span> <span class="o">-</span> <span class="n">ID1</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+
+            <span class="n">points</span><span class="o">.</span><span class="n">InsertNextPoint</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">voronoi_clipped</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">p</span><span class="p">))</span> <span class="o">+</span> <span class="n">dist</span><span class="p">)</span>
+            <span class="n">verts</span><span class="o">.</span><span class="n">InsertNextCell</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">verts</span><span class="o">.</span><span class="n">InsertCellPoint</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># ..witout opthalmic artery </span>
+        <span class="n">ID1</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">ID2</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">get_curvilinear_coordinate</span><span class="p">(</span><span class="n">centerline_clipped</span><span class="p">))</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="n">IDmid</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span> <span class="p">(</span><span class="n">ID1</span> <span class="o">+</span> <span class="n">ID2</span><span class="p">)</span><span class="o">/</span><span class="mf">2.</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">voronoi_clipped</span><span class="o">.</span><span class="n">GetNumberOfPoints</span><span class="p">()):</span>
+            <span class="n">cl_id</span> <span class="o">=</span> <span class="n">centerline_loc</span><span class="o">.</span><span class="n">FindClosestPoint</span><span class="p">(</span><span class="n">voronoi_clipped</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
+
+            <span class="n">dist</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">dx</span> <span class="o">*</span> <span class="p">(</span><span class="n">cl_id</span> <span class="o">-</span> <span class="n">ID1</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">ID2</span> <span class="o">-</span> <span class="n">cl_id</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span> <span class="n">ID2</span> <span class="o">-</span> <span class="n">ID1</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+
+            <span class="n">points</span><span class="o">.</span><span class="n">InsertNextPoint</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">voronoi_clipped</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">p</span><span class="p">))</span> <span class="o">+</span> <span class="n">dist</span><span class="p">)</span>
+            <span class="n">verts</span><span class="o">.</span><span class="n">InsertNextCell</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">verts</span><span class="o">.</span><span class="n">InsertCellPoint</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
+    <span class="c1"># Insert points and create new voronoi diagram</span>
+    <span class="n">newDataSet</span><span class="o">.</span><span class="n">SetPoints</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
+    <span class="n">newDataSet</span><span class="o">.</span><span class="n">SetVerts</span><span class="p">(</span><span class="n">verts</span><span class="p">)</span>
+    <span class="n">newDataSet</span><span class="o">.</span><span class="n">GetPointData</span><span class="p">()</span><span class="o">.</span><span class="n">AddArray</span><span class="p">(</span><span class="n">voronoi_clipped</span><span class="o">.</span><span class="n">GetPointData</span><span class="p">()</span><span class="o">.</span><span class="n">GetArray</span><span class="p">(</span><span class="n">radiusArrayName</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">newDataSet</span></div>
+
+
+<span class="k">if</span>  <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">smooth</span><span class="p">,</span> <span class="n">basedir</span><span class="p">,</span> <span class="n">case</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span> <span class="o">=</span> <span class="n">read_command_line</span><span class="p">()</span>
+    <span class="n">folders</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">([</span><span class="n">folder</span> <span class="k">for</span> <span class="n">folder</span> <span class="ow">in</span> <span class="n">listdir</span><span class="p">(</span><span class="n">basedir</span><span class="p">)</span> <span class="k">if</span> <span class="n">folder</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;P0&quot;</span><span class="p">]])</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;surface&quot;</span>
+    <span class="n">point_path</span> <span class="o">=</span> <span class="s2">&quot;carotid_siphon_points.particles&quot;</span>
+    
+    <span class="k">if</span> <span class="n">case</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="s2">&quot;==== Working on case </span><span class="si">%s</span><span class="s2"> ====&quot;</span> <span class="o">%</span> <span class="n">case</span><span class="p">)</span>
+        <span class="n">dirpath</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">basedir</span><span class="p">,</span> <span class="n">case</span><span class="p">)</span>
+        <span class="n">move_vessel</span><span class="p">(</span><span class="n">dirpath</span><span class="p">,</span><span class="n">smooth</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">point_path</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">folder</span> <span class="ow">in</span> <span class="n">folders</span><span class="p">:</span> 
+            <span class="k">print</span><span class="p">(</span><span class="s2">&quot;==== Working on case </span><span class="si">%s</span><span class="s2"> ====&quot;</span> <span class="o">%</span> <span class="n">folder</span><span class="p">)</span>
+            <span class="n">dirpath</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">basedir</span><span class="p">,</span><span class="n">folder</span><span class="p">)</span>
+            <span class="n">move_vessel</span><span class="p">(</span><span class="n">dirpath</span><span class="p">,</span><span class="n">smooth</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">point_path</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">)</span>
+
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Aslak Bergersen &amp; Henrik Kjeldsberg.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

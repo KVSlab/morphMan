@@ -1,0 +1,11 @@
+"""A pypi demonstration vehicle.
+
+.. moduleauthor:: Andrew Carter <andrew@invalid.com>
+
+"""
+
+import test_rstInPy
+
+
+def start():
+    "This starts this module running ..."

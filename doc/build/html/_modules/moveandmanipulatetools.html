@@ -1,0 +1,894 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>moveandmanipulatetools &mdash; VMTK TOOLS 0.1 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="VMTK TOOLS 0.1 documentation" href="../index.html"/>
+        <link rel="up" title="Module code" href="index.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../vmtktools_docs.html" class="icon icon-home"> VMTK TOOLS
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Using VMTK Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../scripts.html">Documentation for the Python Scripts</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../vmtktools_docs.html">VMTK TOOLS</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../vmtktools_docs.html">Docs</a> &raquo;</li>
+      
+          <li><a href="index.html">Module code</a> &raquo;</li>
+      
+    <li>moveandmanipulatetools</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for moveandmanipulatetools</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">common</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">argparse</span> <span class="kn">import</span> <span class="n">ArgumentParser</span>
+<span class="kn">from</span> <span class="nn">os</span> <span class="kn">import</span> <span class="n">path</span><span class="p">,</span> <span class="n">listdir</span>
+
+<span class="kn">import</span> <span class="nn">matlab.engine</span>
+<span class="kn">import</span> <span class="nn">operator</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">numpy.linalg</span> <span class="kn">as</span> <span class="nn">la</span>
+<span class="kn">from</span> <span class="nn">scipy.signal</span> <span class="kn">import</span> <span class="n">argrelextrema</span><span class="p">,</span> <span class="n">resample</span>
+<span class="kn">from</span> <span class="nn">scipy.ndimage.filters</span> <span class="kn">import</span> <span class="n">gaussian_filter</span> <span class="k">as</span> <span class="n">gauss</span>
+
+<span class="c1"># Local import</span>
+<span class="kn">from</span> <span class="nn">patchandinterpolatecenterlines</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">clipvoronoidiagram</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">paralleltransportvoronoidiagram</span> <span class="kn">import</span> <span class="o">*</span>
+
+
+<div class="viewcode-block" id="get_clipping_points"><a class="viewcode-back" href="../scripts.html#moveandmanipulatetools.get_clipping_points">[docs]</a><span class="k">def</span> <span class="nf">get_clipping_points</span><span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Read clipping points from file</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        dirpath (str): Location of directory.</span>
+<span class="sd">        filename (str): Name of clipping point file.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        clipping_points (ndarray): Clipping points. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">particles</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+    <span class="n">all_points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">particles</span><span class="p">)</span>
+    <span class="n">clipping_points</span> <span class="o">=</span> <span class="n">all_points</span>
+    <span class="k">return</span> <span class="n">clipping_points</span></div>
+
+
+<div class="viewcode-block" id="sort_centerlines"><a class="viewcode-back" href="../scripts.html#moveandmanipulatetools.sort_centerlines">[docs]</a><span class="k">def</span> <span class="nf">sort_centerlines</span><span class="p">(</span><span class="n">centerlines_complete</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Sort the complete set of centerlines </span>
+<span class="sd">    by placing the longest centerline first. </span>
+
+<span class="sd">    Args: </span>
+<span class="sd">        centerlines_complete (vtkPolyData): Complete set of centerlines.</span>
+
+<span class="sd">    Returns: </span>
+<span class="sd">        centerlines_in_order (vtkPolyData): Comlete set of sorted centerlines. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">centerlines_complete</span><span class="o">.</span><span class="n">GetNumberOfCells</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">extract_single_line</span><span class="p">(</span><span class="n">centerlines_complete</span><span class="p">,</span> <span class="n">i</span><span class="p">))</span>
+
+    <span class="n">longest</span> <span class="o">=</span> <span class="p">[</span><span class="n">lines</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+    <span class="n">lenlong</span> <span class="o">=</span> <span class="n">get_curvilinear_coordinate</span><span class="p">(</span><span class="n">longest</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">n</span><span class="p">):</span>
+        <span class="n">tmplong</span> <span class="o">=</span> <span class="n">get_curvilinear_coordinate</span><span class="p">(</span><span class="n">lines</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tmplong</span><span class="p">)</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">lenlong</span><span class="p">):</span>
+            <span class="n">lenlong</span> <span class="o">=</span> <span class="n">tmplong</span>
+            <span class="n">longest</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">lines</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span> 
+            <span class="n">longest</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">lines</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+    <span class="n">centerlines_in_order</span> <span class="o">=</span> <span class="n">merge_data</span><span class="p">(</span><span class="n">longest</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">centerlines_in_order</span></div>
+
+
+<div class="viewcode-block" id="connect_line"><a class="viewcode-back" href="../scripts.html#moveandmanipulatetools.connect_line">[docs]</a><span class="k">def</span> <span class="nf">connect_line</span><span class="p">(</span><span class="n">line</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create edges between points defining a</span>
+<span class="sd">    centerline, used to construct a </span>
+<span class="sd">    discrete line in 3D.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        line (vtkPoints): Points defining a centerline.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        line (vtkPolyData): Discrete centerline data. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">pts</span> <span class="o">=</span> <span class="n">vtk</span><span class="o">.</span><span class="n">vtkPoints</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">((</span><span class="n">line</span><span class="o">.</span><span class="n">GetNumberOfCells</span><span class="p">())):</span>
+        <span class="n">pts</span><span class="o">.</span><span class="n">InsertNextPoint</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+
+    <span class="n">lines</span> <span class="o">=</span> <span class="n">vtk</span><span class="o">.</span><span class="n">vtkCellArray</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">((</span><span class="n">line</span><span class="o">.</span><span class="n">GetNumberOfCells</span><span class="p">())</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">newline</span> <span class="o">=</span> <span class="n">vtk</span><span class="o">.</span><span class="n">vtkLine</span><span class="p">()</span>
+        <span class="n">newline</span><span class="o">.</span><span class="n">GetPointIds</span><span class="p">()</span><span class="o">.</span><span class="n">SetId</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+        <span class="n">newline</span><span class="o">.</span><span class="n">GetPointIds</span><span class="p">()</span><span class="o">.</span><span class="n">SetId</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">InsertNextCell</span><span class="p">(</span><span class="n">newline</span><span class="p">)</span>
+
+    <span class="n">line</span> <span class="o">=</span> <span class="n">vtk</span><span class="o">.</span><span class="n">vtkPolyData</span><span class="p">()</span>
+    <span class="n">line</span><span class="o">.</span><span class="n">SetPoints</span><span class="p">(</span><span class="n">pts</span><span class="p">)</span>
+    <span class="n">line</span><span class="o">.</span><span class="n">SetLines</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">line</span></div>
+
+
+<div class="viewcode-block" id="move_line_horizontally"><a class="viewcode-back" href="../scripts.html#moveandmanipulatetools.move_line_horizontally">[docs]</a><span class="k">def</span> <span class="nf">move_line_horizontally</span><span class="p">(</span><span class="n">patch_cl</span><span class="p">,</span> <span class="n">ID1</span><span class="p">,</span> <span class="n">ID2</span><span class="p">,</span> <span class="n">dx_p1</span><span class="p">,</span> <span class="n">clip</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">eye</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Iterate through centerline and move line based on a profile</span>
+<span class="sd">    for horizontal movement. Includes special treatment of </span>
+<span class="sd">    opthalmic artery if present. </span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        patch_cl (vtkPolyData): Centerline data. </span>
+<span class="sd">        ID1 (int): Index of first clipping point.</span>
+<span class="sd">        ID2 (int): Index of second clipping point.</span>
+<span class="sd">        dx_p1 (ndarray): Direction to move upstream.</span>
+<span class="sd">        clip (bool): Determines which part of geometry is being moved, True if siphon. </span>
+<span class="sd">        eye (bool): Determines presence of opthamlic artery.</span>
+<span class="sd">        side (str): Determines location relative to the middle of the siphon.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        newline (vtkPolyData): Manipulated centerline.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">centerline_loc</span> <span class="o">=</span> <span class="n">get_locator</span><span class="p">(</span><span class="n">patch_cl</span><span class="p">)</span>
+    <span class="n">newline</span> <span class="o">=</span> <span class="n">vtk</span><span class="o">.</span><span class="n">vtkPolyData</span><span class="p">()</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="n">vtk</span><span class="o">.</span><span class="n">vtkPoints</span><span class="p">()</span>
+    <span class="n">verts</span> <span class="o">=</span> <span class="n">vtk</span><span class="o">.</span><span class="n">vtkCellArray</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">clip</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">eye</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="n">l1</span> <span class="o">=</span> <span class="n">extract_single_line</span><span class="p">(</span><span class="n">patch_cl</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">l2</span> <span class="o">=</span> <span class="n">extract_single_line</span><span class="p">(</span><span class="n">patch_cl</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">l3</span> <span class="o">=</span> <span class="n">extract_single_line</span><span class="p">(</span><span class="n">patch_cl</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">test_cl</span> <span class="o">=</span> <span class="n">merge_data</span><span class="p">([</span><span class="n">l1</span><span class="p">,</span><span class="n">l2</span><span class="p">,</span><span class="n">l3</span><span class="p">])</span>
+
+            <span class="n">ID1</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">ID2</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">get_curvilinear_coordinate</span><span class="p">(</span><span class="n">test_cl</span><span class="p">))</span>
+            <span class="n">idmid</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span> <span class="p">(</span><span class="n">ID1</span> <span class="o">+</span> <span class="n">ID2</span><span class="p">)</span><span class="o">/</span><span class="mf">2.</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ID1</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">ID2</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">get_curvilinear_coordinate</span><span class="p">(</span><span class="n">patch_cl</span><span class="p">))</span>
+            <span class="n">idmid</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span> <span class="p">(</span><span class="n">ID1</span> <span class="o">+</span> <span class="n">ID2</span><span class="p">)</span><span class="o">/</span><span class="mf">2.</span><span class="p">)</span>
+        
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">patch_cl</span><span class="o">.</span><span class="n">GetNumberOfPoints</span><span class="p">()):</span>
+            <span class="n">cl_id</span> <span class="o">=</span> <span class="n">centerline_loc</span><span class="o">.</span><span class="n">FindClosestPoint</span><span class="p">(</span><span class="n">patch_cl</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="n">cl_id</span> <span class="o">&lt;</span> <span class="n">idmid</span><span class="p">:</span>
+                <span class="n">dist</span> <span class="o">=</span> <span class="n">dx_p1</span> <span class="o">*</span> <span class="p">(</span><span class="n">idmid</span><span class="o">**</span><span class="mi">2</span><span class="o">-</span><span class="n">cl_id</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">idmid</span><span class="o">**</span><span class="mi">2</span><span class="o">-</span><span class="n">ID1</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">cl_id</span> <span class="o">&lt;=</span> <span class="p">(</span><span class="n">ID2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+                    <span class="n">dist</span> <span class="o">=</span> <span class="o">-</span><span class="n">dx_p1</span> <span class="o">*</span> <span class="p">(</span><span class="n">cl_id</span><span class="o">-</span><span class="n">idmid</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">ID2</span><span class="o">-</span><span class="n">idmid</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span> 
+                    <span class="n">locator</span> <span class="o">=</span> <span class="n">get_locator</span><span class="p">(</span><span class="n">test_cl</span><span class="p">)</span>
+                    <span class="n">pp</span> <span class="o">=</span> <span class="n">patch_cl</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">cl_id</span><span class="p">)</span>
+                    <span class="n">id_main</span> <span class="o">=</span> <span class="n">locator</span><span class="o">.</span><span class="n">FindClosestPoint</span><span class="p">(</span><span class="n">pp</span><span class="p">)</span>
+                    <span class="n">dist</span> <span class="o">=</span> <span class="o">-</span><span class="n">dx_p1</span> <span class="o">*</span> <span class="p">(</span><span class="n">id_main</span><span class="o">-</span><span class="n">idmid</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">id_main</span><span class="o">-</span><span class="n">idmid</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+
+            <span class="n">patch_point</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">patch_cl</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="n">la</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">patch_point</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.1</span><span class="p">:</span>
+                <span class="n">points</span><span class="o">.</span><span class="n">InsertNextPoint</span><span class="p">(</span><span class="n">patch_point</span> <span class="o">+</span> <span class="n">dist</span><span class="p">)</span>
+                <span class="n">verts</span><span class="o">.</span><span class="n">InsertNextCell</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">verts</span><span class="o">.</span><span class="n">InsertCellPoint</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">patch_cl</span><span class="o">.</span><span class="n">GetNumberOfPoints</span><span class="p">()):</span>
+            <span class="n">cl_id</span> <span class="o">=</span> <span class="n">centerline_loc</span><span class="o">.</span><span class="n">FindClosestPoint</span><span class="p">(</span><span class="n">patch_cl</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="n">side</span> <span class="o">==</span> <span class="s2">&quot;right&quot;</span><span class="p">:</span>
+                <span class="n">dist</span> <span class="o">=</span> <span class="o">-</span><span class="n">dx_p1</span>
+            <span class="k">elif</span> <span class="n">side</span> <span class="o">==</span> <span class="s2">&quot;left&quot;</span><span class="p">:</span>
+                <span class="n">dist</span> <span class="o">=</span> <span class="n">dx_p1</span>
+
+            <span class="n">points</span><span class="o">.</span><span class="n">InsertNextPoint</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">patch_cl</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">p</span><span class="p">))</span> <span class="o">+</span> <span class="n">dist</span><span class="p">)</span>
+            <span class="n">verts</span><span class="o">.</span><span class="n">InsertNextCell</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">verts</span><span class="o">.</span><span class="n">InsertCellPoint</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
+    <span class="n">newline</span><span class="o">.</span><span class="n">SetPoints</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
+    <span class="n">newline</span><span class="o">.</span><span class="n">SetVerts</span><span class="p">(</span><span class="n">verts</span><span class="p">)</span>
+    <span class="n">newline</span><span class="o">.</span><span class="n">GetPointData</span><span class="p">()</span><span class="o">.</span><span class="n">AddArray</span><span class="p">(</span><span class="n">patch_cl</span><span class="o">.</span><span class="n">GetPointData</span><span class="p">()</span><span class="o">.</span><span class="n">GetArray</span><span class="p">(</span><span class="n">radiusArrayName</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">newline</span></div>
+
+<div class="viewcode-block" id="move_points_vertically"><a class="viewcode-back" href="../scripts.html#moveandmanipulatetools.move_points_vertically">[docs]</a><span class="k">def</span> <span class="nf">move_points_vertically</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">dx</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Iterate through centerline points and move line based on a profile</span>
+<span class="sd">    for vertical movement. </span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        line (vtkPolyData): Centerline data. </span>
+<span class="sd">        dx (ndarray): Direction to move centerline.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        newline (vtkPolyData): Manipulated centerline.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">centerline_loc</span> <span class="o">=</span> <span class="n">get_locator</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+
+    <span class="n">newline</span> <span class="o">=</span> <span class="n">vtk</span><span class="o">.</span><span class="n">vtkPolyData</span><span class="p">()</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="n">vtk</span><span class="o">.</span><span class="n">vtkPoints</span><span class="p">()</span>
+    <span class="n">verts</span> <span class="o">=</span> <span class="n">vtk</span><span class="o">.</span><span class="n">vtkCellArray</span><span class="p">()</span>
+
+    <span class="n">ID1</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">ID2</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">get_curvilinear_coordinate</span><span class="p">(</span><span class="n">line</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">GetNumberOfPoints</span><span class="p">()):</span>
+        <span class="n">cl_id</span> <span class="o">=</span> <span class="n">centerline_loc</span><span class="o">.</span><span class="n">FindClosestPoint</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
+
+        <span class="n">dist</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">dx</span> <span class="o">*</span> <span class="p">(</span><span class="n">cl_id</span> <span class="o">-</span> <span class="n">ID1</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">ID2</span> <span class="o">-</span> <span class="n">cl_id</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span> <span class="n">ID2</span> <span class="o">-</span> <span class="n">ID1</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+
+        <span class="n">points</span><span class="o">.</span><span class="n">InsertNextPoint</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">p</span><span class="p">))</span> <span class="o">+</span> <span class="n">dist</span><span class="p">)</span>
+        <span class="n">verts</span><span class="o">.</span><span class="n">InsertNextCell</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">verts</span><span class="o">.</span><span class="n">InsertCellPoint</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
+    <span class="n">newline</span><span class="o">.</span><span class="n">SetPoints</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
+    <span class="n">newline</span><span class="o">.</span><span class="n">SetVerts</span><span class="p">(</span><span class="n">verts</span><span class="p">)</span>
+    <span class="n">newline</span><span class="o">.</span><span class="n">GetPointData</span><span class="p">()</span><span class="o">.</span><span class="n">AddArray</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">GetPointData</span><span class="p">()</span><span class="o">.</span><span class="n">GetArray</span><span class="p">(</span><span class="n">radiusArrayName</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">newline</span></div>
+
+
+
+
+
+<div class="viewcode-block" id="move_line_vertically"><a class="viewcode-back" href="../scripts.html#moveandmanipulatetools.move_line_vertically">[docs]</a><span class="k">def</span> <span class="nf">move_line_vertically</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">dx</span><span class="p">,</span> <span class="n">ID1_0</span><span class="p">,</span> <span class="n">clip_ID</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">eye</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Iterate through centerline and move line based on a profile</span>
+<span class="sd">    for vertical movement. Includes special treatment of </span>
+<span class="sd">    opthalmic artery if present. </span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        line (vtkPolyData): Centerline data. </span>
+<span class="sd">        dx (ndarray): Direction to move vertically.</span>
+<span class="sd">        ID1_0 (int): Index of first clipping point.</span>
+<span class="sd">        clip_ID (int): Index of opthalmic artery entrance if present.</span>
+<span class="sd">        eye (bool): Determines presence of opthamlic artery.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        newline (vtkPolyData): Manipulated centerline.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">centerline_loc</span> <span class="o">=</span> <span class="n">get_locator</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+
+    <span class="n">newline</span> <span class="o">=</span> <span class="n">vtk</span><span class="o">.</span><span class="n">vtkPolyData</span><span class="p">()</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="n">vtk</span><span class="o">.</span><span class="n">vtkPoints</span><span class="p">()</span>
+    <span class="n">verts</span> <span class="o">=</span> <span class="n">vtk</span><span class="o">.</span><span class="n">vtkCellArray</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">eye</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="n">l1</span> <span class="o">=</span> <span class="n">extract_single_line</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">l2</span> <span class="o">=</span> <span class="n">extract_single_line</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">l3</span> <span class="o">=</span> <span class="n">extract_single_line</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">test_cl</span> <span class="o">=</span> <span class="n">merge_data</span><span class="p">([</span><span class="n">l1</span><span class="p">,</span><span class="n">l2</span><span class="p">,</span><span class="n">l3</span><span class="p">])</span>
+
+        <span class="n">ID1</span> <span class="o">=</span> <span class="n">I1</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">ID2</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">get_curvilinear_coordinate</span><span class="p">(</span><span class="n">test_cl</span><span class="p">))</span>
+        <span class="n">IDmid</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span> <span class="p">(</span><span class="n">ID1</span> <span class="o">+</span> <span class="n">ID2</span><span class="p">)</span><span class="o">/</span><span class="mf">2.</span><span class="p">)</span>
+        <span class="n">I2</span> <span class="o">=</span> <span class="n">ID2</span><span class="o">-</span><span class="mi">1</span> 
+
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">GetNumberOfPoints</span><span class="p">()):</span>
+            <span class="n">cl_id</span> <span class="o">=</span> <span class="n">centerline_loc</span><span class="o">.</span><span class="n">FindClosestPoint</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="n">cl_id</span> <span class="o">&lt;=</span> <span class="n">I2</span><span class="p">:</span>
+                <span class="n">dist</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">dx</span> <span class="o">*</span> <span class="p">(</span><span class="n">cl_id</span> <span class="o">-</span> <span class="n">I1</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">I2</span> <span class="o">-</span> <span class="n">cl_id</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span> <span class="n">I2</span> <span class="o">-</span> <span class="n">I1</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">cl_id</span> <span class="o">=</span> <span class="n">clip_ID</span> <span class="o">-</span> <span class="n">ID1_0</span> <span class="o">+</span> <span class="nb">int</span><span class="p">((</span><span class="n">ID2</span> <span class="o">-</span> <span class="p">(</span><span class="n">clip_ID</span> <span class="o">-</span> <span class="n">ID1_0</span><span class="p">)</span> <span class="p">)</span><span class="o">*</span><span class="mf">0.4</span><span class="p">)</span>
+                <span class="n">dist</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">dx</span> <span class="o">*</span> <span class="p">(</span><span class="n">cl_id</span> <span class="o">-</span> <span class="n">ID1</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">ID2</span> <span class="o">-</span> <span class="n">cl_id</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span> <span class="n">ID2</span> <span class="o">-</span> <span class="n">ID1</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+
+            <span class="n">points</span><span class="o">.</span><span class="n">InsertNextPoint</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">p</span><span class="p">))</span> <span class="o">+</span> <span class="n">dist</span><span class="p">)</span>
+            <span class="n">verts</span><span class="o">.</span><span class="n">InsertNextCell</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">verts</span><span class="o">.</span><span class="n">InsertCellPoint</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ID1</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">ID2</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">get_curvilinear_coordinate</span><span class="p">(</span><span class="n">line</span><span class="p">))</span>
+    
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">GetNumberOfPoints</span><span class="p">()):</span>
+            <span class="n">cl_id</span> <span class="o">=</span> <span class="n">centerline_loc</span><span class="o">.</span><span class="n">FindClosestPoint</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
+
+            <span class="n">dist</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">dx</span> <span class="o">*</span> <span class="p">(</span><span class="n">cl_id</span> <span class="o">-</span> <span class="n">ID1</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">ID2</span> <span class="o">-</span> <span class="n">cl_id</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span> <span class="n">ID2</span> <span class="o">-</span> <span class="n">ID1</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+
+            <span class="n">points</span><span class="o">.</span><span class="n">InsertNextPoint</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">p</span><span class="p">))</span> <span class="o">+</span> <span class="n">dist</span><span class="p">)</span>
+            <span class="n">verts</span><span class="o">.</span><span class="n">InsertNextCell</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">verts</span><span class="o">.</span><span class="n">InsertCellPoint</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
+    <span class="n">newline</span><span class="o">.</span><span class="n">SetPoints</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
+    <span class="n">newline</span><span class="o">.</span><span class="n">SetVerts</span><span class="p">(</span><span class="n">verts</span><span class="p">)</span>
+    <span class="n">newline</span><span class="o">.</span><span class="n">GetPointData</span><span class="p">()</span><span class="o">.</span><span class="n">AddArray</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">GetPointData</span><span class="p">()</span><span class="o">.</span><span class="n">GetArray</span><span class="p">(</span><span class="n">radiusArrayName</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">newline</span></div>
+
+
+<div class="viewcode-block" id="move_perp"><a class="viewcode-back" href="../scripts.html#moveandmanipulatetools.move_perp">[docs]</a><span class="k">def</span> <span class="nf">move_perp</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">Z</span><span class="p">,</span> <span class="n">alpha</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    Find directions for manipulation </span>
+<span class="sd">    in the vertical direction. </span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        n (ndarray): Normal vector to plane through clipping points.</span>
+<span class="sd">        P (ndarray): Clipping points.</span>
+<span class="sd">        Z (ndarray): Points along the centerline. </span>
+<span class="sd">        alpha (float): Extension / Compression factor.</span>
+
+<span class="sd">    Returns: </span>
+<span class="sd">        dZ (ndarray): Directions to points along the  centerline. </span>
+<span class="sd">        dx (ndarray): Direction to move the centerline. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">p1</span> <span class="o">=</span> <span class="n">P</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">p2</span> <span class="o">=</span> <span class="n">P</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="c1"># Find midpoint and point furthest away</span>
+    <span class="n">dist</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">z</span> <span class="ow">in</span> <span class="n">Z</span><span class="p">:</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">la</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">((</span><span class="n">z</span> <span class="o">-</span> <span class="n">p1</span><span class="p">),(</span><span class="n">z</span> <span class="o">-</span> <span class="n">p2</span><span class="p">)))</span> <span class="o">/</span> <span class="n">la</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">p2</span> <span class="o">-</span> <span class="n">p1</span><span class="p">)</span>
+        <span class="n">dist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+
+    <span class="n">D_id</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">dist</span><span class="p">))</span>
+    <span class="n">D</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">dist</span><span class="p">)</span>
+    <span class="n">z_m</span> <span class="o">=</span> <span class="n">Z</span><span class="p">[</span><span class="n">D_id</span><span class="p">]</span>
+
+    <span class="c1"># Vector from line to Z_max and projection onto plane</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="p">(</span><span class="n">z_m</span> <span class="o">-</span> <span class="n">p2</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="n">z_m</span> <span class="o">-</span> <span class="n">p2</span><span class="p">)</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">p2</span><span class="o">-</span><span class="n">p1</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">p2</span><span class="o">-</span><span class="n">p1</span><span class="p">)</span> <span class="o">/</span> <span class="n">la</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">p2</span><span class="o">-</span><span class="n">p1</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+    <span class="n">PV</span> <span class="o">=</span> <span class="n">v</span> <span class="o">-</span> <span class="n">v</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">*</span><span class="n">n</span>
+
+    <span class="c1"># Find distances </span>
+    <span class="n">P1</span> <span class="o">=</span>  <span class="p">(</span><span class="n">z_m</span> <span class="o">-</span> <span class="n">p1</span><span class="p">)</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">p2</span><span class="o">-</span><span class="n">p1</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">p2</span><span class="o">-</span><span class="n">p1</span><span class="p">)</span> <span class="o">/</span> <span class="n">la</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">p2</span><span class="o">-</span><span class="n">p1</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+    <span class="n">P1</span> <span class="o">=</span> <span class="n">p1</span> <span class="o">+</span> <span class="n">P1</span>
+    <span class="n">V</span> <span class="o">=</span> <span class="n">P1</span> <span class="o">+</span> <span class="n">v</span>
+    <span class="n">PV1</span> <span class="o">=</span> <span class="n">P1</span> <span class="o">+</span> <span class="n">PV</span>
+
+    <span class="c1"># Move points</span>
+    <span class="n">dZ</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Z</span><span class="p">)):</span>
+        <span class="n">dz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">PV</span><span class="p">)</span> <span class="o">*</span> <span class="n">dist</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="n">D</span> <span class="o">*</span> <span class="n">alpha</span>
+        <span class="n">dZ</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="n">Z</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">dz</span><span class="p">)</span>
+
+    <span class="n">dx</span> <span class="o">=</span> <span class="p">(</span><span class="n">PV1</span> <span class="o">-</span> <span class="n">P1</span><span class="p">)</span><span class="o">*</span><span class="n">alpha</span>
+    <span class="k">return</span> <span class="n">dZ</span><span class="p">,</span> <span class="n">dx</span>  </div>
+
+<div class="viewcode-block" id="move_para"><a class="viewcode-back" href="../scripts.html#moveandmanipulatetools.move_para">[docs]</a><span class="k">def</span> <span class="nf">move_para</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span><span class="n">Z</span><span class="p">,</span> <span class="n">beta</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    Find directions for manipulation </span>
+<span class="sd">    in the horizontal direction. </span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        n (ndarray): Normal vector to plane through clipping points.</span>
+<span class="sd">        P (ndarray): Clipping points.</span>
+<span class="sd">        Z (ndarray): Points along the centerline. </span>
+<span class="sd">        beta (float): Extension / Compression factor.</span>
+
+<span class="sd">    Returns: </span>
+<span class="sd">        dZ (ndarray): Directions to points along the  centerline. </span>
+<span class="sd">        zp_min (ndarray): Translation direction in upstream direction.</span>
+<span class="sd">        zm_min (ndarray): Translation direction in downstream direction.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">p1</span> <span class="o">=</span> <span class="n">P</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">p2</span> <span class="o">=</span> <span class="n">P</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    
+    <span class="c1"># Find normal from q</span>
+    <span class="n">q</span> <span class="o">=</span> <span class="p">[(</span><span class="n">p1</span> <span class="o">+</span> <span class="n">p2</span><span class="p">)</span><span class="o">/</span><span class="mf">2.</span><span class="p">]</span>
+    <span class="n">qp2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">p2</span> <span class="o">-</span> <span class="n">q</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">qp1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">p1</span> <span class="o">-</span> <span class="n">q</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">qp2</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span><span class="o">*</span><span class="mi">3</span>
+
+    <span class="c1"># Split points based on orientation</span>
+    <span class="c1"># to q normal</span>
+    <span class="n">Z_p</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">Z_p_dist</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">Z_m</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">Z_m_dist</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">z</span> <span class="ow">in</span> <span class="n">Z</span><span class="p">:</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">la</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">((</span><span class="n">z</span> <span class="o">-</span> <span class="n">s</span><span class="p">),(</span><span class="n">z</span> <span class="o">-</span> <span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">])))</span> <span class="o">/</span> <span class="n">la</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">s</span><span class="p">)</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">s</span><span class="o">-</span><span class="n">q</span><span class="p">,</span> <span class="n">z</span><span class="o">-</span><span class="n">q</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">Z_p</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+            <span class="n">Z_p_dist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">Z_m</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+            <span class="n">Z_m_dist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+    
+    <span class="c1"># Move points</span>
+    <span class="n">D</span> <span class="o">=</span> <span class="n">la</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">p1</span><span class="o">-</span><span class="n">p2</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.</span>
+    <span class="n">dZ</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">dZ</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p1</span> <span class="o">+</span> <span class="n">qp1</span><span class="o">*</span><span class="n">beta</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Z_p</span><span class="p">)):</span>
+        <span class="n">dz</span> <span class="o">=</span> <span class="n">qp1</span> <span class="o">*</span> <span class="n">Z_p_dist</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="n">D</span> <span class="o">*</span> <span class="n">beta</span>
+        <span class="n">dZ</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Z_p</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">dz</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Z_m</span><span class="p">)):</span>
+        <span class="n">dz</span> <span class="o">=</span> <span class="n">qp2</span> <span class="o">*</span> <span class="n">Z_m_dist</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="n">D</span> <span class="o">*</span> <span class="n">beta</span>
+        <span class="n">dZ</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Z_m</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">dz</span><span class="p">)</span>
+    <span class="n">dZ</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p2</span> <span class="o">+</span> <span class="n">qp2</span><span class="o">*</span><span class="n">beta</span><span class="p">)</span>
+    
+    <span class="c1"># Check if moved in right direction</span>
+    <span class="n">d_0</span> <span class="o">=</span> <span class="n">la</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">Z_p</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">q</span><span class="p">,</span> <span class="n">Z_p</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">s</span><span class="p">)</span> <span class="p">)</span> <span class="o">/</span> <span class="n">la</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">s</span><span class="o">-</span><span class="n">q</span><span class="p">)</span>
+    <span class="n">d_1</span> <span class="o">=</span> <span class="n">la</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">dZ</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">q</span><span class="p">,</span> <span class="n">dZ</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">s</span><span class="p">)</span> <span class="p">)</span> <span class="o">/</span> <span class="n">la</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">s</span><span class="o">-</span><span class="n">q</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">d_1</span> <span class="o">&lt;</span> <span class="n">d_0</span><span class="p">:</span>
+        <span class="c1"># Split points based on orientation</span>
+        <span class="c1"># to q normal</span>
+        <span class="n">Z_p</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">Z_p_dist</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">Z_m</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">Z_m_dist</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">z</span> <span class="ow">in</span> <span class="n">Z</span><span class="p">:</span>
+            <span class="n">d</span> <span class="o">=</span> <span class="n">la</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">((</span><span class="n">z</span> <span class="o">-</span> <span class="n">s</span><span class="p">),(</span><span class="n">z</span> <span class="o">-</span> <span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">])))</span> <span class="o">/</span> <span class="n">la</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">s</span><span class="p">)</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">s</span><span class="o">-</span><span class="n">q</span><span class="p">,</span> <span class="n">z</span><span class="o">-</span><span class="n">q</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">Z_p</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+                <span class="n">Z_p_dist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">Z_m</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+                <span class="n">Z_m_dist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+
+        <span class="c1"># Move points</span>
+        <span class="n">D</span> <span class="o">=</span> <span class="n">la</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">p1</span><span class="o">-</span><span class="n">p2</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.</span>
+        <span class="n">dZ</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">dZ</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p1</span> <span class="o">+</span> <span class="n">qp1</span><span class="o">*</span><span class="n">beta</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Z_p</span><span class="p">)):</span>
+            <span class="n">dz</span> <span class="o">=</span> <span class="n">qp1</span> <span class="o">*</span> <span class="n">Z_p_dist</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="n">D</span> <span class="o">*</span> <span class="n">beta</span>
+            <span class="n">dZ</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Z_p</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">dz</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Z_m</span><span class="p">)):</span>
+            <span class="n">dz</span> <span class="o">=</span> <span class="n">qp2</span> <span class="o">*</span> <span class="n">Z_m_dist</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="n">D</span> <span class="o">*</span> <span class="n">beta</span>
+            <span class="n">dZ</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Z_m</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">dz</span><span class="p">)</span>
+        <span class="n">dZ</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p2</span> <span class="o">+</span> <span class="n">qp2</span><span class="o">*</span><span class="n">beta</span><span class="p">)</span>
+
+
+    <span class="n">zpid</span> <span class="o">=</span> <span class="n">Z_p_dist</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">Z_p_dist</span><span class="p">))</span>
+    <span class="n">zp_min</span> <span class="o">=</span> <span class="n">Z_p</span><span class="p">[</span><span class="n">zpid</span><span class="p">]</span>
+    <span class="n">zmid</span> <span class="o">=</span> <span class="n">Z_m_dist</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">Z_m_dist</span><span class="p">))</span>
+    <span class="n">zm_min</span> <span class="o">=</span> <span class="n">Z_m</span><span class="p">[</span><span class="n">zmid</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">dZ</span><span class="p">,</span> <span class="n">zp_min</span><span class="p">,</span> <span class="n">zm_min</span></div>
+
+<div class="viewcode-block" id="best_plane"><a class="viewcode-back" href="../scripts.html#moveandmanipulatetools.best_plane">[docs]</a><span class="k">def</span> <span class="nf">best_plane</span><span class="p">(</span><span class="n">Z</span><span class="p">,</span> <span class="n">P</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Find the least squares plane through</span>
+<span class="sd">    the points in P and approximating the points</span>
+<span class="sd">    in Z. </span>
+
+<span class="sd">    Args: </span>
+<span class="sd">        Z (ndarray): Array of points to approximate.</span>
+<span class="sd">        P (ndarray): Array of points used as constraints. </span>
+
+<span class="sd">    Returns: </span>
+<span class="sd">        n (ndarray): Normal vector to plane. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Defined matrices</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Z</span><span class="p">))</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">P</span><span class="p">))</span>
+
+    <span class="c1"># Create complete matrix</span>
+    <span class="n">ATA</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">Z</span><span class="p">)</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Z</span><span class="p">)</span>
+    <span class="n">M0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">ATA</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">P</span><span class="p">)]</span>
+    <span class="n">M1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">P</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">P</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">P</span><span class="p">)))]</span>
+    <span class="n">M</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">M0</span><span class="p">,</span> <span class="n">M1</span><span class="p">]</span>
+    <span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">Z</span><span class="p">)</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">b</span><span class="p">),</span><span class="n">d</span><span class="p">]</span>
+    
+    <span class="c1"># Solve system</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">la</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">M</span><span class="p">,</span><span class="n">Y</span><span class="p">)</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">,</span><span class="n">c</span><span class="p">])</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">n</span> <span class="o">/</span> <span class="n">la</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+
+    <span class="c1"># Define plane</span>
+    <span class="n">xmin</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">Z</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">operator</span><span class="o">.</span><span class="n">itemgetter</span><span class="p">(</span><span class="mi">1</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">4</span> 
+    <span class="n">xmax</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">Z</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">operator</span><span class="o">.</span><span class="n">itemgetter</span><span class="p">(</span><span class="mi">1</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">4</span>
+    <span class="n">ymin</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">Z</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">operator</span><span class="o">.</span><span class="n">itemgetter</span><span class="p">(</span><span class="mi">1</span><span class="p">))[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">4</span> 
+    <span class="n">ymax</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">Z</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">operator</span><span class="o">.</span><span class="n">itemgetter</span><span class="p">(</span><span class="mi">1</span><span class="p">))[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">4</span>
+    <span class="n">xx</span><span class="p">,</span><span class="n">yy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">xmin</span><span class="p">,</span><span class="n">xmax</span><span class="p">,</span><span class="mi">15</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">ymin</span><span class="p">,</span><span class="n">ymax</span><span class="p">,</span><span class="mi">15</span><span class="p">))</span>
+    <span class="n">zz</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">a</span><span class="o">*</span><span class="n">xx</span> <span class="o">-</span> <span class="n">b</span><span class="o">*</span><span class="n">yy</span> <span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">n</span></div>
+
+
+<div class="viewcode-block" id="find_closest_point"><a class="viewcode-back" href="../scripts.html#moveandmanipulatetools.find_closest_point">[docs]</a><span class="k">def</span> <span class="nf">find_closest_point</span><span class="p">(</span><span class="n">dx</span><span class="p">,</span><span class="n">start</span><span class="p">,</span><span class="n">stop</span><span class="p">,</span> <span class="n">P0</span><span class="p">,</span> <span class="n">line</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Find point located closest to a given point P0.</span>
+<span class="sd">    Searching from start to stop along the centerline. </span>
+
+<span class="sd">    Args: </span>
+<span class="sd">        dx (ndarray): Direction to search for point furthest away.</span>
+<span class="sd">        start (int): Index to start searching. </span>
+<span class="sd">        stop (int): Index to stop searching. </span>
+<span class="sd">        P0 (ndarray): Point to search from. </span>
+<span class="sd">        line (vtkPolyData): Centerline to search along. </span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        minP (ndarray): Point located closest to P0.</span>
+<span class="sd">        minID (int): ID of point located closest to P0.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">dx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">b</span> <span class="o">=</span>  <span class="n">dx</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">c</span> <span class="o">=</span>  <span class="n">dx</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">,</span><span class="n">c</span><span class="p">])</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">n</span> <span class="o">/</span> <span class="n">la</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+
+    <span class="c1"># Define plane</span>
+    <span class="n">xmin</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">xmax</span> <span class="o">=</span> <span class="mi">100</span>
+    <span class="n">ymin</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">ymax</span> <span class="o">=</span> <span class="mi">100</span>
+    <span class="n">xx</span><span class="p">,</span><span class="n">yy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">xmin</span><span class="p">,</span><span class="n">xmax</span><span class="p">,</span><span class="mi">150</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">ymin</span><span class="p">,</span><span class="n">ymax</span><span class="p">,</span><span class="mi">150</span><span class="p">))</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">a</span><span class="o">*</span><span class="n">P0</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">b</span><span class="o">*</span><span class="n">P0</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">c</span><span class="o">*</span><span class="n">P0</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>  
+    <span class="n">zz</span> <span class="o">=</span> <span class="p">(</span><span class="n">d</span> <span class="o">-</span> <span class="n">a</span><span class="o">*</span><span class="n">xx</span> <span class="o">-</span> <span class="n">b</span><span class="o">*</span><span class="n">yy</span> <span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">start</span><span class="p">,</span><span class="n">stop</span><span class="p">):</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="n">points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="p">)</span>
+    <span class="n">dist_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">pcl</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">points</span><span class="p">):</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">pcl</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">P0</span><span class="p">)</span>
+        <span class="n">dist</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">n</span><span class="p">))</span>
+        <span class="n">dist_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dist</span><span class="p">)</span>
+
+    
+    <span class="n">minID</span> <span class="o">=</span> <span class="n">dist_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">dist_list</span><span class="p">))</span> <span class="o">+</span> <span class="n">start</span>
+    <span class="n">minP</span> <span class="o">=</span> <span class="n">points</span><span class="p">[</span><span class="n">minID</span> <span class="o">-</span> <span class="n">start</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">minP</span><span class="p">,</span> <span class="n">minID</span> </div>
+
+
+<div class="viewcode-block" id="find_furthest_points"><a class="viewcode-back" href="../scripts.html#moveandmanipulatetools.find_furthest_points">[docs]</a><span class="k">def</span> <span class="nf">find_furthest_points</span><span class="p">(</span><span class="n">dx</span><span class="p">,</span> <span class="n">line</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Find point located furthes away from the line</span>
+<span class="sd">    spanned of the clipping points p1 and p2.</span>
+
+<span class="sd">    Args: </span>
+<span class="sd">        dx (ndarray): Direction to search for point furthest away.</span>
+<span class="sd">        line (vtkPolyData): Centerline to search along. </span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        maxP (ndarray): Point located furthest away.</span>
+<span class="sd">        maxID (int): ID of point located furthest away.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">P0</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">dx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">b</span> <span class="o">=</span>  <span class="n">dx</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">c</span> <span class="o">=</span>  <span class="n">dx</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">,</span><span class="n">c</span><span class="p">])</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">n</span> <span class="o">/</span> <span class="n">la</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+
+    <span class="c1"># Define plane</span>
+    <span class="n">xmin</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">xmax</span> <span class="o">=</span> <span class="mi">100</span>
+    <span class="n">ymin</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">ymax</span> <span class="o">=</span> <span class="mi">100</span>
+    <span class="n">xx</span><span class="p">,</span><span class="n">yy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">xmin</span><span class="p">,</span><span class="n">xmax</span><span class="p">,</span><span class="mi">150</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">ymin</span><span class="p">,</span><span class="n">ymax</span><span class="p">,</span><span class="mi">150</span><span class="p">))</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">a</span><span class="o">*</span><span class="n">P0</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">b</span><span class="o">*</span><span class="n">P0</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">c</span><span class="o">*</span><span class="n">P0</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>  
+    <span class="n">zz</span> <span class="o">=</span> <span class="p">(</span><span class="n">d</span> <span class="o">-</span> <span class="n">a</span><span class="o">*</span><span class="n">xx</span> <span class="o">-</span> <span class="n">b</span><span class="o">*</span><span class="n">yy</span> <span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">GetNumberOfPoints</span><span class="p">()):</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="n">points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
+    <span class="n">dist_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">pcl</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">points</span><span class="p">):</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">pcl</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">P0</span><span class="p">)</span>
+        <span class="n">dist</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">n</span><span class="p">))</span>
+        <span class="n">dist_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dist</span><span class="p">)</span>
+    
+    <span class="n">maxID</span> <span class="o">=</span> <span class="n">dist_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">dist_list</span><span class="p">))</span>
+    <span class="n">maxP</span> <span class="o">=</span> <span class="n">points</span><span class="p">[</span><span class="n">maxID</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">maxP</span><span class="p">,</span> <span class="n">maxID</span> </div>
+
+
+<div class="viewcode-block" id="get_spline_points"><a class="viewcode-back" href="../scripts.html#moveandmanipulatetools.get_spline_points">[docs]</a><span class="k">def</span> <span class="nf">get_spline_points</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">param</span><span class="p">,</span><span class="n">direction</span><span class="p">,</span> <span class="n">clip_points</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    Pick n uniformly selected points along the </span>
+<span class="sd">    centerline from point P1 to P2, and move them.</span>
+
+<span class="sd">    Args: </span>
+<span class="sd">        line (vtkPolyData): Longest centerline in geometry. </span>
+<span class="sd">        param (float): Extension / Compression factor.</span>
+<span class="sd">        direction (str): Direction to move centerline.</span>
+<span class="sd">        clip_points (vtkPoints): Clipping points. </span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dz (ndarray): Points along the centerline. </span>
+<span class="sd">        ids (ndarray): IDs of points along centerline.</span>
+<span class="sd">        dx (ndarray): Direction to move geometry. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">locator</span> <span class="o">=</span> <span class="n">get_locator</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+    <span class="n">p1</span>      <span class="o">=</span> <span class="n">clip_points</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">p2</span>      <span class="o">=</span> <span class="n">clip_points</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">ID1</span>     <span class="o">=</span> <span class="n">locator</span><span class="o">.</span><span class="n">FindClosestPoint</span><span class="p">(</span><span class="n">p1</span><span class="p">)</span>
+    <span class="n">ID2</span>     <span class="o">=</span> <span class="n">locator</span><span class="o">.</span><span class="n">FindClosestPoint</span><span class="p">(</span><span class="n">p2</span><span class="p">)</span>
+    <span class="n">ID_mid</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">ID1</span> <span class="o">+</span> <span class="n">ID2</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.</span><span class="p">)</span>
+    <span class="n">P</span> <span class="o">=</span> <span class="p">[</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">]</span>
+    
+    <span class="c1"># Select n uniformly spaced points </span>
+    <span class="n">n</span> <span class="o">=</span> <span class="mi">10</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    <span class="n">dx</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="n">n</span> <span class="o">+</span> <span class="mf">1.</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">ID</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ID1</span> <span class="o">+</span> <span class="p">(</span><span class="n">ID2</span> <span class="o">-</span> <span class="n">ID1</span><span class="p">)</span> <span class="o">*</span> <span class="n">i</span> <span class="o">*</span> <span class="n">dx</span><span class="p">)</span>
+        <span class="n">ids</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">ID</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">GetPoints</span><span class="p">()</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">ID</span><span class="p">)</span>
+        <span class="n">points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="mi">2</span><span class="p">]]))</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">P</span><span class="p">)):</span>
+        <span class="n">P</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">P</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">P</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">P</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">2</span><span class="p">]])</span>
+
+    <span class="n">n</span> <span class="o">=</span> <span class="n">best_plane</span><span class="p">(</span><span class="n">points</span><span class="p">,</span><span class="n">P</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s2">&quot;vertical&quot;</span><span class="p">:</span>
+        <span class="n">dz</span><span class="p">,</span> <span class="n">dx</span> <span class="o">=</span> <span class="n">move_perp</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="n">P</span><span class="p">,</span> <span class="n">points</span><span class="p">,</span> <span class="n">param</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">dz</span><span class="p">,</span> <span class="n">ids</span><span class="p">,</span> <span class="n">dx</span>
+    <span class="k">elif</span> <span class="n">direction</span> <span class="o">==</span> <span class="s2">&quot;horizont&quot;</span><span class="p">:</span>
+        <span class="n">dz</span><span class="p">,</span><span class="n">zp</span><span class="p">,</span><span class="n">zm</span> <span class="o">=</span> <span class="n">move_para</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="n">P</span><span class="p">,</span> <span class="n">points</span><span class="p">,</span> <span class="n">param</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">dz</span><span class="p">,</span> <span class="n">ids</span></div>
+
+
+
+<div class="viewcode-block" id="find_ophthalmic_artery"><a class="viewcode-back" href="../scripts.html#moveandmanipulatetools.find_ophthalmic_artery">[docs]</a><span class="k">def</span> <span class="nf">find_ophthalmic_artery</span><span class="p">(</span><span class="n">centerlines</span><span class="p">,</span> <span class="n">clip_pts</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Method checks if the geometry includes the opthamlic artery. </span>
+<span class="sd">    Extracts the opthalmic artery if present, and determines its position.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        centerlines (vtkPolyData): Complete set of centerlines. </span>
+<span class="sd">        clip_pts (vtkPoints): Clipping points.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        eye (bool): True if opthamlic artery is present.</span>
+<span class="sd">        clip_ID (long): ID where opthamlic artery is located along centerline.</span>
+<span class="sd">        centerlines (vtkPolyData): Complete set of centerlines excluding opthamlic artery. </span>
+<span class="sd">        eyeline (vtkPolyData): Centerline leading to opthalmic artery. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Extract lines:</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">centerlines</span><span class="o">.</span><span class="n">GetNumberOfCells</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">extract_single_line</span><span class="p">(</span><span class="n">centerlines</span><span class="p">,</span> <span class="n">i</span><span class="p">))</span>
+
+    <span class="n">longest</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">tol</span> <span class="o">=</span> <span class="mf">0.40</span>
+    
+    <span class="c1"># Find start and stop IDs along clipped curve</span>
+    <span class="n">locator_longest</span> <span class="o">=</span> <span class="n">get_locator</span><span class="p">(</span><span class="n">longest</span><span class="p">)</span>
+    <span class="n">p1</span>      <span class="o">=</span> <span class="n">clip_pts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">p2</span>      <span class="o">=</span> <span class="n">clip_pts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">ID1</span>     <span class="o">=</span> <span class="n">locator_longest</span><span class="o">.</span><span class="n">FindClosestPoint</span><span class="p">(</span><span class="n">p1</span><span class="p">)</span>
+    <span class="n">ID2</span>     <span class="o">=</span> <span class="n">locator_longest</span><span class="o">.</span><span class="n">FindClosestPoint</span><span class="p">(</span><span class="n">p2</span><span class="p">)</span>
+    
+    <span class="n">eye</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+        <span class="n">locator_checkline</span> <span class="o">=</span> <span class="n">get_locator</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+        <span class="n">len_check</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">get_curvilinear_coordinate</span><span class="p">(</span><span class="n">line</span><span class="p">))</span> 
+        <span class="k">if</span> <span class="n">len_check</span> <span class="o">&lt;</span> <span class="n">ID2</span><span class="p">:</span>
+            <span class="n">IDStop</span> <span class="o">=</span> <span class="n">len_check</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">IDStop</span> <span class="o">=</span> <span class="n">ID2</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">ID1</span><span class="p">,</span> <span class="n">IDStop</span><span class="p">):</span>
+            <span class="n">p_eye</span>   <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+            <span class="n">p_cl</span>    <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">longest</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+            <span class="n">dist</span> <span class="o">=</span> <span class="n">la</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">p_eye</span> <span class="o">-</span> <span class="n">p_cl</span><span class="p">)</span>
+            <span class="k">if</span>  <span class="n">dist</span> <span class="o">&gt;</span> <span class="n">tol</span><span class="p">:</span>
+                <span class="n">clip_ID</span> <span class="o">=</span> <span class="n">i</span>
+                <span class="n">eye</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="n">eyeline</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+                <span class="k">del</span> <span class="n">lines</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+                <span class="n">centerlines</span> <span class="o">=</span> <span class="n">merge_data</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span>
+                <span class="k">break</span>
+        <span class="k">if</span> <span class="n">eye</span><span class="p">:</span>
+            <span class="k">break</span>
+        <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="k">if</span> <span class="n">eye</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">eye</span><span class="p">,</span> <span class="n">clip_ID</span><span class="p">,</span> <span class="n">centerlines</span><span class="p">,</span> <span class="n">eyeline</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">eye</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">centerlines</span><span class="p">,</span> <span class="bp">None</span></div>
+
+<div class="viewcode-block" id="get_vtk_clipping_points"><a class="viewcode-back" href="../scripts.html#moveandmanipulatetools.get_vtk_clipping_points">[docs]</a><span class="k">def</span> <span class="nf">get_vtk_clipping_points</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">clipping_points</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Store clipping points as VTK objects. </span>
+<span class="sd">    Extract points as tuples and corresponding IDs.</span>
+
+<span class="sd">    Args: </span>
+<span class="sd">        line (vtkPolyData): Line representing longest single centerline.</span>
+<span class="sd">        clipping_points (ndarray): Array containing two clpping points. </span>
+
+<span class="sd">    Returns: </span>
+<span class="sd">        p1 (tuple): First clipping point. </span>
+<span class="sd">        p2 (tuple): Second clipping point. </span>
+<span class="sd">        ID1 (long): ID of first clipping point.</span>
+<span class="sd">        ID2 (long): ID of second clipping point.</span>
+<span class="sd">        clip_points (vtkPoints): VTK objects containing the clipping points.</span>
+<span class="sd">        clipping_points (ndarray): Array containing two clipping points. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">locator</span> <span class="o">=</span> <span class="n">get_locator</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+    <span class="n">ID1</span>     <span class="o">=</span> <span class="n">locator</span><span class="o">.</span><span class="n">FindClosestPoint</span><span class="p">(</span><span class="n">clipping_points</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">ID2</span>     <span class="o">=</span> <span class="n">locator</span><span class="o">.</span><span class="n">FindClosestPoint</span><span class="p">(</span><span class="n">clipping_points</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">ID1</span> <span class="o">&gt;</span> <span class="n">ID2</span><span class="p">:</span>
+        <span class="n">clipping_points</span> <span class="o">=</span> <span class="n">clipping_points</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">ID1</span><span class="p">,</span><span class="n">ID2</span> <span class="o">=</span> <span class="n">ID2</span><span class="p">,</span><span class="n">ID1</span>
+
+    <span class="c1"># Set clipping points</span>
+    <span class="n">div_points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">clipping_points</span><span class="p">)</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="n">vtk</span><span class="o">.</span><span class="n">vtkPoints</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">div_points</span><span class="p">:</span>
+        <span class="n">points</span><span class="o">.</span><span class="n">InsertNextPoint</span><span class="p">(</span><span class="n">point</span><span class="p">)</span>
+    <span class="n">clip_points</span> <span class="o">=</span> <span class="n">points</span>
+
+    <span class="n">p1</span>      <span class="o">=</span> <span class="n">clip_points</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">p2</span>      <span class="o">=</span> <span class="n">clip_points</span><span class="o">.</span><span class="n">GetPoint</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">,</span> <span class="n">ID1</span><span class="p">,</span> <span class="n">ID2</span><span class="p">,</span> <span class="n">clip_points</span><span class="p">,</span> <span class="n">clipping_points</span></div>
+
+
+
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Aslak Bergersen &amp; Henrik Kjeldsberg.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
