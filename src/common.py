@@ -758,7 +758,7 @@ def compute_area(surface):
     return mass.GetSurfaceArea()
 
 
-def uncapp_surface_old(surface):
+def uncapp_surface(surface):
     # Add-hoc method for removing capps on surfaces
     # This could proboly be highly improved, but is sufficient for now.
 
@@ -1805,3 +1805,72 @@ def spline_centerline(line, get_curv=False, isline=False, nknots=50, get_stats=T
         return line, curvature
     else:
         return line
+
+   
+def prepare_surface(model_path, parameters):
+    """ 
+    Clean and check connectivity of surface. 
+    Capps or uncapps surface model at inlet and outlets.
+ 
+    Args: 
+        model_path (str): Path to model.
+        parameters (dict): Contains surface model information.
+
+    Returns:
+        open_surface (vtkPolyData): Open surface model.
+    Returns:
+        capped_surface (vtkPolyData): Closed surface model.
+    """
+    # Clean surface
+    surface = read_polydata(model_path)
+    surface = surface_cleaner(surface)
+    surface = triangulate_surface(surface)
+
+   # Check connectivity and only choose the surface with the largest area
+    if not "check_surface" in parameters.keys():
+        connected_surface = gat_connectivity(surface, mode="Largest")
+        if connected_surface.GetNumberOfPoints() != surface.GetNumberOfPoints():
+            WritePolyData(surface, model_path.replace(".vtp", "_test.vtp"))
+
+    # Get a capped and uncapped version of the surface
+    if is_surface_capped(surface):
+        open_surface = uncapp_surface(surface)
+        capped_surface = surface
+    else:
+        open_surface = surface
+        capped_surface = capp_surface(surface)
+
+    return open_surface, capped_surface
+
+def prepare_voronoi_diagram(model_path, voronoi_path, voronoi_smoothed_path, 
+                            smooth, smooth_factor, centerlines):
+    """
+    Compute and smooth voronoi diagram of surface model. 
+
+    Args:
+        model_path (str): Path to surface model.
+        voronoi_path (str): (Save)path to voronoi diagram. 
+        voronoi_smoothed_path (str): (Save)path to smoothed voronoi diagram.
+        smooth (bool): Voronoi is smoothed if True.
+        smooth_factor (float): Smoothing factor for voronoi smoothing.
+        centerlines (vtkPolyData): Centerlines throughout geometry.
+
+    Returns:
+        voronoi (vtkPolyData): Voronoi diagram of surface.
+    """
+    # Smooth voronoi diagram
+    voronoi = make_voronoi_diagram(model_path, voronoi_path)
+    if not path.exists(voronoi_smoothed_path) and smooth:
+        voronoi_smoothed = smooth_voronoi_diagram(voronoi, centerlines, smooth_factor)
+        write_polydata(voronoi_smoothed, voronoi_smoothed_path)
+        surface_smoothed = create_new_surface(voronoi_smoothed)
+        write_polydata(surface_smoothed, model_smoothed_path)
+    else:
+        voronoi_smoothed = read_polydata(voronoi_smoothed_path)
+
+    # Use smoothed voronoi or not
+    voronoi = voronoi_smoothed if smooth else voronoi
+
+    return voronoi
+
+
