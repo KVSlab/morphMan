@@ -24,10 +24,10 @@ def start_case(casepath, folder):
     """
     Compute centerlines from inlet to two outlets,
     centerline between two outlets, and centerlines through
-    complete geometry. 
-    Compute Voronoi diagram of model, smooth Voronoi diagram, 
+    complete geometry.
+    Compute Voronoi diagram of model, smooth Voronoi diagram,
     and compute smoothed surface.
-    
+
     Args:
         casepath (str): Location of cases.
         folder (str): Case name.
@@ -44,7 +44,7 @@ def start_case(casepath, folder):
     centerlines_path = path.join(folder_, "surface", "centerline_complete.vtp")
     centerlines_usr_path = path.join(folder_, "surface", "model_usr_centerline.vtp")
     centerlines_usr_bif_path = path.join(folder_, "surface", "model_usr_centerline_bif.vtp")
-   
+
     # Untar
     if not path.isdir(folder_):
         check_output("bash untar.sh %s %s" % (casepath, folder), stderr=STDOUT, shell=True)
@@ -59,7 +59,7 @@ def start_case(casepath, folder):
     if not path.exists(centerlines_usr_path):
         print "Creating model_usr_centerline.vtp.."
         make_centerline(model_path, centerlines_usr_path, resampling=True, length=0.1, store_points=False)
-        
+
 
     if not path.exists(centerlines_usr_bif_path):
         print "Creating model_usr_centerline_bif.vtp.."
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     dir_path ,case = read_command_line()
 
     if case is None:
-        home = "/home/henrik/master_uio/cases/" 
+        home = "/home/henrik/master_uio/cases/"
 
         cases = listdir(home)
         cases = [home + s for s in cases]

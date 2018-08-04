@@ -24,7 +24,7 @@ def get_clipping_points(dirpath, filename):
         filename (str): Name of clipping point file.
 
     Returns:
-        clipping_points (ndarray): Clipping points. 
+        clipping_points (ndarray): Clipping points.
     """
     particles = path.join(dirpath, filename)
     all_points = np.loadtxt(particles)
@@ -34,14 +34,14 @@ def get_clipping_points(dirpath, filename):
 
 def sort_centerlines(centerlines_complete):
     """
-    Sort the complete set of centerlines 
-    by placing the longest centerline first. 
+    Sort the complete set of centerlines
+    by placing the longest centerline first.
 
-    Args: 
+    Args:
         centerlines_complete (vtkPolyData): Complete set of centerlines.
 
-    Returns: 
-        centerlines_in_order (vtkPolyData): Comlete set of sorted centerlines. 
+    Returns:
+        centerlines_in_order (vtkPolyData): Comlete set of sorted centerlines.
     """
     lines = []
     n = centerlines_complete.GetNumberOfCells()
@@ -55,7 +55,7 @@ def sort_centerlines(centerlines_complete):
         if len(tmplong) > len(lenlong):
             lenlong = tmplong
             longest.insert(0, lines[i])
-        else: 
+        else:
             longest.append(lines[i])
 
     centerlines_in_order = merge_data(longest)
@@ -65,14 +65,14 @@ def sort_centerlines(centerlines_complete):
 def connect_line(line):
     """
     Create edges between points defining a
-    centerline, used to construct a 
+    centerline, used to construct a
     discrete line in 3D.
 
     Args:
         line (vtkPoints): Points defining a centerline.
 
     Returns:
-        line (vtkPolyData): Discrete centerline data. 
+        line (vtkPolyData): Discrete centerline data.
     """
     pts = vtk.vtkPoints()
     for i in range((line.GetNumberOfCells())):
@@ -94,15 +94,15 @@ def connect_line(line):
 def move_line_horizontally(patch_cl, ID1, ID2, dx_p1, clip=False, eye=False, side=None):
     """
     Iterate through centerline and move line based on a profile
-    for horizontal movement. Includes special treatment of 
-    opthalmic artery if present. 
+    for horizontal movement. Includes special treatment of
+    opthalmic artery if present.
 
     Args:
-        patch_cl (vtkPolyData): Centerline data. 
+        patch_cl (vtkPolyData): Centerline data.
         ID1 (int): Index of first clipping point.
         ID2 (int): Index of second clipping point.
         dx_p1 (ndarray): Direction to move upstream.
-        clip (bool): Determines which part of geometry is being moved, True if siphon. 
+        clip (bool): Determines which part of geometry is being moved, True if siphon.
         eye (bool): Determines presence of opthamlic artery.
         side (str): Determines location relative to the middle of the siphon.
 
@@ -129,7 +129,7 @@ def move_line_horizontally(patch_cl, ID1, ID2, dx_p1, clip=False, eye=False, sid
             ID1 = 0
             ID2 = len(get_curvilinear_coordinate(patch_cl))
             idmid = int( (ID1 + ID2)/2.)
-        
+
         for p in range(patch_cl.GetNumberOfPoints()):
             cl_id = centerline_loc.FindClosestPoint(patch_cl.GetPoint(p))
 
@@ -138,7 +138,7 @@ def move_line_horizontally(patch_cl, ID1, ID2, dx_p1, clip=False, eye=False, sid
             else:
                 if cl_id <= (ID2 - 1):
                     dist = -dx_p1 * (cl_id-idmid)**(0.5) / (ID2-idmid)**(0.5)
-                else: 
+                else:
                     locator = get_locator(test_cl)
                     pp = patch_cl.GetPoint(cl_id)
                     id_main = locator.FindClosestPoint(pp)
@@ -173,10 +173,10 @@ def move_line_horizontally(patch_cl, ID1, ID2, dx_p1, clip=False, eye=False, sid
 def move_points_vertically(line, dx):
     """
     Iterate through centerline points and move line based on a profile
-    for vertical movement. 
+    for vertical movement.
 
     Args:
-        line (vtkPolyData): Centerline data. 
+        line (vtkPolyData): Centerline data.
         dx (ndarray): Direction to move centerline.
 
     Returns:
@@ -212,11 +212,11 @@ def move_points_vertically(line, dx):
 def move_line_vertically(line, dx, ID1_0, clip_ID=None, eye=False):
     """
     Iterate through centerline and move line based on a profile
-    for vertical movement. Includes special treatment of 
-    opthalmic artery if present. 
+    for vertical movement. Includes special treatment of
+    opthalmic artery if present.
 
     Args:
-        line (vtkPolyData): Centerline data. 
+        line (vtkPolyData): Centerline data.
         dx (ndarray): Direction to move vertically.
         ID1_0 (int): Index of first clipping point.
         clip_ID (int): Index of opthalmic artery entrance if present.
@@ -240,7 +240,7 @@ def move_line_vertically(line, dx, ID1_0, clip_ID=None, eye=False):
         ID1 = I1 = 0
         ID2 = len(get_curvilinear_coordinate(test_cl))
         IDmid = int( (ID1 + ID2)/2.)
-        I2 = ID2-1 
+        I2 = ID2-1
 
         for p in range(line.GetNumberOfPoints()):
             cl_id = centerline_loc.FindClosestPoint(line.GetPoint(p))
@@ -258,7 +258,7 @@ def move_line_vertically(line, dx, ID1_0, clip_ID=None, eye=False):
     else:
         ID1 = 0
         ID2 = len(get_curvilinear_coordinate(line))
-    
+
         for p in range(line.GetNumberOfPoints()):
             cl_id = centerline_loc.FindClosestPoint(line.GetPoint(p))
 
@@ -275,19 +275,19 @@ def move_line_vertically(line, dx, ID1_0, clip_ID=None, eye=False):
 
 
 def move_perp(n, P, Z, alpha):
-    """ 
-    Find directions for manipulation 
-    in the vertical direction. 
-    
+    """
+    Find directions for manipulation
+    in the vertical direction.
+
     Args:
         n (ndarray): Normal vector to plane through clipping points.
         P (ndarray): Clipping points.
-        Z (ndarray): Points along the centerline. 
+        Z (ndarray): Points along the centerline.
         alpha (float): Extension / Compression factor.
 
-    Returns: 
-        dZ (ndarray): Directions to points along the  centerline. 
-        dx (ndarray): Direction to move the centerline. 
+    Returns:
+        dZ (ndarray): Directions to points along the  centerline.
+        dx (ndarray): Direction to move the centerline.
     """
 
     p1 = P[0]
@@ -307,7 +307,7 @@ def move_perp(n, P, Z, alpha):
     v = (z_m - p2) - (z_m - p2).dot(p2-p1)*(p2-p1) / la.norm(p2-p1)**2
     PV = v - v.dot(n)*n
 
-    # Find distances 
+    # Find distances
     P1 =  (z_m - p1).dot(p2-p1)*(p2-p1) / la.norm(p2-p1)**2
     P1 = p1 + P1
     V = P1 + v
@@ -320,27 +320,27 @@ def move_perp(n, P, Z, alpha):
         dZ.append( Z[i] + dz)
 
     dx = (PV1 - P1)*alpha
-    return dZ, dx  
+    return dZ, dx
 
 def move_para(n, P,Z, beta):
-    """ 
-    Find directions for manipulation 
-    in the horizontal direction. 
-    
+    """
+    Find directions for manipulation
+    in the horizontal direction.
+
     Args:
         n (ndarray): Normal vector to plane through clipping points.
         P (ndarray): Clipping points.
-        Z (ndarray): Points along the centerline. 
+        Z (ndarray): Points along the centerline.
         beta (float): Extension / Compression factor.
 
-    Returns: 
-        dZ (ndarray): Directions to points along the  centerline. 
+    Returns:
+        dZ (ndarray): Directions to points along the  centerline.
         zp_min (ndarray): Translation direction in upstream direction.
         zm_min (ndarray): Translation direction in downstream direction.
     """
     p1 = P[0]
     p2 = P[1]
-    
+
     # Find normal from q
     q = [(p1 + p2)/2.]
     qp2 = np.array(p2 - q)[0]
@@ -362,7 +362,7 @@ def move_para(n, P,Z, beta):
         else:
             Z_m.append(z)
             Z_m_dist.append(d)
-    
+
     # Move points
     D = la.norm(p1-p2) / 2.
     dZ = []
@@ -375,7 +375,7 @@ def move_para(n, P,Z, beta):
         dz = qp2 * Z_m_dist[i] / D * beta
         dZ.append(Z_m[i] + dz)
     dZ.append(p2 + qp2*beta)
-    
+
     # Check if moved in right direction
     d_0 = la.norm( np.cross(Z_p[0] - q, Z_p[0] - s) ) / la.norm(s-q)
     d_1 = la.norm( np.cross(dZ[1] - q, dZ[1] - s) ) / la.norm(s-q)
@@ -420,14 +420,14 @@ def best_plane(Z, P):
     """
     Find the least squares plane through
     the points in P and approximating the points
-    in Z. 
+    in Z.
 
-    Args: 
+    Args:
         Z (ndarray): Array of points to approximate.
-        P (ndarray): Array of points used as constraints. 
+        P (ndarray): Array of points used as constraints.
 
-    Returns: 
-        n (ndarray): Normal vector to plane. 
+    Returns:
+        n (ndarray): Normal vector to plane.
     """
     # Defined matrices
     b = np.ones(len(Z))
@@ -439,7 +439,7 @@ def best_plane(Z, P):
     M1 = np.c_[P, np.zeros( (len(P), len(P)))]
     M = np.r_[M0, M1]
     Y = np.r_[np.transpose(Z).dot(b),d]
-    
+
     # Solve system
     x = la.solve(M,Y)
     a = x[0]
@@ -449,9 +449,9 @@ def best_plane(Z, P):
     n = n / la.norm(n)
 
     # Define plane
-    xmin = min(Z, key=operator.itemgetter(1))[0] - 4 
+    xmin = min(Z, key=operator.itemgetter(1))[0] - 4
     xmax = max(Z, key=operator.itemgetter(1))[0] + 4
-    ymin = min(Z, key=operator.itemgetter(1))[1] - 4 
+    ymin = min(Z, key=operator.itemgetter(1))[1] - 4
     ymax = max(Z, key=operator.itemgetter(1))[1] + 4
     xx,yy = np.meshgrid(np.linspace(xmin,xmax,15),np.linspace(ymin,ymax,15))
     zz = (1 - a*xx - b*yy ) / float(c)
@@ -461,14 +461,14 @@ def best_plane(Z, P):
 def find_closest_point(dx,start,stop, P0, line):
     """
     Find point located closest to a given point P0.
-    Searching from start to stop along the centerline. 
+    Searching from start to stop along the centerline.
 
-    Args: 
+    Args:
         dx (ndarray): Direction to search for point furthest away.
-        start (int): Index to start searching. 
-        stop (int): Index to stop searching. 
-        P0 (ndarray): Point to search from. 
-        line (vtkPolyData): Centerline to search along. 
+        start (int): Index to start searching.
+        stop (int): Index to stop searching.
+        P0 (ndarray): Point to search from.
+        line (vtkPolyData): Centerline to search along.
 
     Returns:
         minP (ndarray): Point located closest to P0.
@@ -486,7 +486,7 @@ def find_closest_point(dx,start,stop, P0, line):
     ymin = 0
     ymax = 100
     xx,yy = np.meshgrid(np.linspace(xmin,xmax,150),np.linspace(ymin,ymax,150))
-    d = a*P0[0] + b*P0[1] + c*P0[2]  
+    d = a*P0[0] + b*P0[1] + c*P0[2]
     zz = (d - a*xx - b*yy ) / float(c)
     points = []
     for i in range(start,stop):
@@ -498,10 +498,10 @@ def find_closest_point(dx,start,stop, P0, line):
         dist = abs(v.dot(n))
         dist_list.append(dist)
 
-    
+
     minID = dist_list.index(min(dist_list)) + start
     minP = points[minID - start]
-    return minP, minID 
+    return minP, minID
 
 
 def find_furthest_points(dx, line):
@@ -509,9 +509,9 @@ def find_furthest_points(dx, line):
     Find point located furthes away from the line
     spanned of the clipping points p1 and p2.
 
-    Args: 
+    Args:
         dx (ndarray): Direction to search for point furthest away.
-        line (vtkPolyData): Centerline to search along. 
+        line (vtkPolyData): Centerline to search along.
 
     Returns:
         maxP (ndarray): Point located furthest away.
@@ -530,7 +530,7 @@ def find_furthest_points(dx, line):
     ymin = 0
     ymax = 100
     xx,yy = np.meshgrid(np.linspace(xmin,xmax,150),np.linspace(ymin,ymax,150))
-    d = a*P0[0] + b*P0[1] + c*P0[2]  
+    d = a*P0[0] + b*P0[1] + c*P0[2]
     zz = (d - a*xx - b*yy ) / float(c)
     points = []
     for i in range(line.GetNumberOfPoints()):
@@ -542,27 +542,27 @@ def find_furthest_points(dx, line):
         v = pcl - np.array(P0)
         dist = abs(v.dot(n))
         dist_list.append(dist)
-    
+
     maxID = dist_list.index(max(dist_list))
     maxP = points[maxID]
-    return maxP, maxID 
+    return maxP, maxID
 
 
 def get_spline_points(line, param,direction, clip_points):
-    """ 
-    Pick n uniformly selected points along the 
+    """
+    Pick n uniformly selected points along the
     centerline from point P1 to P2, and move them.
 
-    Args: 
-        line (vtkPolyData): Longest centerline in geometry. 
+    Args:
+        line (vtkPolyData): Longest centerline in geometry.
         param (float): Extension / Compression factor.
         direction (str): Direction to move centerline.
-        clip_points (vtkPoints): Clipping points. 
+        clip_points (vtkPoints): Clipping points.
 
     Returns:
-        dz (ndarray): Points along the centerline. 
+        dz (ndarray): Points along the centerline.
         ids (ndarray): IDs of points along centerline.
-        dx (ndarray): Direction to move geometry. 
+        dx (ndarray): Direction to move geometry.
     """
     locator = get_locator(line)
     p1      = clip_points.GetPoint(0)
@@ -571,8 +571,8 @@ def get_spline_points(line, param,direction, clip_points):
     ID2     = locator.FindClosestPoint(p2)
     ID_mid = int((ID1 + ID2) / 2.)
     P = [p1,p2]
-    
-    # Select n uniformly spaced points 
+
+    # Select n uniformly spaced points
     n = 10
     points = []
     ids = np.zeros(n)
@@ -600,7 +600,7 @@ def find_diverging_centerlines(centerlines, end_point):
     longest = extract_single_line(centerlines,0)
     longest_locator = get_locator(longest)
     longest_end_id = longest_locator.FindClosestPoint(end_point)
-    
+
     # Separate lines and divering lines
     lines = [longest]
     div_lines = []
@@ -608,13 +608,13 @@ def find_diverging_centerlines(centerlines, end_point):
     div_points = []
     n = centerlines.GetNumberOfCells() - 1
     tol = 0.40
-    
+
     # Find diverging lines
     for i in range(n):
         div = False
         line_tmp = extract_single_line(centerlines, i + 1)
         stop_id = len(get_curvilinear_coordinate(line_tmp))
-        if longest_end_id < stop_id: 
+        if longest_end_id < stop_id:
             stop_id = longest_end_id
         for j in np.arange(stop_id):
             p_cl = np.asarray(longest.GetPoint(j))
@@ -650,24 +650,24 @@ def clip_eyeline(eyeline, clip_start_point, clip_end_ID):
     for p in points:
         eye_points.InsertNextPoint(p)
 
-    patch_eye = CreateParentArteryPatches(eyeline, eye_points, siphon=True) 
+    patch_eye = CreateParentArteryPatches(eyeline, eye_points, siphon=True)
     return patch_eye
 
 
 def find_ophthalmic_artery(centerlines, clip_pts):
     """
-    Method checks if the geometry includes the opthamlic artery. 
+    Method checks if the geometry includes the opthamlic artery.
     Extracts the opthalmic artery if present, and determines its position.
 
     Args:
-        centerlines (vtkPolyData): Complete set of centerlines. 
+        centerlines (vtkPolyData): Complete set of centerlines.
         clip_pts (vtkPoints): Clipping points.
 
     Returns:
         eye (bool): True if opthamlic artery is present.
         clip_ID (long): ID where opthamlic artery is located along centerline.
-        centerlines (vtkPolyData): Complete set of centerlines excluding opthamlic artery. 
-        eyeline (vtkPolyData): Centerline leading to opthalmic artery. 
+        centerlines (vtkPolyData): Complete set of centerlines excluding opthamlic artery.
+        eyeline (vtkPolyData): Centerline leading to opthalmic artery.
     """
 
     # Extract lines:
@@ -678,19 +678,19 @@ def find_ophthalmic_artery(centerlines, clip_pts):
 
     longest = lines[0]
     tol = 0.40
-    
+
     # Find start and stop IDs along clipped curve
     locator_longest = get_locator(longest)
     p1      = clip_pts[0]
     p2      = clip_pts[1]
     ID1     = locator_longest.FindClosestPoint(p1)
     ID2     = locator_longest.FindClosestPoint(p2)
-    
+
     eye = False
     index = 1
     for line in lines[1:]:
         locator_checkline = get_locator(line)
-        len_check = len(get_curvilinear_coordinate(line)) 
+        len_check = len(get_curvilinear_coordinate(line))
         if len_check < ID2:
             IDStop = len_check - 1
         else:
@@ -718,20 +718,20 @@ def find_ophthalmic_artery(centerlines, clip_pts):
 
 def get_vtk_clipping_points(line, clipping_points):
     """
-    Store clipping points as VTK objects. 
+    Store clipping points as VTK objects.
     Extract points as tuples and corresponding IDs.
 
-    Args: 
+    Args:
         line (vtkPolyData): Line representing longest single centerline.
-        clipping_points (ndarray): Array containing two clpping points. 
+        clipping_points (ndarray): Array containing two clpping points.
 
-    Returns: 
-        p1 (tuple): First clipping point. 
-        p2 (tuple): Second clipping point. 
+    Returns:
+        p1 (tuple): First clipping point.
+        p2 (tuple): Second clipping point.
         ID1 (long): ID of first clipping point.
         ID2 (long): ID of second clipping point.
         clip_points (vtkPoints): VTK objects containing the clipping points.
-        clipping_points (ndarray): Array containing two clipping points. 
+        clipping_points (ndarray): Array containing two clipping points.
     """
     locator = get_locator(line)
     ID1     = locator.FindClosestPoint(clipping_points[0])
@@ -751,8 +751,3 @@ def get_vtk_clipping_points(line, clipping_points):
     p2      = clip_points.GetPoint(1)
 
     return p1, p2, ID1, ID2, clip_points, clipping_points
-
-
-
-
-

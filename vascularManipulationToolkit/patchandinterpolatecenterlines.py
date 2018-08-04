@@ -58,7 +58,7 @@ def CreateParentArteryPatches(parentCenterlines, clipPoints, siphon=False, bif=F
     patchedCenterlines.SetPoints(patchedCenterlinesPoints)
     patchedCenterlines.SetLines(patchedCenterlinesCellArray)
     patchedCenterlines.GetPointData().AddArray(radiusArray)
- 
+
     return patchedCenterlines
 
 
@@ -76,7 +76,7 @@ def ExtractPatchesIdsSiphon(parentCl, clipPts, clipped=False):
 
         upId = locator.FindClosestPoint(upstreamPoint)
         downId = locator.FindClosestPoint(downstreamPoint)
-        
+
         if j == 0:
             if clipped:
                 clipIds.append(upId-1)
@@ -85,14 +85,14 @@ def ExtractPatchesIdsSiphon(parentCl, clipPts, clipped=False):
                 clipIds.append(upId)
                 clipIds.append(downId)
             numberOfPoints += upId + 1
-            numberOfPoints += cellLine.GetNumberOfPoints() - downId 
+            numberOfPoints += cellLine.GetNumberOfPoints() - downId
         else:
             if clipped:
                 clipIds.append(downId+1)
             else:
                 clipIds.append(downId)
-            numberOfPoints += cellLine.GetNumberOfPoints() - downId  
- 
+            numberOfPoints += cellLine.GetNumberOfPoints() - downId
+
     return clipIds, numberOfPoints
 
 def ExtractPatchesIds(parentCl, clipPts):
@@ -100,7 +100,7 @@ def ExtractPatchesIds(parentCl, clipPts):
     clipIds = []
     numberOfPoints = 0
     N = clipPts.GetNumberOfPoints()
-    
+
     if N == 3:
         commonPoint = clipPts.GetPoint(0)
         pnt_1 = clipPts.GetPoint(1)
@@ -120,7 +120,7 @@ def ExtractPatchesIds(parentCl, clipPts):
 
         ID1 = locator.FindClosestPoint(pnt_1)
         ID2 = locator.FindClosestPoint(pnt_2)
-        
+
         distance1 = math.sqrt(distance(pnt_1, cellLine.GetPoints().GetPoint(ID1)))
         distance2 = math.sqrt(distance(pnt_2, cellLine.GetPoints().GetPoint(ID2)))
 
@@ -128,7 +128,7 @@ def ExtractPatchesIds(parentCl, clipPts):
             ID = 0
         else:
             ID = ID1 if distance1 < distance2 else ID2
-        
+
         if N == 2:
             clipIds = [ID1, ID2]
             numberOfPoints = cellLine.GetNumberOfPoints()
@@ -142,7 +142,7 @@ def ExtractPatchesIds(parentCl, clipPts):
 
 def InterpolatePatchCenterlines(patchCenterlines, parentCenterlines,
                                 additionalPoint, lower, version):
-   
+
     if additionalPoint is not None:
         additionalPointIds = []
         for i in range(parentCenterlines.GetNumberOfCells()):
@@ -150,7 +150,7 @@ def InterpolatePatchCenterlines(patchCenterlines, parentCenterlines,
             additionalPointIds.append(line.FindPoint(additionalPoint))
     else:
         additionalPointIds = ["" for i in range(parentCenterlines.GetNumberOfCells())]
-  
+
     interpolatedLines = vtk.vtkPolyData()
     interpolatedPoints = vtk.vtkPoints()
     interpolatedCellArray = vtk.vtkCellArray()
@@ -166,7 +166,7 @@ def InterpolatePatchCenterlines(patchCenterlines, parentCenterlines,
 
         patchCenterlines.GetCell(0, startingCell)
         patchCenterlines.GetCell(i+1, endingCell)
-    
+
         if version:
             splinePoints = InterpolateSpline(startingCell, endingCell, additionalPoint)
         else:
@@ -183,7 +183,7 @@ def InterpolatePatchCenterlines(patchCenterlines, parentCenterlines,
 
     interpolatedLines.SetPoints(interpolatedPoints)
     interpolatedLines.SetLines(interpolatedCellArray)
- 
+
     attributeFilter = vtkvmtk.vtkvmtkCenterlineAttributesFilter()
     attributeFilter.SetInputData(interpolatedLines)
     attributeFilter.SetAbscissasArrayName(abscissasArrayName)
@@ -191,7 +191,7 @@ def InterpolatePatchCenterlines(patchCenterlines, parentCenterlines,
     attributeFilter.Update()
 
     attributeInterpolatedLines = attributeFilter.GetOutput()
-  
+
     return attributeInterpolatedLines
 
 
@@ -212,10 +212,10 @@ def InterpolateSpline(startCell, endCell, additionalPoint):
     n = 5
     N = 100
     num_centerline_points = 3
-    
+
     for i in range(num_centerline_points -1, -1, -1):
         points.append(get_startCell.GetPoint(num_start - n*i - 1))
-    
+
     if additionalPoint is not None:
         points.append(additionalPoint)
 
@@ -235,7 +235,7 @@ def InterpolateSpline(startCell, endCell, additionalPoint):
     #        curv_coor[i] = c*1.2
 
     points = np.asarray(points)
-    
+
     fx = splrep(curv_coor, points[:,0], k=3)
     fy = splrep(curv_coor, points[:,1], k=3)
     fz = splrep(curv_coor, points[:,2], k=3)
@@ -261,7 +261,7 @@ def InterpolateSpline(startCell, endCell, additionalPoint):
         points.SetPoint(l, tmp[l])
 
     return points
-    
+
 
 def InterpolateTwoCells(startCell, endCell, numberOfSplinePoints, additionalPointId,
                         additionalPoint, type):
@@ -269,7 +269,7 @@ def InterpolateTwoCells(startCell, endCell, numberOfSplinePoints, additionalPoin
     xspline = vtk.vtkCardinalSpline()
     yspline = vtk.vtkCardinalSpline()
     zspline = vtk.vtkCardinalSpline()
-   
+
     numberOfStartCellPoints = startCell.GetNumberOfPoints()
     numberOfEndCellPoints = endCell.GetNumberOfPoints()
     endCellFirstId = numberOfSplinePoints - numberOfEndCellPoints
@@ -293,9 +293,9 @@ def InterpolateTwoCells(startCell, endCell, numberOfSplinePoints, additionalPoin
         zspline.AddPoint(index, point[2])
 
     xspline.Compute()
-    yspline.Compute()  
+    yspline.Compute()
     zspline.Compute()
-   
+
     points.SetNumberOfPoints(numberOfSplinePoints)
     for i in range(numberOfSplinePoints):
         points.SetPoint(i,xspline.Evaluate(float(i)),yspline.Evaluate(float(i)),zspline.Evaluate(float(i)))

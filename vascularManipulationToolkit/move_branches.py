@@ -20,7 +20,7 @@ def read_command_line():
     Read arguments from commandline
     """
     # TODO: Change to --feature --no-feature for bool agruments
-    # Ex. 
+    # Ex.
     # feature_parser = parser.add_mutually_exclusive_group(required=False)
     # feature_parser.add_argument('--feature', dest='feature', action='store_true')
     # feature_parser.add_argument('--no-feature', dest='feature', action='store_false')
@@ -80,7 +80,7 @@ def read_command_line():
 def get_points(data, key, R, m, rotated=True, bif=False):
     """
     Finds spesific points around the bifurcation, based on the
-    key argument. Points can before or after rotation. 
+    key argument. Points can before or after rotation.
 
     Args:
         data (dict): Contains information about points and IDs of branches and bifurcation.
@@ -89,11 +89,11 @@ def get_points(data, key, R, m, rotated=True, bif=False):
         m (dict): Cointains rotation matrices for each daughter branch.
         rotated (bool): Gets rotated points if True.
         bif (true): Gets only bifurcation points if True.
-    
+
     Returns:
         points (vtkPoints): Points as VTK objects.
     Returns:
-        div_points_bif (ndarray): Points as numpy objects. 
+        div_points_bif (ndarray): Points as numpy objects.
     """
     div_points = np.asarray([data["bif"][key], data[0][key], data[1][key]])
 
@@ -113,26 +113,26 @@ def get_points(data, key, R, m, rotated=True, bif=False):
     div_points_bif = div_points[bif:]
     for point in div_points_bif:
         points.InsertNextPoint(point)
-    
+
     return points, div_points_bif
 
 
 def rotate_voronoi(clipped_voronoi, patch_cl, div_points, m, R):
     """
-    Perform rotation of the voronoi diagram representing the 
+    Perform rotation of the voronoi diagram representing the
     daughter branches. Rotate along the bifurcation plane
     spanned by two vectors, preserving the angle with
     the rest of the vasculature. Rotation is performed
-    using a standard rotational matrix m. 
+    using a standard rotational matrix m.
 
     Args:
         clipped_voronoi (vtkPolyData): Clipped voronoi diagram.
         patch_cl (vtkPolyData): Clipped centerline.
-        div_points (ndarray): Contains bifurcation landmarking points. 
+        div_points (ndarray): Contains bifurcation landmarking points.
         R (ndarray): Matrix containing unit vectors in the rotated coordinate system.
         m (dict): Cointains rotation matrices for each daughter branch.
     Returns:
-        maskedVoronoi (vtkPolyData): Rotated voronoi diagram. 
+        maskedVoronoi (vtkPolyData): Rotated voronoi diagram.
     """
     numberOfPoints = clipped_voronoi.GetNumberOfPoints()
     distance = vtk.vtkMath.Distance2BetweenPoints
@@ -173,11 +173,11 @@ def rotate_voronoi(clipped_voronoi, patch_cl, div_points, m, R):
             return m_, div
         else:
             return I, np.array([0, 0, 0])
-    
+
     maskedVoronoi = vtk.vtkPolyData()
     maskedPoints = vtk.vtkPoints()
     cellArray = vtk.vtkCellArray()
-    radiusArray = get_vtk_array(radiusArrayName, 1, numberOfPoints) 
+    radiusArray = get_vtk_array(radiusArrayName, 1, numberOfPoints)
 
     # Iterate through voronoi diagram
     for i in range(numberOfPoints):
@@ -201,24 +201,24 @@ def rotate_voronoi(clipped_voronoi, patch_cl, div_points, m, R):
 
 def rotate_cl(patch_cl, div_points, rotation_matrix, R):
     """
-    Perform rotation of the centerline representing the 
+    Perform rotation of the centerline representing the
     daughter branches. Rotate along the bifurcation plane
     spanned by two vectors, preserving the angle with
     the rest of the vasculature. Rotation is performed
-    using a standard rotational matrix. 
+    using a standard rotational matrix.
 
     Args:
         patch_cl (vtkPolyData): Clipped centerline representing two daughter branches.
-        div_points (ndarray): Contains bifurcation landmarking points. 
+        div_points (ndarray): Contains bifurcation landmarking points.
         rotation_matrix (dict): Cointains rotation matrices for each daughter branch.
         R (ndarray): Matrix containing unit vectors in the rotated coordinate system.
     Returns:
-        centerlin (vtkPolyData): Rotated centerline. 
+        centerlin (vtkPolyData): Rotated centerline.
     """
     distance = vtk.vtkMath.Distance2BetweenPoints
     I = np.eye(3)
     R_inv = np.linalg.inv(R)
-    
+
     numberOfPoints = patch_cl.GetNumberOfPoints()
 
     centerline = vtk.vtkPolyData()
@@ -229,7 +229,7 @@ def rotate_cl(patch_cl, div_points, rotation_matrix, R):
     line0 = extract_single_line(patch_cl, 0)
     locator0 = get_locator(line0)
 
-    # Iterate through points along the centerline 
+    # Iterate through points along the centerline
     count = 0
     for i in range(patch_cl.GetNumberOfCells()):
         cell = extract_single_line(patch_cl, i)
@@ -253,7 +253,7 @@ def rotate_cl(patch_cl, div_points, rotation_matrix, R):
         else:
             m = I
             O = np.array([0, 0, 0])
-        
+
         getData = cell.GetPointData().GetArray(radiusArrayName).GetTuple1
         for j in range(cell.GetNumberOfPoints()):
             point = np.asarray(cell.GetPoints().GetPoint(j))
@@ -297,10 +297,10 @@ def rotationMatrix(data, angle, leave1, leave2):
         tmp = e - d
         len = math.sqrt(np.dot(tmp, tmp))
         vec[:,i] = tmp / len
-    
+
     # Expand basis to 3D
     R = gram_schmidt(vec)
-    
+
     # Set up rotation matrices
     cos_a = math.cos(angle)
     sin_a = math.sin(angle)
@@ -319,7 +319,7 @@ def rotationMatrix(data, angle, leave1, leave2):
 
     if np.dot(tmp1, R)[0] > np.dot(tmp2, R)[0]:
         m = {1: m2, 2: m1}
-    
+
     # Leave one of the branches untouched
     if leave1:
         k = 1 if data[0]["r_end"] > data[1]["r_end"] else 2
@@ -351,10 +351,10 @@ def merge_cl(centerline, end_point, div_point):
     Args:
         centerline (vtkPolyData): Centerline data consisting of multiple lines.
         end_point (ndarray): Point where bifurcation ends.
-        div_point (ndarray): Point where centerlines diverge. 
+        div_point (ndarray): Point where centerlines diverge.
 
-    Returns: 
-        merge (vtkPolyData): Merged centerline. 
+    Returns:
+        merge (vtkPolyData): Merged centerline.
     """
     merge = vtk.vtkPolyData()
     points = vtk.vtkPoints()
@@ -451,16 +451,16 @@ def sort_outlets(outlets, outlet1, outlet2, dirpath):
 
     Args:
         outlets (list): List of outlet center points.
-        outlet1 (list): Point representing first relevant oultet. 
-        outlet2 (list): Point representing second relevant oultet. 
+        outlet1 (list): Point representing first relevant oultet.
+        outlet2 (list): Point representing second relevant oultet.
         dirpath (str): Location of info file.
 
     Returns:
         outlets (list): List of sorted outlet center points.
-    Returns: 
-        outlet1 (list): Point representing first relevant oultet. 
     Returns:
-        outlet2 (list): Point representing second relevant oultet. 
+        outlet1 (list): Point representing first relevant oultet.
+    Returns:
+        outlet2 (list): Point representing second relevant oultet.
     """
     tmp_outlets = np.array(outlets).reshape(len(outlets)//3, 3)
     outlet1_index = np.argsort(np.sum((tmp_outlets - outlet1)**2, axis=1))[0]
@@ -484,21 +484,21 @@ def sort_outlets(outlets, outlet1, outlet2, dirpath):
 
 def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
          cylinder_factor, aneurysm, anu_num, resampling_step, version):
-    """ 
-    Objective rotation of daughter branches, by rotating 
+    """
+    Objective rotation of daughter branches, by rotating
     centerlines and Voronoi diagram about the bifuraction center.
     The implementation is an extension of the original method
-    presented by Ford et al. (2009), for aneurysm removal, 
-    which introduces the possibility to rotate the 
-    daughter branches a given angle. 
-    Includes the option to rotate only one of the daughter branches. 
+    presented by Ford et al. (2009), for aneurysm removal,
+    which introduces the possibility to rotate the
+    daughter branches a given angle.
+    Includes the option to rotate only one of the daughter branches.
 
     Args:
-        dirpath (str): Directory where case folder is located. 
-        name (str): Name of directory where case model is located. 
+        dirpath (str): Directory where case folder is located.
+        name (str): Name of directory where case model is located.
         smooth (bool): Determine if the voronoi diagram should be smoothed.
         smooth_factor (float): Smoothing factor used for voronoi diagram smoothing.
-        angle (float): Angle which daughter branches are moved, in radians. 
+        angle (float): Angle which daughter branches are moved, in radians.
         l1 (bool): Leaves first branch untouched if True.
         l2 (bool): Leaves second branch untouched if True.
         bif (bool): Interpolates bifurcation is True.
@@ -506,7 +506,7 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
         cylinder_factor(float): Factor for choosing the smaller cylinder during Voronoi interpolation.
         aneurysm (bool): Determines if aneurysm is present.
         anu_num (int): Number of aneurysms.
-        resampling_step (float): Resampling step used to resample centerlines. 
+        resampling_step (float): Resampling step used to resample centerlines.
         version (bool): Determines bifurcation interpolation method.
     """
     # Filenames
@@ -621,7 +621,7 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
 
     # Get data from centerlines and rotation matrix
     data = get_data(centerline_relevant_outlets, centerline_bif, tolerance)
-    R, m = rotationMatrix(data, angle, l1, l2) 
+    R, m = rotationMatrix(data, angle, l1, l2)
     write_parameters(data, dirpath)
 
     # Compute and smooth voornoi diagram (not aneurysm)
@@ -668,7 +668,7 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
     write_points(div_points[0], points_div_path)
     write_points(end_points[0], points_clipp_path)
 
-    # Clip centerlines 
+    # Clip centerlines
     print("Clipping centerlines and voronoi diagram.")
     patch_cl = CreateParentArteryPatches(centerline_par, end_points[0])
     write_polydata(patch_cl, centerline_clipped_path)
@@ -686,15 +686,15 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
         voronoi_clipped = ExtractMaskedVoronoiPoints(voronoi, masked_voronoi)
         write_polydata(voronoi_clipped, voronoi_clipped_path)
 
-    # Rotate branches (Centerline and Voronoi diagram) 
+    # Rotate branches (Centerline and Voronoi diagram)
     print("Rotate centerlines and voronoi diagram.")
     rotated_cl = rotate_cl(patch_cl, end_points[1], m, R)
     write_polydata(rotated_cl, centerline_rotated_path)
-    
+
     if lower or bif:
         rotated_bif_cl = rotate_cl(patch_bif_cl, end_points_bif[1], m, R)
         write_polydata(rotated_bif_cl, centerline_rotated_bif_path)
-    
+
     rotated_voronoi = rotate_voronoi(voronoi_clipped, patch_cl, end_points[1], m, R)
     write_polydata(rotated_voronoi, voronoi_rotated_path)
 

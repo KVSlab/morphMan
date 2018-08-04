@@ -9,60 +9,60 @@ from os import path
 
 
 def MaskVoronoiDiagram(voronoi, centerlines):
-   numberOfCenterlinesPatches = centerlines.GetNumberOfCells()
-   numberOfVoronoiPoints = voronoi.GetNumberOfPoints()
+    numberOfCenterlinesPatches = centerlines.GetNumberOfCells()
+    numberOfVoronoiPoints = voronoi.GetNumberOfPoints()
 
-   maskArray = vtk.vtkIntArray()
-   maskArray.SetNumberOfComponents(1)
-   maskArray.SetNumberOfTuples(numberOfVoronoiPoints)
-   maskArray.FillComponent(0, 0)
+    maskArray = vtk.vtkIntArray()
+    maskArray.SetNumberOfComponents(1)
+    maskArray.SetNumberOfTuples(numberOfVoronoiPoints)
+    maskArray.FillComponent(0, 0)
 
-   for i in range(numberOfCenterlinesPatches):
-     tangent, center, centerMISR = ComputePatchEndPointParameters(i, centerlines) 
-     MaskWithPatch(i, tangent, center, centerMISR, maskArray, centerlines, voronoi)
+    for i in range(numberOfCenterlinesPatches):
+        tangent, center, centerMISR = ComputePatchEndPointParameters(i, centerlines)
+        MaskWithPatch(i, tangent, center, centerMISR, maskArray, centerlines, voronoi)
 
-   return maskArray
+    return maskArray
 
 
 def ComputePatchEndPointParameters(id, centerlines):
-   point0 = [0.0, 0.0, 0.0]
-   point1 = [0.0, 0.0, 0.0]
-   tan = [0.0, 0.0, 0.0]
-   radius0 = -1
+    point0 = [0.0, 0.0, 0.0]
+    point1 = [0.0, 0.0, 0.0]
+    tan = [0.0, 0.0, 0.0]
+    radius0 = -1
 
-   cell = vtk.vtkGenericCell()
-   centerlines.GetCell(id, cell)
+    cell = vtk.vtkGenericCell()
+    centerlines.GetCell(id, cell)
 
-   if (id == 0):
-     point0 = cell.GetPoints().GetPoint(cell.GetNumberOfPoints() - 1)
-     point1 = cell.GetPoints().GetPoint(cell.GetNumberOfPoints() - 2)
-     radius0 = centerlines.GetPointData().GetArray(radiusArrayName).GetTuple1(cell.GetPointId(cell.GetNumberOfPoints() - 1))
-   
-   else:
-     point0 = cell.GetPoints().GetPoint(0)
-     point1 = cell.GetPoints().GetPoint(1)
-     radius0 = centerlines.GetPointData().GetArray(radiusArrayName).GetTuple1(cell.GetPointId(0))
-   
-   tan[0] = point1[0] - point0[0]
-   tan[1] = point1[1] - point0[1]
-   tan[2] = point1[2] - point0[2]
-   vtk.vtkMath.Normalize(tan)
+    if (id == 0):
+        point0 = cell.GetPoints().GetPoint(cell.GetNumberOfPoints() - 1)
+        point1 = cell.GetPoints().GetPoint(cell.GetNumberOfPoints() - 2)
+        radius0 = centerlines.GetPointData().GetArray(radiusArrayName).GetTuple1(cell.GetPointId(cell.GetNumberOfPoints() - 1))
 
-   return tan, point0, radius0 
+    else:
+        point0 = cell.GetPoints().GetPoint(0)
+        point1 = cell.GetPoints().GetPoint(1)
+        radius0 = centerlines.GetPointData().GetArray(radiusArrayName).GetTuple1(cell.GetPointId(0))
+
+    tan[0] = point1[0] - point0[0]
+    tan[1] = point1[1] - point0[1]
+    tan[2] = point1[2] - point0[2]
+    vtk.vtkMath.Normalize(tan)
+
+    return tan, point0, radius0
 
 
 def MaskWithPatch(id, t, c, r, maskArray, centerlines, voronoi):
-   patch = extract_single_line(centerlines, id)
-   
-   tubeFunction = vtkvmtk.vtkvmtkPolyBallLine()
-   tubeFunction.SetInput(patch)
-   tubeFunction.SetPolyBallRadiusArrayName(radiusArrayName)
+    patch = extract_single_line(centerlines, id)
 
-   lastSphere = vtk.vtkSphere()
-   lastSphere.SetRadius(r * 1.5)
-   lastSphere.SetCenter(c)
+    tubeFunction = vtkvmtk.vtkvmtkPolyBallLine()
+    tubeFunction.SetInput(patch)
+    tubeFunction.SetPolyBallRadiusArrayName(radiusArrayName)
 
-   for i in range(voronoi.GetNumberOfPoints()):
+    lastSphere = vtk.vtkSphere()
+    lastSphere.SetRadius(r * 1.5)
+    lastSphere.SetCenter(c)
+
+    for i in range(voronoi.GetNumberOfPoints()):
         point = [0.0, 0.0, 0.0]
         voronoiVector = [0.0, 0.0, 0.0]
 
@@ -72,45 +72,45 @@ def MaskWithPatch(id, t, c, r, maskArray, centerlines, voronoi):
 
         tubevalue = tubeFunction.EvaluateFunction(point)
         spherevalue = lastSphere.EvaluateFunction(point)
-        
+
         if (spherevalue < 0.0) & (voronoiVectorDot < 0.0): continue
         elif (tubevalue <= 0.0):
             maskArray.SetTuple1(i, 1)
 
 
 def ComputeNumberOfMaskedPoints(dataArray):
-   numberOfPoints = 0
-   for i  in range(dataArray.GetNumberOfTuples()):
-      value = dataArray.GetTuple1(i)
-      if (value == 1): numberOfPoints += 1
-   return numberOfPoints   
+    numberOfPoints = 0
+    for i  in range(dataArray.GetNumberOfTuples()):
+        value = dataArray.GetTuple1(i)
+        if (value == 1): numberOfPoints += 1
+    return numberOfPoints
 
 
 def ExtractMaskedVoronoiPoints(voronoi,maskArray):
-   numberOfPoints = ComputeNumberOfMaskedPoints(maskArray)
+    numberOfPoints = ComputeNumberOfMaskedPoints(maskArray)
 
-   maskedVoronoi = vtk.vtkPolyData()
-   maskedPoints = vtk.vtkPoints()
-   cellArray = vtk.vtkCellArray()
-   radiusArray = get_vtk_array(radiusArrayName, 1, numberOfPoints)
+    maskedVoronoi = vtk.vtkPolyData()
+    maskedPoints = vtk.vtkPoints()
+    cellArray = vtk.vtkCellArray()
+    radiusArray = get_vtk_array(radiusArrayName, 1, numberOfPoints)
 
-   count = 0
-   for i in range(voronoi.GetNumberOfPoints()):
-      point = [0.0, 0.0, 0.0]
-      voronoi.GetPoint(i, point)
-      pointRadius = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1(i) 
-      value = maskArray.GetTuple1(i)
-      if (value == 1):
-        maskedPoints.InsertNextPoint(point)
-        radiusArray.SetTuple1(count, pointRadius)
-        cellArray.InsertNextCell(1)
-        cellArray.InsertCellPoint(count)
-        count += 1
+    count = 0
+    for i in range(voronoi.GetNumberOfPoints()):
+        point = [0.0, 0.0, 0.0]
+        voronoi.GetPoint(i, point)
+        pointRadius = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
+        value = maskArray.GetTuple1(i)
+        if (value == 1):
+            maskedPoints.InsertNextPoint(point)
+            radiusArray.SetTuple1(count, pointRadius)
+            cellArray.InsertNextCell(1)
+            cellArray.InsertCellPoint(count)
+            count += 1
 
-   maskedVoronoi.SetPoints(maskedPoints)
-   maskedVoronoi.SetVerts(cellArray)
-   maskedVoronoi.GetPointData().AddArray(radiusArray)
-   return maskedVoronoi
+    maskedVoronoi.SetPoints(maskedPoints)
+    maskedVoronoi.SetVerts(cellArray)
+    maskedVoronoi.GetPointData().AddArray(radiusArray)
+    return maskedVoronoi
 
 
 def SmoothClippedVoronoiDiagram(voronoi, centerlines, smoothingFactor):
@@ -137,7 +137,7 @@ def SmoothClippedVoronoiDiagram(voronoi, centerlines, smoothingFactor):
             count += 1
 
     radiusArray = get_vtk_array(radiusArrayName, 1, count)
-    
+
     for i in range(count):
         radiusArray.SetTuple1(i, radiusArrayNumpy[i])
 

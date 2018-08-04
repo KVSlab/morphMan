@@ -46,7 +46,7 @@ def compute_angle(dirpath, point_path, name, alpha,beta, method, proj=False):
     """
     Primary collection of methods for computing the angle of a vessel bend.
     Three main methods are currently implemented:
-    1) ODR methods: odrline 
+    1) ODR methods: odrline
     2) Tracing point methods: maxcurv, smooth, discrete, frac, MISR
     3) Relative tracing point methods: plane, itplane, itplane_clip
 
@@ -56,11 +56,11 @@ def compute_angle(dirpath, point_path, name, alpha,beta, method, proj=False):
         name (str): Directory where surface models are located.
         alpha (float): Extension / Compression factor in vertical direction.
         beta (float): Extension / Compression factor in horizontal direction.
-        method (str): Method used to compute angle. 
-        proj (bool): True / False for computing 2D / 3D angle. 
-    
+        method (str): Method used to compute angle.
+        proj (bool): True / False for computing 2D / 3D angle.
+
     Returns:
-        newdeg (float): New angle of a vessel bend from a manipulated centerline. 
+        newdeg (float): New angle of a vessel bend from a manipulated centerline.
     """
     # Input filenames
     model_path = path.join(dirpath, name, "model.vtp")
@@ -73,7 +73,7 @@ def compute_angle(dirpath, point_path, name, alpha,beta, method, proj=False):
 
     # Extract Clipping points
     clipping_points = get_clipping_points(dirpath, point_path)
-    
+
     # Read and check model
     if not path.exists(model_path):
         RuntimeError("The given directory: %s did not contain the file: model.vtp" % dirpath)
@@ -89,7 +89,7 @@ def compute_angle(dirpath, point_path, name, alpha,beta, method, proj=False):
 
     # Get inlet and outlets
     inlet, outlets = get_centers(open_surface, dirpath)
-    
+
     # Compute centerline
     centerlines_complete = vmtk_compute_centerlines(inlet, outlets,
                                                centerline_complete_path,
@@ -113,7 +113,7 @@ def compute_angle(dirpath, point_path, name, alpha,beta, method, proj=False):
     n = centerlines_in_order.GetNumberOfCells()
     for i in range(1,n+1):
         patch_ends.append(extract_single_line(patch_cl, i))
-    
+
     # Find directions to move centerline
     direction = "horizont"
     middle_points, middleIds = get_spline_points(line, beta, direction, vtk_clipping_points)
@@ -136,7 +136,7 @@ def compute_angle(dirpath, point_path, name, alpha,beta, method, proj=False):
     clipped_part_new = move_points_vertically(clipped_part_new, dx)
     new_centerline = merge_data([patch_cl_new1, clipped_part_new, patch_cl_new2])
     new_centerline = connect_line(new_centerline)
-    
+
     # Extract siphons from old and new centerline
     locator = get_locator(new_centerline)
     ica_siphon = read_polydata(siphon_path)
@@ -149,19 +149,19 @@ def compute_angle(dirpath, point_path, name, alpha,beta, method, proj=False):
     new_p1 = newline_sp.GetPoints().GetPoint(newID1)
     new_p2 = newline_sp.GetPoints().GetPoint(newID2)
     moved_carotid_siphon = extract_single_line(newline_sp, 0, startID=newID1, endID=newID2)
-    
+
     # Rename
     siphon = ica_siphon
     moved_siphon = moved_carotid_siphon
 
-    if method in ["maxcurv", "odrline","smooth", "frac"]: 
+    if method in ["maxcurv", "odrline","smooth", "frac"]:
         nknots = 11
         line_sp, curv_sp = spline_centerline(siphon, get_curv=True, isline=True, nknots=nknots)
         curv_sp= resample(curv_sp, line_sp.GetNumberOfPoints())
         newline_sp, newcurv_sp = spline_centerline(newsiphon, get_curv=True, isline=True, nknots=nknots)
         cutcurv = curv_sp[ID1:ID2]
         newcutcurv = newcurv_sp[newID1:newID2]
-    
+
     if method == "discrete":
         # Smooth line with discrete derivatives
         neigh = 30
@@ -196,7 +196,7 @@ def compute_angle(dirpath, point_path, name, alpha,beta, method, proj=False):
         print "Computing 2D Angles"
     else:
         print "Computing 3D Angles"
-    
+
     # Find adjusted clipping points (and tracing points)
     if method == "plane":
         maxP, maxID     = find_furthest_points(dx, siphon)
@@ -205,12 +205,12 @@ def compute_angle(dirpath, point_path, name, alpha,beta, method, proj=False):
     elif method in ["itplane", "itplane_clip"]:
         maxP, maxID     = find_furthest_points(dx, siphon )
         newmaxP, newmaxID = find_furthest_points(dx, moved_siphon)
-        
+
         siphon = vmtk_centerline_geometry(siphon, False)
 
         T1 = get_array("FrenetTangent", siphon, k=3)
         T2 = get_array("FrenetTangent", moved_siphon, k=3)
-        
+
         p1_1, p1_id = find_closest_point(T1[-1],0, maxID, p2, siphon )
         p2_2, p2_id = find_closest_point(T1[0],maxID, siphon.GetNumberOfPoints(), p1, siphon)
 
@@ -221,11 +221,11 @@ def compute_angle(dirpath, point_path, name, alpha,beta, method, proj=False):
         N2 = get_array("FrenetBinormal", moved_siphon, k=3)[np1_id]
 
         dP = p1_1 - p2_2
-        dnewP = newp1_1 - newp2_2 
+        dnewP = newp1_1 - newp2_2
 
         normal = np.cross(dP, N1)
         newnormal = np.cross(dnewP, N2)
-        
+
         maxP, maxID     = find_furthest_points(normal, siphon)
         newmaxP, newmaxID = find_furthest_points(newnormal, moved_siphon)
 
@@ -266,7 +266,7 @@ def compute_angle(dirpath, point_path, name, alpha,beta, method, proj=False):
                 dist = n1**2 + n2**2
                 if dist > max_dist:
                     max_dist = dist; maxID=i
-        
+
         newnormP1 = [la.norm(np.array(new_p1) - np.array(moved_siphon.GetPoint(i))) for i in range(moved_siphon.GetNumberOfPoints())]
         newnormP2 = [la.norm(np.array(new_p2) - np.array(moved_siphon.GetPoint(i))) for i in range(moved_siphon.GetNumberOfPoints()-1,-1,-1)]
         newmaxID= 0; new_max_dist = 0
@@ -276,10 +276,10 @@ def compute_angle(dirpath, point_path, name, alpha,beta, method, proj=False):
                 if dist > new_max_dist:
                     new_max_dist = dist; newmaxID=i
 
-    # Compute angles based on the classic formula for 
+    # Compute angles based on the classic formula for
     # angle between vectors in 3D
     if method == "odrline":
-        limits = ["cumulative" , "sd"] 
+        limits = ["cumulative" , "sd"]
         pA = pB = newpA = newpB = np.zeros(3)
         for limit in limits:
             d1, d2, curvlineold = odr_line(ID1, ID2, line_sp, curv_sp, limit)
@@ -307,7 +307,7 @@ def compute_angle(dirpath, point_path, name, alpha,beta, method, proj=False):
             newdeg,nl1,nl2 = find_angle(newpA, newpB, new_p1,new_p2, proj)
 
 
-    else: 
+    else:
         if method == "frac":
             n_values = [5] #[3,5,5,7,7]
             l = [2] #[1,2,1,1,2]
@@ -315,31 +315,31 @@ def compute_angle(dirpath, point_path, name, alpha,beta, method, proj=False):
             for i in range(len(n_values)):
                 dX = 1. / n_values[i]
                 frac = "%sdiv%s"% (l[i] ,n_values[i])
-                IDA = int(ID1 + (ID2 - ID1) * l[i] * dX) 
-                IDB = int(ID1 + (ID2 - ID1) * r[i] * dX) 
+                IDA = int(ID1 + (ID2 - ID1) * l[i] * dX)
+                IDB = int(ID1 + (ID2 - ID1) * r[i] * dX)
                 pA = line_sp.GetPoints().GetPoint(IDA)
                 pB = line_sp.GetPoints().GetPoint(IDB)
 
-                IDA = int(newID1 + (newID2 - newID1) * l[i] * dX) 
-                IDB = int(newID1 + (newID2 - newID1) * r[i] * dX) 
+                IDA = int(newID1 + (newID2 - newID1) * l[i] * dX)
+                IDB = int(newID1 + (newID2 - newID1) * r[i] * dX)
                 newpA = newline_sp.GetPoints().GetPoint(IDA)
                 newpB = newline_sp.GetPoints().GetPoint(IDB)
 
                 newdeg, nl1,nl2 = find_angle(newpA, newpB, new_p1,new_p2, proj)
                 return newdeg
-                
+
 
                 old_deg.append(deg)
                 new_deg.append(newdeg)
 
-        elif method in ["plane", "itplane", "itplane_clip", "maxcurv", "smooth", "discrete", "maxdist"]: 
+        elif method in ["plane", "itplane", "itplane_clip", "maxcurv", "smooth", "discrete", "maxdist"]:
             frac_vals = [ 2. / 5. ]
             for frac in frac_vals:
 
                 if method == "itplane_clip":
                     IDmid = (p2_id - p1_id)/2.
                     newIDmid = (np2_id - np1_id)/2.
-                    if maxID > IDmid: 
+                    if maxID > IDmid:
                         IDA = int((maxID-p1_id)*frac)
                         IDB = int((maxID-p1_id)*(1 + (1-frac)))
                         pA = siphon.GetPoints().GetPoint(IDA+p1_id)
@@ -398,10 +398,10 @@ def compute_curvature(dirpath, point_path, name, alpha, beta, method):
         name (str): Directory where surface models are located.
         alpha (float): Extension / Compression factor in vertical direction.
         beta (float): Extension / Compression factor in horizontal direction.
-        method (str): Method used to compute curvature. 
-    
+        method (str): Method used to compute curvature.
+
     Returns:
-        maxcurv (float): Maximum curvature within the selected siphon. 
+        maxcurv (float): Maximum curvature within the selected siphon.
     """
     # Input filenames
     model_path = path.join(dirpath, name, "model.vtp")
@@ -429,7 +429,7 @@ def compute_curvature(dirpath, point_path, name, alpha, beta, method):
 
     # Get inlet and outlets
     inlet, outlets = get_centers(open_surface, dirpath)
-    
+
     # Compute centerline
     centerlines_complete = vmtk_compute_centerlines(inlet, outlets,
                                                centerline_complete_path,
@@ -460,13 +460,13 @@ def compute_curvature(dirpath, point_path, name, alpha, beta, method):
     dx_p1 = middle_points[0] - p1
     dx_p2 = middle_points[-1] - p2
     maxcurv = None
-    
+
     # Compute new centerline using VMTK
     if "vmtk" in method:
         new_centerline_vmtk = make_centerline(model_new_surface, new_centerlines_path, smooth=False, resampling=False)
         centerlines_in_order = sort_centerlines(new_centerline_vmtk)
         new_line_vmtk = extract_single_line(centerlines_in_order, 0)
-        
+
         # Find new boundaries
         locator = get_locator(new_line_vmtk)
         ID1_new = locator.FindClosestPoint(p1)
@@ -479,7 +479,7 @@ def compute_curvature(dirpath, point_path, name, alpha, beta, method):
             curv_fac = get_array("Curvature", line_fac)
             curv_fac= gauss(curv_fac, 5)
             maxcurv = max(curv_fac[ID1_new+10:ID2_new-10])[0]
-            
+
 
         # 2) VMTK - Iteration variance
         elif method == "vmtkit":
@@ -488,7 +488,7 @@ def compute_curvature(dirpath, point_path, name, alpha, beta, method):
             curv_it = get_array("Curvature", line_it)
             curv_it= gauss(curv_it, 5)
             maxcurv = max(curv_it[ID1_new+10:ID2_new-10])[0]
-    
+
     else:
         # Compute new centerline by manual displacement
         print("Moving centerline manually")
@@ -504,7 +504,7 @@ def compute_curvature(dirpath, point_path, name, alpha, beta, method):
         clipped_part_new = move_points_vertically(clipped_part_new, dx)
         new_centerline = merge_data([patch_cl_new1, clipped_part_new, patch_cl_new2])
         new_centerline = connect_line(new_centerline)
-        
+
         # Find new boundaries of siphon
         locator = get_locator(new_centerline)
         ID1_new = locator.FindClosestPoint(p1)
@@ -517,7 +517,7 @@ def compute_curvature(dirpath, point_path, name, alpha, beta, method):
             filtercurv = gauss(curv_di,5)
             maxcurv = max(filtercurv[ID1_new+10:ID2_new-10])
 
-        # 5) Knot free regression splines 
+        # 5) Knot free regression splines
         if method == "knotfree":
             clfile = write_centerline(new_centerline)
             inits = 20
@@ -525,7 +525,7 @@ def compute_curvature(dirpath, point_path, name, alpha, beta, method):
             curv_kf = gauss(curv_kf,5)
             maxcurv = max(curv_kf[ID1_new+10:ID2_new-10])
 
-        # 6) Splines 
+        # 6) Splines
         if method == "spline":
             nknots = 50
             line_sp, curv_sp = spline_centerline(new_centerline, get_curv=True, isline=True, nknots=nknots)
@@ -540,9 +540,9 @@ def odr_line(ID1, ID2, line, curvature, limit):
     Computes the othogonal distance regression
     of points along the centerline selected from
     1) All points until a cumulative limit is reached
-    or 
-    2) The first 11 points and all points fulfilling curvature 
-    less than the mean plus 1.96 x SD 
+    or
+    2) The first 11 points and all points fulfilling curvature
+    less than the mean plus 1.96 x SD
 
     Args:
         ID1 (int): ID of first clipping point.
@@ -556,7 +556,7 @@ def odr_line(ID1, ID2, line, curvature, limit):
         d2 (ndarray): Direction vector from second clipping point.
         curvlines (vtkPolyData): Centerline object with corresponding curvature values.
     """
-    lim = len(curvature)-1 
+    lim = len(curvature)-1
 
     if limit == "cumulative":
         max_cum = 10
@@ -604,10 +604,10 @@ def odr_line(ID1, ID2, line, curvature, limit):
     # Arrange points in matrix
     X1 = np.array([list(p) for p in p1s])
     X2 = np.array([list(p) for p in p2s])
-    
+
     # Find mean of points
-    avg1 = np.array([np.mean(X1[:,0]), np.mean(X1[:,1]), np.mean(X1[:,2])])        
-    avg2 = np.array([np.mean(X2[:,0]), np.mean(X2[:,1]), np.mean(X2[:,2])])        
+    avg1 = np.array([np.mean(X1[:,0]), np.mean(X1[:,1]), np.mean(X1[:,2])])
+    avg2 = np.array([np.mean(X2[:,0]), np.mean(X2[:,1]), np.mean(X2[:,2])])
 
     # Subtract the mean from all points
     dX1 = X1 - np.array([avg1 for i in range(len(X1))])
@@ -619,7 +619,7 @@ def odr_line(ID1, ID2, line, curvature, limit):
     # Find direction vector
     d1 = V1[0]
     d2 = V2[0]
-    
+
     # Parametric equation P = p0 + t*d
     # Make lines with curv
     # Create edges between new_centerline points
@@ -662,12 +662,12 @@ def cut_centerline(line, endID):
     Clips the centerline at the end point
     given by some ID.
 
-    Args: 
+    Args:
         line (vtkPolyData): Centerline data.
         endID (int): ID of point to cut.
 
     Returns:
-        line (vtkPolyData): Clipped line. 
+        line (vtkPolyData): Clipped line.
     """
     # Create edges between new_centerline points
     pts = vtk.vtkPoints()
@@ -689,21 +689,21 @@ def cut_centerline(line, endID):
 
 def find_angle(pA, pB, p1,p2, proj):
     """
-    Compute the angle between two vectors 
+    Compute the angle between two vectors
     a = pA - p1 and b = pB - p2
-    using the classical formula. 
+    using the classical formula.
 
     Args:
         pA (ndarray): Point along the centerline.
         pB (ndarray): Point along the centerline.
         p1 (ndarray): Point along the centerline.
         p2 (ndarray): Point along the centerline.
-        proj (bool): True / False for 2D / 3D angle. 
+        proj (bool): True / False for 2D / 3D angle.
 
     Returns:
         deg (float): Angle between vectors.
         P1A (ndarray): First vector.
-        P2B (ndarraty): Second vector. 
+        P2B (ndarraty): Second vector.
     """
     if not proj:
         P1A = np.array([pA[0] - p1[0], pA[1] - p1[1], pA[2] - p1[2]])
@@ -719,14 +719,14 @@ def find_angle(pA, pB, p1,p2, proj):
 
 def find_angle_odr(d1,d2,proj):
     """
-    Compute the angle between two vectors 
-    d1 and d2 using the classical formula. 
+    Compute the angle between two vectors
+    d1 and d2 using the classical formula.
     Used for the ODR-method, spesifically.
-    
+
     Args:
         d1 (ndarray): First vector
         d2 (ndarray): Second vector
-        proj (bool): True / False for 2D / 3D angle. 
+        proj (bool): True / False for 2D / 3D angle.
 
     Returns:
         deg (float): Angle between vectors.
@@ -744,29 +744,29 @@ def find_angle_odr(d1,d2,proj):
 
 def save_angle_or_curvature(values, case, param):
     """
-    Save values of curvature / angle stored in a 
-    n x n matrix. 
+    Save values of curvature / angle stored in a
+    n x n matrix.
 
     Args:
         values (ndarray): n x n matrix containing values.
-        case (str): Name of case. 
-        param (str): Name of parameter stored.  
+        case (str): Name of case.
+        param (str): Name of parameter stored.
     """
     mat = np.matrix(values)
     with open('new_%s_%s.txt' % (param,case),'wb') as f:
         for line in mat:
             np.savetxt(f, line, fmt='%.3f')
-     
+
 def spline_matlab_noload(path, filename, init_knots, order):
     """
     Perform Knot-free regresion spline on input centerline
-    extracted from input filename. 
+    extracted from input filename.
     Excludes loading of matlab engine.
 
     Args:
         path (str): Path to centerline-text location.
         filename (str): Filename of text where centerlines is stored.
-        init_knots (int): Number of initial knots. 
+        init_knots (int): Number of initial knots.
         order (int): Order of spline.
 
     Returns:
@@ -789,9 +789,9 @@ def spline_matlab_noload(path, filename, init_knots, order):
 
 def main(basedir, case, kappa, theta, alpha, beta, method_curv, method_angle, n=50):
     """
-    Initilization for computing curvature and angle. 
+    Initilization for computing curvature and angle.
     Values are either printed to terminal or stored in a (n x n) matrix.
-    
+
     Args:
         basedir (str): Location of case folders.
         case (str): Name of case.
@@ -800,12 +800,12 @@ def main(basedir, case, kappa, theta, alpha, beta, method_curv, method_angle, n=
         alpha (float): Extension / Compression factor in vertical direction.
         beta (float): Extension / Compression factor in horizontal direction.
         method_curv (str): Method used to compute curvature.
-        method_angle (str): Method used to compute angle. 
-        n (int): Determines matrix size when computing multiple values. 
+        method_angle (str): Method used to compute angle.
+        n (int): Determines matrix size when computing multiple values.
     """
     name = "surface"
     point_path = "carotid_siphon_points.particles"
-    
+
     # One or more cases
     if case is not None:
         folders = [case]
@@ -821,7 +821,7 @@ def main(basedir, case, kappa, theta, alpha, beta, method_curv, method_angle, n=
         max_curv_values = np.zeros((n,n))
         angle_values = np.zeros((n,n))
         k = 0
-    
+
     # Iterate through cases and compute quantities
     for folder in folders:
         print("Working on case " + folder)
@@ -856,7 +856,7 @@ def main(basedir, case, kappa, theta, alpha, beta, method_curv, method_angle, n=
                 save_angle_or_curvature(max_curv_values, folder, "curvature")
             if theta:
                 save_angle_or_curvature(angle_values, folder, "angle")
-            k+=1 
+            k+=1
 
 
 
@@ -866,4 +866,3 @@ if  __name__ == "__main__":
     if method_curv == "knotfree":
         mlab = matlab.engine.start_matlab()
     main(basedir, case, kappa, theta, alpha, beta, method_curv, method_angle)
-

@@ -43,10 +43,10 @@ version = vtk.vtkVersion().GetVTKMajorVersion()
 
 def read_polydata(filename):
     """
-    Load the given file, and return a vtkPolyData object for it. 
+    Load the given file, and return a vtkPolyData object for it.
 
     Args:
-        filename (str): Path to input file. 
+        filename (str): Path to input file.
 
     Returns:
         polyData (vtkSTL/vtkPolyData/vtkXMLStructured/
@@ -100,8 +100,8 @@ def write_polydata(input_data, filename):
     Args:
         input_data (vtkSTL∕vtkPolyData/vtkXMLStructured/
                     vtkXMLRectilinear∕vtkXMLPolydata/vtkXMLUnstructured/
-                    vtkXMLImage/Tecplot): Input data. 
-        filename (str): Save path location.    
+                    vtkXMLImage/Tecplot): Input data.
+        filename (str): Save path location.
     """
     # Check filename format
     fileType = filename.split(".")[-1]
@@ -144,7 +144,7 @@ def write_polydata(input_data, filename):
 def automatic_surface_clipping(surface, centerlines, filename, clipspheres=0):
     """
     Clips inlet and outlets of newly enveloped surface
-    model using centerline as reference. 
+    model using centerline as reference.
 
     Args:
         surface (vtkPolyData): Input surface.
@@ -207,7 +207,7 @@ def make_voronoi_diagram(surface, filename):
     write_polydata(voronoi.VoronoiDiagram, filename)
 
     newVoronoi = voronoi.VoronoiDiagram
-    return newVoronoi 
+    return newVoronoi
 
 def write_spheres(points, dirpath, radius=None, name="sphere%s.vtp", base=0.2):
     radius = [base]*len(points) if radius is None else radius
@@ -223,25 +223,25 @@ def write_spheres(points, dirpath, radius=None, name="sphere%s.vtp", base=0.2):
 
 
 def get_tolerance(centerline):
-    """ 
-    Finds tolerance based on 
-    average length between points 
+    """
+    Finds tolerance based on
+    average length between points
     along the input centerline.
 
     Args:
         centerline (vtkPolyData): Centerline data.
 
     Returns:
-        tolerance (float): Tolerance value. 
+        tolerance (float): Tolerance value.
     """
     line = extract_single_line(centerline, 0)
     length = get_curvilinear_coordinate(line)
     tolerance = np.mean(length[1:] - length[:-1]) / divergingRatioToSpacingTolerance
-    return tolerance 
+    return tolerance
 
 def get_relevant_outlets(surface, dir_path):
     """
-    Extract relevant outlets of the 
+    Extract relevant outlets of the
     input surface model.
 
     Args:
@@ -372,8 +372,8 @@ def get_curvilinear_coordinate(line):
 def merge_data(inputs):
     """
     Appends one or more polygonal
-    datates together into a single 
-    polygonal dataset. 
+    datates together into a single
+    polygonal dataset.
 
     Args:
         inputs (list): List of vtkPolyData objects.
@@ -387,20 +387,20 @@ def merge_data(inputs):
     appendFilter.Update()
     merged_data = appendFilter.GetOutput()
 
-    return merged_data 
+    return merged_data
 
 
 def get_array(arrayName, line, k=1):
     """
     Get data array from centerline object (Point data).
-    
-    Args: 
+
+    Args:
         arrayName (str): Name of array.
         line (vtkPolyData): Centerline object.
         k (int): Dimension.
 
     Returns:
-        array (ndarray): Array containing data points. 
+        array (ndarray): Array containing data points.
     """
     array = np.zeros((line.GetNumberOfPoints(), k))
     if k == 1:
@@ -419,14 +419,14 @@ def get_array(arrayName, line, k=1):
 def get_array_cell(arrayName, line, k=1):
     """
     Get data array from centerline object (Cell data).
-    
-    Args: 
+
+    Args:
         arrayName (str): Name of array.
         line (vtkPolyData): Centerline object.
         k (int): Dimension.
 
     Returns:
-        array (ndarray): Array containing data points. 
+        array (ndarray): Array containing data points.
     """
     array = np.zeros((line.GetNumberOfCells(), k))
     if k == 1:
@@ -446,17 +446,17 @@ def get_array_cell(arrayName, line, k=1):
 
 def create_new_surface(completeVoronoiDiagram, polyBallImageSize=[120, 120, 120]):
     """
-    Envelops an input voronoi diagram 
-    into a new surface model at a 
-    given resolution determined by 
-    the polyBallImageSize. 
+    Envelops an input voronoi diagram
+    into a new surface model at a
+    given resolution determined by
+    the polyBallImageSize.
 
-    Args: 
+    Args:
         completeVoronoiDiagram (vtkPolyData): Voronoi diagram
         polyBallImageSize (list): List of dimensional resolution of output model
 
     Returns:
-        envelope (vtkPolyData): Enveloped surface model. 
+        envelope (vtkPolyData): Enveloped surface model.
     """
     # TODO: Get bounds and compute polyballs based on that
     #       bounds = surface.GetBounds()
@@ -527,7 +527,7 @@ def get_relevant_outlets_tawss(surface, dir_path):
 
 def get_aneurysm_dome(surface, dir_path, anu_num):
     """
-    Extract aneurysm dome of the 
+    Extract aneurysm dome of the
     input surface model.
 
     Args:
@@ -559,14 +559,14 @@ def centerline_div(centerline1, centerline2, tol):
     """
     Find ID of diverging point;
     where two input centerlines diverge
-    due to a bifurcation. 
+    due to a bifurcation.
 
     Args:
         centerline1 (vtkPolyData): First centerline.
         centerline2 (vtkPolyData): Second centerline.
         tol (float): Tolerance.
 
-    Returns: 
+    Returns:
         i (int): ID at diverging point.
     """
     # Find clipping points
@@ -631,7 +631,7 @@ def provide_relevant_outlets_tawss(surface, dir_path=None):
 
 def provide_relevant_outlets(surface, dir_path=None):
     """
-    Get relevant outlets from user 
+    Get relevant outlets from user
     selected points on a input surface.
 
     Args:
@@ -666,7 +666,7 @@ def provide_relevant_outlets(surface, dir_path=None):
 
 def provide_aneurysm_points(surface, dir_path=None):
     """
-    Get location of aneurysm(s) based on 
+    Get location of aneurysm(s) based on
     selected points on a input surface.
 
     Args:
@@ -704,16 +704,16 @@ def get_data(centerline, centerline_bif, tol):
     """
     Locate bifurcating point and diverging points
     in a bifurcation.
-    End points are set based on the MISR at 
-    the selected points. 
+    End points are set based on the MISR at
+    the selected points.
 
-    Args: 
+    Args:
         centerline (vtkPolyData): Centerline from inlet to relevant outlets.
         centerline_bif (vtkPolyData): Centerline through bifurcation.
         tol (float): Tolerance parameter.
-        
+
     Returns:
-        data (dict): Contains info about diverging point locations. 
+        data (dict): Contains info about diverging point locations.
     """
     # Sort centerline to start at inlet
     cl1 = extract_single_line(centerline,0)
@@ -741,7 +741,7 @@ def get_data(centerline, centerline_bif, tol):
     for i in range(0, N):
         cell_point_0 = centerline.GetPoint(points_ids_0.GetId(i))
         cell_point_1 = centerline.GetPoint(points_ids_1.GetId(i))
-        
+
         distance_between_points = distance(cell_point_0, cell_point_1)**2
         if distance_between_points > tol:
             tmpI = i
@@ -775,7 +775,7 @@ def get_data(centerline, centerline_bif, tol):
                 center = centerline.GetPoint(point_ID)
                 r = centerline.GetPointData().GetArray(radiusArrayName).GetTuple1(point_ID)
                 break
-        
+
         end, r_end = move_past_sphere(centerline, center, r, point_ID, step=1, stop=point_ID*100, X=1)
         data[counter]["end_point"] = end
         data[counter]["r_end"] = r_end
@@ -783,7 +783,7 @@ def get_data(centerline, centerline_bif, tol):
         data[counter]["ID_end"] = locator.FindClosestPoint(data[counter]["end_point"])
         data[counter]["ID_div"] = locator.FindClosestPoint(center)
         data[counter]["div_point"] = center
-        
+
     return data
 
 
@@ -811,14 +811,14 @@ def write_points(points, filename):
 def surface_cleaner(surface):
     """
     Clean surface by merging
-    duplicate points, and∕or 
-    removing unused points 
+    duplicate points, and∕or
+    removing unused points
     and∕or removing degenerate cells.
 
-    Args: 
+    Args:
         surface (vtkPolyData): Surface model.
 
-    Returns: 
+    Returns:
         cleanSurface (vtkPolyData): Cleaned surface model.
     """
     # Clean surface
@@ -1354,7 +1354,7 @@ def remove_distant_points(voronoi, centerline, limit=None):
         ID = locator.FindClosestPoint(point)
         cl_point = centerline.GetPoint(ID)
         dist = distance(point, cl_point)
-        if limit(get_data(i), point, dist): 
+        if limit(get_data(i), point, dist):
             count += 1
             continue
 
@@ -1430,29 +1430,29 @@ def vmtk_compute_centerlines(inlet, outlet, filepath, surface, resampling=1,
 
 def generate_mesh(surface):
         # Compute the mesh.
-        meshGenerator = vmtkscripts.vmtkMeshGenerator()
-        meshGenerator.Surface = surface
-        meshGenerator.ElementSizeMode = "edgelengtharray"
-        meshGenerator.TargetEdgeLengthArrayName = "Size"
-        meshGenerator.BoundaryLayer = 1
-        meshGenerator.NumberOfSubLayers = 4
-        meshGenerator.BoundaryLayerOnCaps = 0
-        meshGenerator.BoundaryLayerThicknessFactor = 0.85
-        meshGenerator.SubLayerRatio = 0.75
-        meshGenerator.Tetrahedralize = 1
-        meshGenerator.VolumeElementScaleFactor = 0.8
-        meshGenerator.EndcapsEdgeLengthFactor = 1.0
+    meshGenerator = vmtkscripts.vmtkMeshGenerator()
+    meshGenerator.Surface = surface
+    meshGenerator.ElementSizeMode = "edgelengtharray"
+    meshGenerator.TargetEdgeLengthArrayName = "Size"
+    meshGenerator.BoundaryLayer = 1
+    meshGenerator.NumberOfSubLayers = 4
+    meshGenerator.BoundaryLayerOnCaps = 0
+    meshGenerator.BoundaryLayerThicknessFactor = 0.85
+    meshGenerator.SubLayerRatio = 0.75
+    meshGenerator.Tetrahedralize = 1
+    meshGenerator.VolumeElementScaleFactor = 0.8
+    meshGenerator.EndcapsEdgeLengthFactor = 1.0
 
-        # Mesh
-        meshGenerator.Execute()
+    # Mesh
+    meshGenerator.Execute()
 
-        # Remeshed surface, store for later
-        remeshSurface = meshGenerator.RemeshedSurface
+    # Remeshed surface, store for later
+    remeshSurface = meshGenerator.RemeshedSurface
 
-        # Full mesh
-        mesh = meshGenerator.Mesh
+    # Full mesh
+    mesh = meshGenerator.Mesh
 
-        return mesh, remeshSurface
+    return mesh, remeshSurface
 
 def create_vtk_array(values, name, k=1):
     vtkArray = get_vtk_array(name, k, values.shape[0])
@@ -1822,9 +1822,9 @@ def vmtk_surface_smoother(surface, method, iterations=800):
 
     return surface
 
-    
+
 def make_centerline(ifile, ofile, length=0.1, it=100, factor=0.1, in_out=None,
-                   smooth=False, resampling=False, newpoints= None, 
+                   smooth=False, resampling=False, newpoints= None,
                    recompute=False, store_points=False, endpoints=0):
     """
     A general centerline command. If a centerline file with the same file
@@ -1835,9 +1835,9 @@ def make_centerline(ifile, ofile, length=0.1, it=100, factor=0.1, in_out=None,
     giving in_out. The first element in the list is the source point, and if -1
     is given, is chooses the old inlet, else it chooses outletX, where X is the
     outlet ID.
-    
+
     Args:
-        ifile (vtkPolyData): Input surface model. 
+        ifile (vtkPolyData): Input surface model.
         ofile (str): Name of output file.
         length (float): Number in (0,1], the resampling step.
         it(int):  Number of iterations of smoothing
@@ -1888,7 +1888,7 @@ def make_centerline(ifile, ofile, length=0.1, it=100, factor=0.1, in_out=None,
             vmtkcenterlines.TargetPoints = outlets
         else:
             vmtkcenterlines.SeedSelectorName = "pickpoint"
-        
+
         # Add resampling
         if resampling:
             vmtkcenterlines.Resampling = 1
@@ -1934,11 +1934,11 @@ def extract_carotid_siphon(folder):
     data = get_data(centerline, centerline_bif, centerlineSpacing)
     line = extract_single_line(centerline, 0, startID=0, endID=data["bif"]["ID_div"])
     write_polydata(line, path.join(folder, "surface", "carotid_siphon.vtp"))
-    
+
     return line
 
 
-# Resampling of centerline 
+# Resampling of centerline
 def vmtk_centerline_resampling(line, length, filename=None):
     resampler = vmtkscripts.vmtkCenterlineResampling()
     resampler.Centerlines = line
@@ -1946,7 +1946,7 @@ def vmtk_centerline_resampling(line, length, filename=None):
     resampler.Execute()
 
     line = resampler.Centerlines
-    return line 
+    return line
 
 # Check bool value for argparse
 def str2bool(v):
@@ -1971,15 +1971,15 @@ def vmtk_centerline_geometry(line, smooth, outputsmoothed=False, factor=1.0, ite
     geometry.Execute()
 
     line = geometry.Centerlines
-    return line 
+    return line
 
 def vmtk_centerline_attributes(line):
     attributes = vmtkscripts.vmtkCenterlineAttributes()
     attributes.Centerlines = line
-    attributes.NormalsArrayName = parallelTransportNormalsArrayName 
-    attributes.AbscissaArrayName = abscissasArrayName 
+    attributes.NormalsArrayName = parallelTransportNormalsArrayName
+    attributes.AbscissaArrayName = abscissasArrayName
     attributes.Execute()
-    
+
     line = attributes.Centerlines
     return line
 
@@ -2016,7 +2016,7 @@ def write_centerline(centerline):
         centerline: Centerline data.
 
     Returns:
-        Path to centerline points 
+        Path to centerline points
     """
     P = []
     for i in range(centerline.GetNumberOfPoints()):
@@ -2031,7 +2031,7 @@ def write_centerline(centerline):
 
 def discrete_geometry(line, neigh=10):
     len_line = line.GetNumberOfPoints()
-    N = line.GetNumberOfPoints() 
+    N = line.GetNumberOfPoints()
 
     # Compute cumulative chord length
     t = np.zeros(N)
@@ -2061,7 +2061,7 @@ def discrete_geometry(line, neigh=10):
         x[i] = p[i][0]
         y[i] = p[i][1]
         z[i] = p[i][2]
- 
+
 
     for i in range(0, m):
         t_sum = sum([ (t[j] - t[i])**2 for j in range(0, 2*m+1)])
@@ -2086,7 +2086,7 @@ def discrete_geometry(line, neigh=10):
     for i in range(N):
         dgammadt.append(np.array([dxdt[i], dydt[i], dzdt[i]]))
         dgammadt_norm[i] = la.norm(dgammadt[i])
-    
+
     tg = []
     for i in range(N):
         tg.append(dgammadt[i] / dgammadt_norm[i])
@@ -2099,7 +2099,7 @@ def discrete_geometry(line, neigh=10):
         t1[i] = tg[i][0]
         t2[i] = tg[i][1]
         t3[i] = tg[i][2]
-    
+
     dt1dt = np.zeros(N)
     dt2dt = np.zeros(N)
     dt3dt = np.zeros(N)
@@ -2115,7 +2115,7 @@ def discrete_geometry(line, neigh=10):
         dt1dt[i] = sum([ (t[j] - t[i])*(t1[j]-t1[i]) for j in range(i-m, i+m+1)]) / t_sum
         dt2dt[i] = sum([ (t[j] - t[i])*(t2[j]-t2[i]) for j in range(i-m, i+m+1)]) / t_sum
         dt3dt[i] = sum([ (t[j] - t[i])*(t3[j]-t3[i]) for j in range(i-m, i+m+1)]) / t_sum
-    
+
     for i in range(N-m, N):
         t_sum = sum([ (t[j] - t[i])**2 for j in range(N-2*m, N)])
         dt1dt[i] = sum([ (t[j] - t[i])*(t1[j]-t1[i]) for j in range(N-2*m-1, N)]) / t_sum
@@ -2137,16 +2137,16 @@ def discrete_geometry(line, neigh=10):
     return line, curv
 
 def get_k1k2_basis(curvature, line):
-    """ 
-    Create a k1-k2 basis used to determine 
+    """
+    Create a k1-k2 basis used to determine
     the location of each bend of the carotid
-    siphon. 
+    siphon.
 
     Args:
         curvature (floats): Curvature array.
-        line (vtk): Centerline points. 
+        line (vtk): Centerline points.
 
-    Returns: 
+    Returns:
         line (vtk): Centerline points including k1-k2 basis.
     """
 
@@ -2184,23 +2184,23 @@ def get_k1k2_basis(curvature, line):
 
 def spline_centerline(line, get_curv=False, isline=False, nknots=50, get_stats=True):
     """
-    Given the knots and coefficients of a B-spline representation, 
-    evaluate the value of the smoothing polynomial and its derivatives. 
+    Given the knots and coefficients of a B-spline representation,
+    evaluate the value of the smoothing polynomial and its derivatives.
     This is a wrapper around the FORTRAN routines splev and splder of FITPACK.
 
-    Args: 
+    Args:
         line (vtkPolyData): Centerline points.
-        get_curv (bool): Computes curvature profile if True. 
+        get_curv (bool): Computes curvature profile if True.
         isline (bool): Determines if centerline object is a line or points.
-        nknots (int): Number of knots. 
+        nknots (int): Number of knots.
         get_stats (bool): Determines if curve attribuites are computed or not.
 
-    Returns: 
+    Returns:
         line (vtkPolyData): Splined centerline data.
     Returns:
-        curv (ndarray): Curvature profile. 
+        curv (ndarray): Curvature profile.
     """
-    
+
     if not isline:
         # Create edges between new_centerline points
         pts = vtk.vtkPoints()
@@ -2243,7 +2243,7 @@ def spline_centerline(line, get_curv=False, isline=False, nknots=50, get_stats=T
 
     header = ["X", "Y", "Z", radiusArrayName]
     line = data_to_vtkPolyData(data, header)
-   
+
     # Let vmtk compute curve attributes
     if get_stats:
         line = vmtk_centerline_geometry(line, smooth=False)
@@ -2268,4 +2268,3 @@ def spline_centerline(line, get_curv=False, isline=False, nknots=50, get_stats=T
         return line, curvature
     else:
         return line
-

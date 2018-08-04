@@ -24,26 +24,26 @@ def get_alpha_beta(dirpath, i, files, param):
     """
     Imports a matrix of parameter values corresponding
     to a (alpha,beta) point and perform spline interpolation
-    to make a parameter surface. 
+    to make a parameter surface.
     Parameter surface is used to find intersection with
     initial parameter value plus / minus one standard deviation.
-    Three criterias to find suggested alpha-beta value from intersection. 
+    Three criterias to find suggested alpha-beta value from intersection.
 
-    Args: 
-        dirpath (str): Location where parameter value data is stored. 
+    Args:
+        dirpath (str): Location where parameter value data is stored.
         i (int): Index of case iteration
-        files (str): Filename of parameter value data file. 
-        param (str): Parameter name. 
+        files (str): Filename of parameter value data file.
+        param (str): Parameter name.
     """
 
     files = path.join(dirpath, files)
     case = files[-9:-4]
     print "Working on case %s" % case
-    
-    # Get boundaries 
+
+    # Get boundaries
     alphabeta_bound = np.loadtxt("alphabeta_bound.txt")
-    amin, amax, bmin, bmax = alphabeta_bound[i][0],alphabeta_bound[i][1],alphabeta_bound[i][2],alphabeta_bound[i][3] 
-        
+    amin, amax, bmin, bmax = alphabeta_bound[i][0],alphabeta_bound[i][1],alphabeta_bound[i][2],alphabeta_bound[i][3]
+
     # Set standard deviations used to find intersetcion
     if param == "curvature":
         sd_curv = 0.045
@@ -51,14 +51,14 @@ def get_alpha_beta(dirpath, i, files, param):
         sd_angle = 19.1
 
     # Defined SD planes for curvature
-    # Tolerance added for adjusting SD 
+    # Tolerance added for adjusting SD
     # if there are no intersections found
     def cpsd(x, y, tol=0.0):
-        return curv0 + sd_curv - tol 
+        return curv0 + sd_curv - tol
 
     def cmsd(x, y, tol=0.0):
-        return curv0 - sd_curv + tol 
-        
+        return curv0 - sd_curv + tol
+
     def curv_init(x, y, tol=0.0):
         return curv0
 
@@ -66,7 +66,7 @@ def get_alpha_beta(dirpath, i, files, param):
         return angle0 + sd_angle - tol
 
     def amsd(x, y, tol=0.0):
-        return angle0 - sd_angle + tol 
+        return angle0 - sd_angle + tol
 
     def angle_init(x, y, tol=0.0):
         return angle0
@@ -78,18 +78,18 @@ def get_alpha_beta(dirpath, i, files, param):
     N = len(data)
     edge = [amin,amax,bmin,bmax]
     alpha = np.linspace(amin,amax,N)
-    beta = np.linspace(bmin,bmax,N) 
+    beta = np.linspace(bmin,bmax,N)
     alpha_long = np.linspace(amin,amax,300)
-    beta_long = np.linspace(bmin,bmax,300) 
+    beta_long = np.linspace(bmin,bmax,300)
     yy,xx = np.meshgrid(beta,alpha)
 
     points = np.zeros((N,2))
     for i in range(len(xx)):
         points[i] = [alpha[i],beta[i]]
-    
+
     # Spline interpolation
     f = interpolate.interp2d(beta,alpha, data, kind='cubic')
-    if param == "curvature": 
+    if param == "curvature":
         curv0 = f(0,0)
     elif param == "angle":
         angle0 = f(0,0)
@@ -98,7 +98,7 @@ def get_alpha_beta(dirpath, i, files, param):
     Z = []
     if param == "curvature":
         methods = [cpsd, cmsd, curv_init]
-    elif param == "angle": 
+    elif param == "angle":
         methods = [apsd, amsd, angle_init]
 
     # Find intersecting points
@@ -133,8 +133,8 @@ def get_alpha_beta(dirpath, i, files, param):
                 dx = int(len(zeros) / 10.)
             elif len(zeros) > 0:
                 dx = 1
-        
-        # Check points and apply criterias 
+
+        # Check points and apply criterias
         # to find suggested values for alpha and beta
         if len(zeros) > 0:
             points = []
@@ -156,7 +156,7 @@ def get_alpha_beta(dirpath, i, files, param):
                         dist = dist_tmp
                         P = p
                 Z.append(P)
-                
+
                 # Write points to file
                 write_alpha_beta_point(case, P, plane.__name__)
 
@@ -178,17 +178,17 @@ def write_alpha_beta_point(case, P, method):
 
 def alpha_beta_intersection(method, f,alphas, betas, tol=0.0):
     """
-    Iterate through values of alpha and beta 
+    Iterate through values of alpha and beta
     and find intersection points with a given tolerance
     between initial value and initial value plus/minus SD.
 
-    Args: 
-        method (function): Plane defining initial value plus/minus SD. 
+    Args:
+        method (function): Plane defining initial value plus/minus SD.
         f (interp2d): Interpolated surface of curvature or angle values.
         alphas (ndarray): List of alpha values.
         betas (ndarray): List of beta values.
         tol (float): Tolerance used for adjusting SD if needed.
-    
+
     Returns:
         zeros (ndarray): Array containing (alpha,beta) tuples which intersect.
     """
@@ -207,7 +207,7 @@ def alpha_beta_intersection(method, f,alphas, betas, tol=0.0):
 def main(dirpath, param):
     """
     Get files containing parameter values
-    and find suggested choice for alpha and beta, 
+    and find suggested choice for alpha and beta,
     the compression / extension factors.
 
     Args:

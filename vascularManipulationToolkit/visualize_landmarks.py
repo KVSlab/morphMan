@@ -21,7 +21,7 @@ rcParams['figure.figsize'] = 9.2, 12
 def set_camera_position(renderView1, filename):
     """
     Adjust camera position to given
-    position saved in input file .pvcc 
+    position saved in input file .pvcc
     from Paraview
     """
     tree = ET.parse(filename)
@@ -80,7 +80,7 @@ def combine_landmark(method):
     Args:
         method (str): Landmarking method
     """
-    savepath = "/home/henrik/article/results/" 
+    savepath = "/home/henrik/article/results/"
     savedir = "../results/landmark_%s.png" % method
 
     cases = sorted(listdir(savepath))
@@ -101,7 +101,7 @@ def combine_landmark(method):
 
 
 def viz_landmark(case, points_name):
-    """ 
+    """
     Visualize and save screenshot of models
     including centerline and landmarking interfaces,
     visualized in Paraview.
@@ -240,13 +240,13 @@ def viz_landmark(case, points_name):
     Delete(optimal_bogparticles )
     Delete(carotid_siphonvtpDisplay)
     Delete(modelvtpDisplay)
-    Delete(optimal_bogparticlesDisplay) 
+    Delete(optimal_bogparticlesDisplay)
     del carotid_siphonvtp
-    del modelvtp 
-    del optimal_bogparticles 
+    del modelvtp
+    del optimal_bogparticles
     del carotid_siphonvtpDisplay
     del modelvtpDisplay
-    del optimal_bogparticlesDisplay 
+    del optimal_bogparticlesDisplay
 
     try:
         remove(tmp_particles)
@@ -265,4 +265,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    

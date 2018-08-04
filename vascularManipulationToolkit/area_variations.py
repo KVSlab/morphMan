@@ -50,11 +50,11 @@ def read_command_line():
 def get_stats(centerline_area, folder, centerline):
     """
     Compute and write all statistical
-    paramaters of the manipulation. 
+    paramaters of the manipulation.
 
-    Args: 
+    Args:
         centerline_area (vtkPolyData): Centerline object including area.
-        folder (str): Path to case folder. 
+        folder (str): Path to case folder.
         centerline (vtkPolyData): Centerline object.
 
     Returns:
@@ -62,7 +62,7 @@ def get_stats(centerline_area, folder, centerline):
     Returns:
         area (ndarray): Array of cross-section area along the abscissa.
     """
-    
+
     area = get_array("CenterlineSectionArea", centerline_area)
     MISR_ = get_array(radiusArrayName, centerline)**2*math.pi
     MISR = np.array([MISR_[i] for i in range(MISR_.shape[0] - 1, -1, -1)])[:area.shape[0]]
@@ -158,13 +158,13 @@ def get_stats(centerline_area, folder, centerline):
 
 def get_line_to_change(centerline, tol):
     """
-    Extract and spline part of centerline 
+    Extract and spline part of centerline
     within the geometry where
-    area variations will be performed. 
+    area variations will be performed.
 
     Args:
         centerline (vtkPolyData): Centerline in geometry.
-        tol (float): Tolerance parameter. 
+        tol (float): Tolerance parameter.
 
     Returns:
         lineToChange (vtkPolyData): Part of centerline.
@@ -186,7 +186,7 @@ def get_line_to_change(centerline, tol):
             if distance(point1, point2) > tol:
                 pointID = i
                 break
-        pointIDs.append(pointID) 
+        pointIDs.append(pointID)
 
     pointID = min(pointIDs)
 
@@ -200,23 +200,23 @@ def get_factor(lineToChange, beta, ratio, percentage, stenosis, stenosis_size, a
     """
     Compute the factor determining
     the change in radius, used to
-    manipulate the Voronoi diagram. 
+    manipulate the Voronoi diagram.
     Only 80% of the geometry covered
-    by the centerline is adjusted to 
-    leave the inlet, and the end of 
-    the area of interest, unchanged. 
+    by the centerline is adjusted to
+    leave the inlet, and the end of
+    the area of interest, unchanged.
 
     Args:
         lineToChange (vtkPolyData): Centerline representing area of interest.
         beta (float): Factor deciding how area will change. Ignored if ratio is given.
-        ratio (float): Desired ratio between min and max cross-sectional area. 
-        percentage (float): Desired increase/decrease in cross-sectional area. 
-        stenosis (bool): Creates or removes a user selected stenosis in the geometry if True. 
+        ratio (float): Desired ratio between min and max cross-sectional area.
+        percentage (float): Desired increase/decrease in cross-sectional area.
+        stenosis (bool): Creates or removes a user selected stenosis in the geometry if True.
         stenosis_size (float): Length of affected stenosis area. Default is MISR x 2.0 of selected point.
         add_noise (bool): Adds noise to surface if true.
 
     Returns:
-        factor (float): Factor determining the change in radius. 
+        factor (float): Factor determining the change in radius.
     """
     # Array to change the radius
     area = get_array("CenterlineSectionArea", lineToChange)
@@ -239,7 +239,7 @@ def get_factor(lineToChange, beta, ratio, percentage, stenosis, stenosis_size, a
 
         # Exclude first and last 10 %
         area_ = area[int(area.shape[0]*0.02):-int(area.shape[0]*0.02)]
-        
+
         # Estimate beta and find factor
         while abs(R - ratio) >= 0.001 and iter < max_iter:
             factor_ = (area / mean)**(beta-1)
@@ -250,7 +250,7 @@ def get_factor(lineToChange, beta, ratio, percentage, stenosis, stenosis_size, a
 
             area_new = (np.sqrt(area[:,0]/math.pi)*factor)**2 * math.pi
             R = area_new.max() / area_new.min()
-            
+
             print(("R now: {:4f}  Want: {:2f}  R old: {:6f}".format(R, ratio, R_old)))
             if R < ratio:
                 a = beta
@@ -290,7 +290,7 @@ def get_factor(lineToChange, beta, ratio, percentage, stenosis, stenosis_size, a
         trans = np.asarray(np.linspace(1, 0, k).tolist() + np.zeros(l).tolist() + np.linspace(0, 1, k).tolist())
         factor_ = np.ones(len(trans)) * (1 + percentage*0.01)
         factor = factor_*(1-trans) + trans
-    
+
     else:
         factor_ = (area / mean)**beta
         # A linear transition of the old and new geometry
@@ -302,7 +302,7 @@ def get_factor(lineToChange, beta, ratio, percentage, stenosis, stenosis_size, a
     return factor
 
 def create_stenosis(lineToChange, stenosisPoint, area, stenosis_size, percentage):
-    # Find closest point along centerline 
+    # Find closest point along centerline
     locator = get_locator(lineToChange)
     stenosisLinePointId = int(locator.FindClosestPoint(stenosisPoint))
     stenosisLinePoint = lineToChange.GetPoint(stenosisLinePointId)
@@ -329,17 +329,17 @@ def create_stenosis(lineToChange, stenosisPoint, area, stenosis_size, percentage
 
     # Define sine profile
     t = np.linspace(0, np.pi, stopId-startId)
-    sine_profile = (np.sin(t)*percentage*0.01 + 1.0).tolist() 
+    sine_profile = (np.sin(t)*percentage*0.01 + 1.0).tolist()
     factor_ = np.asarray(np.ones(startId).tolist() + sine_profile + np.ones(area.shape[0]-stopId).tolist())
     factor = factor_*(1-trans) + trans
 
-    return factor 
+    return factor
 
 def subdivide_centerline(size, startId, stopId, segment_length=1.0):
     """
-    Create a linear transition between original 
-    and manipulated geometry. 
-    
+    Create a linear transition between original
+    and manipulated geometry.
+
     Args:
         size ()
     """
@@ -349,13 +349,13 @@ def subdivide_centerline(size, startId, stopId, segment_length=1.0):
     endmid_l = diff - end_l
     start_l = int(startId * segment_length)
     startmid_l = startId - start_l
-    
-    start = np.asarray(np.ones(start_l)).tolist() 
-    startmid = np.asarray(np.linspace(1, 0, startmid_l)).tolist() 
+
+    start = np.asarray(np.ones(start_l)).tolist()
+    startmid = np.asarray(np.linspace(1, 0, startmid_l)).tolist()
     mid = np.zeros(l).tolist()
     endmid = np.linspace(0, 1, endmid_l).tolist()
-    end = np.asarray(np.ones(end_l)).tolist() 
-    trans = np.asarray(start + startmid + mid + endmid + end) 
+    end = np.asarray(np.ones(end_l)).tolist()
+    trans = np.asarray(start + startmid + mid + endmid + end)
     return trans
 
 def remove_stenosis(lineToChange, point1, point2, area):
@@ -369,7 +369,7 @@ def remove_stenosis(lineToChange, point1, point2, area):
     else:
         startId = lineId2
         stopId = lineId1
-    
+
     # Get areas at start and end
     startPoint = lineToChange.GetPoint(startId)
     endPoint = lineToChange.GetPoint(stopId)
@@ -393,25 +393,25 @@ def remove_stenosis(lineToChange, point1, point2, area):
     factor_ = np.asarray(np.ones(startId).tolist() + fixed_area + np.ones(area.shape[0]-stopId).tolist())
     factor = factor_*(1-trans) + trans
 
-    return factor 
+    return factor
 
 def change_area(voronoi, lineToChange, beta, ratio, percentage, stenosis, stenosis_size, add_noise, surface):
     """
     Change the cross-sectional area of an input
     voronoi diagram along the corresponding area
-    represented by a centerline.  
+    represented by a centerline.
 
     Args:
-        voronoi (vtkPolyData): Voronoi diagram. 
-        tol (float): Tolerance factor. 
+        voronoi (vtkPolyData): Voronoi diagram.
+        tol (float): Tolerance factor.
         beta (float): Factor deciding how area will change. Ignored if ratio is given.
-        ratio (float): Desired ratio between min and max cross-sectional area. 
-        percentage (float): Percentage the area of the geometry / stenosis is increase/decreased. 
-        stenosis (bool): Creates or removes a user selected stenosis in the geometry if True. 
+        ratio (float): Desired ratio between min and max cross-sectional area.
+        percentage (float): Percentage the area of the geometry / stenosis is increase/decreased.
+        stenosis (bool): Creates or removes a user selected stenosis in the geometry if True.
         stenosis_size (float): Length of affected stenosis area. Default is MISR x 2.0 of selected point.
         add_noise (bool): Adds noise to surface if true.
 
-    Returns: 
+    Returns:
         newVoronoi (vtkPolyData): Manipulated Voronoi diagram.
     """
     # NEW: Check if voronoi point is within 1.5*MISR of centerline.
@@ -439,7 +439,7 @@ def change_area(voronoi, lineToChange, beta, ratio, percentage, stenosis, stenos
     lastSphere.SetRadius(r * 1.5)
     lastSphere.SetCenter(c1)
 
-    # Get factor    
+    # Get factor
     factor = get_factor(lineToChange, beta, ratio, percentage, stenosis, stenosis_size, add_noise, surface)
 
     # Locator to find closest point on centerline
@@ -452,7 +452,7 @@ def change_area(voronoi, lineToChange, beta, ratio, percentage, stenosis, stenos
     voronoiPoints = vtk.vtkPoints()
     cellArray = vtk.vtkCellArray()
     radiusArray = get_vtk_array(radiusArrayName, 1, N)
-    
+
     # Iterate through Voronoi diagram and manipulate
     # If inside MISR tube and inside plane, change r and move point.
     point = [0., 0., 0.]
@@ -478,7 +478,7 @@ def change_area(voronoi, lineToChange, beta, ratio, percentage, stenosis, stenos
                 v2 = v1 * (1 - factor[tmp_ID])
 
             point = (np.asarray(point) + v2).tolist()
-            
+
 
             # Change radius
             pointRadius = pointRadius*factor[tmp_ID]
@@ -496,20 +496,20 @@ def change_area(voronoi, lineToChange, beta, ratio, percentage, stenosis, stenos
 
 def main(folder, beta, smooth, stats, r_change, percentage, stenosis, stenosis_size, add_noise):
     """
-    Objective manipulation of area variation in 
-    patient-specific models of blood vessels. 
+    Objective manipulation of area variation in
+    patient-specific models of blood vessels.
     Manipulation is performed by looping over
     all Voronoi points relative to a selected centerline
-    and change the corresponding radius. 
+    and change the corresponding radius.
 
     Args:
-        folder (str): Path to directory with cases. 
+        folder (str): Path to directory with cases.
         beta (float): Factor determining how much the geometry will differ.
         smooth (bool): Determines Voronoi smoothing or not.
         stats (bool): Computes stats of area variations if True.
         r_change (float): Wanted ratio, A_max / A_min. Beta is ignored (and estimated) if given.
-        percentage (float): Percentage the area of the geometry / stenosis is increase/decreased. 
-        stenosis (bool): Creates or removes a user selected stenosis in the geometry if True. 
+        percentage (float): Percentage the area of the geometry / stenosis is increase/decreased.
+        stenosis (bool): Creates or removes a user selected stenosis in the geometry if True.
         stenosis_size (float): Length of affected stenosis area. Default is MISR x 2.0 of selected point.
         add_noise (bool): Adds noise to surface if true.
 
@@ -518,12 +518,12 @@ def main(folder, beta, smooth, stats, r_change, percentage, stenosis, stenosis_s
     Returns:
         area (ndarray): Array of cross-section area along the abscissa.
     """
-    # Input files 
+    # Input files
     model_path = path.join(folder, "surface", "model.vtp")
     centerlines_path = path.join(folder, "surface", "model_usr_centerline.vtp")
     voronoi_path = path.join(folder, "surface", "voronoi.vtp")
 
-    # Output files 
+    # Output files
     voronoi_smoothed_path = path.join(folder, "surface", "voronoi_smoothed.vtp")
     voronoi_new_path = path.join(folder, "surface", "voronoi_area.vtp")
     centerline_area_path = path.join(folder, "surface", "centerline_area.vtp")
@@ -532,15 +532,15 @@ def main(folder, beta, smooth, stats, r_change, percentage, stenosis, stenosis_s
     centerline_spline_path = path.join(folder, "surface", "centerline_spline.vtp")
     model_smoothed_path = path.join(folder, "surface", "model_smoothed.vtp")
     s = ""
-    s += "" if not smooth else "_smooth" 
-    s += "" if r_change is not None or percentage is not None else "_%s" % beta 
-    s += "" if r_change is None else "_ratio%s" % r_change 
-    s += "" if not stenosis else "_stenosis_%smisr" % stenosis_size 
+    s += "" if not smooth else "_smooth"
+    s += "" if r_change is not None or percentage is not None else "_%s" % beta
+    s += "" if r_change is None else "_ratio%s" % r_change
+    s += "" if not stenosis else "_stenosis_%smisr" % stenosis_size
     s += "" if not add_noise else "_noise"
-    s += "" if percentage is None else "_%s" % percentage 
+    s += "" if percentage is None else "_%s" % percentage
     model_area_path = path.join(folder, "surface", "model_area%s.vtp" % s)
 
-    # Import centerline 
+    # Import centerline
     centerlines = make_centerline(model_path, centerlines_path, length=0.1, smooth=False)
 
     # Import and clean surface

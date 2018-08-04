@@ -36,13 +36,13 @@ def read_command_line():
 def main(dirpath, name,smooth,  smoothingfactor, iterations, smoothmode):
     """
     Create a sharper or smoother version of the input geometry,
-    determined by a smoothed version of the siphon centerline. 
+    determined by a smoothed version of the siphon centerline.
 
-    Args: 
+    Args:
         dirpath (str): Directory where case is located.
         name (str): Directory where surface models are located.
         smooth (bool): Adjusts smoothing of the voronoi diagram.
-        smoothingfactor (float): Smoothingfactor for centerline smoothing. 
+        smoothingfactor (float): Smoothingfactor for centerline smoothing.
         iterations (int): Number of smoothing iterations.
         smoothmode (bool): Determines if models is sharpened or smoothed.
     """
@@ -86,7 +86,7 @@ def main(dirpath, name,smooth,  smoothingfactor, iterations, smoothmode):
 
     # Get inlet and outlets
     inlet, outlets = get_centers(open_surface, dirpath)
-    
+
     # Compute all centerlines
     centerlines_complete = vmtk_compute_centerlines(inlet, outlets,
                                                centerline_complete_path,
@@ -111,8 +111,8 @@ def main(dirpath, name,smooth,  smoothingfactor, iterations, smoothmode):
 
     # Search for diverging clipping points along the siphon
     siphon_end_point = carotid_siphon.GetPoint(carotid_siphon.GetNumberOfPoints()-1)
-    div_ids, div_points, centerlines_in_order, div_lines = find_diverging_centerlines(centerlines_in_order, siphon_end_point) 
-    
+    div_ids, div_points, centerlines_in_order, div_lines = find_diverging_centerlines(centerlines_in_order, siphon_end_point)
+
     if div_ids != []:
         print("Clipping diverging centerlines")
         div_patch_cl = []
@@ -132,9 +132,9 @@ def main(dirpath, name,smooth,  smoothingfactor, iterations, smoothmode):
         masked_voronoi_div = MaskVoronoiDiagram(voronoi, div_line_ends)
         clipped_voronoi_div.append(ExtractMaskedVoronoiPoints(voronoi, masked_voronoi_div))
 
-    # Smooth Carotid siphon 
+    # Smooth Carotid siphon
     smooth_carotid_siphon = vmtk_centerline_geometry(carotid_siphon, True, True, factor=sf, iterations=it)
-    write_polydata(smooth_carotid_siphon, centerline_smooth_path) 
+    write_polydata(smooth_carotid_siphon, centerline_smooth_path)
 
     # Get rest of artery
     locator = get_locator(carotid_siphon)
@@ -185,15 +185,15 @@ def main(dirpath, name,smooth,  smoothingfactor, iterations, smoothmode):
 def make_voronoi_smooth(voronoi, old_cl, new_cl, smoothmode, div=False, div_point=None):
     """
     Move the voronoi diagram based on a smoothed
-    version of the centerline. 
-    
+    version of the centerline.
+
     Args:
         voronoi (vtkPolyData): Voronoi diagram data set.
         old_cl (vtkPolyData): Unsmoothed centerline points.
         new_cl (vtkPolyData): Smoothed centerline points.
         smoothmode (bool): Determines if model becomes smoother or sharper.
-        div (bool): True if centerline is a diverging line. 
-        div_point (ndarray): Diverging point along siphon. 
+        div (bool): True if centerline is a diverging line.
+        div_point (ndarray): Diverging point along siphon.
 
     Returns:
         newDataSet (vtkPolyData): Manipulated voronoi diagram.
@@ -221,11 +221,11 @@ def make_voronoi_smooth(voronoi, old_cl, new_cl, smoothmode, div=False, div_poin
             dx = p1 - p0
         else:
             dx = -(p1 - p0)
-        
+
         # Smooth transition at inlet and at end of siphon
         if cl_id < IDstartmid:
             dx = 0
-        elif IDstartmid <= cl_id < IDmid: 
+        elif IDstartmid <= cl_id < IDmid:
             dx = dx*(cl_id - IDstartmid) / float(IDmid - IDstartmid)
         elif cl_id > IDmidend:
             dx = dx*(IDend - cl_id) / float(IDend - IDmidend)
@@ -245,10 +245,7 @@ if  __name__ == "__main__":
     smooth, basedir, case, smoothmode, smoothingfactor, iterations = read_command_line()
     name = "surface"
     folders = listdir(basedir) if case is None else [case]
-    for folder in folders: 
+    for folder in folders:
         print("==== Working on case %s ====" % folder)
         dirpath = path.join(basedir,folder)
         main(dirpath, name, smooth, smoothingfactor, iterations, smoothmode)
-
-
-

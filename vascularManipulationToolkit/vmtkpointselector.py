@@ -95,7 +95,7 @@ class vmtkPickPointSeedSelector(vmtkSeedSelector):
             self.vmtkRenderer.Initialize()
             self.OwnRenderer = 1
 
-        #self.vmtkRenderer.RegisterScript(self.Script) 
+        #self.vmtkRenderer.RegisterScript(self.Script)
 
         glyphs = vtk.vtkGlyph3D()
         glyphSource = vtk.vtkSphereSource()
@@ -139,7 +139,7 @@ class vmtkPickPointSeedSelector(vmtkSeedSelector):
             text = 'Place one point where stenosis is centered OR place two points to heal stenosis, \'u\' to undo\n'
         elif self.Mode == "outlet":
             text = 'Please select the two relevant outlets, \'u\' to undo\n'
-        elif self.Mode == "aneurysm": 
+        elif self.Mode == "aneurysm":
             text = 'Please position the mouse and press space to add the top of the aneurysm, \'u\' to undo\n'
         else:
             text = "Place points, \'u\' to undo\n"

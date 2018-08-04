@@ -15,7 +15,7 @@ for f in files:
         print "ITS HERE"
         print 1/0
 """
-    
+
 from modulefinder import ModuleFinder
 
 finder = ModuleFinder()
