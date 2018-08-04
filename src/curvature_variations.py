@@ -169,9 +169,10 @@ def change_curvature(dirpath, name,smooth,  smoothingfactor, iterations, smoothm
     # Create new surface
     print("Create new surface")
     new_surface = create_new_surface(newVoronoi)
+    # TODO: Add Automated clipping of newmodel 
+    new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100):
     write_polydata(new_surface, model_new_surface)
 
-    # TODO: Add clipping of in and outlets
 
 def make_voronoi_smooth(voronoi, old_cl, new_cl, smoothmode, div=False, div_point=None):
     """
