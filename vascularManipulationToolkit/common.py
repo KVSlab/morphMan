@@ -1,20 +1,16 @@
 # -*- coding: utf-8 -*-
 #!/usr/bin/env python
 import vtk
-from vmtk import vtkvmtk, vmtkscripts
-try:
-    from vmtkpointselector import *
-except:
-    pass
 import numpy as np
 import numpy.linalg as la
 import matlab.engine
 import sys
-import re
-from os import path, listdir
 import math
+from vmtk import vtkvmtk, vmtkscripts
+from os import path, listdir
 from scipy.signal import argrelextrema, gaussian, resample
 from scipy.interpolate import splrep, splev
+from vmtkpointselector import *
 
 # Global array names
 radiusArrayName = 'MaximumInscribedSphereRadius'
@@ -30,7 +26,7 @@ edgeArrayName = 'EdgeArray'
 edgePCoordArrayName = 'EdgePCoordArray'
 costFunctionArrayName = 'CostFunctionArray'
 
-# Options not availeble from commandline
+# Options not available from commandline
 divergingRatioToSpacingTolerance = 2.0
 interpolationHalfSize = 3
 voronoiCoreCutOffThreshold = 0.75
@@ -184,6 +180,7 @@ def automatic_surface_clipping(surface, centerlines, filename, clipspheres=0):
 
     return surface
 
+
 def make_voronoi_diagram(surface, filename):
     """
     Creates a surface model's
@@ -208,6 +205,7 @@ def make_voronoi_diagram(surface, filename):
 
     newVoronoi = voronoi.VoronoiDiagram
     return newVoronoi
+
 
 def write_spheres(points, dirpath, radius=None, name="sphere%s.vtp", base=0.2):
     radius = [base]*len(points) if radius is None else radius
@@ -239,6 +237,7 @@ def get_tolerance(centerline):
     tolerance = np.mean(length[1:] - length[:-1]) / divergingRatioToSpacingTolerance
     return tolerance
 
+
 def get_relevant_outlets(surface, dir_path):
     """
     Extract relevant outlets of the
@@ -266,7 +265,6 @@ def get_relevant_outlets(surface, dir_path):
         relevant_outlets = provide_relevant_outlets(surface, dir_path)
 
     return relevant_outlets
-
 
 
 def smooth_voronoi_diagram(voronoi, centerlines, smoothingFactor,
@@ -525,6 +523,7 @@ def get_relevant_outlets_tawss(surface, dir_path):
 
     return inlet, relevant_outlets
 
+
 def get_aneurysm_dome(surface, dir_path, anu_num):
     """
     Extract aneurysm dome of the
@@ -555,6 +554,7 @@ def get_aneurysm_dome(surface, dir_path, anu_num):
 
     return dome[anu_num]
 
+
 def centerline_div(centerline1, centerline2, tol):
     """
     Find ID of diverging point;
@@ -581,53 +581,6 @@ def centerline_div(centerline1, centerline2, tol):
 
     return i
 
-
-def provide_relevant_outlets_tavel(surface, dir_path=None):
-    # Fix surface
-    cleaned_surface = surface_cleaner(surface)
-    triangulated_surface = triangulate_surface(cleaned_surface)
-
-    # Select seeds
-    SeedSelector = vmtkPickPointSeedSelector()
-    SeedSelector.SetSurface(triangulated_surface)
-    SeedSelector.Execute()
-
-    aneurysmSeedIds = SeedSelector.GetTargetSeedIds()
-    get_point = surface.GetPoints().GetPoint
-    points = [list(get_point(aneurysmSeedIds.GetId(i))) for i in range(aneurysmSeedIds.GetNumberOfIds())]
-    info = {}
-
-    if dir_path is not None:
-        info["tavel_inlet"] = points[0]
-        for i in range(1, len(points)):
-            info["tavel_relevant_outlet_%d" % (i-1)] = points[i]
-            write_parameters(info, dir_path)
-
-    return points[0], points[1:]
-
-
-def provide_relevant_outlets_tawss(surface, dir_path=None):
-    # Fix surface
-    cleaned_surface = surface_cleaner(surface)
-    triangulated_surface = triangulate_surface(cleaned_surface)
-
-    # Select seeds
-    SeedSelector = vmtkPickPointSeedSelector()
-    SeedSelector.SetSurface(triangulated_surface)
-    SeedSelector.Execute()
-
-    aneurysmSeedIds = SeedSelector.GetTargetSeedIds()
-    get_point = surface.GetPoints().GetPoint
-    points = [list(get_point(aneurysmSeedIds.GetId(i))) for i in range(aneurysmSeedIds.GetNumberOfIds())]
-    info = {}
-
-    if dir_path is not None:
-        info["tawss_inlet"] = points[0]
-        for i in range(1, len(points)):
-            info["tawss_relevant_outlet_%d" % (i-1)] = points[i]
-            write_parameters(info, dir_path)
-
-    return points[0], points[1:]
 
 def provide_relevant_outlets(surface, dir_path=None):
     """
@@ -697,7 +650,6 @@ def provide_aneurysm_points(surface, dir_path=None):
             write_parameters(info, dir_path)
 
     return points
-
 
 
 def get_data(centerline, centerline_bif, tol):
@@ -1364,7 +1316,7 @@ def remove_distant_points(voronoi, centerline, limit=None):
         value = get_data(i)
         radius[i-count] = value
 
-    print(("Removed %s points from the voronoi diagram" % count))
+    print("Removed %s points from the voronoi diagram" % count)
 
     radiusArray = get_vtk_array(radiusArrayName, 1, N-count)
     for i in range(N-count):
@@ -1453,6 +1405,7 @@ def generate_mesh(surface):
     mesh = meshGenerator.Mesh
 
     return mesh, remeshSurface
+
 
 def create_vtk_array(values, name, k=1):
     vtkArray = get_vtk_array(name, k, values.shape[0])
@@ -1553,6 +1506,7 @@ def csv_to_txt(folder):
     writer.write(text)
     writer.close()
     check_output("mv " + csv + " " + txt, stderr=STDOUT, shell=True)
+
 
 def data_to_vtkPolyData(data, header, TNB=None, PT=None):
     line = vtk.vtkPolyData()
@@ -1922,6 +1876,7 @@ def make_centerline(ifile, ofile, length=0.1, it=100, factor=0.1, in_out=None,
         centerline = read_polydata(ofile)
     return centerline
 
+
 # Extract carotid siphon
 def extract_carotid_siphon(folder):
     centerline_path = path.join(folder, "surface", "model_usr_centerline.vtp")
@@ -1948,6 +1903,7 @@ def vmtk_centerline_resampling(line, length, filename=None):
     line = resampler.Centerlines
     return line
 
+
 # Check bool value for argparse
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
@@ -1956,6 +1912,7 @@ def str2bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
+
 
 # Compute geometric features of centerline
 def vmtk_centerline_geometry(line, smooth, outputsmoothed=False, factor=1.0, iterations=100):
@@ -1972,6 +1929,7 @@ def vmtk_centerline_geometry(line, smooth, outputsmoothed=False, factor=1.0, ite
 
     line = geometry.Centerlines
     return line
+
 
 def vmtk_centerline_attributes(line):
     attributes = vmtkscripts.vmtkCenterlineAttributes()
@@ -2005,6 +1963,7 @@ def spline_matlab(path, filename, init_knots, order):
         curv_p[i] = curv_m[i][0]
 
     return curv_p
+
 
 def write_centerline(centerline):
     """
@@ -2136,6 +2095,7 @@ def discrete_geometry(line, neigh=10):
 
     return line, curv
 
+
 def get_k1k2_basis(curvature, line):
     """
     Create a k1-k2 basis used to determine
@@ -2181,6 +2141,7 @@ def get_k1k2_basis(curvature, line):
         line.GetPointData().AddArray(k_array)
 
     return line
+
 
 def spline_centerline(line, get_curv=False, isline=False, nknots=50, get_stats=True):
     """

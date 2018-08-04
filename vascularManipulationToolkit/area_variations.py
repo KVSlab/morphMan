@@ -8,8 +8,6 @@ import numpy as np
 import math
 from scipy.ndimage.filters import gaussian_filter
 from scipy.signal import argrelextrema
-import ToolRepairSTL
-from IPython import embed
 
 def read_command_line():
     """
