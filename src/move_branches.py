@@ -1,11 +1,9 @@
 from common import *
 from argparse import ArgumentParser
 from os import path, listdir
-from subprocess import STDOUT, check_output
 from time import time
 from copy import deepcopy
 
-from IPython import embed
 import sys
 import math
 
@@ -13,7 +11,6 @@ import math
 from patchandinterpolatecenterlines import *
 from clipvoronoidiagram import *
 from paralleltransportvoronoidiagram import *
-import ToolRepairSTL
 
 def read_command_line():
     """
@@ -555,7 +552,8 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
         print("Aneurysm type read from info.txt file: %s" % aneurysm_type)
 
     # Clean and capp / uncapp surface
-    open_surface, capped_surface = preare_surface(model_path, parameters)
+    open_surface, capped_surface = prepare_surface(model_path, parameters)
+    surface = open_surface
 
     # Get aneurysm "end point"
     if aneurysm:
