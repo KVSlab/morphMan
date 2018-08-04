@@ -24,7 +24,7 @@ def read_command_line():
                         help="Path to the folder with all the cases")
     parser.add_argument('-c','--case', type=str, default=None, help="Choose case")
     parser.add_argument('-cm','--curv_method', type=str, default="spline",
-            help="Choose which method used for computing curvature: spline (default) | vmtk | knotfree | disc |")
+            help="Choose which method used for computing curvature: spline (default) | vmtk | disc |")
 
     parser.add_argument('-a','--algorithm', type=str, default="bogunovic",
             help="Choose which landmarking algorithm to use: bogunovic or piccinelli")
@@ -68,21 +68,6 @@ def landmarking_bogunovic(centerline, folder, curv_method, algorithm,
 
     if resamp_step is not None:
         centerline = vmtk_centerline_resampling(centerline, length=resamp_step)
-
-    if curv_method == "knotfree":
-        init = nknots
-        order = 5
-
-        # Get attributes
-        line = vmtk_centerline_attributes(centerline)
-        line = vmtk_centerline_geometry(line,smooth, factor=smoothingfactor, iterations=iterations)
-        clfile = write_centerline(line)
-        curvature_ = spline_matlab(".", clfile, init_knots=init, order=float(5),plot=False)
-        curvature__ = gaussian_filter(curvature_, 5)
-        curvature = []
-        for c in curvature__:
-            curvature.append([c])
-        curvature = np.array(curvature)
 
     elif curv_method == "vmtk":
         line = vmtk_centerline_attributes(centerline)
@@ -236,7 +221,9 @@ def landmarking_bogunovic(centerline, folder, curv_method, algorithm,
         create_particles(folder, algorithm, curv_method)
 
 
-def landmarking_piccinelli(centerline, folder, curv_method, algorithm, resamp_step=None, smooth=False, nknots=None, factor_curv=None, factor_tor=None, iterations=100):
+def landmarking_piccinelli(centerline, folder, curv_method, algorithm, resamp_step=None,
+                           smooth=False, nknots=None, factor_curv=None, factor_tor=None,
+                           iterations=100);
     """
     Perform landmarking of an input centerline to
     identify different segments along the vessel.
@@ -275,8 +262,10 @@ def landmarking_piccinelli(centerline, folder, curv_method, algorithm, resamp_st
         max_point_tor_ids = list(argrelextrema(abs(torsion_smooth), np.greater)[0])
 
     elif curv_method == "vmtk":
-        line = vmtk_centerline_geometry(centerline, True, outputsmoothed=0, factor=factor_curv, iterations=iterations)
-        line_tor = vmtk_centerline_geometry(centerline, True, outputsmoothed=0, factor=factor_tor, iterations=iterations)
+        line = vmtk_centerline_geometry(centerline, True, outputsmoothed=0,
+                                        factor=factor_curv, iterations=iterations)
+        line_tor = vmtk_centerline_geometry(centerline, True, outputsmoothed=0,
+                                            factor=factor_tor, iterations=iterations)
 
         # Get curvature and torsion, find peaks
         curvature = get_array("Curvature", line)
@@ -509,7 +498,8 @@ def create_particles(folder, algorithm, method):
     output_all.close()
     output_siphon.close()
 
-def main(folder, curv_method, algorithm, resamp_step, nknots, smooth, factor_curv, factor_torsion, iterations):
+def main(folder, curv_method, algorithm, resamp_step, nknots, smooth, factor_curv,
+         factor_torsion, iterations):
     """
     Compute carotid siphon and perform landmarking.
 

@@ -3,7 +3,6 @@
 import vtk
 import numpy as np
 import numpy.linalg as la
-import matlab.engine
 import sys
 import math
 from vmtk import vtkvmtk, vmtkscripts
@@ -1940,52 +1939,6 @@ def vmtk_centerline_attributes(line):
 
     line = attributes.Centerlines
     return line
-
-
-def spline_matlab(path, filename, init_knots, order):
-    """
-    Perform Knot-free regresion spline on input centerline
-    extracted from input filename
-    Includes loading of matlab engine.
-
-    """
-
-    print("Computing knot free regression spline")
-    order = float(order)
-    init_knots = float(init_knots)
-    mlab = matlab.engine.start_matlab()
-    curv_m = mlab.CenterlineCharacterization(path, filename, init_knots, order, nargout=1)
-
-    n = len(curv_m)
-    curv_p = np.zeros(n)
-
-    for i in range(n):
-        curv_p[i] = curv_m[i][0]
-
-    return curv_p
-
-
-def write_centerline(centerline):
-    """
-    Write centerline points to text file
-    used for computation of curvature in
-    matlab
-
-    Args:
-        centerline: Centerline data.
-
-    Returns:
-        Path to centerline points
-    """
-    P = []
-    for i in range(centerline.GetNumberOfPoints()):
-        P.append(np.array(centerline.GetPoint(i)))
-
-    clfile = "centerline.txt"
-    with open(clfile,'wb') as f:
-        for p in P:
-            f.write("%s %s %s\n" % (p[0],p[1],p[2]))
-    return clfile
 
 
 def discrete_geometry(line, neigh=10):
