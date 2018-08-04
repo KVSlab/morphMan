@@ -12,6 +12,7 @@ from patchandinterpolatecenterlines import *
 from clipvoronoidiagram import *
 from paralleltransportvoronoidiagram import *
 
+
 def read_command_line():
     """
     Read arguments from commandline
@@ -86,7 +87,7 @@ def get_points(data, key, R, m, rotated=True, bif=False):
     # Origo of the bifurcation
     O_key = "div_point"
     O = np.asarray([data["bif"][O_key], data[0][O_key], data[1][O_key]])
-    O = np.sum(np.asarray(O), axis=0)/3.
+    O = np.sum(np.asarray(O), axis=0) / 3.
 
     if rotated:
         R_inv = np.linalg.inv(R)
@@ -149,7 +150,7 @@ def rotate_voronoi(clipped_voronoi, patch_cl, div_points, m, R):
 
         if dist.index(min(dist)) not in not_rotate:
             pnt = cellLine[dist.index(min(dist))].GetPoints().GetPoint(0)
-            if math.sqrt(distance(pnt, div_points[1])) >  \
+            if math.sqrt(distance(pnt, div_points[1])) > \
                     math.sqrt(distance(pnt, div_points[2])):
                 m_ = m[2]
                 div = div_points[2]
@@ -234,7 +235,7 @@ def rotate_cl(patch_cl, div_points, rotation_matrix, R):
             dist2 = math.sqrt(distance(pnt2, div_points[-1]))
             k = -2 if dist1 < dist2 else -1
             O = div_points[k]
-            m = rotation_matrix[k+3]
+            m = rotation_matrix[k + 3]
 
         else:
             m = I
@@ -256,7 +257,7 @@ def rotate_cl(patch_cl, div_points, rotation_matrix, R):
     return centerline
 
 
-def rotationMatrix(data, angle, leave1, leave2):
+def rotation_matrix(data, angle, leave1, leave2):
     """
     Compute the rotation matrices for one or both
     daughter brances of the vessel.
@@ -291,11 +292,11 @@ def rotationMatrix(data, angle, leave1, leave2):
     cos_a = math.cos(angle)
     sin_a = math.sin(angle)
     m1 = np.asarray([[cos_a, -sin_a, 0],
-                     [sin_a,  cos_a, 0],
-                     [    0,      0, 1]])
-    m2 = np.asarray([[ cos_a, sin_a, 0],
+                     [sin_a, cos_a, 0],
+                     [0, 0, 1]])
+    m2 = np.asarray([[cos_a, sin_a, 0],
                      [-sin_a, cos_a, 0],
-                     [     0,     0, 1]])
+                     [0, 0, 1]])
 
     m = {1: m1, 2: m2}
     tmp1 = data[0]["div_point"] - d
@@ -353,15 +354,15 @@ def merge_cl(centerline, end_point, div_point):
     map_other = {0: 1, 1: 0}
     ID0 = locators[0].FindClosestPoint(end_point[1])
     ID1 = locators[1].FindClosestPoint(end_point[1])
-    dist0 = math.sqrt(np.sum((np.asarray(lines[0].GetPoint(ID0)) - end_point[1])**2))
-    dist1 = math.sqrt(np.sum((np.asarray(lines[1].GetPoint(ID1)) - end_point[1])**2))
+    dist0 = math.sqrt(np.sum((np.asarray(lines[0].GetPoint(ID0)) - end_point[1]) ** 2))
+    dist1 = math.sqrt(np.sum((np.asarray(lines[1].GetPoint(ID1)) - end_point[1]) ** 2))
     end1 = 0 if dist0 < dist1 else 1
     end2 = int(not end1)
     for i in range(2, N_lines):
         ID1 = locators[i].FindClosestPoint(end_point[1])
         ID2 = locators[i].FindClosestPoint(end_point[2])
-        dist1 = math.sqrt(np.sum((np.asarray(lines[i].GetPoint(ID1)) - end_point[1])**2))
-        dist2 = math.sqrt(np.sum((np.asarray(lines[i].GetPoint(ID2)) - end_point[2])**2))
+        dist1 = math.sqrt(np.sum((np.asarray(lines[i].GetPoint(ID1)) - end_point[1]) ** 2))
+        dist2 = math.sqrt(np.sum((np.asarray(lines[i].GetPoint(ID2)) - end_point[2]) ** 2))
         map_other[i] = end1 if dist1 > dist2 else end2
 
     counter = 0
@@ -374,7 +375,7 @@ def merge_cl(centerline, end_point, div_point):
         div_id = loc.FindClosestPoint(div_point[0])
         clipp_dist = distance(line.GetPoint(clipp_id), end_point[0])
         div_dist = distance(line.GetPoint(div_id), div_point[0])
-        tol = get_tolerance(line)*3
+        tol = get_tolerance(line) * 3
         merge_bool = True
         if clipp_dist > tol or div_dist > tol:
             merge_bool = False
@@ -386,7 +387,7 @@ def merge_cl(centerline, end_point, div_point):
 
         for j in range(N):
             # Add point
-            if div_ID[i] < j < end_ID[i] and merge_bool: # and i in change:
+            if div_ID[i] < j < end_ID[i] and merge_bool:
                 new = (np.asarray(other.GetPoint(j)) +
                     np.asarray(line.GetPoint(j))) / 2.
                 points.InsertNextPoint(new)
@@ -436,9 +437,9 @@ def sort_outlets(outlets, outlet1, outlet2, dirpath):
     Returns:
         outlet2 (list): Point representing second relevant oultet.
     """
-    tmp_outlets = np.array(outlets).reshape(len(outlets)//3, 3)
-    outlet1_index = np.argsort(np.sum((tmp_outlets - outlet1)**2, axis=1))[0]
-    outlet2_index = np.argsort(np.sum((tmp_outlets - outlet2)**2, axis=1))[0]
+    tmp_outlets = np.array(outlets).reshape(len(outlets) // 3, 3)
+    outlet1_index = np.argsort(np.sum((tmp_outlets - outlet1) ** 2, axis=1))[0]
+    outlet2_index = np.argsort(np.sum((tmp_outlets - outlet2) ** 2, axis=1))[0]
     tmp_outlets = tmp_outlets.tolist()
     if max(outlet1_index, outlet2_index) == outlet1_index:
         outlet1 = tmp_outlets.pop(outlet1_index)
@@ -449,8 +450,8 @@ def sort_outlets(outlets, outlet1, outlet2, dirpath):
     outlet_rest = (np.array(tmp_outlets).flatten()).tolist()
     outlets = outlet1 + outlet2 + outlet_rest
     data = {}
-    for i in range(len(outlets)//3):
-        data["outlet"+str(i)] = outlets[3*i:3*(i+1)]
+    for i in range(len(outlets) // 3):
+        data["outlet" + str(i)] = outlets[3 * i:3 * (i + 1)]
     write_parameters(data, dirpath)
 
     return outlets, outlet1, outlet2
@@ -487,7 +488,7 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
     folder = path.join(dirpath, name + "%s")
 
     # Input filenames
-    model_path = folder %  ".vtp"
+    model_path = folder % ".vtp"
 
     # Output names
     # Surface
@@ -495,30 +496,30 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
 
     # Centerliens
     centerline_par_path = folder % "_centerline_par.vtp"
-    centerline_aneurysm_path = folder %  "_centerline_aneurysm.vtp"
-    centerline_bif_path = folder %  "_centerline_bif.vtp"
-    centerline_complete_path = folder %  "_centerline_complete.vtp"
-    centerline_clipped_path = folder %  "_centerline_clipped_ang.vtp"
-    centerline_clipped_bif_path = folder %  "_centerline_clipped_bif_ang.vtp"
-    centerline_bif_clipped_path = folder %  "centerline_clipped_bif_ang.vtp"
-    centerline_dau_clipped_path = folder %  "centerline_clipped_dau_ang.vtp"
-    centerline_new_path = folder %  "_centerline_interpolated_ang.vtp"
-    centerline_new_bif_path = folder %  "_centerline_interpolated_bif_ang.vtp"
-    centerline_new_bif_lower_path = folder %  "_centerline_interpolated_bif_lower_ang.vtp"
-    centerline_relevant_outlets_path = folder %  "_centerline_relevant_outlets.vtp"
-    centerline_rotated_path = folder %  "centerline_rotated_ang.vtp"
-    centerline_rotated_bif_path = folder %  "centerline_rotated_bif_ang.vtp"
-    centerline_rotated_dau_path = folder %  "centerline_rotated_dau_ang.vtp"
+    centerline_aneurysm_path = folder % "_centerline_aneurysm.vtp"
+    centerline_bif_path = folder % "_centerline_bif.vtp"
+    centerline_complete_path = folder % "_centerline_complete.vtp"
+    centerline_clipped_path = folder % "_centerline_clipped_ang.vtp"
+    centerline_clipped_bif_path = folder % "_centerline_clipped_bif_ang.vtp"
+    centerline_bif_clipped_path = folder % "centerline_clipped_bif_ang.vtp"
+    centerline_dau_clipped_path = folder % "centerline_clipped_dau_ang.vtp"
+    centerline_new_path = folder % "_centerline_interpolated_ang.vtp"
+    centerline_new_bif_path = folder % "_centerline_interpolated_bif_ang.vtp"
+    centerline_new_bif_lower_path = folder % "_centerline_interpolated_bif_lower_ang.vtp"
+    centerline_relevant_outlets_path = folder % "_centerline_relevant_outlets.vtp"
+    centerline_rotated_path = folder % "centerline_rotated_ang.vtp"
+    centerline_rotated_bif_path = folder % "centerline_rotated_bif_ang.vtp"
+    centerline_rotated_dau_path = folder % "centerline_rotated_dau_ang.vtp"
 
     # Voronoi diagrams
     voronoi_path = folder % "_voronoi.vtp"
     voronoi_smoothed_path = folder % "_voronoi_smoothed.vtp"
     voronoi_clipped_path = folder % "_voronoi_clipped_ang.vtp"
-    voronoi_ang_path = folder %  "_voronoi_ang.vtp"
-    voronoi_rotated_path = folder %  "voronoi_rotated_ang.vtp"
+    voronoi_ang_path = folder % "_voronoi_ang.vtp"
+    voronoi_rotated_path = folder % "voronoi_rotated_ang.vtp"
 
     # Points
-    points_clipp_path = folder %  "_clippingpoints.vtp"
+    points_clipp_path = folder % "_clippingpoints.vtp"
     points_div_path = folder % "_divergingpoints.vtp"
 
     # Naming based on different options
@@ -529,7 +530,7 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
     s += "" if not smooth else "_smooth"
     s += "" if not lower else "_lower"
     s += "" if cylinder_factor == 7.0 else "_cyl%s" % cylinder_factor
-    model_new_surface = folder % ("_angle"+s+".vtp")
+    model_new_surface = folder % ("_angle" + s + ".vtp")
 
     # Read and check model
     if not path.exists(model_path):
@@ -580,7 +581,7 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
 
     # Get data from centerlines and rotation matrix
     data = get_data(centerline_relevant_outlets, centerline_bif, tolerance)
-    R, m = rotationMatrix(data, angle, l1, l2)
+    R, m = rotation_matrix(data, angle, l1, l2)
     write_parameters(data, dirpath)
 
     # Compute and smooth voornoi diagram (not aneurysm)
@@ -595,7 +596,7 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
             aneu_centerline = extract_single_line(centerline_complete,
                                                 centerline_complete.GetNumberOfCells() - 1)
             div_aneu_id = []
-            for i in range(centerline_complete.GetNumberOfCells()-1):
+            for i in range(centerline_complete.GetNumberOfCells() - 1):
                 div_aneu_id.append(centerline_div(aneu_centerline,
                                                   extract_single_line(centerline_complete, i)))
             div_aneu_id = max(div_aneu_id)
@@ -657,14 +658,12 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
     rotated_voronoi = rotate_voronoi(voronoi_clipped, patch_cl, end_points[1], m, R)
     write_polydata(rotated_voronoi, voronoi_rotated_path)
 
-
     # Interpolate the centerline
     print("Interpolate centerlines and voronoi diagram.")
     interpolated_cl = InterpolatePatchCenterlines(rotated_cl, centerline_par,
                                                   div_points_rotated[0].GetPoint(0),
                                                   None, False)
     write_polydata(interpolated_cl, centerline_new_path.replace(".vtp", "1.vtp"))
-
 
     if bif:
         print("Start interpolate bif")
@@ -674,8 +673,8 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
 
     if lower:
         print("Start interpolate lower")
-        center = ((1/9.)*div_points[1][0] + (4/9.)*div_points[1][1] + \
-                        (4/9.)*div_points[1][2]).tolist()
+        center = ((1 / 9.) * div_points[1][0] + (4 / 9.) * div_points[1][1] + \
+                        (4 / 9.) * div_points[1][2]).tolist()
         div_points_rotated_bif[0].SetPoint(0, center[0], center[1], center[2])
         interpolated_bif_lower = InterpolatePatchCenterlines(rotated_bif_cl, centerline_bif,
                                                              div_points_rotated_bif[0].GetPoint(0),
@@ -711,13 +710,12 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
     new_surface = create_new_surface(interpolated_voronoi)
 
     print("Surface saved in: {}".format(model_new_surface.split("/")[-1]))
-    # TODO: Add Automated clipping of newmodel 
+    # TODO: Add Automated clipping of newmodel
     new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100)
     write_polydata(new_surface, model_new_surface)
 
 
-
-if  __name__ == "__main__":
+if __name__ == "__main__":
     smooth, angle, smooth_factor, l1, l2, bif, basedir, case, lower, \
     cylinder_factor, version, aneurysm, anu_num, resampling_step = read_command_line()
     folders = listdir(basedir) if case is None else [case]

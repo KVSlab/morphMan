@@ -1,10 +1,9 @@
-#!/usr/bin/env python
-
 import vtk
 import sys
 from os import path
 from vmtk.vmtkscripts import vmtkRenderer
 from vmtk import vmtkrenderer
+
 
 class VtkText:
     def __init__(self, guiText=""):
@@ -81,7 +80,7 @@ class vmtkPickPointSeedSelector(vmtkSeedSelector):
         self.PickedSeeds.SetPoints(seedPoints)
 
     def Execute(self):
-        if (self._Surface == None):
+        if self._Surface is None:
             self.PrintError('vmtkPickPointSeedSelector Error: Surface not set.')
             return
 
@@ -97,7 +96,7 @@ class vmtkPickPointSeedSelector(vmtkSeedSelector):
         glyphs.SetInputData(self.PickedSeeds)
         glyphs.SetSourceConnection(glyphSource.GetOutputPort())
         glyphs.SetScaleModeToDataScalingOff()
-        glyphs.SetScaleFactor(self._Surface.GetLength()*0.01)
+        glyphs.SetScaleFactor(self._Surface.GetLength() * 0.01)
 
         glyphMapper = vtk.vtkPolyDataMapper()
         glyphMapper.SetInputData(glyphs.GetOutput())

@@ -15,6 +15,7 @@ from clipvoronoidiagram import *
 from paralleltransportvoronoidiagram import *
 from moveandmanipulatetools import *
 
+
 def read_command_line():
     """
     Read arguments from commandline
@@ -111,7 +112,7 @@ def compute_angle(dirpath, point_path, name, alpha, beta, method, proj=False):
     patch_start = extract_single_line(patch_cl, 0)
     patch_ends = []
     n = centerlines_in_order.GetNumberOfCells()
-    for i in range(1, n+1):
+    for i in range(1, n + 1):
         patch_ends.append(extract_single_line(patch_cl, i))
 
     # Find directions to move centerline
@@ -141,10 +142,10 @@ def compute_angle(dirpath, point_path, name, alpha, beta, method, proj=False):
     locator = get_locator(new_centerline)
     ica_siphon = read_polydata(siphon_path)
     endID = ica_siphon.GetNumberOfPoints() - 1
-    endID_new  = locator.FindClosestPoint(ica_siphon.GetPoint(endID))
+    endID_new = locator.FindClosestPoint(ica_siphon.GetPoint(endID))
     new_ica_siphon = newsiphon = cut_centerline(new_centerline, endID_new)
-    newID1  = locator.FindClosestPoint(p1)
-    newID2  = locator.FindClosestPoint(p2)
+    newID1 = locator.FindClosestPoint(p1)
+    newID2 = locator.FindClosestPoint(p2)
     newline_sp, newcurv_sp = spline_centerline(new_ica_siphon, get_curv=True, isline=True, nknots=11)
     new_p1 = newline_sp.GetPoints().GetPoint(newID1)
     new_p2 = newline_sp.GetPoints().GetPoint(newID2)
@@ -157,7 +158,7 @@ def compute_angle(dirpath, point_path, name, alpha, beta, method, proj=False):
     if method in ["maxcurv", "odrline", "smooth", "frac"]:
         nknots = 11
         line_sp, curv_sp = spline_centerline(siphon, get_curv=True, isline=True, nknots=nknots)
-        curv_sp= resample(curv_sp, line_sp.GetNumberOfPoints())
+        curv_sp = resample(curv_sp, line_sp.GetNumberOfPoints())
         newline_sp, newcurv_sp = spline_centerline(newsiphon, get_curv=True, isline=True, nknots=nknots)
         cutcurv = curv_sp[ID1:ID2]
         newcutcurv = newcurv_sp[newID1:newID2]
@@ -165,15 +166,14 @@ def compute_angle(dirpath, point_path, name, alpha, beta, method, proj=False):
     if method == "discrete":
         # Smooth line with discrete derivatives
         neigh = 30
-        line_d, curv_d =  discrete_geometry(siphon, neigh=neigh)
-        newline_d, newcurv_d =  discrete_geometry(newsiphon, neigh=neigh)
+        line_d, curv_d = discrete_geometry(siphon, neigh=neigh)
+        newline_d, newcurv_d = discrete_geometry(newsiphon, neigh=neigh)
         cutcurv_d = curv_d[ID1:ID2]
         newcutcurv_d = newcurv_d[newID1:newID2]
 
-
     if method == "MISR":
         # Map MISR values to old and new splined anterior bend
-        anterior_bend =extract_single_line(line, 0, startID=ID1, endID=ID2)
+        anterior_bend = extract_single_line(line, 0, startID=ID1, endID=ID2)
         M = anterior_bend.GetNumberOfPoints()
         M1 = moved_siphon.GetNumberOfPoints()
         misrArray = get_vtk_array(radiusArrayName, 1, M)
@@ -227,14 +227,14 @@ def compute_angle(dirpath, point_path, name, alpha, beta, method, proj=False):
         normal = np.cross(dP, N1)
         newnormal = np.cross(dnewP, N2)
 
-        maxP, maxID     = find_furthest_points(normal, siphon)
+        maxP, maxID = find_furthest_points(normal, siphon)
         newmaxP, newmaxID = find_furthest_points(newnormal, moved_siphon)
 
     elif method == "maxcurv":
         maxID, v = max(enumerate(cutcurv), key=operator.itemgetter(1))
         newmaxID, v = max(enumerate(newcutcurv), key=operator.itemgetter(1))
         maxP = line_sp.GetPoint(ID1 + maxID)
-        newmaxP = newline_sp.GetPoint(newID1+newmaxID)
+        newmaxP = newline_sp.GetPoint(newID1 + newmaxID)
 
     elif method == "smooth":
         allmaxcurv = argrelextrema(cutcurv, np.greater)[0]
@@ -257,25 +257,28 @@ def compute_angle(dirpath, point_path, name, alpha, beta, method, proj=False):
         maxID, v = max(enumerate(cutcurv_d), key=operator.itemgetter(1))
         newmaxID, v = max(enumerate(newcutcurv_d), key=operator.itemgetter(1))
 
-
     elif method == "maxdist":
         normP1 = [la.norm(np.array(p1) - np.array(siphon.GetPoint(i))) for i in range(siphon.GetNumberOfPoints())]
-        normP2 = [la.norm(np.array(p2) - np.array(siphon.GetPoint(i))) for i in range(siphon.GetNumberOfPoints()-1, -1, -1)]
-        maxID=0; max_dist = 0
+        normP2 = [la.norm(np.array(p2) - np.array(siphon.GetPoint(i))) for i in range(siphon.GetNumberOfPoints() - 1, -1, -1)]
+        maxID = 0
+        max_dist = 0
         for i, n1 in enumerate(normP1):
             for j, n2 in enumerate(normP2):
-                dist = n1**2 + n2**2
+                dist = n1 ** 2 + n2 ** 2
                 if dist > max_dist:
-                    max_dist = dist; maxID=i
+                    max_dist = dist
+                    maxID = i
 
         newnormP1 = [la.norm(np.array(new_p1) - np.array(moved_siphon.GetPoint(i))) for i in range(moved_siphon.GetNumberOfPoints())]
-        newnormP2 = [la.norm(np.array(new_p2) - np.array(moved_siphon.GetPoint(i))) for i in range(moved_siphon.GetNumberOfPoints()-1, -1, -1)]
-        newmaxID= 0; new_max_dist = 0
+        newnormP2 = [la.norm(np.array(new_p2) - np.array(moved_siphon.GetPoint(i))) for i in range(moved_siphon.GetNumberOfPoints() - 1, -1, -1)]
+        newmaxID = 0
+        new_max_dist = 0
         for i, n1 in enumerate(newnormP1):
             for j, n2 in enumerate(newnormP2):
-                dist = n1**2 + n2**2
+                dist = n1 ** 2 + n2 ** 2
                 if dist > new_max_dist:
-                    new_max_dist = dist; newmaxID=i
+                    new_max_dist = dist
+                    newmaxID = i
 
     # Compute angles based on the classic formula for
     # angle between vectors in 3D
@@ -294,14 +297,14 @@ def compute_angle(dirpath, point_path, name, alpha, beta, method, proj=False):
         N1 = siphon.GetNumberOfPoints()
         N2 = moved_siphon.GetNumberOfPoints()
         rad1 = siphon.GetPointData().GetArray(radiusArrayName).GetTuple1(0)
-        rad2 = siphon.GetPointData().GetArray(radiusArrayName).GetTuple1(N1-1)
+        rad2 = siphon.GetPointData().GetArray(radiusArrayName).GetTuple1(N1 - 1)
         newrad1 = moved_siphon.GetPointData().GetArray(radiusArrayName).GetTuple1(0)
-        newrad2 = moved_siphon.GetPointData().GetArray(radiusArrayName).GetTuple1(N2-1)
+        newrad2 = moved_siphon.GetPointData().GetArray(radiusArrayName).GetTuple1(N2 - 1)
 
-        pA, rA = move_past_sphere(siphon, p1, rad1, 0, step=1, stop=N1-1, X=param)
-        pB, rB = move_past_sphere(siphon, p2, rad2, N1-1, step=-1, stop=0, X=param)
-        newpA, rA = move_past_sphere(moved_siphon, new_p1, newrad1, 0, step=1, stop=N2-1, X=param)
-        newpB, rB = move_past_sphere(moved_siphon, new_p2, newrad2, N2-1, step=-1, stop=0, X=param)
+        pA, rA = move_past_sphere(siphon, p1, rad1, 0, step=1, stop=N1 - 1, X=param)
+        pB, rB = move_past_sphere(siphon, p2, rad2, N1 - 1, step=-1, stop=0, X=param)
+        newpA, rA = move_past_sphere(moved_siphon, new_p1, newrad1, 0, step=1, stop=N2 - 1, X=param)
+        newpB, rB = move_past_sphere(moved_siphon, new_p2, newrad2, N2 - 1, step=-1, stop=0, X=param)
 
         deg, l1, l2 = find_angle(pA, pB, p1, p2, proj)
         newdeg, nl1, nl2 = find_angle(newpA, newpB, new_p1, new_p2, proj)
@@ -313,7 +316,7 @@ def compute_angle(dirpath, point_path, name, alpha, beta, method, proj=False):
             r = [3]
 
             dX = 1. / n_values[i]
-            frac = "%sdiv%s"% (l[i], n_values[i])
+            frac = "%sdiv%s" % (l[i], n_values[i])
             IDA = int(ID1 + (ID2 - ID1) * l[i] * dX)
             IDB = int(ID1 + (ID2 - ID1) * r[i] * dX)
             pA = line_sp.GetPoints().GetPoint(IDA)
@@ -330,44 +333,43 @@ def compute_angle(dirpath, point_path, name, alpha, beta, method, proj=False):
                         "discrete", "maxdist"]:
             frac = [2. / 5.]
             if method == "itplane_clip":
-                IDmid = (p2_id - p1_id)/2.
-                newIDmid = (np2_id - np1_id)/2.
+                IDmid = (p2_id - p1_id) / 2.
+                newIDmid = (np2_id - np1_id) / 2.
                 if maxID > IDmid:
-                    IDA = int((maxID-p1_id)*frac)
-                    IDB = int((maxID-p1_id)*(1 + (1-frac)))
-                    pA = siphon.GetPoints().GetPoint(IDA+p1_id)
-                    pB = siphon.GetPoints().GetPoint(IDB+p1_id)
+                    IDA = int((maxID - p1_id) * frac)
+                    IDB = int((maxID - p1_id) * (1 + (1 - frac)))
+                    pA = siphon.GetPoints().GetPoint(IDA + p1_id)
+                    pB = siphon.GetPoints().GetPoint(IDB + p1_id)
                 else:
-                    IDB = int((p2_id - maxID)*(1 + (1-frac)))
-                    IDA = int((p2_id - maxID)*frac)
+                    IDB = int((p2_id - maxID) * (1 + (1 - frac)))
+                    IDA = int((p2_id - maxID) * frac)
                     pA = siphon.GetPoints().GetPoint(IDA)
                     pB = siphon.GetPoints().GetPoint(IDB)
 
                 if newmaxID > newIDmid:
-                    IDA = int((newmaxID-np1_id)*frac)
-                    IDB = int((newmaxID-np1_id)*(1 + (1-frac)))
-                    newpA = moved_siphon.GetPoints().GetPoint(IDA+np1_id)
+                    IDA = int((newmaxID - np1_id) * frac)
+                    IDB = int((newmaxID - np1_id) * (1 + (1 - frac)))
+                    newpA = moved_siphon.GetPoints().GetPoint(IDA + np1_id)
                     newpB = moved_siphon.GetPoints().GetPoint(IDB + np1_id)
                 else:
-                    IDA = int((np2_id - newmaxID)*frac)
-                    IDB = int((np2_id - newmaxID)*(1 + (1-frac)))
+                    IDA = int((np2_id - newmaxID) * frac)
+                    IDB = int((np2_id - newmaxID) * (1 + (1 - frac)))
                     newpA = moved_siphon.GetPoints().GetPoint(IDA)
                     newpB = moved_siphon.GetPoints().GetPoint(IDB)
-
 
                 deg, l1, l2 = find_angle(pA, pB, p1_1, p2_2, proj)
                 newdeg, nl1, nl2 = find_angle(newpA, newpB, newp1_1, newp2_2, proj)
 
             else:
-                IDA = int(maxID*frac)
-                IDB = int(maxID*(1 + (1-frac)))
+                IDA = int(maxID * frac)
+                IDB = int(maxID * (1 + (1 - frac)))
                 pA = siphon.GetPoints().GetPoint(IDA)
                 pB = siphon.GetPoints().GetPoint(IDB)
 
                 deg, l1, l2 = find_angle(pA, pB, p1, p2, proj)
 
-                IDA = int(newmaxID*frac)
-                IDB = int(newmaxID*(1 + (1-frac)))
+                IDA = int(newmaxID * frac)
+                IDB = int(newmaxID * (1 + (1 - frac)))
                 newpA = moved_siphon.GetPoints().GetPoint(IDA)
                 newpB = moved_siphon.GetPoints().GetPoint(IDB)
 
@@ -447,7 +449,7 @@ def compute_curvature(dirpath, point_path, name, alpha, beta, method):
     patch_start = extract_single_line(patch_cl, 0)
     patch_ends = []
     n = centerlines_in_order.GetNumberOfCells()
-    for i in range(1, n+1):
+    for i in range(1, n + 1):
         patch_ends.append(extract_single_line(patch_cl, i))
 
     # Find ID of middle pooint:
@@ -473,17 +475,16 @@ def compute_curvature(dirpath, point_path, name, alpha, beta, method):
             factor = 0.5
             line_fac = vmtk_centerline_geometry(new_line_vmtk, smooth=True, iterations=100, factor=factor)
             curv_fac = get_array("Curvature", line_fac)
-            curv_fac= gauss(curv_fac, 5)
-            maxcurv = max(curv_fac[ID1_new+10:ID2_new-10])[0]
-
+            curv_fac = gauss(curv_fac, 5)
+            maxcurv = max(curv_fac[ID1_new + 10:ID2_new - 10])[0]
 
         # 2) VMTK - Iteration variance
         elif method == "vmtkit":
             it = 150
             line_it = vmtk_centerline_geometry(new_line_vmtk, smooth=True, iterations=it, factor=1.0)
             curv_it = get_array("Curvature", line_it)
-            curv_it= gauss(curv_it, 5)
-            maxcurv = max(curv_it[ID1_new+10:ID2_new-10])[0]
+            curv_it = gauss(curv_it, 5)
+            maxcurv = max(curv_it[ID1_new + 10:ID2_new - 10])[0]
 
     else:
         # Compute new centerline by manual displacement
@@ -512,7 +513,7 @@ def compute_curvature(dirpath, point_path, name, alpha, beta, method):
             neigh = 20
             line_di, curv_di = discrete_geometry(new_centerline, neigh=neigh)
             filtercurv = gauss(curv_di, 5)
-            maxcurv = max(filtercurv[ID1_new+10:ID2_new-10])
+            maxcurv = max(filtercurv[ID1_new + 10:ID2_new - 10])
 
         # 5) Knot free regression splines
         if method == "knotfree":
@@ -520,7 +521,7 @@ def compute_curvature(dirpath, point_path, name, alpha, beta, method):
             inits = 20
             curv_kf = spline_matlab_noload(".", clfile, init_knots=inits, order=float(5))
             curv_kf = gauss(curv_kf, 5)
-            maxcurv = max(curv_kf[ID1_new+10:ID2_new-10])
+            maxcurv = max(curv_kf[ID1_new + 10:ID2_new - 10])
 
         # 6) Splines
         if method == "spline":
@@ -528,7 +529,7 @@ def compute_curvature(dirpath, point_path, name, alpha, beta, method):
             line_sp, curv_sp = spline_centerline(new_centerline, get_curv=True,
                                                  isline=True, nknots=nknots)
             curv_sp = gauss(curv_sp, 5)
-            maxcurv = max(curv_sp[ID1_new+10:ID2_new-10])
+            maxcurv = max(curv_sp[ID1_new + 10:ID2_new - 10])
 
     return maxcurv
 
@@ -554,52 +555,52 @@ def odr_line(ID1, ID2, line, curvature, limit):
         d2 (ndarray): Direction vector from second clipping point.
         curvlines (vtkPolyData): Centerline object with corresponding curvature values.
     """
-    lim = len(curvature)-1
+    lim = len(curvature) - 1
 
     if limit == "cumulative":
         max_cum = 10
-        ID1_up = ID1+ 1
-        ID1_down = ID1- 1
+        ID1_up = ID1 + 1
+        ID1_down = ID1 - 1
         ID2_up = ID2 - 1
         ID2_down = ID2 + 1
-        while sum(curvature[ID1:ID1_up+1]) < max_cum and ID1_up < lim:
+        while sum(curvature[ID1:ID1_up + 1]) < max_cum and ID1_up < lim:
             ID1_up += 1
-        while sum(curvature[ID1_down:ID1+1]) < max_cum and ID1_down > 0:
+        while sum(curvature[ID1_down:ID1 + 1]) < max_cum and ID1_down > 0:
             ID1_down -= 1
-        while sum(curvature[ID2_up:ID2+1]) < max_cum  and ID2_up > 0:
+        while sum(curvature[ID2_up:ID2 + 1]) < max_cum and ID2_up > 0:
             ID2_up -= 1
-        while sum(curvature[ID2:ID2_down+1]) < max_cum and ID2_down < lim:
+        while sum(curvature[ID2:ID2_down + 1]) < max_cum and ID2_down < lim:
             ID2_down += 1
     else:
         SD = 0.045
         ID1_up = ID1 + 5
-        ID1_down = ID1- 5
+        ID1_down = ID1 - 5
         ID2_up = ID2 - 5
         ID2_down = ID2 + 5
 
-        mean1 = sum(curvature[ID1_down:ID1_up+1]) / 11.
-        mean2 = sum(curvature[ID2_up:ID2_down+1]) / 11.
+        mean1 = sum(curvature[ID1_down:ID1_up + 1]) / 11.
+        mean2 = sum(curvature[ID2_up:ID2_down + 1]) / 11.
 
-        SD1 = np.sqrt(sum((curvature[ID1_down:ID1_up+1] - mean1)**2) / 10)
-        SD2 = np.sqrt(sum((curvature[ID2_up:ID1_down+1] - mean2)**2) / 10)
-        tol1 = mean1 + SD1*1.96
-        tol2 = mean2 + SD2*1.96
+        SD1 = np.sqrt(sum((curvature[ID1_down:ID1_up + 1] - mean1) ** 2) / 10)
+        SD2 = np.sqrt(sum((curvature[ID2_up:ID1_down + 1] - mean2) ** 2) / 10)
+        tol1 = mean1 + SD1 * 1.96
+        tol2 = mean2 + SD2 * 1.96
 
         while curvature[ID1_up] < tol1 and ID1_up < lim:
-            ID1_up +=1
+            ID1_up += 1
         while curvature[ID1_down] < tol1 and ID1_down > 0:
-            ID1_down -=1
+            ID1_down -= 1
         while curvature[ID2_up] < tol2 and ID2_up > 0:
-            ID2_up -=1
+            ID2_up -= 1
         while curvature[ID2_down] < tol2 and ID2_down < lim:
-            ID2_down +=1
+            ID2_down += 1
 
     p1s = []
-    for i in range(ID1_down, ID1_up+1):
+    for i in range(ID1_down, ID1_up + 1):
         p1s.append(line.GetPoint(i))
 
     p2s = []
-    for i in range(ID2_up, ID2_down+1):
+    for i in range(ID2_up, ID2_down + 1):
         p2s.append(line.GetPoint(i))
 
     # Arrange points in matrix
@@ -632,7 +633,7 @@ def odr_line(ID1, ID2, line, curvature, limit):
             pts.InsertNextPoint(p[i])
 
         lines = vtk.vtkCellArray()
-        for i in range(len(p)-2):
+        for i in range(len(p) - 2):
             newline = vtk.vtkLine()
             newline.GetPointIds().SetId(0, i)
             newline.GetPointIds().SetId(1, i + 1)
@@ -645,10 +646,10 @@ def odr_line(ID1, ID2, line, curvature, limit):
         M = line_.GetNumberOfPoints()
         curvArray = get_vtk_array("Curvature", 1, M)
         if k == 0:
-            for i in range(ID1_up+1- ID1_down):
+            for i in range(ID1_up + 1 - ID1_down):
                 curvArray.SetTuple(i, [curvature[ID1_down + i]])
         else:
-            for i in range(ID2_down+1 - ID2_up):
+            for i in range(ID2_down + 1 - ID2_up):
                 curvArray.SetTuple(i, [curvature[ID2_up + i]])
 
         line_.GetPointData().AddArray(curvArray)
@@ -678,7 +679,7 @@ def cut_centerline(line, endID):
         pts.InsertNextPoint(line.GetPoint(i))
 
     lines = vtk.vtkCellArray()
-    for i in range(endID-2):
+    for i in range(endID - 2):
         newline = vtk.vtkLine()
         newline.GetPointIds().SetId(0, i)
         newline.GetPointIds().SetId(1, i + 1)
@@ -715,7 +716,7 @@ def find_angle(pA, pB, p1, p2, proj):
     else:
         P1A = np.array([0, pA[1] - p1[1], pA[2] - p1[2]])
         P2B = np.array([0, pB[1] - p2[1], pB[2] - p2[2]])
-    costheta = (P1A.dot(P2B)) / (la.norm(P1A)*la.norm(P2B))
+    costheta = (P1A.dot(P2B)) / (la.norm(P1A) * la.norm(P2B))
     angle = np.arccos(costheta)
     deg = (angle * 180 / np.pi)
 
@@ -742,7 +743,7 @@ def find_angle_odr(d1, d2, proj):
         d1[0] = 0
         d2[0] = 0
 
-    costheta = (d1.dot(-d2)) / (la.norm(d1)*la.norm(-d2))
+    costheta = (d1.dot(-d2)) / (la.norm(d1) * la.norm(-d2))
     angle = np.arccos(costheta)
     deg = (angle * 180 / np.pi)
 
@@ -864,10 +865,10 @@ def main(basedir, case, kappa, theta, alpha, beta, method_curv, method_angle, n=
                 save_angle_or_curvature(max_curv_values, folder, "curvature")
             if theta:
                 save_angle_or_curvature(angle_values, folder, "angle")
-            k+=1
+            k += 1
 
 
-if  __name__ == "__main__":
+if __name__ == "__main__":
     basedir, case, kappa, theta, alpha, beta, method_curv, method_angle = read_command_line()
     if method_curv == "knotfree":
         mlab = matlab.engine.start_matlab()

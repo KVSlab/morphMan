@@ -8,6 +8,7 @@ from clipvoronoidiagram import *
 from paralleltransportvoronoidiagram import *
 from moveandmanipulatetools import *
 
+
 def read_command_line():
     """Read arguments from commandline"""
     parser = ArgumentParser()
@@ -31,10 +32,11 @@ def read_command_line():
 
     args = parser.parse_args()
 
-    return args.smooth, args.dir_path, args.case, args.smoothmode, args.smoothingfactor, args.iterations, args.smoothingfactor_voro
+    return args.smooth, args.dir_path, args.case, args.smoothmode, args.smoothingfactor, \
+           args.iterations, args.smoothingfactor_voro
 
 
-def change_curvature(dirpath, name,smooth,  smoothingfactor, iterations, smoothmode, smooth_factor_voro):
+def change_curvature(dirpath, name, smooth, smoothingfactor, iterations, smoothmode, smooth_factor_voro):
     """
     Create a sharper or smoother version of the input geometry,
     determined by a smoothed version of the siphon centerline.
@@ -56,7 +58,7 @@ def change_curvature(dirpath, name,smooth,  smoothingfactor, iterations, smoothm
     # Output names
     model_smoothed_path = path.join(dirpath, name, "model_smoothed.vtp")
     method = "smoothed" if smoothmode else "extended"
-    model_new_surface = path.join(dirpath, name , "model_%s_fac_%s_it_%s.vtp" % ( method, sf, it))
+    model_new_surface = path.join(dirpath, name, "model_%s_fac_%s_it_%s.vtp" % (method, sf, it))
 
     # Centerlines
     centerline_complete_path = path.join(dirpath, name, "centerline_complete.vtp")
@@ -139,12 +141,12 @@ def change_curvature(dirpath, name,smooth,  smoothingfactor, iterations, smoothm
         points.InsertNextPoint(point)
     clip_points = points
 
-    IDbif  = locator.FindClosestPoint(pEnd)
+    IDbif = locator.FindClosestPoint(pEnd)
 
     patch_cl = CreateParentArteryPatches(centerlines_in_order, clip_points, siphon=True)
     end_lines = []
     for i in range(patch_cl.GetNumberOfCells()):
-        tmp_line  = extract_single_line(patch_cl, i)
+        tmp_line = extract_single_line(patch_cl, i)
         if tmp_line.GetNumberOfPoints() > 50:
             end_lines.append(tmp_line)
 
@@ -163,7 +165,7 @@ def change_curvature(dirpath, name,smooth,  smoothingfactor, iterations, smoothm
                                                              carotid_siphon,
                                                              smooth_carotid_siphon,
                                                              smoothmode, div=True,
-                                                             div_point = div_points[i]))
+                                                             div_point=div_points[i]))
 
     moved_clipped_voronoi_div.append(moved_clipped_voronoi)
     moved_clipped_voronoi_div.append(clipped_voronoi_end)
@@ -174,7 +176,7 @@ def change_curvature(dirpath, name,smooth,  smoothingfactor, iterations, smoothm
     # Create new surface
     print("Create new surface")
     new_surface = create_new_surface(newVoronoi)
-    # TODO: Add Automated clipping of newmodel 
+    # TODO: Add Automated clipping of newmodel
     new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100)
     write_polydata(new_surface, model_new_surface)
 
@@ -235,14 +237,15 @@ def make_voronoi_smooth(voronoi, old_cl, new_cl, smoothmode, div=False, div_poin
     newDataSet.SetPoints(points)
     newDataSet.SetVerts(verts)
     newDataSet.GetPointData().AddArray(voronoi.GetPointData().GetArray(radiusArrayName))
+
     return newDataSet
 
 
-if  __name__ == "__main__":
+if __name__ == "__main__":
     smooth, basedir, case, smoothmode, smoothingfactor, iterations, smooth_factor_voro = read_command_line()
     name = "surface"
     folders = listdir(basedir) if case is None else [case]
     for folder in folders:
         print("==== Working on case %s ====" % folder)
-        dirpath = path.join(basedir,folder)
+        dirpath = path.join(basedir, folder)
         change_curvature(dirpath, name, smooth, smoothingfactor, iterations, smoothmode, smooth_factor_voro)

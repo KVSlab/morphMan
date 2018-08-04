@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from argparse import ArgumentParser
 from os import listdir, path
 from scipy.interpolate import griddata
@@ -6,6 +5,7 @@ from scipy import interpolate
 
 import numpy as np
 import numpy.linalg as la
+
 
 def read_command_line():
     """
@@ -20,11 +20,12 @@ def read_command_line():
                         help="Parameter to compute.")
     parser.add_argument('-r', '--radius', type=float, default=0.15,
                         help="Radius of bounding circle, limiting the choice of alpha and beta")
-    parser.add_argument('-b','--boundary', nargs='+', default=None,
+    parser.add_argument('-b', '--boundary', nargs='+', default=None,
                         help='Boundary of grid, as a list: [alpha_min, alpha_max, beta_min, beta_max]',
                         required=True)
 
     args = parser.parse_args()
+
     return args.dir_path, args.param, args.boundary, args.radius
 
 
@@ -46,7 +47,7 @@ def get_alpha_beta(dirpath, i, files, param, boundary):
 
     files = path.join(dirpath, files)
     case = files[-9:-4]
-    print "Working on case %s" % case
+    print("Working on case %s" % case)
 
     # Get boundaries
     amin, amax, bmin, bmax = boundary[0], boundary[1], boundary[2], boundary[3]
@@ -111,7 +112,7 @@ def get_alpha_beta(dirpath, i, files, param, boundary):
     # Find intersecting points
     # Reduces SD if no points are found
     for plane in methods:
-        print "Method: %s" % (plane.__name__)
+        print("Method: %s" % (plane.__name__))
 
         zeros = alpha_beta_intersection(plane, f, alpha_long, beta_long)
         if len(zeros) > 10:
@@ -124,9 +125,9 @@ def get_alpha_beta(dirpath, i, files, param, boundary):
             maxiter = 50
             iterations = 0
 
-            print "Found no points..Adjusting SD"
-            while empty == True and iterations < maxiter:
-                print "Iterations: %i" % (iterations + 1)
+            print("Found no points..Adjusting SD")
+            while empty and iterations < maxiter:
+                print("Iterations: %i" % (iterations + 1))
                 zeros = alpha_beta_intersection(plane, f, alpha_long, beta_long, tol)
                 if len(zeros) > 0:
                     empty = False
