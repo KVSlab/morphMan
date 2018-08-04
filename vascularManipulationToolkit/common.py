@@ -33,8 +33,6 @@ numberOfSplineAnalyzedPoints = 40
 phiValues = [float(i) for i in range(2, 43, 2)]
 thetaStep = 2.0
 
-# Shortcuts
-version = vtk.vtkVersion().GetVTKMajorVersion()
 
 def read_polydata(filename):
     """
@@ -126,10 +124,7 @@ def write_polydata(input_data, filename):
 
     # Set filename and input
     writer.SetFileName(filename)
-    if version < 6:
-        writer.SetInput(input_data)
-    else:
-        writer.SetInputData(input_data)
+    writer.SetInputData(input_data)
     writer.Update()
 
     # Write
@@ -459,10 +454,7 @@ def create_new_surface(completeVoronoiDiagram, polyBallImageSize=[120, 120, 120]
     #       bounds = surface.GetBounds()
     # Get the x,y, and z range of the completeVoronoiDiagram
     modeller = vtkvmtk.vtkvmtkPolyBallModeller()
-    if version < 6:
-        modeller.SetInput(completeVoronoiDiagram)
-    else:
-        modeller.SetInputData(completeVoronoiDiagram)
+    modeller.SetInputData(completeVoronoiDiagram)
     modeller.SetRadiusArrayName(radiusArrayName)
     modeller.UsePolyBallLineOff()
     modeller.SetSampleDimensions(polyBallImageSize)
@@ -470,10 +462,7 @@ def create_new_surface(completeVoronoiDiagram, polyBallImageSize=[120, 120, 120]
 
     # Write the new surface
     marchingCube = vtk.vtkMarchingCubes()
-    if version < 6:
-        marchingCube.SetInput(modeller.GetOutput())
-    else:
-        marchingCube.SetInputData(modeller.GetOutput())
+    marchingCube.SetInputData(modeller.GetOutput())
     marchingCube.SetValue(0, 0.0)
     marchingCube.Update()
     envelope = marchingCube.GetOutput()
@@ -774,10 +763,7 @@ def surface_cleaner(surface):
     """
     # Clean surface
     surfaceCleaner = vtk.vtkCleanPolyData()
-    if version < 6:
-        surfaceCleaner.SetInput(surface)
-    else:
-        surfaceCleaner.SetInputData(surface)
+    surfaceCleaner.SetInputData(surface)
     surfaceCleaner.Update()
     cleanSurface = surfaceCleaner.GetOutput()
 
@@ -837,10 +823,7 @@ def get_centers(surface, dir_path, flowext=False):
 def triangulate_surface(surface):
     """Triangulate surface or polygon(?)"""
     surfaceTriangulator = vtk.vtkTriangleFilter()
-    if version < 6:
-        surfaceTriangulator.SetInput(surface)
-    else:
-        surfaceTriangulator.SetInputData(surface)
+    surfaceTriangulator.SetInputData(surface)
     surfaceTriangulator.PassLinesOff()
     surfaceTriangulator.PassVertsOff()
     surfaceTriangulator.Update()
@@ -851,10 +834,7 @@ def triangulate_surface(surface):
 def geometry_filter(unstructured_grid):
      # Convert unstructured grid to polydata
     filter = vtk.vtkGeometryFilter()
-    if version < 6:
-        filter.SetInput(unstructured_grid)
-    else:
-        filter.SetInputData(unstructured_grid)
+    filter.SetInputData(unstructured_grid)
     filter.Update()
     polydata = filter.GetOutput()
 
@@ -867,10 +847,7 @@ def threshold(surface, name, lower=0, upper=1, type="between", source=1):
 
     # Apply threshold
     threshold = vtk.vtkThreshold()
-    if version < 6:
-        threshold.SetInput(surface)
-    else:
-        threshold.SetInputData(surface)
+    threshold.SetInputData(surface)
     if type=="between":
         threshold.ThresholdBetween(lower, upper)
     elif type == "lower":
@@ -895,10 +872,7 @@ def threshold(surface, name, lower=0, upper=1, type="between", source=1):
 def compute_area(surface):
     "Compute area of polydata"
     mass = vtk.vtkMassProperties()
-    if version < 6:
-        mass.SetInput(surface)
-    else:
-        mass.SetInputData(surface)
+    mass.SetInputData(surface)
 
     return mass.GetSurfaceArea()
 
@@ -909,10 +883,7 @@ def uncapp_surface_old(surface):
 
     # Get cell normals
     normal_generator = vtk.vtkPolyDataNormals()
-    if version < 6:
-        normal_generator.SetInput(surface)
-    else:
-        normal_generator.SetInputData(surface)
+    normal_generator.SetInputData(surface)
     normal_generator.ComputePointNormalsOff()
     normal_generator.ComputeCellNormalsOn()
     normal_generator.Update()
@@ -920,10 +891,7 @@ def uncapp_surface_old(surface):
 
     # Compute gradients of the normals
     gradients_generator = vtk.vtkGradientFilter()
-    if version < 6:
-        gradients_generator.SetInput(cell_normals)
-    else:
-        gradients_generator.SetInputData(cell_normals)
+    gradients_generator.SetInputData(cell_normals)
     gradients_generator.SetInputArrayToProcess(0, 0, 0, 1, "Normals")
     gradients_generator.Update()
     gradients = gradients_generator.GetOutput()
@@ -973,10 +941,7 @@ def uncapp_surface_old(surface):
     tmp_center = [0, 0, 0]
     for region in regions:
         centers_filter = vtk.vtkCellCenters()
-        if version < 6:
-            centers_filter.SetInput(region)
-        else:
-            centers_filter.SetInputData(region)
+        centers_filter.SetInputData(region)
         centers_filter.VertexCellsOn()
         centers_filter.Update()
         centers = centers_filter.GetOutput()
@@ -1019,10 +984,7 @@ def uncapp_surface_old(surface):
 
 def capp_surface(surface):
     surfaceCapper = vtkvmtk.vtkvmtkCapPolyData()
-    if version < 6:
-        surfaceCapper.SetInput(surface)
-    else:
-        surfaceCapper.SetInputData(surface)
+    surfaceCapper.SetInputData(surface)
     surfaceCapper.SetDisplacement(0.0)
     surfaceCapper.SetInPlaneDisplacement(0.0)
     surfaceCapper.Update()
@@ -1081,11 +1043,7 @@ def is_surface_capped(surface):
 def get_connectivity(surface, mode="All", closestPoint=None):
     """Compute connectivity of the cells"""
     connectivity = vtk.vtkPolyDataConnectivityFilter()
-    # Backwards compatibility
-    if version < 6:
-        connectivity.SetInput(surface)
-    else:
-        connectivity.SetInputData(surface)
+    connectivity.SetInputData(surface)
 
     # Mark each region with "RegionId"
     if mode == "All":
@@ -1136,10 +1094,7 @@ def get_feature_edges(polyData):
     featureEdges.FeatureEdgesOff()
     featureEdges.BoundaryEdgesOn()
     featureEdges.NonManifoldEdgesOff()
-    if version < 6:
-        featureEdges.SetInput(polyData)
-    else:
-        featureEdges.SetInputData(polyData)
+    featureEdges.SetInputData(polyData)
     featureEdges.Update()
 
     return featureEdges.GetOutput()
@@ -1487,24 +1442,6 @@ def write_parameters(data, folder):
     f = open(path.join(folder, "info.txt"), "w")
     f.write(text)
     f.close()
-
-
-def csv_to_txt(folder):
-    """Make it easier to access data with a normal txt file"""
-    csv = path.join(folder, "info.csv")
-    txt = path.join(folder, "info.txt")
-    reader = open(csv, "r")
-    header = reader.readline().split(",")
-    row = reader.readline().split(",")
-    for i in range(len(header)):
-        header[i] = ": ".join([header[i].replace("\n",""),
-                               row[i].replace("\n", "")])
-    text = "\n".join(header)
-    reader.close()
-    writer = open(csv, "w")
-    writer.write(text)
-    writer.close()
-    check_output("mv " + csv + " " + txt, stderr=STDOUT, shell=True)
 
 
 def data_to_vtkPolyData(data, header, TNB=None, PT=None):
@@ -1900,6 +1837,7 @@ def vmtk_centerline_resampling(line, length, filename=None):
     resampler.Execute()
 
     line = resampler.Centerlines
+
     return line
 
 
