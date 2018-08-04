@@ -724,7 +724,7 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
 
     print("Surface saved in: {}".format(model_new_surface.split("/")[-1]))
     # TODO: Add Automated clipping of newmodel 
-    new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100):
+    new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100)
     write_polydata(new_surface, model_new_surface)
 
 

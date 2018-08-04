@@ -235,7 +235,7 @@ def move_vessel(dirpath, smooth, name, point_path, alpha=0.0, beta=0.0, smooth_f
                                voronoi_siphon, new_centerline, eye, vtk_clipping_points)
     else:
         # TODO: Add Automated clipping of newmodel 
-        new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100):
+        new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100)
         write_polydata(new_centerline, new_centerlines_path)
         write_polydata(new_surface, model_new_surface)
 
@@ -329,7 +329,7 @@ def move_vessel_vertically(dirpath, name, oldpoints, alpha,  voronoi_remaining,
     print("Writing new surface")
     new_surface = create_new_surface(newVoronoi)
     # TODO: Add Automated clipping of newmodel 
-    new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100):
+    new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100)
     write_polydata(new_surface, model_new_surface)
 
     print "Creating new_centerline_complete.vtp of vertically moved model"

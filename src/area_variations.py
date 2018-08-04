@@ -589,7 +589,7 @@ def area_variations(folder, beta, smooth, stats, r_change, percentage, stenosis,
 
         print("Write surface to: {}".format(model_area_path.split("/")[-1]))
         # TODO: Add Automated clipping of newmodel 
-        model_new_surface = vmtk_surface_smoother(model_new_surface, method="laplace", iterations=100):
+        model_new_surface = vmtk_surface_smoother(model_new_surface, method="laplace", iterations=100)
         write_polydata(model_new_surface, model_area_path)
 
     return length, area
