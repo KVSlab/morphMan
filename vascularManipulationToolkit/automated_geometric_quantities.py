@@ -832,8 +832,8 @@ def main(basedir, case, kappa, theta, alpha, beta, method_curv, method_angle, n=
             alphas = np.linspace(amin,amax, n)
             betas = np.linspace(bmin,bmax,n)
 
-        for i,alpha in enumerate(alphas):
-            for j,beta in enumerate(betas):
+        for i, alpha in enumerate(alphas):
+            for j, beta in enumerate(betas):
                 # Compute curvature (kappa) or / and angle (theta)
                 if kappa:
                     maxcurv = compute_curvature(casedir, point_path, name,  alpha,beta, method_curv )
@@ -857,8 +857,6 @@ def main(basedir, case, kappa, theta, alpha, beta, method_curv, method_angle, n=
             if theta:
                 save_angle_or_curvature(angle_values, folder, "angle")
             k+=1
-
-
 
 
 if  __name__ == "__main__":

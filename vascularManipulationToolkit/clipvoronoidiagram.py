@@ -110,39 +110,5 @@ def ExtractMaskedVoronoiPoints(voronoi,maskArray):
     maskedVoronoi.SetPoints(maskedPoints)
     maskedVoronoi.SetVerts(cellArray)
     maskedVoronoi.GetPointData().AddArray(radiusArray)
+
     return maskedVoronoi
-
-
-def SmoothClippedVoronoiDiagram(voronoi, centerlines, smoothingFactor):
-    numberOfPoints = voronoi.GetNumberOfPoints()
-
-    threshold = get_array(radiusArrayName, centerlines) * (1 - smoothingFactor)
-    locator = get_locator(centerlines)
-
-    smoothedDiagram = vtk.vtkPolyData()
-    points = vtk.vtkPoints()
-    cellArray = vtk.vtkCellArray()
-    radiusArrayNumpy = np.zeros(numberOfPoints)
-
-    count = 0
-    for i in range(numberOfPoints):
-        point = voronoi.GetPoint(i)
-        radius = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
-        id = locator.FindClosestPoint(point)
-        if radius >= threshold[id]:
-            points.InsertNextPoint(point)
-            cellArray.InsertNextCell(1)
-            cellArray.InsertCellPoint(count)
-            radiusArrayNumpy[count] = radius
-            count += 1
-
-    radiusArray = get_vtk_array(radiusArrayName, 1, count)
-
-    for i in range(count):
-        radiusArray.SetTuple1(i, radiusArrayNumpy[i])
-
-    smoothedDiagram.SetPoints(points)
-    smoothedDiagram.SetVerts(cellArray)
-    smoothedDiagram.GetPointData().AddArray(radiusArray)
-
-    return smoothedDiagram

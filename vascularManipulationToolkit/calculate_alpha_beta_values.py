@@ -204,6 +204,7 @@ def alpha_beta_intersection(method, f,alphas, betas, tol=0.0):
                     zeros.append([i,j])
     return zeros
 
+
 def main(dirpath, param):
     """
     Get files containing parameter values
@@ -223,6 +224,7 @@ def main(dirpath, param):
         files_angle = sorted([f for f in listdir(dirpath) if f[4:9] in ["angle"] ])
         for i in range(len(files_angle)):
             get_alpha_beta(dirpath, i, files_angle[i], param)
+
 
 if __name__ == "__main__":
     dirpath,  param = read_command_line()

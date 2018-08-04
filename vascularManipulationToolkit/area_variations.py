@@ -577,7 +577,7 @@ def main(folder, beta, smooth, stats, r_change, percentage, stenosis, stenosis_s
     # Smooth voronoi diagram
     voronoi = make_voronoi_diagram(model_path, voronoi_path)
     if not path.exists(voronoi_smoothed_path) and smooth:
-        voronoi_smoothed = SmoothClippedVoronoiDiagram(voronoi, centerlines, 0.25)
+        voronoi_smoothed = smooth_voronoi_diagram(voronoi, centerlines, 0.25)
         write_polydata(voronoi_smoothed, voronoi_smoothed_path)
         surface_smoothed = create_new_surface(voronoi_smoothed)
         write_polydata(surface_smoothed, model_smoothed_path)
