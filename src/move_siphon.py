@@ -1,7 +1,5 @@
 from argparse import ArgumentParser
 from os import path, listdir
-import sys
-import numpy.linalg as la
 
 # Local import
 from common import *
@@ -26,13 +24,17 @@ def read_command_line():
                         help="Compression factor in vertical direction, ranging from -1.0 to 1.0")
     parser.add_argument("-b", "--beta", type=float, default=0.0,
                         help="Compression factor in horizontal direction, ranging from -1.0 to 1.0")
+    parser.add_argument('-sf','--smooth_factor', type=float, default=0.25,
+                         help="If smooth option is true then each voronoi point" + \
+                         " that has a radius less then MISR*(1-smooth_factor) at" + \
+                         " the closest centerline point is removes" metavar="smoothening_factor")
 
     args = parser.parse_args()
 
-    return args.smooth, args.dir_path, args.case, args.alpha, args.beta
+    return args.smooth, args.dir_path, args.case, args.alpha, args.beta, args.smooth_factor
 
 
-def move_vessel(dirpath, smooth, name, point_path, alpha=0.0, beta=0.0):
+def move_vessel(dirpath, smooth, name, point_path, alpha=0.0, beta=0.0, smooth_factor=0.25):
     """
     Primary script for moving a selected part of any blood vessel.
     Relies on an input centerline, a surface geometry of a 3D blood vessel network,
@@ -55,6 +57,7 @@ def move_vessel(dirpath, smooth, name, point_path, alpha=0.0, beta=0.0):
         point_path (str): Location of boundary points of the vessel to be manipulated.
         alpha (float): Extension / Compression factor in vertical direction.
         beta (float): Extension / Compression factor in horizontal direction.
+        smooth_factor (float): Smoothing factor used for voronoi diagram smoothing.
     """
 
     # Input filenames
@@ -90,17 +93,12 @@ def move_vessel(dirpath, smooth, name, point_path, alpha=0.0, beta=0.0):
     if not path.exists(model_path):
         RuntimeError("The given directory: %s did not contain the file: model.vtp" % dirpath)
 
-    # Clean surface
-    surface = read_polydata(model_path)
-    surface = surface_cleaner(surface)
-    surface = triangulate_surface(surface)
-
-    #Get a capped and uncapped version of the surface
-    open_surface = surface
-    capped_surface = capp_surface(surface)
+    # Clean and capp / uncapp surface
+    parameters = get_parameters(dirpath)
+    surface, capped_surface = preare_surface(model_path, parameters)
 
     # Get inlet and outlets
-    inlet, outlets = get_centers(open_surface, dirpath)
+    inlet, outlets = get_centers(surface, dirpath)
 
     # Compute all centerlines
     centerlines_complete = vmtk_compute_centerlines(inlet, outlets,
@@ -114,12 +112,8 @@ def move_vessel(dirpath, smooth, name, point_path, alpha=0.0, beta=0.0):
                                                                                      clipping_points)
 
     print("Compute Voronoi diagram")
-    voronoi = make_voronoi_diagram(surface, voronoi_path)
-    if not path.exists(voronoi_smoothed_path) and smooth:
-        voronoi_smoothed = smooth_voronoi_diagram(voronoi, centerlines_complete, 0.25)
-        write_polydata(voronoi_smoothed, voronoi_smoothed_path)
-        surface_smoothed = create_new_surface(voronoi_smoothed)
-        write_polydata(surface_smoothed, model_smoothed_path)
+    voronoi = prepare_voronoi_diagram(model_path, voronoi_path, voronoi_smoothed_path, 
+                                    smooth, smooth_factor, centerlines_complete) 
 
     # Check if case includs the opthalmic artery
     eye, clip_ID, centerlines_in_order, eyeline = find_ophthalmic_artery(centerlines_in_order,
@@ -508,7 +502,7 @@ def move_voronoi_vertically(voronoi_clipped, centerline_clipped, ID1_0, clip_ID,
 
 
 if  __name__ == "__main__":
-    smooth, basedir, case, alpha, beta = read_command_line()
+    smooth, basedir, case, alpha, beta, smooth_factor = read_command_line()
     folders = sorted([folder for folder in listdir(basedir) if folder[:2] in ["P0"]])
     name = "surface"
     point_path = "carotid_siphon_points.particles"
@@ -521,4 +515,4 @@ if  __name__ == "__main__":
         for folder in folders:
             print("==== Working on case %s ====" % folder)
             dirpath = path.join(basedir,folder)
-            move_vessel(dirpath,smooth, name, point_path, alpha, beta)
+            move_vessel(dirpath,smooth, name, point_path, alpha, beta, smooth_factor)

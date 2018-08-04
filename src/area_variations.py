@@ -1,13 +1,12 @@
-from common import *
-import time
-from argparse import ArgumentParser
-from clipvoronoidiagram import *
-from paralleltransportvoronoidiagram import *
-from os import path, listdir
-import numpy as np
-import math
 from scipy.ndimage.filters import gaussian_filter
 from scipy.signal import argrelextrema
+from argparse import ArgumentParser
+from os import path, listdir
+
+# Local import 
+from common import *
+from clipvoronoidiagram import *
+from paralleltransportvoronoidiagram import *
 
 def read_command_line():
     """
@@ -27,6 +26,10 @@ def read_command_line():
                        " A_max/A_min, when this is given beta will be ignored" + \
                        " and beta computed such that this will (approxematly)" + \
                        " be the result")
+    parser.add_argument('-sf','--smooth_factor', type=float, default=0.25,
+                         help="If smooth option is true then each voronoi point" + \
+                         " that has a radius less then MISR*(1-smooth_factor) at" + \
+                         " the closest centerline point is removes" metavar="smoothening_factor")
     parser.add_argument("--percentage", type=float, default=None, help="Percentage the" + \
                         " area of the geometry is increase/decreased overall or only stenosis")
     parser.add_argument("--stenosis", type=bool, default=False, help="Creates a user selected" + \
@@ -42,7 +45,7 @@ def read_command_line():
     if args.ratio is not None and args.beta != 0.5:
         print("WARNING: The beta value you provided will be ignored.")
 
-    return args.s, args.beta, args.stats, args.dir_path, args.case, args.ratio, args.percentage, args.stenosis, args.size, args.noise
+    return args.s, args.beta, args.stats, args.dir_path, args.case, args.ratio, args.percentage, args.stenosis, args.size, args.noise, args.smooth_factor
 
 
 def get_stats(centerline_area, folder, centerline):
@@ -492,7 +495,8 @@ def change_area(voronoi, lineToChange, beta, ratio, percentage, stenosis, stenos
 
     return newVoronoi
 
-def main(folder, beta, smooth, stats, r_change, percentage, stenosis, stenosis_size, add_noise):
+def area_variations(folder, beta, smooth, stats, r_change, percentage, stenosis, 
+                    stenosis_size, add_noise, smooth_factor):
     """
     Objective manipulation of area variation in
     patient-specific models of blood vessels.
@@ -510,6 +514,7 @@ def main(folder, beta, smooth, stats, r_change, percentage, stenosis, stenosis_s
         stenosis (bool): Creates or removes a user selected stenosis in the geometry if True.
         stenosis_size (float): Length of affected stenosis area. Default is MISR x 2.0 of selected point.
         add_noise (bool): Adds noise to surface if true.
+        smooth_factor (float): Smoothing factor used for voronoi diagram smoothing.
 
     Returns:
         length (ndarray): Array of abscissa coordinates.
@@ -541,52 +546,13 @@ def main(folder, beta, smooth, stats, r_change, percentage, stenosis, stenosis_s
     # Import centerline
     centerlines = make_centerline(model_path, centerlines_path, length=0.1, smooth=False)
 
-    # Import and clean surface
-    surface = read_polydata(model_path)
-    surface = surface_cleaner(surface)
-    surface = triangulate_surface(surface)
-
-    # Check the mesh if there is redundant nodes or NaN triangles
-    parameters = get_parameters(folder)
-    if not "check_surface" in list(parameters.keys()):
-        ToolRepairSTL.surfaceOverview(surface)
-        ToolRepairSTL.foundAndDeleteNaNTriangles(surface)
-        surface = ToolRepairSTL.cleanTheSurface(surface)
-        foundNaN = ToolRepairSTL.foundAndDeleteNaNTriangles(surface)
-        if foundNaN == True:
-            raise RuntimeError('There is an issue with the surface. Nan' + \
-                                'coordinates or some other shenanigans.')
-        else:
-            parameters["check_surface"] = True
-            write_parameters(parameters, folder)
-
-        # Check connectivity and only choose the surface with the largest area
-        connectivity = get_connectivity(surface)
-        region_array = get_array("RegionId", connectivity)
-        if region_array.max() > 0:
-            print(("WARNING: The surface is not connected, therefore only the" + \
-                    " connected surface with the larges area will be keept."))
-            surfaces = []
-            for i in range(region_array):
-                surfaces.append(threshold(connectivity, "RegionId", lower=(i-0.1),
-                                        upper=(i+0.1), type="between", source=0))
-                area.append(compute_area(surfaces[-1]))
-
-            surface = surfaces[area.index(max(area))]
+    # Clean and capp / uncapp surface
+    parameters = get_parameters(dirpath)
+    surface, capped_surface = preare_surface(model_path, parameters)
 
     # Smooth voronoi diagram
-    voronoi = make_voronoi_diagram(model_path, voronoi_path)
-    if not path.exists(voronoi_smoothed_path) and smooth:
-        voronoi_smoothed = smooth_voronoi_diagram(voronoi, centerlines, 0.25)
-        write_polydata(voronoi_smoothed, voronoi_smoothed_path)
-        surface_smoothed = create_new_surface(voronoi_smoothed)
-        write_polydata(surface_smoothed, model_smoothed_path)
-
-    voronoi_smoothed = read_polydata(voronoi_smoothed_path)
-
-    # Use smoothed voronoi or not
-    voronoi = voronoi_smoothed if smooth else voronoi
-    model_path = model_smoothed_path if smooth else model_path
+    voronoi = prepare_voronoi_diagram(model_path, voronoi_path, voronoi_smoothed_path, 
+                                    smooth, smooth_factor, centerlines) 
 
     # Tolerance for finding diverging point
     tolerance = get_tolerance(centerlines)
@@ -628,10 +594,10 @@ def main(folder, beta, smooth, stats, r_change, percentage, stenosis, stenosis_s
 
 
 if __name__ == '__main__':
-    smooth, beta, stats, basefolder, case, ratio, percentage, stenosis, stenosis_size, add_noise = read_command_line()
+    smooth, beta, stats, basefolder, case, ratio, percentage, stenosis, stenosis_size, add_noise, smooth_factor = read_command_line()
     folders = listdir(basefolder) if case is None else [case]
     for i, folder in enumerate(folders):
         if folder.startswith("P0"):
             print("Working on: {}".format(folder))
             case = path.join(basefolder, folder)
-            main(case, beta, smooth, stats, ratio, percentage, stenosis, stenosis_size, add_noise)
+            area_variations(case, beta, smooth, stats, ratio, percentage, stenosis, stenosis_size, add_noise, smooth_factor)
