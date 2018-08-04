@@ -47,7 +47,7 @@ def sort_centerlines(centerlines_complete):
 
     longest = [lines[0]]
     lenlong = get_curvilinear_coordinate(longest[0])
-    for i in range(1,n):
+    for i in range(1, n):
         tmplong = get_curvilinear_coordinate(lines[i])
         if len(tmplong) > len(lenlong):
             lenlong = tmplong
@@ -117,15 +117,15 @@ def move_line_horizontally(patch_cl, ID1, ID2, dx_p1, clip=False, eye=False, sid
             l1 = extract_single_line(patch_cl, 0)
             l2 = extract_single_line(patch_cl, 1)
             l3 = extract_single_line(patch_cl, 2)
-            test_cl = merge_data([l1,l2,l3])
+            test_cl = merge_data([l1, l2, l3])
 
             ID1 = 0
             ID2 = len(get_curvilinear_coordinate(test_cl))
-            idmid = int( (ID1 + ID2)/2.)
+            idmid = int((ID1 + ID2) / 2.)
         else:
             ID1 = 0
             ID2 = len(get_curvilinear_coordinate(patch_cl))
-            idmid = int( (ID1 + ID2)/2.)
+            idmid = int((ID1 + ID2) / 2.)
 
         for p in range(patch_cl.GetNumberOfPoints()):
             cl_id = centerline_loc.FindClosestPoint(patch_cl.GetPoint(p))
@@ -167,6 +167,7 @@ def move_line_horizontally(patch_cl, ID1, ID2, dx_p1, clip=False, eye=False, sid
 
     return newline
 
+
 def move_points_vertically(line, dx):
     """
     Iterate through centerline points and move line based on a profile
@@ -191,7 +192,7 @@ def move_points_vertically(line, dx):
     for p in range(line.GetNumberOfPoints()):
         cl_id = centerline_loc.FindClosestPoint(line.GetPoint(p))
 
-        dist = 4 * dx * (cl_id - ID1)*(ID2 - cl_id) / ( ID2 - ID1)**2
+        dist = 4 * dx * (cl_id - ID1)*(ID2 - cl_id) / (ID2 - ID1)**2
 
         points.InsertNextPoint(np.asarray(line.GetPoint(p)) + dist)
         verts.InsertNextCell(1)
@@ -201,9 +202,6 @@ def move_points_vertically(line, dx):
     newline.SetVerts(verts)
     newline.GetPointData().AddArray(line.GetPointData().GetArray(radiusArrayName))
     return newline
-
-
-
 
 
 def move_line_vertically(line, dx, ID1_0, clip_ID=None, eye=False):
@@ -232,34 +230,32 @@ def move_line_vertically(line, dx, ID1_0, clip_ID=None, eye=False):
         l1 = extract_single_line(line, 0)
         l2 = extract_single_line(line, 1)
         l3 = extract_single_line(line, 2)
-        test_cl = merge_data([l1,l2,l3])
+        test_cl = merge_data([l1, l2, l3])
 
         ID1 = I1 = 0
         ID2 = len(get_curvilinear_coordinate(test_cl))
-        IDmid = int( (ID1 + ID2)/2.)
+        IDmid = int((ID1 + ID2)/2.)
         I2 = ID2-1
 
         for p in range(line.GetNumberOfPoints()):
             cl_id = centerline_loc.FindClosestPoint(line.GetPoint(p))
 
             if cl_id <= I2:
-                dist = 4 * dx * (cl_id - I1)*(I2 - cl_id) / ( I2 - I1)**2
+                dist = 4 * dx * (cl_id - I1)*(I2 - cl_id) / (I2 - I1)**2
             else:
-                cl_id = clip_ID - ID1_0 + int((ID2 - (clip_ID - ID1_0) )*0.4)
-                dist = 4 * dx * (cl_id - ID1)*(ID2 - cl_id) / ( ID2 - ID1)**2
+                cl_id = clip_ID - ID1_0 + int((ID2 - (clip_ID - ID1_0))*0.4)
+                dist = 4 * dx * (cl_id - ID1)*(ID2 - cl_id) / (ID2 - ID1)**2
 
             points.InsertNextPoint(np.asarray(line.GetPoint(p)) + dist)
             verts.InsertNextCell(1)
             verts.InsertCellPoint(p)
-
     else:
         ID1 = 0
         ID2 = len(get_curvilinear_coordinate(line))
 
         for p in range(line.GetNumberOfPoints()):
             cl_id = centerline_loc.FindClosestPoint(line.GetPoint(p))
-
-            dist = 4 * dx * (cl_id - ID1)*(ID2 - cl_id) / ( ID2 - ID1)**2
+            dist = 4 * dx * (cl_id - ID1)*(ID2 - cl_id) / (ID2 - ID1)**2
 
             points.InsertNextPoint(np.asarray(line.GetPoint(p)) + dist)
             verts.InsertNextCell(1)
@@ -268,6 +264,7 @@ def move_line_vertically(line, dx, ID1_0, clip_ID=None, eye=False):
     newline.SetPoints(points)
     newline.SetVerts(verts)
     newline.GetPointData().AddArray(line.GetPointData().GetArray(radiusArrayName))
+
     return newline
 
 
@@ -293,7 +290,7 @@ def move_perp(n, P, Z, alpha):
     # Find midpoint and point furthest away
     dist = []
     for z in Z:
-        d = la.norm( np.cross((z - p1),(z - p2))) / la.norm(p2 - p1)
+        d = la.norm(np.cross((z - p1), (z - p2))) / la.norm(p2 - p1)
         dist.append(d)
 
     D_id = dist.index(max(dist))
@@ -314,12 +311,14 @@ def move_perp(n, P, Z, alpha):
     dZ = []
     for i in range(len(Z)):
         dz = np.array(PV) * dist[i] / D * alpha
-        dZ.append( Z[i] + dz)
+        dZ.append(Z[i] + dz)
 
     dx = (PV1 - P1)*alpha
+
     return dZ, dx
 
-def move_para(n, P,Z, beta):
+
+def move_para(n, P, Z, beta):
     """
     Find directions for manipulation
     in the horizontal direction.
@@ -351,7 +350,7 @@ def move_para(n, P,Z, beta):
     Z_m = []
     Z_m_dist = []
     for z in Z:
-        d = la.norm( np.cross((z - s),(z - q[0]))) / la.norm(q[0] - s)
+        d = la.norm(np.cross((z - s), (z - q[0]))) / la.norm(q[0] - s)
         c = np.cross(s-q, z-q)
         if c[0][0] >= 0:
             Z_p.append(z)
@@ -374,8 +373,8 @@ def move_para(n, P,Z, beta):
     dZ.append(p2 + qp2*beta)
 
     # Check if moved in right direction
-    d_0 = la.norm( np.cross(Z_p[0] - q, Z_p[0] - s) ) / la.norm(s-q)
-    d_1 = la.norm( np.cross(dZ[1] - q, dZ[1] - s) ) / la.norm(s-q)
+    d_0 = la.norm(np.cross(Z_p[0] - q, Z_p[0] - s)) / la.norm(s - q)
+    d_1 = la.norm(np.cross(dZ[1] - q, dZ[1] - s)) / la.norm(s - q)
     if d_1 < d_0:
         # Split points based on orientation
         # to q normal
@@ -384,7 +383,7 @@ def move_para(n, P,Z, beta):
         Z_m = []
         Z_m_dist = []
         for z in Z:
-            d = la.norm( np.cross((z - s),(z - q[0]))) / la.norm(q[0] - s)
+            d = la.norm(np.cross((z - s), (z - q[0]))) / la.norm(q[0] - s)
             c = -np.cross(s-q, z-q)
             if c[0][0] >= 0:
                 Z_p.append(z)
@@ -411,7 +410,9 @@ def move_para(n, P,Z, beta):
     zp_min = Z_p[zpid]
     zmid = Z_m_dist.index(min(Z_m_dist))
     zm_min = Z_m[zmid]
+
     return dZ, zp_min, zm_min
+
 
 def best_plane(Z, P):
     """
@@ -432,17 +433,17 @@ def best_plane(Z, P):
 
     # Create complete matrix
     ATA = np.transpose(Z).dot(Z)
-    M0 = np.c_[ATA,np.transpose(P)]
-    M1 = np.c_[P, np.zeros( (len(P), len(P)))]
+    M0 = np.c_[ATA, np.transpose(P)]
+    M1 = np.c_[P, np.zeros((len(P), len(P)))]
     M = np.r_[M0, M1]
-    Y = np.r_[np.transpose(Z).dot(b),d]
+    Y = np.r_[np.transpose(Z).dot(b), d]
 
     # Solve system
-    x = la.solve(M,Y)
+    x = la.solve(M, Y)
     a = x[0]
     b = x[1]
     c = x[2]
-    n = np.array([a,b,c])
+    n = np.array([a, b, c])
     n = n / la.norm(n)
 
     # Define plane
@@ -450,12 +451,13 @@ def best_plane(Z, P):
     xmax = max(Z, key=operator.itemgetter(1))[0] + 4
     ymin = min(Z, key=operator.itemgetter(1))[1] - 4
     ymax = max(Z, key=operator.itemgetter(1))[1] + 4
-    xx,yy = np.meshgrid(np.linspace(xmin,xmax,15),np.linspace(ymin,ymax,15))
-    zz = (1 - a*xx - b*yy ) / float(c)
+    xx, yy = np.meshgrid(np.linspace(xmin, xmax, 15), np.linspace(ymin, ymax, 15))
+    zz = (1 - a*xx - b*yy) / float(c)
+
     return n
 
 
-def find_closest_point(dx,start,stop, P0, line):
+def find_closest_point(dx, start, stop, P0, line):
     """
     Find point located closest to a given point P0.
     Searching from start to stop along the centerline.
@@ -474,7 +476,7 @@ def find_closest_point(dx,start,stop, P0, line):
     a = dx[0]
     b =  dx[1]
     c =  dx[2]
-    n = np.array([a,b,c])
+    n = np.array([a, b, c])
     n = n / la.norm(n)
 
     # Define plane
@@ -482,22 +484,24 @@ def find_closest_point(dx,start,stop, P0, line):
     xmax = 100
     ymin = 0
     ymax = 100
-    xx,yy = np.meshgrid(np.linspace(xmin,xmax,150),np.linspace(ymin,ymax,150))
+    xx, yy = np.meshgrid(np.linspace(xmin, xmax, 150), np.linspace(ymin, ymax, 150))
     d = a*P0[0] + b*P0[1] + c*P0[2]
-    zz = (d - a*xx - b*yy ) / float(c)
+    zz = (d - a*xx - b*yy) / float(c)
+
     points = []
-    for i in range(start,stop):
+    for i in range(start, stop):
         p = line.GetPoint(i)
-        points.append( np.array(p) )
+        points.append(np.array(p))
+
     dist_list = []
-    for i,pcl in enumerate(points):
+    for i, pcl in enumerate(points):
         v = pcl - np.array(P0)
         dist = abs(v.dot(n))
         dist_list.append(dist)
 
-
     minID = dist_list.index(min(dist_list)) + start
     minP = points[minID - start]
+
     return minP, minID
 
 
@@ -518,7 +522,7 @@ def find_furthest_points(dx, line):
     a = dx[0]
     b =  dx[1]
     c =  dx[2]
-    n = np.array([a,b,c])
+    n = np.array([a, b, c])
     n = n / la.norm(n)
 
     # Define plane
@@ -526,26 +530,28 @@ def find_furthest_points(dx, line):
     xmax = 100
     ymin = 0
     ymax = 100
-    xx,yy = np.meshgrid(np.linspace(xmin,xmax,150),np.linspace(ymin,ymax,150))
+    xx, yy = np.meshgrid(np.linspace(xmin, xmax, 150), np.linspace(ymin, ymax, 150))
     d = a*P0[0] + b*P0[1] + c*P0[2]
-    zz = (d - a*xx - b*yy ) / float(c)
+    zz = (d - a*xx - b*yy) / float(c)
+
     points = []
     for i in range(line.GetNumberOfPoints()):
         p = line.GetPoint(i)
         points.append(np.array(p))
-    dist_list = []
 
-    for i,pcl in enumerate(points):
+    dist_list = []
+    for i, pcl in enumerate(points):
         v = pcl - np.array(P0)
         dist = abs(v.dot(n))
         dist_list.append(dist)
 
     maxID = dist_list.index(max(dist_list))
     maxP = points[maxID]
+
     return maxP, maxID
 
 
-def get_spline_points(line, param,direction, clip_points):
+def get_spline_points(line, param, direction, clip_points):
     """
     Pick n uniformly selected points along the
     centerline from point P1 to P2, and move them.
@@ -562,19 +568,19 @@ def get_spline_points(line, param,direction, clip_points):
         dx (ndarray): Direction to move geometry.
     """
     locator = get_locator(line)
-    p1      = clip_points.GetPoint(0)
-    p2      = clip_points.GetPoint(1)
-    ID1     = locator.FindClosestPoint(p1)
-    ID2     = locator.FindClosestPoint(p2)
+    p1 = clip_points.GetPoint(0)
+    p2 = clip_points.GetPoint(1)
+    ID1 = locator.FindClosestPoint(p1)
+    ID2 = locator.FindClosestPoint(p2)
     ID_mid = int((ID1 + ID2) / 2.)
-    P = [p1,p2]
+    P = [p1, p2]
 
     # Select n uniformly spaced points
     n = 10
     points = []
     ids = np.zeros(n)
     dx = 1 / (n + 1.)
-    for i in range(1,n+1):
+    for i in range(1, n+1):
         ID = int(ID1 + (ID2 - ID1) * i * dx)
         ids[i-1] = ID
         p = line.GetPoints().GetPoint(ID)
@@ -583,18 +589,20 @@ def get_spline_points(line, param,direction, clip_points):
     for i in range(len(P)):
         P[i] = np.array([P[i][0], P[i][1], P[i][2]])
 
-    n = best_plane(points,P)
+    n = best_plane(points, P)
 
     if direction == "vertical":
-        dz, dx = move_perp(n,P, points, param)
+        dz, dx = move_perp(n, P, points, param)
         return dz, ids, dx
+
     elif direction == "horizont":
-        dz,zp,zm = move_para(n,P, points, param)
+        dz, zp, zm = move_para(n, P, points, param)
         return dz, ids
+
 
 def find_diverging_centerlines(centerlines, end_point):
     # Start with longest line
-    longest = extract_single_line(centerlines,0)
+    longest = extract_single_line(centerlines, 0)
     longest_locator = get_locator(longest)
     longest_end_id = longest_locator.FindClosestPoint(end_point)
 
@@ -627,7 +635,9 @@ def find_diverging_centerlines(centerlines, end_point):
             lines.append(line_tmp)
 
     centerlines = merge_data(lines)
+
     return div_ids, div_points, centerlines, div_lines
+
 
 def clip_eyeline(eyeline, clip_start_point, clip_end_ID):
     """
@@ -648,6 +658,7 @@ def clip_eyeline(eyeline, clip_start_point, clip_end_ID):
         eye_points.InsertNextPoint(p)
 
     patch_eye = CreateParentArteryPatches(eyeline, eye_points, siphon=True)
+
     return patch_eye
 
 
@@ -713,6 +724,7 @@ def find_ophthalmic_artery(centerlines, clip_pts):
     else:
         return eye, None, centerlines, None
 
+
 def get_vtk_clipping_points(line, clipping_points):
     """
     Store clipping points as VTK objects.
@@ -735,7 +747,7 @@ def get_vtk_clipping_points(line, clipping_points):
     ID2     = locator.FindClosestPoint(clipping_points[1])
     if ID1 > ID2:
         clipping_points = clipping_points[::-1]
-        ID1,ID2 = ID2,ID1
+        ID1, ID2 = ID2, ID1
 
     # Set clipping points
     div_points = np.asarray(clipping_points)
@@ -744,7 +756,7 @@ def get_vtk_clipping_points(line, clipping_points):
         points.InsertNextPoint(point)
     clip_points = points
 
-    p1      = clip_points.GetPoint(0)
-    p2      = clip_points.GetPoint(1)
+    p1 = clip_points.GetPoint(0)
+    p2 = clip_points.GetPoint(1)
 
     return p1, p2, ID1, ID2, clip_points, clipping_points

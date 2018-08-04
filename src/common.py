@@ -349,7 +349,7 @@ def get_array(arrayName, line, k=1):
         getData = line.GetPointData().GetArray(arrayName).GetTuple3
 
     for i in range(line.GetNumberOfPoints()):
-        array[i,:] = getData(i)
+        array[i, :] = getData(i)
 
     return array
 
@@ -377,7 +377,7 @@ def get_array_cell(arrayName, line, k=1):
         getData = line.GetCellData().GetArray(arrayName).GetTuple9
 
     for i in range(line.GetNumberOfCells()):
-        array[i,:] = getData(i)
+        array[i, :] = getData(i)
 
     return array
 
@@ -560,9 +560,9 @@ def get_data(centerline, centerline_bif, tol):
         data (dict): Contains info about diverging point locations.
     """
     # Sort centerline to start at inlet
-    cl1 = extract_single_line(centerline,0)
-    cl2 = extract_single_line(centerline,1)
-    centerline = merge_data([cl1,cl2])
+    cl1 = extract_single_line(centerline, 0)
+    cl2 = extract_single_line(centerline, 1)
+    centerline = merge_data([cl1, cl2])
 
     # Declear variables before loop incase values are not found
     diverging_point_ID = -1
@@ -571,7 +571,7 @@ def get_data(centerline, centerline_bif, tol):
 
     clipping_point_ID = -1
     clipping_point = [0.0, 0.0, 0.0]
-    data = {"bif":{}, 0:{}, 1:{}}
+    data = {"bif": {}, 0: {}, 1: {}}
 
     # List of points conected to ID
     points_ids_0 = vtk.vtkIdList()
@@ -713,7 +713,7 @@ def triangulate_surface(surface):
 
 
 def geometry_filter(unstructured_grid):
-     # Convert unstructured grid to polydata
+    # Convert unstructured grid to polydata
     filter = vtk.vtkGeometryFilter()
     filter.SetInputData(unstructured_grid)
     filter.Update()
@@ -803,7 +803,7 @@ def uncapp_surface_old(surface):
     centers_edge = []
     limit = 0.1
     for i in range(int(region_array.max())+1):
-        regions.append(threshold(end_capps_connectivity, "RegionId",  lower=(i-limit),
+        regions.append(threshold(end_capps_connectivity, "RegionId", lower=(i-limit),
                             upper=(i+limit), type="between", source=0))
         circ, center = compute_circleness(regions[-1])
         circleness.append(circ)
@@ -1000,6 +1000,7 @@ def compute_centers(polyData, case_path=None, test_capped=False):
             polygon.GetPointIds().SetId(j, j)
 
         area.append(polygon.ComputeArea())
+        # FIXME: Remve bary center as well
         center.append(np.array(compute_bary_center(tmp_points)))
 
     # Store the center and area
@@ -1025,17 +1026,17 @@ def compute_centers(polyData, case_path=None, test_capped=False):
 def compute_bary_center(points):
     # Get i+1
     shifted = np.zeros(points.shape)
-    shifted[1:,:] = points[:-1,:]
-    shifted[0,:] = points[-1,:]
+    shifted[1:, :] = points[:-1, :]
+    shifted[0, :] = points[-1, :]
 
     # Compute weights
     weight = np.sqrt(np.sum((points - shifted)**2, axis=1))
     weight_sum = np.sum(weight)
 
     # Compute center
-    center_x = np.sum((points[:,0] + shifted[:,0])/2 * weight) / weight_sum
-    center_y = np.sum((points[:,1] + shifted[:,1])/2 * weight) / weight_sum
-    center_z = np.sum((points[:,2] + shifted[:,2])/2 * weight) / weight_sum
+    center_x = np.sum((points[:, 0] + shifted[:, 0])/2 * weight) / weight_sum
+    center_y = np.sum((points[:, 1] + shifted[:, 1])/2 * weight) / weight_sum
+    center_z = np.sum((points[:, 2] + shifted[:, 2])/2 * weight) / weight_sum
 
     return [center_x, center_y, center_z]
 
@@ -1137,7 +1138,7 @@ def vmtk_compute_centerline_sections(surface, centerline):
 
     return line, CenterlineSections
 
-#TODO: Merge / remove - use make_centerline instead
+
 def vmtk_compute_centerlines(inlet, outlet, filepath, surface, resampling=1,
                         smooth=False, num_iter=100, smooth_factor=0.1,
                         endPoint=1, method="pointlist"):
@@ -1179,15 +1180,15 @@ def create_vtk_array(values, name, k=1):
             vtkArray.SetTuple1(i, values[i])
     elif k == 2:
         for i in range(values.shape[0]):
-            vtkArray.SetTuple2(i, values[i,0], values[i,1])
+            vtkArray.SetTuple2(i, values[i, 0], values[i, 1])
     elif k == 3:
         for i in range(values.shape[0]):
-            vtkArray.SetTuple3(i, values[i,0], values[i,1], values[i,2])
+            vtkArray.SetTuple3(i, values[i, 0], values[i, 1], values[i, 2])
     elif k == 9:
         for i in range(values.shape[0]):
-            vtkArray.SetTuple9(i, values[i,0], values[i,1], values[i,2],
-                                  values[i,3], values[i,4], values[i,5],
-                                  values[i,6], values[i,7], values[i,8])
+            vtkArray.SetTuple9(i, values[i, 0], values[i, 1], values[i, 2],
+                                  values[i, 3], values[i, 4], values[i, 5],
+                                  values[i, 6], values[i, 7], values[i, 8])
 
     return vtkArray
 
@@ -1197,15 +1198,16 @@ def gram_schmidt(V):
     U = np.copy(V)
 
     def proj(u, v):
-        return u * np.dot(v,u) / np.dot(u,u)
+        return u * np.dot(v, u) / np.dot(u, u)
 
     for i in range(1, V.shape[1]):
         for j in range(i):
-            U[:,i] -= proj(U[:,j], V[:,i])
+            U[:, i] -= proj(U[:, j], V[:, i])
 
     # normalize column
-    den=(U**2).sum(axis=0)**0.5
-    E = U/den
+    den = (U**2).sum(axis=0)**0.5
+    E = U / den
+
     return E
 
 
@@ -1278,14 +1280,14 @@ def data_to_vtkPolyData(data, header, TNB=None, PT=None):
 
     for i in range(data.shape[0]):
         cellArray.InsertCellPoint(i)
-        linePoints.InsertNextPoint(data[i,:3])
+        linePoints.InsertNextPoint(data[i, :3])
         for j in range(3, data.shape[1]):
             info_array[j-3].SetTuple1(i, data[i, j])
 
     if TNB is not None:
         for i in range(data.shape[0]):
             for j in range(data.shape[1]-3, data.shape[1], 1):
-                tnb_ = TNB[j - data.shape[1]][i,:]
+                tnb_ = TNB[j - data.shape[1]][i, :]
                 info_array[j].SetTuple3(i, tnb_[0], tnb_[1], tnb_[2])
 
     if PT is not None:
@@ -1575,7 +1577,7 @@ def discrete_geometry(line, neigh=10):
         p.append(np.array(list(line.GetPoint(i))))
         p[i] = np.array(p[i])
 
-    norms = [la.norm(p[j] - p[j-1]) for j in range(1,N)]
+    norms = [la.norm(p[j] - p[j-1]) for j in range(1, N)]
     s = sum(norms)
     for i in range(1, N):
         s1 = sum(norms[:i+1])
@@ -1597,24 +1599,23 @@ def discrete_geometry(line, neigh=10):
         y[i] = p[i][1]
         z[i] = p[i][2]
 
-
     for i in range(0, m):
-        t_sum = sum([ (t[j] - t[i])**2 for j in range(0, 2*m+1)])
-        dxdt[i] = sum([ (t[j] - t[i])*(x[j]-x[i]) for j in range(0, 2*m+1)]) / t_sum
-        dydt[i] = sum([ (t[j] - t[i])*(y[j]-y[i]) for j in range(0, 2*m+1)]) / t_sum
-        dzdt[i] = sum([ (t[j] - t[i])*(z[j]-z[i]) for j in range(0, 2*m+1)]) / t_sum
+        t_sum = sum([(t[j] - t[i])**2 for j in range(0, 2*m+1)])
+        dxdt[i] = sum([(t[j] - t[i])*(x[j]-x[i]) for j in range(0, 2*m+1)]) / t_sum
+        dydt[i] = sum([(t[j] - t[i])*(y[j]-y[i]) for j in range(0, 2*m+1)]) / t_sum
+        dzdt[i] = sum([(t[j] - t[i])*(z[j]-z[i]) for j in range(0, 2*m+1)]) / t_sum
 
     for i in range(m, N-m):
-        t_sum = sum([ (t[j] - t[i])**2 for j in range(i-m, i+m+1)])
-        dxdt[i] = sum([ (t[j] - t[i])*(x[j]-x[i]) for j in range(i-m, i+m+1)]) / t_sum
-        dydt[i] = sum([ (t[j] - t[i])*(y[j]-y[i]) for j in range(i-m, i+m+1)]) / t_sum
-        dzdt[i] = sum([ (t[j] - t[i])*(z[j]-z[i]) for j in range(i-m, i+m+1)]) / t_sum
+        t_sum = sum([(t[j] - t[i])**2 for j in range(i-m, i+m+1)])
+        dxdt[i] = sum([(t[j] - t[i])*(x[j]-x[i]) for j in range(i-m, i+m+1)]) / t_sum
+        dydt[i] = sum([(t[j] - t[i])*(y[j]-y[i]) for j in range(i-m, i+m+1)]) / t_sum
+        dzdt[i] = sum([(t[j] - t[i])*(z[j]-z[i]) for j in range(i-m, i+m+1)]) / t_sum
 
     for i in range(N-m, N):
-        t_sum = sum([ (t[j] - t[i])**2 for j in range(N-2*m, N)])
-        dxdt[i] = sum([ (t[j] - t[i])*(x[j]-x[i]) for j in range(N-2*m-1, N)]) / t_sum
-        dydt[i] = sum([ (t[j] - t[i])*(y[j]-y[i]) for j in range(N-2*m-1, N)]) / t_sum
-        dzdt[i] = sum([ (t[j] - t[i])*(z[j]-z[i]) for j in range(N-2*m-1, N)]) / t_sum
+        t_sum = sum([(t[j] - t[i])**2 for j in range(N-2*m, N)])
+        dxdt[i] = sum([(t[j] - t[i])*(x[j]-x[i]) for j in range(N-2*m-1, N)]) / t_sum
+        dydt[i] = sum([(t[j] - t[i])*(y[j]-y[i]) for j in range(N-2*m-1, N)]) / t_sum
+        dzdt[i] = sum([(t[j] - t[i])*(z[j]-z[i]) for j in range(N-2*m-1, N)]) / t_sum
 
     dgammadt = []
     dgammadt_norm = np.zeros(N)
@@ -1640,22 +1641,22 @@ def discrete_geometry(line, neigh=10):
     dt3dt = np.zeros(N)
 
     for i in range(0, m):
-        t_sum = sum([ (t[j] - t[i])**2 for j in range(0, 2*m+1)])
-        dt1dt[i] = sum([ (t[j] - t[i])*(t1[j]-t1[i]) for j in range(0, 2*m+1)]) / t_sum
-        dt2dt[i] = sum([ (t[j] - t[i])*(t2[j]-t2[i]) for j in range(0, 2*m+1)]) / t_sum
-        dt3dt[i] = sum([ (t[j] - t[i])*(t3[j]-t3[i]) for j in range(0, 2*m+1)]) / t_sum
+        t_sum = sum([(t[j] - t[i])**2 for j in range(0, 2*m+1)])
+        dt1dt[i] = sum([(t[j] - t[i])*(t1[j]-t1[i]) for j in range(0, 2*m+1)]) / t_sum
+        dt2dt[i] = sum([(t[j] - t[i])*(t2[j]-t2[i]) for j in range(0, 2*m+1)]) / t_sum
+        dt3dt[i] = sum([(t[j] - t[i])*(t3[j]-t3[i]) for j in range(0, 2*m+1)]) / t_sum
 
     for i in range(m, N-m):
-        t_sum = sum([ (t[j] - t[i])**2 for j in range(i-m, i+m+1)])
-        dt1dt[i] = sum([ (t[j] - t[i])*(t1[j]-t1[i]) for j in range(i-m, i+m+1)]) / t_sum
-        dt2dt[i] = sum([ (t[j] - t[i])*(t2[j]-t2[i]) for j in range(i-m, i+m+1)]) / t_sum
-        dt3dt[i] = sum([ (t[j] - t[i])*(t3[j]-t3[i]) for j in range(i-m, i+m+1)]) / t_sum
+        t_sum = sum([(t[j] - t[i])**2 for j in range(i-m, i+m+1)])
+        dt1dt[i] = sum([(t[j] - t[i])*(t1[j]-t1[i]) for j in range(i-m, i+m+1)]) / t_sum
+        dt2dt[i] = sum([(t[j] - t[i])*(t2[j]-t2[i]) for j in range(i-m, i+m+1)]) / t_sum
+        dt3dt[i] = sum([(t[j] - t[i])*(t3[j]-t3[i]) for j in range(i-m, i+m+1)]) / t_sum
 
     for i in range(N-m, N):
-        t_sum = sum([ (t[j] - t[i])**2 for j in range(N-2*m, N)])
-        dt1dt[i] = sum([ (t[j] - t[i])*(t1[j]-t1[i]) for j in range(N-2*m-1, N)]) / t_sum
-        dt2dt[i] = sum([ (t[j] - t[i])*(t2[j]-t2[i]) for j in range(N-2*m-1, N)]) / t_sum
-        dt3dt[i] = sum([ (t[j] - t[i])*(t3[j]-t3[i]) for j in range(N-2*m-1, N)]) / t_sum
+        t_sum = sum([(t[j] - t[i])**2 for j in range(N-2*m, N)])
+        dt1dt[i] = sum([(t[j] - t[i])*(t1[j]-t1[i]) for j in range(N-2*m-1, N)]) / t_sum
+        dt2dt[i] = sum([(t[j] - t[i])*(t2[j]-t2[i]) for j in range(N-2*m-1, N)]) / t_sum
+        dt3dt[i] = sum([(t[j] - t[i])*(t3[j]-t3[i]) for j in range(N-2*m-1, N)]) / t_sum
 
     dtgdt = []
     dtgdt_norm = np.zeros(N)
@@ -1695,12 +1696,12 @@ def get_k1k2_basis(curvature, line):
 
     for i in range(E1.shape[0]):
         V = np.eye(3)
-        V[:, 0] = T[i,:]
-        V[:, 1] = E1[i,:]
+        V[:, 0] = T[i, :]
+        V[:, 1] = E1[i, :]
         V = gram_schmidt(V)
 
-        E1[i,:] = V[:,1]
-        E2[i,:] = V[:,2]
+        E1[i, :] = V[:, 1]
+        E2[i, :] = V[:, 2]
 
     # Compute k_1, k_2 furfilling T' = curv(s)*N(s) = k_1(s)*E_1(s) + k_2(s)*E_2(s).
     # This is simply a change of basis for the curvature vector N. The room
@@ -1708,9 +1709,9 @@ def get_k1k2_basis(curvature, line):
     # torsion.
     N = get_array("FrenetNormal", line, k=3)
 
-    k2 = (curvature.T * (E1[:,1]*N[:,0] - N[:,1]*E1[:,0]) / \
-                        (E2[:,1]*E1[:,0] - E2[:,0]*E1[:,1]))[0]
-    k1 = (-(curvature.T * N[:,0] + k2*E2[:,0]) / E1[:,0])[0]
+    k2 = (curvature.T * (E1[:, 1]*N[:, 0] - N[:, 1]*E1[:, 0]) / \
+                        (E2[:, 1]*E1[:, 0] - E2[:, 0]*E1[:, 1]))[0]
+    k1 = (-(curvature.T * N[:, 0] + k2*E2[:, 0]) / E1[:, 0])[0]
 
     for k in [(k1, "k1"), (k2, "k2")]:
         k_array = create_vtk_array(k[0], k[1])
@@ -1761,22 +1762,22 @@ def spline_centerline(line, get_curv=False, isline=False, nknots=50, get_stats=T
 
     curv_coor = get_curvilinear_coordinate(line)
     for i in range(data.shape[0]):
-        data[i,:] = line.GetPoint(i)
+        data[i, :] = line.GetPoint(i)
 
     t = np.linspace(curv_coor[0], curv_coor[-1], nknots+2)[1:-1]
-    fx = splrep(curv_coor, data[:,0], k=4, t=t)
-    fy = splrep(curv_coor, data[:,1], k=4, t=t)
-    fz = splrep(curv_coor, data[:,2], k=4, t=t)
+    fx = splrep(curv_coor, data[:, 0], k=4, t=t)
+    fy = splrep(curv_coor, data[:, 1], k=4, t=t)
+    fz = splrep(curv_coor, data[:, 2], k=4, t=t)
 
     fx_ = splev(curv_coor, fx)
     fy_ = splev(curv_coor, fy)
     fz_ = splev(curv_coor, fz)
 
     data = np.zeros((len(curv_coor), 4))
-    data[:,0] = fx_
-    data[:,1] = fy_
-    data[:,2] = fz_
-    data[:,3] = MISR[:,0]
+    data[:, 0] = fx_
+    data[:, 1] = fy_
+    data[:, 2] = fz_
+    data[:, 3] = MISR[:, 0]
 
     header = ["X", "Y", "Z", radiusArrayName]
     line = data_to_vtkPolyData(data, header)

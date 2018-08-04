@@ -22,28 +22,30 @@ def read_command_line():
 
     parser.add_argument('-d', '--dir_path', type=str, default=".",
                         help="Path to the folder with all the cases")
-    parser.add_argument('-c','--case', type=str, default=None, help="Choose case")
-    parser.add_argument('-cm','--curv_method', type=str, default="spline",
+    parser.add_argument('-c', '--case', type=str, default=None, help="Choose case")
+    parser.add_argument('-cm', '--curv_method', type=str, default="spline",
             help="Choose which method used for computing curvature: spline (default) | vmtk | disc |")
 
-    parser.add_argument('-a','--algorithm', type=str, default="bogunovic",
+    parser.add_argument('-a', '--algorithm', type=str, default="bogunovic",
             help="Choose which landmarking algorithm to use: bogunovic or piccinelli")
-    parser.add_argument('-r','--resamp_step', type=float, default=None,
+    parser.add_argument('-r', '--resamp_step', type=float, default=None,
                         help="Choose if the centerline should be resampled with this resampling step")
-    parser.add_argument('-nk','--nknots', type=int, default=11,
+    parser.add_argument('-nk', '--nknots', type=int, default=11,
                         help="Number of knots used in B-splines.")
     parser.add_argument('-s', '--smooth', type=bool, default=False,
                         help="If the original centerline should be smoothed " +\
                         "when computing the centerline attribiutes", metavar="smooth")
-    parser.add_argument('-facc','--factor_curvature', type=float, default=1.0,
+    parser.add_argument('-facc', '--factor_curvature', type=float, default=1.0,
                         help="Smoothing factor for computing curvature.")
-    parser.add_argument('-fact','--factor_torsion', type=float, default=1.0,
+    parser.add_argument('-fact', '--factor_torsion', type=float, default=1.0,
                         help="Smoothing factor for computing torsion.")
-    parser.add_argument('-it','--iterations', type=int, default=100,
+    parser.add_argument('-it', '--iterations', type=int, default=100,
                         help="Smoothing iterations.")
     args = parser.parse_args()
 
-    return args.dir_path, args.case, args.curv_method, args.resamp_step, args.smooth, args.algorithm, args.nknots, args.factor_curvature, args.factor_torsion, args.iterations
+    return args.dir_path, args.case, args.curv_method, args.resamp_step, args.smooth, \
+           args.algorithm, args.nknots, args.factor_curvature, args.factor_torsion, \
+           args.iterations
 
 def landmarking_bogunovic(centerline, folder, curv_method, algorithm,
         resamp_step, smooth=False, nknots=25, smoothingfactor=1.0, iterations=100):
@@ -71,7 +73,7 @@ def landmarking_bogunovic(centerline, folder, curv_method, algorithm,
 
     elif curv_method == "vmtk":
         line = vmtk_centerline_attributes(centerline)
-        line = vmtk_centerline_geometry(line,smooth, factor=smoothingfactor, iterations=iterations)
+        line = vmtk_centerline_geometry(line, smooth, factor=smoothingfactor, iterations=iterations)
         curvature_ = get_array("Curvature", line)
         curvature__ = gaussian_filter(curvature_, 5)
         curvature = []
@@ -82,7 +84,7 @@ def landmarking_bogunovic(centerline, folder, curv_method, algorithm,
     elif curv_method == "disc":
         neigh = 20
         line = vmtk_centerline_attributes(centerline)
-        line = vmtk_centerline_geometry(line,smooth, factor=smoothingfactor, iterations=iterations)
+        line = vmtk_centerline_geometry(line, smooth, factor=smoothingfactor, iterations=iterations)
         line, curvature__ = discrete_geometry(line, neigh=neigh)
         curvature = []
         for c in curvature__:
@@ -114,12 +116,12 @@ def landmarking_bogunovic(centerline, folder, curv_method, algorithm,
     k1_points = k1[max_point_ids]
     k2_points = k2[max_point_ids]
     k_points = np.zeros((k1_points.shape[0], 2))
-    k_points[:,0] = k1_points[:,0]
-    k_points[:,1] = k2_points[:,0]
+    k_points[:, 0] = k1_points[:, 0]
+    k_points[:, 1] = k2_points[:, 0]
     tetha = np.zeros(k1_points.shape[0] - 1)
     for i in range(tetha.shape[0]):
-        a = k_points[i,:] / np.sqrt(np.sum(k_points[i,:]**2))
-        b = k_points[i+1,:] / np.sqrt(np.sum(k_points[i+1,:]**2))
+        a = k_points[i, :] / np.sqrt(np.sum(k_points[i, :]**2))
+        b = k_points[i+1, :] / np.sqrt(np.sum(k_points[i+1, :]**2))
         tetha[i] = math.acos(np.dot(a, b))
         tetha[i] = tetha[i] * 180 / math.pi
 
@@ -157,7 +159,6 @@ def landmarking_bogunovic(centerline, folder, curv_method, algorithm,
             stop = max_point_ids[i + 1]
             b = min_point_ids[i+1]
             index = ((min_point_ids > start) * (min_point_ids < stop)).nonzero()[0]
-            #min_point = min(min_point_ids[index])
             min_point = (min_point_ids[index])
             interfaces[part] = min_point
 
@@ -223,7 +224,7 @@ def landmarking_bogunovic(centerline, folder, curv_method, algorithm,
 
 def landmarking_piccinelli(centerline, folder, curv_method, algorithm, resamp_step=None,
                            smooth=False, nknots=None, factor_curv=None, factor_tor=None,
-                           iterations=100);
+                           iterations=100):
     """
     Perform landmarking of an input centerline to
     identify different segments along the vessel.
@@ -258,7 +259,7 @@ def landmarking_piccinelli(centerline, folder, curv_method, algorithm, resamp_st
         # Get curvature and torsion, find peaks
         curvature = get_array("Curvature", line)
         torsion = get_array("Torsion", line)
-        torsion_smooth = gaussian_filter(torsion , 10)
+        torsion_smooth = gaussian_filter(torsion, 10)
         max_point_tor_ids = list(argrelextrema(abs(torsion_smooth), np.greater)[0])
 
     elif curv_method == "vmtk":
@@ -270,7 +271,7 @@ def landmarking_piccinelli(centerline, folder, curv_method, algorithm, resamp_st
         # Get curvature and torsion, find peaks
         curvature = get_array("Curvature", line)
         torsion = get_array("Torsion", line_tor)
-        torsion_smooth = gaussian_filter(torsion , 10)
+        torsion_smooth = gaussian_filter(torsion, 10)
         curvature_smooth = gaussian_filter(curvature, 10)
         max_point_ids = list(argrelextrema(curvature_smooth, np.greater)[0])
         max_point_tor_ids = list(argrelextrema(abs(torsion_smooth), np.greater)[0])
@@ -374,22 +375,22 @@ def spline_and_geometry(line, smooth, nknots):
     for i in range(data.shape[0]):
         curv_coor = get_curvilinear_coordinate(line)
 
-        data[i,:] = line.GetPoints().GetPoint(i)
+        data[i, :] = line.GetPoints().GetPoint(i)
 
     t = np.linspace(curv_coor[0], curv_coor[-1], nknots+2)[1:-1]
 
-    fx = splrep(curv_coor, data[:,0], k=4, t=t)
-    fy = splrep(curv_coor, data[:,1], k=4, t=t)
-    fz = splrep(curv_coor, data[:,2], k=4, t=t)
+    fx = splrep(curv_coor, data[:, 0], k=4, t=t)
+    fy = splrep(curv_coor, data[:, 1], k=4, t=t)
+    fz = splrep(curv_coor, data[:, 2], k=4, t=t)
 
     fx_ = splev(curv_coor, fx)
     fy_ = splev(curv_coor, fy)
     fz_ = splev(curv_coor, fz)
 
     data = np.zeros((len(curv_coor), 3))
-    data[:,0] = fx_
-    data[:,1] = fy_
-    data[:,2] = fz_
+    data[:, 0] = fx_
+    data[:, 1] = fy_
+    data[:, 2] = fz_
 
     header = ["X", "Y", "Z"]
     line = data_to_vtkPolyData(data, header)
@@ -521,9 +522,11 @@ def main(folder, curv_method, algorithm, resamp_step, nknots, smooth, factor_cur
 
     # Landmark
     if algorithm == "bogunovic":
-        landmarking_bogunovic(line, folder, curv_method, algorithm, resamp_step, smooth ,nknots, factor_curv, iterations)
+        landmarking_bogunovic(line, folder, curv_method, algorithm, resamp_step, smooth,
+                              nknots, factor_curv, iterations)
     elif algorithm == "piccinelli":
-        landmarking_piccinelli(line, folder, curv_method, algorithm, resamp_step, smooth ,nknots, factor_curv, factor_torsion, iterations)
+        landmarking_piccinelli(line, folder, curv_method, algorithm, resamp_step, smooth,
+                               nknots, factor_curv, factor_torsion, iterations)
     else:
         print("Algorithm is not valid. Select between 'bogunovic' and 'piccinelli'.")
 

@@ -15,7 +15,7 @@ def read_command_line():
     """
     parser = ArgumentParser()
 
-    parser.add_argument('-c','--case', type=str, default=None, help="Case")
+    parser.add_argument('-c', '--case', type=str, default=None, help="Case")
     parser.add_argument('-d', '--dir_path', type=str, default=".", help="Path")
     parser.add_argument('--s', '--smooth', type=bool, default=False,
                         help="If the original voronoi diagram", metavar="smooth")
@@ -139,7 +139,7 @@ def get_stats(centerline_area, folder, centerline):
     stats = {"max_derivative": max_derivative,
              "local_max_stepest_disent": local_max_stepest_disent,
              "max_mean_ratio_area": max_mean_ratio_area,
-             "min_mean_ratio_area" : min_mean_ratio_area,
+             "min_mean_ratio_area": min_mean_ratio_area,
              "mean_area": mean_area,
              "max_min_ratio_area": global_max_area / global_min_area,
              "length_min_max": length_min_max,
@@ -243,10 +243,11 @@ def get_factor(lineToChange, beta, ratio, percentage, stenosis, stenosis_size, a
             factor_ = (area / mean)**(beta-1)
             k = int(round(factor_.shape[0] * 0.10, 0))
             l = factor_.shape[0] - k*2
-            trans = np.asarray(np.linspace(1, 0, k).tolist() + np.zeros(l).tolist() + np.linspace(0, 1, k).tolist())
-            factor = factor_[:,0]*(1-trans) + trans
+            trans = np.asarray(np.linspace(1, 0, k).tolist() + np.zeros(l).tolist() +
+                               np.linspace(0, 1, k).tolist())
+            factor = factor_[:, 0]*(1-trans) + trans
 
-            area_new = (np.sqrt(area[:,0]/math.pi)*factor)**2 * math.pi
+            area_new = (np.sqrt(area[:, 0]/math.pi)*factor)**2 * math.pi
             R = area_new.max() / area_new.min()
 
             print(("R now: {:4f}  Want: {:2f}  R old: {:6f}".format(R, ratio, R_old)))
@@ -294,8 +295,9 @@ def get_factor(lineToChange, beta, ratio, percentage, stenosis, stenosis_size, a
         # A linear transition of the old and new geometry
         k = int(round(factor_.shape[0] * 0.10, 0))
         l = factor_.shape[0] - k*2
-        trans = np.asarray(np.linspace(1, 0, k).tolist() + np.zeros(l).tolist() + np.linspace(0, 1, k).tolist())
-        factor = factor_[:,0]*(1-trans) + trans
+        trans = np.asarray(np.linspace(1, 0, k).tolist() + np.zeros(l).tolist() +
+                           np.linspace(0, 1, k).tolist())
+        factor = factor_[:, 0]*(1-trans) + trans
 
     return factor
 
@@ -357,7 +359,7 @@ def subdivide_centerline(size, startId, stopId, segment_length=1.0):
     return trans
 
 def remove_stenosis(lineToChange, point1, point2, area):
-  # Find closest point along centerline and sort points
+    # Find closest point along centerline and sort points
     locator = get_locator(lineToChange)
     lineId1 = int(locator.FindClosestPoint(point1))
     lineId2 = int(locator.FindClosestPoint(point2))
@@ -384,10 +386,10 @@ def remove_stenosis(lineToChange, point1, point2, area):
     trans = subdivide_centerline(area.shape[0], startId, stopId, segment_length=1.0)
 
     # Define stenosis area and factor
-    t = np.linspace(startId,stopId, stopId-startId)
+    t = np.linspace(startId, stopId, stopId-startId)
     fixed_area = []
     for t_ in t:
-        fixed_area.append(new_area(t_) )
+        fixed_area.append(new_area(t_))
     factor_ = np.asarray(np.ones(startId).tolist() + fixed_area + np.ones(area.shape[0]-stopId).tolist())
     factor = factor_*(1-trans) + trans
 
@@ -471,7 +473,7 @@ def change_area(voronoi, lineToChange, beta, ratio, percentage, stenosis, stenos
 
             # Add noise
             if 0.1*M < tmp_ID < 0.9*M and add_noise:
-                v2 = v1 * (1 - factor[tmp_ID]*np.random.uniform(0.4,1.2))
+                v2 = v1 * (1 - factor[tmp_ID]*np.random.uniform(0.4, 1.2))
             else:
                 v2 = v1 * (1 - factor[tmp_ID])
 

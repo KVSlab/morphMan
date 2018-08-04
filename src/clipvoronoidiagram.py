@@ -86,7 +86,7 @@ def ComputeNumberOfMaskedPoints(dataArray):
     return numberOfPoints
 
 
-def ExtractMaskedVoronoiPoints(voronoi,maskArray):
+def ExtractMaskedVoronoiPoints(voronoi, maskArray):
     numberOfPoints = ComputeNumberOfMaskedPoints(maskArray)
 
     maskedVoronoi = vtk.vtkPolyData()

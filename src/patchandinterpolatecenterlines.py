@@ -226,19 +226,11 @@ def InterpolateSpline(startCell, endCell, additionalPoint):
     for i in range(len(points)-1):
         curv_coor[i+1] = curv_coor[i] + math.sqrt(distance(points[i], points[i+1]))
 
-    # FIXME: Test the effect of adding an extra distance
-    # Increse the longest distances
-    #base_line = curv_coor[0]
-    #for i, c in enumerate(curv_coor):
-    #    if c > 5*base_line:
-    #        print "Making distance longer, prev:", c, "  new:", 1.2*c
-    #        curv_coor[i] = c*1.2
-
     points = np.asarray(points)
 
-    fx = splrep(curv_coor, points[:,0], k=3)
-    fy = splrep(curv_coor, points[:,1], k=3)
-    fz = splrep(curv_coor, points[:,2], k=3)
+    fx = splrep(curv_coor, points[:, 0], k=3)
+    fy = splrep(curv_coor, points[:, 1], k=3)
+    fz = splrep(curv_coor, points[:, 2], k=3)
 
     curv_coor = np.linspace(curv_coor[0], curv_coor[-1], N)
     fx_ = splev(curv_coor, fx)
@@ -298,5 +290,5 @@ def InterpolateTwoCells(startCell, endCell, numberOfSplinePoints, additionalPoin
 
     points.SetNumberOfPoints(numberOfSplinePoints)
     for i in range(numberOfSplinePoints):
-        points.SetPoint(i,xspline.Evaluate(float(i)),yspline.Evaluate(float(i)),zspline.Evaluate(float(i)))
+        points.SetPoint(i, xspline.Evaluate(float(i)), yspline.Evaluate(float(i)), zspline.Evaluate(float(i)))
     return points

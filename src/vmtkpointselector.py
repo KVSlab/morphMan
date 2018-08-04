@@ -6,14 +6,11 @@ from os import path
 from vmtk.vmtkscripts import vmtkRenderer
 from vmtk import vmtkrenderer
 
-version = vtk.vtkVersion().GetVTKMajorVersion()
-
 class VtkText:
     def __init__(self, guiText=""):
         self.text = vtk.vtkTextActor()
         self.text.SetInput(guiText)
         textProperties = self.text.GetTextProperty()
-        #textProperties.SetFontFamilyToArial()
         textProperties.SetFontSize(15)
         textProperties.SetColor(1, 1, 1)
         self.text.SetDisplayPosition(10, 2)
@@ -57,7 +54,7 @@ class vmtkPickPointSeedSelector(vmtkSeedSelector):
         picker = vtk.vtkCellPicker()
         picker.SetTolerance(1E-4 * self._Surface.GetLength())
         eventPosition = self.vmtkRenderer.RenderWindowInteractor.GetEventPosition()
-        result = picker.Pick(float(eventPosition[0]),float(eventPosition[1]),0.0,self.vmtkRenderer.Renderer)
+        result = picker.Pick(float(eventPosition[0]), float(eventPosition[1]), 0.0, self.vmtkRenderer.Renderer)
         if result == 0:
             return
         pickPosition = picker.GetPickPosition()
@@ -65,7 +62,7 @@ class vmtkPickPointSeedSelector(vmtkSeedSelector):
         minDistance = 1E10
         pickedSeedId = -1
         for i in range(pickedCellPointIds.GetNumberOfIds()):
-            distance = vtk.vtkMath.Distance2BetweenPoints(pickPosition,self._Surface.GetPoint(pickedCellPointIds.GetId(i)))
+            distance = vtk.vtkMath.Distance2BetweenPoints(pickPosition, self._Surface.GetPoint(pickedCellPointIds.GetId(i)))
             if distance < minDistance:
                 minDistance = distance
                 pickedSeedId = pickedCellPointIds.GetId(i)
@@ -95,41 +92,30 @@ class vmtkPickPointSeedSelector(vmtkSeedSelector):
             self.vmtkRenderer.Initialize()
             self.OwnRenderer = 1
 
-        #self.vmtkRenderer.RegisterScript(self.Script)
-
         glyphs = vtk.vtkGlyph3D()
         glyphSource = vtk.vtkSphereSource()
-        if version < 6:
-            glyphs.SetInput(self.PickedSeeds)
-            glyphs.SetSource(glyphSource.GetOutput())
-        else:
-            glyphs.SetInputData(self.PickedSeeds)
-            #glyphs.SetSourceData(glyphSource.GetOutput())
-            glyphs.SetSourceConnection(glyphSource.GetOutputPort())
-
+        glyphs.SetInputData(self.PickedSeeds)
+        glyphs.SetSourceConnection(glyphSource.GetOutputPort())
         glyphs.SetScaleModeToDataScalingOff()
         glyphs.SetScaleFactor(self._Surface.GetLength()*0.01)
+
         glyphMapper = vtk.vtkPolyDataMapper()
-        if version < 6:
-            glyphMapper.SetInput(glyphs.GetOutput())
-        else:
-            # NOTE: This fixed the red spheres not showing up
-            glyphMapper.SetInputData(glyphs.GetOutput())
+        glyphMapper.SetInputData(glyphs.GetOutput())
         glyphMapper.SetInputConnection(glyphs.GetOutputPort())
+
         self.SeedActor = vtk.vtkActor()
         self.SeedActor.SetMapper(glyphMapper)
         self.SeedActor.GetProperty().SetColor(1.0, 0.0, 0.0)
         self.SeedActor.PickableOff()
-        self.vmtkRenderer.Renderer.AddActor(self.SeedActor)
 
+        self.vmtkRenderer.Renderer.AddActor(self.SeedActor)
         self.vmtkRenderer.AddKeyBinding('u', 'Undo.', self.UndoCallback)
         self.vmtkRenderer.AddKeyBinding('space', 'Add points.', self.PickCallback)
+
         surfaceMapper = vtk.vtkPolyDataMapper()
-        if version < 6:
-            surfaceMapper.SetInput(self._Surface)
-        else:
-            surfaceMapper.SetInputData(self._Surface)
+        surfaceMapper.SetInputData(self._Surface)
         surfaceMapper.ScalarVisibilityOff()
+
         surfaceActor = vtk.vtkActor()
         surfaceActor.SetMapper(surfaceMapper)
         surfaceActor.GetProperty().SetOpacity(1.0)

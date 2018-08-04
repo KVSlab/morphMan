@@ -100,7 +100,7 @@ def get_points(data, key, R, m, rotated=True, bif=False):
     # Origo of the bifurcation
     O_key = "div_point"
     O = np.asarray([data["bif"][O_key], data[0][O_key], data[1][O_key]])
-    O = np.sum(np.asarray(O),axis=0)/3.
+    O = np.sum(np.asarray(O), axis=0)/3.
 
     if rotated:
         R_inv = np.linalg.inv(R)
@@ -296,7 +296,7 @@ def rotationMatrix(data, angle, leave1, leave2):
         e = np.asarray(data[i]["end_point"])
         tmp = e - d
         len = math.sqrt(np.dot(tmp, tmp))
-        vec[:,i] = tmp / len
+        vec[:, i] = tmp / len
 
     # Expand basis to 3D
     R = gram_schmidt(vec)
@@ -559,7 +559,7 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
     surface = surface_cleaner(surface)
     surface = triangulate_surface(surface)
 
-   # Check connectivity and only choose the surface with the largest area
+    # Check connectivity and only choose the surface with the largest area
     if not "check_surface" in parameters.keys():
         connected_surface = getConnectivity(surface, mode="Largest")
         if connected_surface.GetNumberOfPoints() != surface.GetNumberOfPoints():

@@ -30,7 +30,7 @@ def read_command_line():
     return args.smooth, args.dir_path, args.case, args.smoothmode, args.smoothingfactor, args.iterations
 
 
-def main(dirpath, name,smooth,  smoothingfactor, iterations, smoothmode):
+def main(dirpath, name, smooth, smoothingfactor, iterations, smoothmode):
     """
     Create a sharper or smoother version of the input geometry,
     determined by a smoothed version of the siphon centerline.
@@ -51,20 +51,21 @@ def main(dirpath, name,smooth,  smoothingfactor, iterations, smoothmode):
 
     # Output names
     model_smoothed_path = path.join(dirpath, name, "model_smoothed.vtp")
-    model_new_surface = path.join(dirpath, name , "model_smooth_%s_fac_%s_it_%s.vtp" % ( smoothmode, sf, it))
+    model_new_surface = path.join(dirpath, name, "model_smooth_%s_fac_%s_it_%s.vtp" %
+                                  (smoothmode, sf, it))
 
     # Centerlines
     centerline_complete_path = path.join(dirpath, name, "centerline_complete.vtp")
-    centerline_clipped_path = path.join(dirpath, name,  "centerline_clipped.vtp")
-    centerline_clipped_part_path = path.join(dirpath, name,  "centerline_clipped_part.vtp")
-    centerline_clipped_part1_path = path.join(dirpath, name,  "centerline_clipped_end_part.vtp")
+    centerline_clipped_path = path.join(dirpath, name, "centerline_clipped.vtp")
+    centerline_clipped_part_path = path.join(dirpath, name, "centerline_clipped_part.vtp")
+    centerline_clipped_part1_path = path.join(dirpath, name, "centerline_clipped_end_part.vtp")
     centerline_new_path = path.join(dirpath, name, "centerline_interpolated.vtp")
     carotid_siphon_path = path.join(dirpath, name, "carotid_siphon.vtp")
-    centerline_smooth_path =  path.join(dirpath, name ,  "smooth_carotid_siphon.vtp")
+    centerline_smooth_path = path.join(dirpath, name, "smooth_carotid_siphon.vtp")
 
     # Voronoi diagrams
     voronoi_path = path.join(dirpath, name, "model_voronoi.vtp")
-    voronoi_smoothed_path = path.join(dirpath, name,  "model_voronoi_smoothed.vtp")
+    voronoi_smoothed_path = path.join(dirpath, name, "model_voronoi_smoothed.vtp")
     voronoi_clipped_path = path.join(dirpath, name, "model_voronoi_clipped.vtp")
     voronoi_clipped_part_path = path.join(dirpath, name, "model_voronoi_clipped_part.vtp")
 
@@ -116,7 +117,7 @@ def main(dirpath, name,smooth,  smoothingfactor, iterations, smoothmode):
         for i, divline in enumerate(div_lines):
             clip_id = int((divline.GetNumberOfPoints() - div_ids[i])*0.2 + div_ids[i])
             patch_eye = clip_eyeline(divline, carotid_siphon.GetPoint(0), clip_id)
-            div_patch_cl.append(extract_single_line(patch_eye,1))
+            div_patch_cl.append(extract_single_line(patch_eye, 1))
 
     # Clipp Voronoi diagram
     print("Clipping voronoi diagram")
@@ -244,5 +245,5 @@ if  __name__ == "__main__":
     folders = listdir(basedir) if case is None else [case]
     for folder in folders:
         print("==== Working on case %s ====" % folder)
-        dirpath = path.join(basedir,folder)
+        dirpath = path.join(basedir, folder)
         main(dirpath, name, smooth, smoothingfactor, iterations, smoothmode)
