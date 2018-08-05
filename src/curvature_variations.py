@@ -59,6 +59,7 @@ def change_curvature(dirpath, name, smooth, smoothingfactor, iterations, smoothm
     model_smoothed_path = path.join(dirpath, name, "model_smoothed.vtp")
     method = "smoothed" if smoothmode else "extended"
     model_new_surface = path.join(dirpath, name, "model_%s_fac_%s_it_%s.vtp" % (method, sf, it))
+    model_new_surface_clean = path.join(dirpath, name , "model_%s_fac_%s_it_%s_clean.vtp" % ( method, sf, it))
 
     # Centerlines
     centerline_complete_path = path.join(dirpath, name, "centerline_complete.vtp")
@@ -81,7 +82,8 @@ def change_curvature(dirpath, name, smooth, smoothingfactor, iterations, smoothm
 
     # Clean and capp / uncapp surface
     parameters = get_parameters(dirpath)
-    surface, capped_surface = preare_surface(model_path, parameters)
+    open_surface, capped_surface = preare_surface(model_path, parameters)
+    surface = open_surface
 
     # Get inlet and outlets
     inlet, outlets = get_centers(open_surface, dirpath)
@@ -178,6 +180,8 @@ def change_curvature(dirpath, name, smooth, smoothingfactor, iterations, smoothm
     new_surface = create_new_surface(newVoronoi)
     # TODO: Add Automated clipping of newmodel
     new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100)
+    new_surface = clean_and_check_surface(new_surface, None,
+                                          model_new_surface_clean, None)
     write_polydata(new_surface, model_new_surface)
 
 

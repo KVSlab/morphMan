@@ -4,9 +4,6 @@ from os import path, listdir
 from time import time
 from copy import deepcopy
 
-import sys
-import math
-
 # Local import
 from patchandinterpolatecenterlines import *
 from clipvoronoidiagram import *
@@ -531,6 +528,7 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
     s += "" if not lower else "_lower"
     s += "" if cylinder_factor == 7.0 else "_cyl%s" % cylinder_factor
     model_new_surface = folder % ("_angle" + s + ".vtp")
+    model_new_surface_clean = folder % ("_angle"+s+"_cleaned.vtp")
 
     # Read and check model
     if not path.exists(model_path):
@@ -712,6 +710,8 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
     print("Surface saved in: {}".format(model_new_surface.split("/")[-1]))
     # TODO: Add Automated clipping of newmodel
     new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100)
+    new_surface = clean_and_check_surface(new_surface, None,
+                                          model_new_surface_clean, None)
     write_polydata(new_surface, model_new_surface)
 
 

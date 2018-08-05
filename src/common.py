@@ -1848,3 +1848,80 @@ def prepare_voronoi_diagram(model_path, voronoi_path, voronoi_smoothed_path,
     voronoi = voronoi_smoothed if smooth else voronoi
 
     return voronoi
+
+
+def sort_centerlines(centerlines_complete):
+    """
+    Sort the complete set of centerlines
+    by placing the longest centerline first.
+
+    Args:
+        centerlines_complete (vtkPolyData): Complete set of centerlines.
+
+    Returns:
+        centerlines_in_order (vtkPolyData): Comlete set of sorted centerlines.
+    """
+    lines = []
+    n = centerlines_complete.GetNumberOfCells()
+    for i in range(n):
+        lines.append(extract_single_line(centerlines_complete, i))
+
+    longest = [lines[0]]
+    lenlong = get_curvilinear_coordinate(longest[0])
+    for i in range(1,n):
+        tmplong = get_curvilinear_coordinate(lines[i])
+        if len(tmplong) > len(lenlong):
+            lenlong = tmplong
+            longest.insert(0, lines[i])
+        else:
+            longest.append(lines[i])
+
+    centerlines_in_order = merge_data(longest)
+
+    return centerlines_in_order
+
+
+def clean_and_check_surface(surface, centerlines, model_path, centerlines_path):
+    """
+    Clean and check surface for overlapping regions.
+
+    Args:
+        surface (str): Surface model.
+        centerlines (str): New centerlines.
+        model_path (str): Path to surface model.
+        centerlines_path (str): Save path to tmp centerlines.
+
+    Returns:
+        surface (vtkPolyData): Cleaned surface model.
+    """
+    # Clean surface
+    surface = surface_cleaner(surface)
+    surface = triangulate_surface(surface)
+    write_polydata(surface, model_path)
+
+   # Check connectivity and only choose the surface with the largest area
+    connected_surface = get_connectivity(surface, mode="Largest")
+    if connected_surface.GetNumberOfPoints() != surface.GetNumberOfPoints():
+        WritePolyData(surface, model_path.replace(".vtp", "_test.vtp"))
+
+    # Check if model has overlapping regions
+    if centerlines is not None:
+        centerlines_to_check = sort_centerlines(make_centerline(model_path,
+                                                centerlines_path, recompute=True))
+        line_to_check = extract_single_line(centerlines_to_check, 0)
+        line_to_check = vmtk_centerline_resampling(line_to_check, length=0.1)
+        line_to_compare = extract_single_line(centerlines, 0)
+        line_to_compare = vmtk_centerline_resampling(line_to_compare, length=0.1)
+
+        # Compare distance between points along both centerliens
+        N = min([line_to_check.GetNumberOfPoints(), line_to_compare.GetNumberOfPoints()])
+        tolerance = get_tolerance(line_to_compare) * 100
+        for i in range(N):
+            p1 = np.asarray(line_to_check.GetPoint(i))
+            p2 = np.asarray(line_to_compare.GetPoint(i))
+            dist = la.norm(p1-p2)
+            if dist > tolerance:
+                print("\nModel has overlapping regions. Check surface model.")
+                sys.exit(0)
+
+    return surface
