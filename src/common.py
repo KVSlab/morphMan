@@ -978,28 +978,18 @@ def compute_centers(polyData, case_path=None, test_capped=False):
         if n <= 5:
             continue
 
-        # Sort to be ordred clockwise
-        for j in range(3):
-            x = points[index][:, j]
-            x_end = x[2::2].tolist()
-            x_end.reverse()
-            x1 = [x[0]] + x[1::2].tolist() + x_end
-            tmp_points[:, j] = x1
-
         # Insert points into VTK object
         points_vtk = vtk.vtkPoints()
         [points_vtk.InsertNextPoint(tmp_points[k]) for k in range(n)]
 
-        # Make polygon
-        polygon = vtk.vtkPolygon()
-        polygon.GetPoints().DeepCopy(points_vtk)
-        polygon.GetPointIds().SetNumberOfIds(n)
-        for j in range(n):
-            polygon.GetPointIds().SetId(j, j)
+        # Create surface for computing area of opening
+        delaunay = vtk.vtkDelaunay2D()
+        delaunay.SetInputdata(points_vtk)
+        delaunay.Update()
 
-        area.append(polygon.ComputeArea())
-        # FIXME: Remve bary center as well
-        center.append(np.array(compute_bary_center(tmp_points)))
+        # Add quanteties
+        area.append(compute_area(delaunay.GetOutput()))
+        center.append(np.mean(tmp_points, axsis=0))
 
     # Store the center and area
     inlet_ind = area.index(max(area))
@@ -1010,6 +1000,7 @@ def compute_centers(polyData, case_path=None, test_capped=False):
             if i == inlet_ind:
                 p = -1
                 continue
+
             info["outlet%d" % (i + p)] = center[i].tolist()
             info["outlet%s_area" % (i + p)] = area[i]
 
@@ -1021,24 +1012,6 @@ def compute_centers(polyData, case_path=None, test_capped=False):
     center_ = [item for sublist in center for item in sublist]
 
     return inlet_center, center_
-
-
-def compute_bary_center(points):
-    # Get i+1
-    shifted = np.zeros(points.shape)
-    shifted[1:, :] = points[:-1, :]
-    shifted[0, :] = points[-1, :]
-
-    # Compute weights
-    weight = np.sqrt(np.sum((points - shifted) ** 2, axis=1))
-    weight_sum = np.sum(weight)
-
-    # Compute center
-    center_x = np.sum((points[:, 0] + shifted[:, 0]) / 2 * weight) / weight_sum
-    center_y = np.sum((points[:, 1] + shifted[:, 1]) / 2 * weight) / weight_sum
-    center_z = np.sum((points[:, 2] + shifted[:, 2]) / 2 * weight) / weight_sum
-
-    return [center_x, center_y, center_z]
 
 
 def get_vtk_array(name, comp, num):
