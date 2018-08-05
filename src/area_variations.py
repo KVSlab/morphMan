@@ -8,13 +8,14 @@ from common import *
 from clipvoronoidiagram import *
 from paralleltransportvoronoidiagram import *
 
+
 def read_command_line():
     """
     Read arguments from commandline
     """
     parser = ArgumentParser()
 
-    parser.add_argument('-c','--case', type=str, default=None, help="Case")
+    parser.add_argument('-c', '--case', type=str, default=None, help="Case")
     parser.add_argument('-d', '--dir_path', type=str, default=".", help="Path")
     parser.add_argument('--s', '--smooth', type=bool, default=False,
                         help="If the original voronoi diagram", metavar="smooth")
@@ -26,10 +27,10 @@ def read_command_line():
                        " A_max/A_min, when this is given beta will be ignored" + \
                        " and beta computed such that this will (approxematly)" + \
                        " be the result")
-    parser.add_argument('-sf','--smooth_factor', type=float, default=0.25,
+    parser.add_argument('-sf', '--smooth_factor', type=float, default=0.25,
                          help="If smooth option is true then each voronoi point" + \
                          " that has a radius less then MISR*(1-smooth_factor) at" + \
-                         " the closest centerline point is removes", metavar="smoothening_factor")
+                         " the closest centerline point is removes" metavar="smoothening_factor")
     parser.add_argument("--percentage", type=float, default=None, help="Percentage the" + \
                         " area of the geometry is increase/decreased overall or only stenosis")
     parser.add_argument("--stenosis", type=bool, default=False, help="Creates a user selected" + \
@@ -45,7 +46,8 @@ def read_command_line():
     if args.ratio is not None and args.beta != 0.5:
         print("WARNING: The beta value you provided will be ignored.")
 
-    return args.s, args.beta, args.stats, args.dir_path, args.case, args.ratio, args.percentage, args.stenosis, args.size, args.noise, args.smooth_factor
+    return args.s, args.beta, args.stats, args.dir_path, args.case, args.ratio, \
+           args.percentage, args.stenosis, args.size, args.noise, args.smooth_factor
 
 
 def get_stats(centerline_area, folder, centerline):
@@ -142,7 +144,7 @@ def get_stats(centerline_area, folder, centerline):
     stats = {"max_derivative": max_derivative,
              "local_max_stepest_disent": local_max_stepest_disent,
              "max_mean_ratio_area": max_mean_ratio_area,
-             "min_mean_ratio_area" : min_mean_ratio_area,
+             "min_mean_ratio_area": min_mean_ratio_area,
              "mean_area": mean_area,
              "max_min_ratio_area": global_max_area / global_min_area,
              "length_min_max": length_min_max,
@@ -156,6 +158,7 @@ def get_stats(centerline_area, folder, centerline):
     write_parameters(stats, folder)
 
     return length, area
+
 
 def get_line_to_change(centerline, tol):
     """
@@ -194,6 +197,7 @@ def get_line_to_change(centerline, tol):
     # Extract and spline a single line
     lineToChange = extract_single_line(centerline, 0, endID=pointID)
     lineToChange = spline_centerline(lineToChange, nknots=25, isline=True, get_stats=False)
+
     return lineToChange
 
 
@@ -246,10 +250,11 @@ def get_factor(lineToChange, beta, ratio, percentage, stenosis, stenosis_size, a
             factor_ = (area / mean)**(beta-1)
             k = int(round(factor_.shape[0] * 0.10, 0))
             l = factor_.shape[0] - k*2
-            trans = np.asarray(np.linspace(1, 0, k).tolist() + np.zeros(l).tolist() + np.linspace(0, 1, k).tolist())
-            factor = factor_[:,0]*(1-trans) + trans
+            trans = np.asarray(np.linspace(1, 0, k).tolist() + np.zeros(l).tolist() +
+                               np.linspace(0, 1, k).tolist())
+            factor = factor_[:, 0]*(1-trans) + trans
 
-            area_new = (np.sqrt(area[:,0]/math.pi)*factor)**2 * math.pi
+            area_new = (np.sqrt(area[:, 0]/math.pi)*factor)**2 * math.pi
             R = area_new.max() / area_new.min()
 
             print(("R now: {:4f}  Want: {:2f}  R old: {:6f}".format(R, ratio, R_old)))
@@ -297,10 +302,12 @@ def get_factor(lineToChange, beta, ratio, percentage, stenosis, stenosis_size, a
         # A linear transition of the old and new geometry
         k = int(round(factor_.shape[0] * 0.10, 0))
         l = factor_.shape[0] - k*2
-        trans = np.asarray(np.linspace(1, 0, k).tolist() + np.zeros(l).tolist() + np.linspace(0, 1, k).tolist())
-        factor = factor_[:,0]*(1-trans) + trans
+        trans = np.asarray(np.linspace(1, 0, k).tolist() + np.zeros(l).tolist() +
+                           np.linspace(0, 1, k).tolist())
+        factor = factor_[:, 0]*(1-trans) + trans
 
     return factor
+
 
 def create_stenosis(lineToChange, stenosisPoint, area, stenosis_size, percentage):
     # Find closest point along centerline
@@ -336,6 +343,7 @@ def create_stenosis(lineToChange, stenosisPoint, area, stenosis_size, percentage
 
     return factor
 
+
 def subdivide_centerline(size, startId, stopId, segment_length=1.0):
     """
     Create a linear transition between original
@@ -357,10 +365,12 @@ def subdivide_centerline(size, startId, stopId, segment_length=1.0):
     endmid = np.linspace(0, 1, endmid_l).tolist()
     end = np.asarray(np.ones(end_l)).tolist()
     trans = np.asarray(start + startmid + mid + endmid + end)
+
     return trans
 
+
 def remove_stenosis(lineToChange, point1, point2, area):
-  # Find closest point along centerline and sort points
+    # Find closest point along centerline and sort points
     locator = get_locator(lineToChange)
     lineId1 = int(locator.FindClosestPoint(point1))
     lineId2 = int(locator.FindClosestPoint(point2))
@@ -381,20 +391,21 @@ def remove_stenosis(lineToChange, point1, point2, area):
         tmpId = int(s)
         tmprad = get_array(radiusArrayName, lineToChange)[tmpId]
         s = (s - startId) / (stopId - startId)
-        return (startMISR* (1 - s) + s * endMISR) / tmprad
+        return (startMISR * (1 - s) + s * endMISR) / tmprad
 
     # Subdivide centerline into sections
     trans = subdivide_centerline(area.shape[0], startId, stopId, segment_length=1.0)
 
     # Define stenosis area and factor
-    t = np.linspace(startId,stopId, stopId-startId)
+    t = np.linspace(startId, stopId, stopId-startId)
     fixed_area = []
     for t_ in t:
-        fixed_area.append(new_area(t_) )
+        fixed_area.append(new_area(t_))
     factor_ = np.asarray(np.ones(startId).tolist() + fixed_area + np.ones(area.shape[0]-stopId).tolist())
     factor = factor_*(1-trans) + trans
 
     return factor
+
 
 def change_area(voronoi, lineToChange, beta, ratio, percentage, stenosis, stenosis_size, add_noise, surface):
     """
@@ -415,11 +426,6 @@ def change_area(voronoi, lineToChange, beta, ratio, percentage, stenosis, stenos
     Returns:
         newVoronoi (vtkPolyData): Manipulated Voronoi diagram.
     """
-    # NEW: Check if voronoi point is within 1.5*MISR of centerline.
-    #      So, this means change MISR of lineToChange, due to extreme
-    #      circleness
-    # OLD: Tube function to evaluate if the voronoi point should be changed
-
     arrayForTube = get_vtk_array("TubeRadius", 1, lineToChange.GetNumberOfPoints())
     MISR = get_array(radiusArrayName, lineToChange)*1.7
     for i in range(MISR.shape[0]):
@@ -467,19 +473,16 @@ def change_area(voronoi, lineToChange, beta, ratio, percentage, stenosis, stenos
         vectorValue = vtk.vtkMath.Dot(voronoiVector, t)
 
         if (tubeValue <= 0.0) and not ((sphereValue < 0.0) and (vectorValue < 0.0)):
-            # TODO: Move point or project vector down in to prependicular
-            # plane, or find vector from spline for continous evaluation
             tmp_ID = locator.FindClosestPoint(point)
             v1 = np.asarray(lineToChange.GetPoint(tmp_ID)) - np.asarray(point)
 
             # Add noise
             if 0.1*M < tmp_ID < 0.9*M and add_noise:
-                v2 = v1 * (1 - factor[tmp_ID]*np.random.uniform(0.4,1.2))
+                v2 = v1 * (1 - factor[tmp_ID]*np.random.uniform(0.4, 1.2))
             else:
                 v2 = v1 * (1 - factor[tmp_ID])
 
             point = (np.asarray(point) + v2).tolist()
-
 
             # Change radius
             pointRadius = pointRadius*factor[tmp_ID]
@@ -494,6 +497,7 @@ def change_area(voronoi, lineToChange, beta, ratio, percentage, stenosis, stenos
     newVoronoi.GetPointData().AddArray(radiusArray)
 
     return newVoronoi
+
 
 def area_variations(folder, beta, smooth, stats, r_change, percentage, stenosis,
                     stenosis_size, add_noise, smooth_factor):
@@ -533,7 +537,6 @@ def area_variations(folder, beta, smooth, stats, r_change, percentage, stenosis,
     centerline_area_spline_path = path.join(folder, "surface", "centerline_area_spline.vtp")
     centerline_area_spline_sections_path = path.join(folder, "surface", "centerline_area_sections.vtp")
     centerline_spline_path = path.join(folder, "surface", "centerline_spline.vtp")
-    centerline_new_path = path.join(folder, "surface", "centerline_area_new.vtp")
     model_smoothed_path = path.join(folder, "surface", "model_smoothed.vtp")
     s = ""
     s += "" if not smooth else "_smooth"
@@ -542,16 +545,14 @@ def area_variations(folder, beta, smooth, stats, r_change, percentage, stenosis,
     s += "" if not stenosis else "_stenosis_%smisr" % stenosis_size
     s += "" if not add_noise else "_noise"
     s += "" if percentage is None else "_%s" % percentage
-    model_new_surface =  path.join(folder, "surface", "model_area%s.vtp" % s)
-    model_new_surface_clean =  path.join(folder, "surface", "model_area%s_clean.vtp" % s)
+    model_area_path = path.join(folder, "surface", "model_area%s.vtp" % s)
 
     # Import centerline
     centerlines = make_centerline(model_path, centerlines_path, length=0.1, smooth=False)
-    centerlines_in_order = sort_centerlines(centerlines)
 
     # Clean and capp / uncapp surface
-    parameters = get_parameters(folder)
-    surface, capped_surface = prepare_surface(model_path, parameters)
+    parameters = get_parameters(dirpath)
+    surface, capped_surface = preare_surface(model_path, parameters)
 
     # Smooth voronoi diagram
     voronoi = prepare_voronoi_diagram(model_path, voronoi_path, voronoi_smoothed_path,
@@ -588,14 +589,12 @@ def area_variations(folder, beta, smooth, stats, r_change, percentage, stenosis,
 
         # Make new surface
         print("Create surface")
-        new_surface = create_new_surface(newvoronoi)
+        model_new_surface = create_new_surface(newvoronoi)
 
-        print("Write surface to: {}".format(model_new_surface.split("/")[-1]))
+        print("Write surface to: {}".format(model_area_path.split("/")[-1]))
         # TODO: Add Automated clipping of newmodel
-        new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100)
-        new_surface = clean_and_check_surface(new_surface, centerlines_in_order,
-                                        model_new_surface_clean, centerline_new_path)
-        write_polydata(new_surface, model_new_surface)
+        model_new_surface = vmtk_surface_smoother(model_new_surface, method="laplace", iterations=100)
+        write_polydata(model_new_surface, model_area_path)
 
     return length, area
 
