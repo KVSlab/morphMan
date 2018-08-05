@@ -575,6 +575,7 @@ def area_variations(folder, beta, smooth, stats, r_change, percentage, stenosis,
 
     area = None
     length = None
+
     if stats:
         # Compute stats
         length, area = get_stats(centerline_area, folder, centerlines)
