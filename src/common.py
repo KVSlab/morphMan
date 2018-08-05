@@ -1919,7 +1919,7 @@ def clean_and_check_surface(surface, centerlines, model_path, centerlines_path):
         for i in range(N):
             p1 = np.asarray(line_to_check.GetPoint(i))
             p2 = np.asarray(line_to_compare.GetPoint(i))
-            dist = la.norm(p1-p2)
+            dist = distance(p1, p2)
             if dist > tolerance:
                 print("\nModel has overlapping regions. Check surface model.")
                 sys.exit(0)
