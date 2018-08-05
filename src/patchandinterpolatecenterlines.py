@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 from common import *
 import vtk
 from scipy.interpolate import splrep, splev
@@ -7,6 +5,7 @@ import sys
 import math
 from vmtk import vtkvmtk
 import numpy as np
+
 
 def CreateParentArteryPatches(parentCenterlines, clipPoints, siphon=False, bif=False):
     numberOfDaughterPatches = parentCenterlines.GetNumberOfCells()
@@ -25,7 +24,7 @@ def CreateParentArteryPatches(parentCenterlines, clipPoints, siphon=False, bif=F
     if bif:
         clipIds = sorted(clipIds)
 
-    numberOfCommonPatch = clipIds[0]+1
+    numberOfCommonPatch = clipIds[0] + 1
 
     patchedCenterlinesCellArray.InsertNextCell(numberOfCommonPatch)
 
@@ -43,9 +42,9 @@ def CreateParentArteryPatches(parentCenterlines, clipPoints, siphon=False, bif=F
 
         getData = cell.GetPointData().GetArray(radiusArrayName).GetTuple1
         numberOfCellPoints = cell.GetNumberOfPoints()
-        startId = clipIds[j+1]
+        startId = clipIds[j + 1]
 
-        patchNumberOfPoints = numberOfCellPoints-startId
+        patchNumberOfPoints = numberOfCellPoints - startId
         patchedCenterlinesCellArray.InsertNextCell(patchNumberOfPoints)
 
         for i in range(startId, cell.GetNumberOfPoints()):
@@ -53,7 +52,7 @@ def CreateParentArteryPatches(parentCenterlines, clipPoints, siphon=False, bif=F
             patchedCenterlinesPoints.InsertNextPoint(point)
             patchedCenterlinesCellArray.InsertCellPoint(count)
             radiusArray.SetTuple1(count, getData(i))
-            count+=1
+            count += 1
 
     patchedCenterlines.SetPoints(patchedCenterlinesPoints)
     patchedCenterlines.SetLines(patchedCenterlinesCellArray)
@@ -67,7 +66,7 @@ def ExtractPatchesIdsSiphon(parentCl, clipPts, clipped=False):
     numberOfPoints = 0
     N = clipPts.GetNumberOfPoints()
 
-    upstreamPoint =  clipPts.GetPoint(0)
+    upstreamPoint = clipPts.GetPoint(0)
     downstreamPoint = clipPts.GetPoint(1)
 
     for j in range(parentCl.GetNumberOfCells()):
@@ -79,8 +78,8 @@ def ExtractPatchesIdsSiphon(parentCl, clipPts, clipped=False):
 
         if j == 0:
             if clipped:
-                clipIds.append(upId-1)
-                clipIds.append(downId+1)
+                clipIds.append(upId - 1)
+                clipIds.append(downId + 1)
             else:
                 clipIds.append(upId)
                 clipIds.append(downId)
@@ -88,12 +87,13 @@ def ExtractPatchesIdsSiphon(parentCl, clipPts, clipped=False):
             numberOfPoints += cellLine.GetNumberOfPoints() - downId
         else:
             if clipped:
-                clipIds.append(downId+1)
+                clipIds.append(downId + 1)
             else:
                 clipIds.append(downId)
             numberOfPoints += cellLine.GetNumberOfPoints() - downId
 
     return clipIds, numberOfPoints
+
 
 def ExtractPatchesIds(parentCl, clipPts):
     distance = vtk.vtkMath.Distance2BetweenPoints
@@ -164,7 +164,7 @@ def InterpolatePatchCenterlines(patchCenterlines, parentCenterlines,
         numberOfInterpolationPoints = parentCenterlines.GetCell(i).GetNumberOfPoints()
 
         patchCenterlines.GetCell(0, startingCell)
-        patchCenterlines.GetCell(i+1, endingCell)
+        patchCenterlines.GetCell(i + 1, endingCell)
 
         if version:
             splinePoints = InterpolateSpline(startingCell, endingCell, additionalPoint)
@@ -212,32 +212,24 @@ def InterpolateSpline(startCell, endCell, additionalPoint):
     N = 100
     num_centerline_points = 3
 
-    for i in range(num_centerline_points -1, -1, -1):
-        points.append(get_startCell.GetPoint(num_start - n*i - 1))
+    for i in range(num_centerline_points - 1, -1, -1):
+        points.append(get_startCell.GetPoint(num_start - n * i - 1))
 
     if additionalPoint is not None:
         points.append(additionalPoint)
 
     for i in range(num_centerline_points):
-        points.append(get_endCell.GetPoint(i*n))
+        points.append(get_endCell.GetPoint(i * n))
 
     curv_coor = np.zeros(len(points))
-    for i in range(len(points)-1):
-        curv_coor[i+1] = curv_coor[i] + math.sqrt(distance(points[i], points[i+1]))
-
-    # FIXME: Test the effect of adding an extra distance
-    # Increse the longest distances
-    #base_line = curv_coor[0]
-    #for i, c in enumerate(curv_coor):
-    #    if c > 5*base_line:
-    #        print "Making distance longer, prev:", c, "  new:", 1.2*c
-    #        curv_coor[i] = c*1.2
+    for i in range(len(points) - 1):
+        curv_coor[i + 1] = curv_coor[i] + math.sqrt(distance(points[i], points[i + 1]))
 
     points = np.asarray(points)
 
-    fx = splrep(curv_coor, points[:,0], k=3)
-    fy = splrep(curv_coor, points[:,1], k=3)
-    fz = splrep(curv_coor, points[:,2], k=3)
+    fx = splrep(curv_coor, points[:, 0], k=3)
+    fy = splrep(curv_coor, points[:, 1], k=3)
+    fz = splrep(curv_coor, points[:, 2], k=3)
 
     curv_coor = np.linspace(curv_coor[0], curv_coor[-1], N)
     fx_ = splev(curv_coor, fx)
@@ -245,13 +237,13 @@ def InterpolateSpline(startCell, endCell, additionalPoint):
     fz_ = splev(curv_coor, fz)
 
     tmp = []
-    for i in range(num_start - n*num_centerline_points):
+    for i in range(num_start - n * num_centerline_points):
         tmp.append(get_startCell.GetPoint(i))
 
     for j in range(N):
         tmp.append([fx_[j], fy_[j], fz_[j]])
 
-    for k in range(n*num_centerline_points, num_end):
+    for k in range(n * num_centerline_points, num_end):
         tmp.append(get_endCell.GetPoint(k))
 
     points = vtk.vtkPoints()
@@ -297,5 +289,5 @@ def InterpolateTwoCells(startCell, endCell, numberOfSplinePoints, additionalPoin
 
     points.SetNumberOfPoints(numberOfSplinePoints)
     for i in range(numberOfSplinePoints):
-        points.SetPoint(i,xspline.Evaluate(float(i)),yspline.Evaluate(float(i)),zspline.Evaluate(float(i)))
+        points.SetPoint(i, xspline.Evaluate(float(i)), yspline.Evaluate(float(i)), zspline.Evaluate(float(i)))
     return points

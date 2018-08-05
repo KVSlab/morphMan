@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from argparse import ArgumentParser
 from os import listdir, path
 from scipy.interpolate import griddata
@@ -6,6 +5,7 @@ from scipy import interpolate
 
 import numpy as np
 import numpy.linalg as la
+
 
 def read_command_line():
     """
@@ -16,16 +16,18 @@ def read_command_line():
                         help="Path to the folder with alpha-beta_vales")
     parser.add_argument("-p", "--param", type=str, default="curvature",
                         help="Parameter to compute.")
-
     parser.add_argument("-p", "--param", type=str, default="curvature",
                         help="Parameter to compute.")
     parser.add_argument('-r', '--radius', type=float, default=0.15,
                         help="Radius of bounding circle, limiting the choice of alpha and beta")
-
-    parser.add_argument('-b','--boundary', nargs='+', default=None, help='Boundary of grid, as a list: [alpha_min, alpha_max, beta_min, beta_max]', required=True)
+    parser.add_argument('-b', '--boundary', nargs='+', default=None,
+                        help='Boundary of grid, as a list: [alpha_min, alpha_max, beta_min, beta_max]',
+                        required=True)
 
     args = parser.parse_args()
+
     return args.dir_path, args.param, args.boundary, args.radius
+
 
 def get_alpha_beta(dirpath, i, files, param, boundary):
     """
@@ -45,7 +47,7 @@ def get_alpha_beta(dirpath, i, files, param, boundary):
 
     files = path.join(dirpath, files)
     case = files[-9:-4]
-    print "Working on case %s" % case
+    print("Working on case %s" % case)
 
     # Get boundaries
     amin, amax, bmin, bmax = boundary[0], boundary[1], boundary[2], boundary[3]
@@ -82,23 +84,23 @@ def get_alpha_beta(dirpath, i, files, param, boundary):
         data = [[float(digit) for digit in line.split()] for line in file]
 
     N = len(data)
-    edge = [amin,amax,bmin,bmax]
-    alpha = np.linspace(amin,amax,N)
-    beta = np.linspace(bmin,bmax,N)
-    alpha_long = np.linspace(amin,amax,300)
-    beta_long = np.linspace(bmin,bmax,300)
-    yy,xx = np.meshgrid(beta,alpha)
+    edge = [amin, amax, bmin, bmax]
+    alpha = np.linspace(amin, amax, N)
+    beta = np.linspace(bmin, bmax, N)
+    alpha_long = np.linspace(amin, amax, 300)
+    beta_long = np.linspace(bmin, bmax, 300)
+    yy, xx = np.meshgrid(beta, alpha)
 
-    points = np.zeros((N,2))
+    points = np.zeros((N, 2))
     for i in range(len(xx)):
-        points[i] = [alpha[i],beta[i]]
+        points[i] = [alpha[i], beta[i]]
 
     # Spline interpolation
-    f = interpolate.interp2d(beta,alpha, data, kind='cubic')
+    f = interpolate.interp2d(beta, alpha, data, kind='cubic')
     if param == "curvature":
-        curv0 = f(0,0)
+        curv0 = f(0, 0)
     elif param == "angle":
-        angle0 = f(0,0)
+        angle0 = f(0, 0)
     zz = f(beta, alpha)
 
     Z = []
@@ -110,9 +112,9 @@ def get_alpha_beta(dirpath, i, files, param, boundary):
     # Find intersecting points
     # Reduces SD if no points are found
     for plane in methods:
-        print "Method: %s" % (plane.__name__)
+        print("Method: %s" % (plane.__name__))
 
-        zeros = alpha_beta_intersection(plane, f, alpha_long,beta_long)
+        zeros = alpha_beta_intersection(plane, f, alpha_long, beta_long)
         if len(zeros) > 10:
             dx = int(len(zeros) / 10.)
         elif len(zeros) > 0:
@@ -123,10 +125,10 @@ def get_alpha_beta(dirpath, i, files, param, boundary):
             maxiter = 50
             iterations = 0
 
-            print "Found no points..Adjusting SD"
-            while empty == True and iterations < maxiter:
-                print "Iterations: %i" % (iterations + 1)
-                zeros = alpha_beta_intersection(plane,f, alpha_long, beta_long, tol)
+            print("Found no points..Adjusting SD")
+            while empty and iterations < maxiter:
+                print("Iterations: %i" % (iterations + 1))
+                zeros = alpha_beta_intersection(plane, f, alpha_long, beta_long, tol)
                 if len(zeros) > 0:
                     empty = False
                 iterations += 1
@@ -179,10 +181,11 @@ def write_alpha_beta_point(case, P, method):
     dirpath = path.join("alphabeta_values.txt")
     alpha = P[0]
     beta = P[1]
-    with open(dirpath,"a") as f:
-        f.write("%s %s alpha=%s beta=%s\n" % (case,method, alpha,beta))
+    with open(dirpath, "a") as f:
+        f.write("%s %s alpha=%s beta=%s\n" % (case, method, alpha, beta))
 
-def alpha_beta_intersection(method, f,alphas, betas, tol=0.0):
+
+def alpha_beta_intersection(method, f, alphas, betas, tol=0.0):
     """
     Iterate through values of alpha and beta
     and find intersection points with a given tolerance
@@ -201,13 +204,13 @@ def alpha_beta_intersection(method, f,alphas, betas, tol=0.0):
     zeros = []
     for i in alphas:
         for j in betas:
-            diff = abs(f(j,i) - method(0,0, tol))
+            diff = abs(f(j, i) - method(0, 0, tol))
             if "c" in method.__name__:
                 if diff < 0.001:
-                    zeros.append([i,j])
+                    zeros.append([i, j])
             else:
                 if diff < 0.05:
-                    zeros.append([i,j])
+                    zeros.append([i, j])
     return zeros
 
 
@@ -228,11 +231,11 @@ def main(dirpath, param, boundary, radius):
 
     files = listdir(dirpath)
     if param == "curvature":
-        files_curv = sorted([f for f in listdir(dirpath) if f[4:8] in ["curv"] ])
+        files_curv = sorted([f for f in listdir(dirpath) if f[4:8] in ["curv"]])
         for i in range(len(files_curv)):
             get_alpha_beta(dirpath, i, files_curv[i], param, boundary, radius)
     elif param == "angle":
-        files_angle = sorted([f for f in listdir(dirpath) if f[4:9] in ["angle"] ])
+        files_angle = sorted([f for f in listdir(dirpath) if f[4:9] in ["angle"]])
         for i in range(len(files_angle)):
             get_alpha_beta(dirpath, i, files_angle[i], param, boundary, radius)
 

@@ -8,6 +8,7 @@ from clipvoronoidiagram import *
 from paralleltransportvoronoidiagram import *
 from moveandmanipulatetools import *
 
+
 def read_command_line():
     """Read arguments from commandline"""
     parser = ArgumentParser()
@@ -31,10 +32,11 @@ def read_command_line():
 
     args = parser.parse_args()
 
-    return args.smooth, args.dir_path, args.case, args.smoothmode, args.smoothingfactor, args.iterations, args.smoothingfactor_voro
+    return args.smooth, args.dir_path, args.case, args.smoothmode, args.smoothingfactor, \
+           args.iterations, args.smoothingfactor_voro
 
 
-def change_curvature(dirpath, name,smooth,  smoothingfactor, iterations, smoothmode, smooth_factor_voro):
+def change_curvature(dirpath, name, smooth, smoothingfactor, iterations, smoothmode, smooth_factor_voro):
     """
     Create a sharper or smoother version of the input geometry,
     determined by a smoothed version of the siphon centerline.
@@ -56,20 +58,20 @@ def change_curvature(dirpath, name,smooth,  smoothingfactor, iterations, smoothm
     # Output names
     model_smoothed_path = path.join(dirpath, name, "model_smoothed.vtp")
     method = "smoothed" if smoothmode else "extended"
-    model_new_surface = path.join(dirpath, name , "model_%s_fac_%s_it_%s.vtp" % ( method, sf, it))
+    model_new_surface = path.join(dirpath, name, "model_%s_fac_%s_it_%s.vtp" % (method, sf, it))
 
     # Centerlines
     centerline_complete_path = path.join(dirpath, name, "centerline_complete.vtp")
-    centerline_clipped_path = path.join(dirpath, name,  "centerline_clipped.vtp")
-    centerline_clipped_part_path = path.join(dirpath, name,  "centerline_clipped_part.vtp")
-    centerline_clipped_part1_path = path.join(dirpath, name,  "centerline_clipped_end_part.vtp")
+    centerline_clipped_path = path.join(dirpath, name, "centerline_clipped.vtp")
+    centerline_clipped_part_path = path.join(dirpath, name, "centerline_clipped_part.vtp")
+    centerline_clipped_part1_path = path.join(dirpath, name, "centerline_clipped_end_part.vtp")
     centerline_new_path = path.join(dirpath, name, "centerline_interpolated.vtp")
     carotid_siphon_path = path.join(dirpath, name, "carotid_siphon.vtp")
-    centerline_smooth_path =  path.join(dirpath, name ,  "smooth_carotid_siphon.vtp")
+    centerline_smooth_path = path.join(dirpath, name, "smooth_carotid_siphon.vtp")
 
     # Voronoi diagrams
     voronoi_path = path.join(dirpath, name, "model_voronoi.vtp")
-    voronoi_smoothed_path = path.join(dirpath, name,  "model_voronoi_smoothed.vtp")
+    voronoi_smoothed_path = path.join(dirpath, name, "model_voronoi_smoothed.vtp")
     voronoi_clipped_path = path.join(dirpath, name, "model_voronoi_clipped.vtp")
     voronoi_clipped_part_path = path.join(dirpath, name, "model_voronoi_clipped_part.vtp")
 
@@ -91,8 +93,8 @@ def change_curvature(dirpath, name,smooth,  smoothingfactor, iterations, smoothm
     centerlines_in_order = sort_centerlines(centerlines_complete)
 
     print("Compute voronoi diagram")
-    voronoi = prepare_voronoi_diagram(model_path, voronoi_path, voronoi_smoothed_path, 
-                                    smooth, smooth_factor_voro, centerlines_complete) 
+    voronoi = prepare_voronoi_diagram(model_path, voronoi_path, voronoi_smoothed_path,
+                                    smooth, smooth_factor_voro, centerlines_complete)
 
     # Get Carotid Siphon
     if path.exists(carotid_siphon_path):
@@ -102,7 +104,8 @@ def change_curvature(dirpath, name,smooth,  smoothingfactor, iterations, smoothm
 
     # Search for diverging clipping points along the siphon
     siphon_end_point = carotid_siphon.GetPoint(carotid_siphon.GetNumberOfPoints()-1)
-    div_ids, div_points, centerlines_in_order, div_lines = find_diverging_centerlines(centerlines_in_order, siphon_end_point)
+    div_ids, div_points, centerlines_in_order, div_lines = find_diverging_centerlines(centerlines_in_order,
+                                                                                      siphon_end_point)
 
     if div_ids != []:
         print("Clipping diverging centerlines")
@@ -110,7 +113,7 @@ def change_curvature(dirpath, name,smooth,  smoothingfactor, iterations, smoothm
         for i, divline in enumerate(div_lines):
             clip_id = int((divline.GetNumberOfPoints() - div_ids[i])*0.2 + div_ids[i])
             patch_eye = clip_eyeline(divline, carotid_siphon.GetPoint(0), clip_id)
-            div_patch_cl.append(extract_single_line(patch_eye,1))
+            div_patch_cl.append(extract_single_line(patch_eye, 1))
 
     # Clipp Voronoi diagram
     print("Clipping voronoi diagram")
@@ -138,12 +141,12 @@ def change_curvature(dirpath, name,smooth,  smoothingfactor, iterations, smoothm
         points.InsertNextPoint(point)
     clip_points = points
 
-    IDbif  = locator.FindClosestPoint(pEnd)
+    IDbif = locator.FindClosestPoint(pEnd)
 
     patch_cl = CreateParentArteryPatches(centerlines_in_order, clip_points, siphon=True)
     end_lines = []
     for i in range(patch_cl.GetNumberOfCells()):
-        tmp_line  = extract_single_line(patch_cl, i)
+        tmp_line = extract_single_line(patch_cl, i)
         if tmp_line.GetNumberOfPoints() > 50:
             end_lines.append(tmp_line)
 
@@ -158,7 +161,11 @@ def change_curvature(dirpath, name,smooth,  smoothingfactor, iterations, smoothm
     # Move diverging centerlines
     moved_clipped_voronoi_div = []
     for i, clipped_voronoi_div_i in enumerate(clipped_voronoi_div):
-        moved_clipped_voronoi_div.append(make_voronoi_smooth(clipped_voronoi_div_i, carotid_siphon, smooth_carotid_siphon, smoothmode, div=True, div_point = div_points[i]))
+        moved_clipped_voronoi_div.append(make_voronoi_smooth(clipped_voronoi_div_i,
+                                                             carotid_siphon,
+                                                             smooth_carotid_siphon,
+                                                             smoothmode, div=True,
+                                                             div_point=div_points[i]))
 
     moved_clipped_voronoi_div.append(moved_clipped_voronoi)
     moved_clipped_voronoi_div.append(clipped_voronoi_end)
@@ -169,7 +176,7 @@ def change_curvature(dirpath, name,smooth,  smoothingfactor, iterations, smoothm
     # Create new surface
     print("Create new surface")
     new_surface = create_new_surface(newVoronoi)
-    # TODO: Add Automated clipping of newmodel 
+    # TODO: Add Automated clipping of newmodel
     new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100)
     write_polydata(new_surface, model_new_surface)
 
@@ -230,14 +237,15 @@ def make_voronoi_smooth(voronoi, old_cl, new_cl, smoothmode, div=False, div_poin
     newDataSet.SetPoints(points)
     newDataSet.SetVerts(verts)
     newDataSet.GetPointData().AddArray(voronoi.GetPointData().GetArray(radiusArrayName))
+
     return newDataSet
 
 
-if  __name__ == "__main__":
+if __name__ == "__main__":
     smooth, basedir, case, smoothmode, smoothingfactor, iterations, smooth_factor_voro = read_command_line()
     name = "surface"
     folders = listdir(basedir) if case is None else [case]
     for folder in folders:
         print("==== Working on case %s ====" % folder)
-        dirpath = path.join(basedir,folder)
+        dirpath = path.join(basedir, folder)
         change_curvature(dirpath, name, smooth, smoothingfactor, iterations, smoothmode, smooth_factor_voro)

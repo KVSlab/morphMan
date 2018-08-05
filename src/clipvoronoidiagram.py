@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import vtk
 import sys
 import math
@@ -73,20 +71,23 @@ def MaskWithPatch(id, t, c, r, maskArray, centerlines, voronoi):
         tubevalue = tubeFunction.EvaluateFunction(point)
         spherevalue = lastSphere.EvaluateFunction(point)
 
-        if (spherevalue < 0.0) & (voronoiVectorDot < 0.0): continue
+        if spherevalue < 0.0 and voronoiVectorDot < 0.0:
+            continue
         elif (tubevalue <= 0.0):
             maskArray.SetTuple1(i, 1)
 
 
 def ComputeNumberOfMaskedPoints(dataArray):
     numberOfPoints = 0
-    for i  in range(dataArray.GetNumberOfTuples()):
+    for i in range(dataArray.GetNumberOfTuples()):
         value = dataArray.GetTuple1(i)
-        if (value == 1): numberOfPoints += 1
+        if value == 1:
+            numberOfPoints += 1
+
     return numberOfPoints
 
 
-def ExtractMaskedVoronoiPoints(voronoi,maskArray):
+def ExtractMaskedVoronoiPoints(voronoi, maskArray):
     numberOfPoints = ComputeNumberOfMaskedPoints(maskArray)
 
     maskedVoronoi = vtk.vtkPolyData()

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#!/usr/bin/env python
 import vtk
 import numpy as np
 import numpy.linalg as la
@@ -173,7 +171,7 @@ def get_tolerance(centerline, N=50):
 
     line = extract_single_line(centerline, 0)
     length = get_curvilinear_coordinate(line)
-    tolerance = np.mean(length[1:N] - length[:N-1]) / divergingRatioToSpacingTolerance
+    tolerance = np.mean(length[1:N] - length[:N - 1]) / divergingRatioToSpacingTolerance
 
     return tolerance
 
@@ -242,7 +240,7 @@ def smooth_voronoi_diagram(voronoi, centerlines, smoothingFactor,
         id_ = locator.FindClosestPoint(point)
         cl_point = centerlines.GetPoint(id_)
 
-        if distance(point, cl_point) > 3*threshold[id_]:
+        if distance(point, cl_point) > 3 * threshold[id_]:
             points.InsertNextPoint(point)
             cellArray.InsertNextCell(1)
             cellArray.InsertCellPoint(count)
@@ -301,8 +299,8 @@ def get_curvilinear_coordinate(line):
     curv_coor = np.zeros(line.GetNumberOfPoints())
     for i in range(line.GetNumberOfPoints() - 1):
         pnt1 = np.asarray(line.GetPoints().GetPoint(i))
-        pnt2 = np.asarray(line.GetPoints().GetPoint(i+1))
-        curv_coor[i+1] = np.sqrt(np.sum((pnt1 - pnt2)**2)) + curv_coor[i]
+        pnt2 = np.asarray(line.GetPoints().GetPoint(i + 1))
+        curv_coor[i + 1] = np.sqrt(np.sum((pnt1 - pnt2) ** 2)) + curv_coor[i]
 
     return curv_coor
 
@@ -345,11 +343,11 @@ def get_array(arrayName, line, k=1):
         getData = line.GetPointData().GetArray(arrayName).GetTuple1
     elif k == 2:
         getData = line.GetPointData().GetArray(arrayName).GetTuple2
-    elif k ==3:
+    elif k == 3:
         getData = line.GetPointData().GetArray(arrayName).GetTuple3
 
     for i in range(line.GetNumberOfPoints()):
-        array[i,:] = getData(i)
+        array[i, :] = getData(i)
 
     return array
 
@@ -371,13 +369,13 @@ def get_array_cell(arrayName, line, k=1):
         getData = line.GetCellData().GetArray(arrayName).GetTuple1
     elif k == 2:
         getData = line.GetCellData().GetArray(arrayName).GetTuple2
-    elif k ==3:
+    elif k == 3:
         getData = line.GetCellData().GetArray(arrayName).GetTuple3
     elif k == 9:
         getData = line.GetCellData().GetArray(arrayName).GetTuple9
 
     for i in range(line.GetNumberOfCells()):
-        array[i,:] = getData(i)
+        array[i, :] = getData(i)
 
     return array
 
@@ -560,9 +558,9 @@ def get_data(centerline, centerline_bif, tol):
         data (dict): Contains info about diverging point locations.
     """
     # Sort centerline to start at inlet
-    cl1 = extract_single_line(centerline,0)
-    cl2 = extract_single_line(centerline,1)
-    centerline = merge_data([cl1,cl2])
+    cl1 = extract_single_line(centerline, 0)
+    cl2 = extract_single_line(centerline, 1)
+    centerline = merge_data([cl1, cl2])
 
     # Declear variables before loop incase values are not found
     diverging_point_ID = -1
@@ -571,7 +569,7 @@ def get_data(centerline, centerline_bif, tol):
 
     clipping_point_ID = -1
     clipping_point = [0.0, 0.0, 0.0]
-    data = {"bif":{}, 0:{}, 1:{}}
+    data = {"bif": {}, 0: {}, 1: {}}
 
     # List of points conected to ID
     points_ids_0 = vtk.vtkIdList()
@@ -586,7 +584,7 @@ def get_data(centerline, centerline_bif, tol):
         cell_point_0 = centerline.GetPoint(points_ids_0.GetId(i))
         cell_point_1 = centerline.GetPoint(points_ids_1.GetId(i))
 
-        distance_between_points = distance(cell_point_0, cell_point_1)**2
+        distance_between_points = distance(cell_point_0, cell_point_1) ** 2
         if distance_between_points > tol:
             tmpI = i
             point_ID_0 = points_ids_0.GetId(i)
@@ -613,14 +611,14 @@ def get_data(centerline, centerline_bif, tol):
             tmp_point = centerline.GetPoint(point_ids.GetId(i))
             closest_point_ID = locator.FindClosestPoint(tmp_point)
             closest_point = centerline_bif.GetPoint(closest_point_ID)
-            distance_between_points = distance(tmp_point, closest_point)**2
+            distance_between_points = distance(tmp_point, closest_point) ** 2
             if distance_between_points < tol:
                 point_ID = point_ids.GetId(i)
                 center = centerline.GetPoint(point_ID)
                 r = centerline.GetPointData().GetArray(radiusArrayName).GetTuple1(point_ID)
                 break
 
-        end, r_end = move_past_sphere(centerline, center, r, point_ID, step=1, stop=point_ID*100, X=1)
+        end, r_end = move_past_sphere(centerline, center, r, point_ID, step=1, stop=point_ID * 100, X=1)
         data[counter]["end_point"] = end
         data[counter]["r_end"] = r_end
         data[counter]["r_div"] = r
@@ -713,7 +711,7 @@ def triangulate_surface(surface):
 
 
 def geometry_filter(unstructured_grid):
-     # Convert unstructured grid to polydata
+    # Convert unstructured grid to polydata
     filter = vtk.vtkGeometryFilter()
     filter.SetInputData(unstructured_grid)
     filter.Update()
@@ -729,7 +727,7 @@ def threshold(surface, name, lower=0, upper=1, type="between", source=1):
     # Apply threshold
     threshold = vtk.vtkThreshold()
     threshold.SetInputData(surface)
-    if type=="between":
+    if type == "between":
         threshold.ThresholdBetween(lower, upper)
     elif type == "lower":
         threshold.ThresholdByLower(lower)
@@ -779,7 +777,7 @@ def uncapp_surface(surface):
 
     # Compute the magnitude of the gradient
     gradients_array = get_array_cell("Gradients", gradients, k=9)
-    gradients_magnitude = np.sqrt(np.sum(gradients_array**2, axis=1))
+    gradients_magnitude = np.sqrt(np.sum(gradients_array ** 2, axis=1))
 
     # Mark all cells with a gradient magnitude less then 0.1
     end_capp_array = gradients_magnitude < 0.08
@@ -802,9 +800,9 @@ def uncapp_surface(surface):
     regions = []
     centers_edge = []
     limit = 0.1
-    for i in range(int(region_array.max())+1):
-        regions.append(threshold(end_capps_connectivity, "RegionId",  lower=(i-limit),
-                            upper=(i+limit), type="between", source=0))
+    for i in range(int(region_array.max()) + 1):
+        regions.append(threshold(end_capps_connectivity, "RegionId", lower=(i - limit),
+                            upper=(i + limit), type="between", source=0))
         circ, center = compute_circleness(regions[-1])
         circleness.append(circ)
         centers_edge.append(center)
@@ -912,15 +910,15 @@ def compute_circleness(surface):
     center = np.mean(np.array(points), axis=0)
 
     # Compute ratio between max inscribed sphere, and min inscribed "area"
-    point_radius = np.sqrt(np.sum((points-center)**2, axis=1))
+    point_radius = np.sqrt(np.sum((points - center) ** 2, axis=1))
     argsort = np.argsort(point_radius)
     if point_radius[argsort[1]] / point_radius[argsort[0]] > 15:
         radius_min = point_radius[argsort[1]]
     else:
         radius_min = point_radius.min()
 
-    min_area = math.pi * radius_min**2
-    max_area = math.pi * point_radius.max()**2
+    min_area = math.pi * radius_min ** 2
+    max_area = math.pi * point_radius.max() ** 2
 
     return max_area / min_area, center
 
@@ -980,27 +978,18 @@ def compute_centers(polyData, case_path=None, test_capped=False):
         if n <= 5:
             continue
 
-        # Sort to be ordred clockwise
-        for j in range(3):
-            x = points[index][:, j]
-            x_end = x[2::2].tolist()
-            x_end.reverse()
-            x1 = [x[0]] + x[1::2].tolist() + x_end
-            tmp_points[:, j] = x1
-
         # Insert points into VTK object
         points_vtk = vtk.vtkPoints()
         [points_vtk.InsertNextPoint(tmp_points[k]) for k in range(n)]
 
-        # Make polygon
-        polygon = vtk.vtkPolygon()
-        polygon.GetPoints().DeepCopy(points_vtk)
-        polygon.GetPointIds().SetNumberOfIds(n)
-        for j in range(n):
-            polygon.GetPointIds().SetId(j, j)
+        # Create surface for computing area of opening
+        delaunay = vtk.vtkDelaunay2D()
+        delaunay.SetInputdata(points_vtk)
+        delaunay.Update()
 
-        area.append(polygon.ComputeArea())
-        center.append(np.array(compute_bary_center(tmp_points)))
+        # Add quanteties
+        area.append(compute_area(delaunay.GetOutput()))
+        center.append(np.mean(tmp_points, axsis=0))
 
     # Store the center and area
     inlet_ind = area.index(max(area))
@@ -1008,7 +997,10 @@ def compute_centers(polyData, case_path=None, test_capped=False):
         info = {"inlet": center[inlet_ind].tolist(), "inlet_area": area[inlet_ind]}
         p = 0
         for i in range(len(area)):
-            if i == inlet_ind: p = -1; continue
+            if i == inlet_ind:
+                p = -1
+                continue
+
             info["outlet%d" % (i + p)] = center[i].tolist()
             info["outlet%s_area" % (i + p)] = area[i]
 
@@ -1020,24 +1012,6 @@ def compute_centers(polyData, case_path=None, test_capped=False):
     center_ = [item for sublist in center for item in sublist]
 
     return inlet_center, center_
-
-
-def compute_bary_center(points):
-    # Get i+1
-    shifted = np.zeros(points.shape)
-    shifted[1:,:] = points[:-1,:]
-    shifted[0,:] = points[-1,:]
-
-    # Compute weights
-    weight = np.sqrt(np.sum((points - shifted)**2, axis=1))
-    weight_sum = np.sum(weight)
-
-    # Compute center
-    center_x = np.sum((points[:,0] + shifted[:,0])/2 * weight) / weight_sum
-    center_y = np.sum((points[:,1] + shifted[:,1])/2 * weight) / weight_sum
-    center_z = np.sum((points[:,2] + shifted[:,2])/2 * weight) / weight_sum
-
-    return [center_x, center_y, center_z]
 
 
 def get_vtk_array(name, comp, num):
@@ -1068,7 +1042,7 @@ def get_locator(centerline):
 
 
 def distance(point1, point2):
-    return np.sqrt(np.sum((np.asarray(point1) - np.asarray(point2))**2))
+    return np.sqrt(np.sum((np.asarray(point1) - np.asarray(point2)) ** 2))
 
 
 def remove_distant_points(voronoi, centerline, limit=None):
@@ -1083,13 +1057,12 @@ def remove_distant_points(voronoi, centerline, limit=None):
 
     if limit is None:
         limit = []
-        m = N//500
+        m = N // 500
         steps = list(range(N))[::m]
         for i in steps:
             if 1 < get_data(i) < 10:
                 limit.append(get_data(i))
         limit_ = np.median(limit) * 3
-        limit = lambda x, y, z: z / 3 > x or x > limit_
 
     count = 0
     for i in range(N):
@@ -1103,16 +1076,15 @@ def remove_distant_points(voronoi, centerline, limit=None):
 
         points.InsertNextPoint(point)
         cellArray.InsertNextCell(1)
-        cellArray.InsertCellPoint(i-count)
+        cellArray.InsertCellPoint(i - count)
         value = get_data(i)
-        radius[i-count] = value
+        radius[i - count] = value
 
     print("Removed %s points from the voronoi diagram" % count)
 
-    radiusArray = get_vtk_array(radiusArrayName, 1, N-count)
-    for i in range(N-count):
+    radiusArray = get_vtk_array(radiusArrayName, 1, N - count)
+    for i in range(N - count):
         radiusArray.SetTuple(i, [float(radius[i])])
-
 
     newVoronoi.SetPoints(points)
     newVoronoi.SetVerts(cellArray)
@@ -1137,7 +1109,7 @@ def vmtk_compute_centerline_sections(surface, centerline):
 
     return line, CenterlineSections
 
-#TODO: Merge / remove - use make_centerline instead
+
 def vmtk_compute_centerlines(inlet, outlet, filepath, surface, resampling=1,
                         smooth=False, num_iter=100, smooth_factor=0.1,
                         endPoint=1, method="pointlist"):
@@ -1179,15 +1151,15 @@ def create_vtk_array(values, name, k=1):
             vtkArray.SetTuple1(i, values[i])
     elif k == 2:
         for i in range(values.shape[0]):
-            vtkArray.SetTuple2(i, values[i,0], values[i,1])
+            vtkArray.SetTuple2(i, values[i, 0], values[i, 1])
     elif k == 3:
         for i in range(values.shape[0]):
-            vtkArray.SetTuple3(i, values[i,0], values[i,1], values[i,2])
+            vtkArray.SetTuple3(i, values[i, 0], values[i, 1], values[i, 2])
     elif k == 9:
         for i in range(values.shape[0]):
-            vtkArray.SetTuple9(i, values[i,0], values[i,1], values[i,2],
-                                  values[i,3], values[i,4], values[i,5],
-                                  values[i,6], values[i,7], values[i,8])
+            vtkArray.SetTuple9(i, values[i, 0], values[i, 1], values[i, 2],
+                                  values[i, 3], values[i, 4], values[i, 5],
+                                  values[i, 6], values[i, 7], values[i, 8])
 
     return vtkArray
 
@@ -1197,21 +1169,23 @@ def gram_schmidt(V):
     U = np.copy(V)
 
     def proj(u, v):
-        return u * np.dot(v,u) / np.dot(u,u)
+        return u * np.dot(v, u) / np.dot(u, u)
 
     for i in range(1, V.shape[1]):
         for j in range(i):
-            U[:,i] -= proj(U[:,j], V[:,i])
+            U[:, i] -= proj(U[:, j], V[:, i])
 
     # normalize column
-    den=(U**2).sum(axis=0)**0.5
-    E = U/den
+    den = (U ** 2).sum(axis=0) ** 0.5
+    E = U / den
+
     return E
 
 
 def get_parameters(folder):
     # If info.txt file, return an empty dict
-    if not path.isfile(path.join(folder, "info.txt")): return {}
+    if not path.isfile(path.join(folder, "info.txt")):
+        return {}
 
     # Get text
     f = open(path.join(folder, "info.txt"), "r")
@@ -1267,29 +1241,29 @@ def data_to_vtkPolyData(data, header, TNB=None, PT=None):
 
     if TNB is not None:
         for i in range(3):
-            radiusArray = get_vtk_array(header[i+data.shape[1]], 3, data.shape[0])
+            radiusArray = get_vtk_array(header[i + data.shape[1]], 3, data.shape[0])
             info_array.append(radiusArray)
 
     if PT is not None:
         start = data.shape[1] if TNB is None else data.shape[1] + 3
         for i in range(2):
-            radiusArray = get_vtk_array(header[i+start], 3, PT[0].shape[0])
+            radiusArray = get_vtk_array(header[i + start], 3, PT[0].shape[0])
             info_array.append(radiusArray)
 
     for i in range(data.shape[0]):
         cellArray.InsertCellPoint(i)
-        linePoints.InsertNextPoint(data[i,:3])
+        linePoints.InsertNextPoint(data[i, :3])
         for j in range(3, data.shape[1]):
-            info_array[j-3].SetTuple1(i, data[i, j])
+            info_array[j - 3].SetTuple1(i, data[i, j])
 
     if TNB is not None:
         for i in range(data.shape[0]):
-            for j in range(data.shape[1]-3, data.shape[1], 1):
-                tnb_ = TNB[j - data.shape[1]][i,:]
+            for j in range(data.shape[1] - 3, data.shape[1], 1):
+                tnb_ = TNB[j - data.shape[1]][i, :]
                 info_array[j].SetTuple3(i, tnb_[0], tnb_[1], tnb_[2])
 
     if PT is not None:
-        start = data.shape[1]-3 if TNB is None else data.shape[1]
+        start = data.shape[1] - 3 if TNB is None else data.shape[1]
         for i in range(PT[-1].shape[0]):
             for j in range(start, start + 2, 1):
                 pt_ = PT[j - start][i, :]
@@ -1364,6 +1338,7 @@ def extract_single_line(centerlines, id, startID=0, endID=None):
     line.SetLines(cellArray)
     for j in range(N_):
         line.GetPointData().AddArray(arrays[j])
+
     return line
 
 
@@ -1378,7 +1353,7 @@ def move_past_sphere(centerline, center, r, start, step=-1, stop=0, X=0.8):
     # Go the length of one MISR backwards
     for i in range(start, stop, step):
         value = MISphere.EvaluateFunction(centerline.GetPoint(i))
-        if (value>=0.0):
+        if value >= 0.0:
             tempPoint = centerline.GetPoint(i)
             break
 
@@ -1388,7 +1363,7 @@ def move_past_sphere(centerline, center, r, start, step=-1, stop=0, X=0.8):
 
 
 def vmtk_surface_smoother(surface, method, iterations=800):
-    smoother= vmtkscripts.vmtkSurfaceSmoothing()
+    smoother = vmtkscripts.vmtkSurfaceSmoothing()
     smoother.Surface = surface
     smoother.NumberOfIterations = iterations
     smoother.Method = method
@@ -1399,7 +1374,7 @@ def vmtk_surface_smoother(surface, method, iterations=800):
 
 
 def make_centerline(ifile, ofile, length=0.1, it=100, factor=0.1, in_out=None,
-                   smooth=False, resampling=False, newpoints= None,
+                   smooth=False, resampling=False, newpoints=None,
                    recompute=False, store_points=False, endpoints=0):
     """
     A general centerline command. If a centerline file with the same file
@@ -1448,8 +1423,8 @@ def make_centerline(ifile, ofile, length=0.1, it=100, factor=0.1, in_out=None,
                 out.sort()
                 points_ = [parameters[p] for p in out]
             else:
-                inlet = parameters["inlet"] if in_out[0] == -1 else parameters["outlet%s"%in_out[0]]
-                points_ = [parameters["outlet%s"%i] for i in in_out[1:]]
+                inlet = parameters["inlet"] if in_out[0] == -1 else parameters["outlet%s" % in_out[0]]
+                points_ = [parameters["outlet%s" % i] for i in in_out[1:]]
 
         if newpoints is not None or "inlet" in parameters:
             # Extract outlet points
@@ -1485,7 +1460,7 @@ def make_centerline(ifile, ofile, length=0.1, it=100, factor=0.1, in_out=None,
             centerlineSmoothing.Execute()
             centerline = centerlinesSmooth.Centerlines
 
-        # If the points are not already storted, do it now
+        # If the points are not already stored, do it now
         if store_points:
             for i in range(centerline.GetNumberOfLines()):
                 tmp_line = extract_single_line(centerline, i)
@@ -1495,6 +1470,7 @@ def make_centerline(ifile, ofile, length=0.1, it=100, factor=0.1, in_out=None,
             write_parameters(parameters, basedir)
     else:
         centerline = read_polydata(ofile)
+
     return centerline
 
 
@@ -1575,10 +1551,10 @@ def discrete_geometry(line, neigh=10):
         p.append(np.array(list(line.GetPoint(i))))
         p[i] = np.array(p[i])
 
-    norms = [la.norm(p[j] - p[j-1]) for j in range(1,N)]
+    norms = [la.norm(p[j] - p[j - 1]) for j in range(1, N)]
     s = sum(norms)
     for i in range(1, N):
-        s1 = sum(norms[:i+1])
+        s1 = sum(norms[:i + 1])
         t[i] = s1 / s
 
     # Radius of sliding neighbourhood
@@ -1597,24 +1573,23 @@ def discrete_geometry(line, neigh=10):
         y[i] = p[i][1]
         z[i] = p[i][2]
 
-
     for i in range(0, m):
-        t_sum = sum([ (t[j] - t[i])**2 for j in range(0, 2*m+1)])
-        dxdt[i] = sum([ (t[j] - t[i])*(x[j]-x[i]) for j in range(0, 2*m+1)]) / t_sum
-        dydt[i] = sum([ (t[j] - t[i])*(y[j]-y[i]) for j in range(0, 2*m+1)]) / t_sum
-        dzdt[i] = sum([ (t[j] - t[i])*(z[j]-z[i]) for j in range(0, 2*m+1)]) / t_sum
+        t_sum = sum([(t[j] - t[i]) ** 2 for j in range(0, 2 * m + 1)])
+        dxdt[i] = sum([(t[j] - t[i]) * (x[j] - x[i]) for j in range(0, 2 * m + 1)]) / t_sum
+        dydt[i] = sum([(t[j] - t[i]) * (y[j] - y[i]) for j in range(0, 2 * m + 1)]) / t_sum
+        dzdt[i] = sum([(t[j] - t[i]) * (z[j] - z[i]) for j in range(0, 2 * m + 1)]) / t_sum
 
-    for i in range(m, N-m):
-        t_sum = sum([ (t[j] - t[i])**2 for j in range(i-m, i+m+1)])
-        dxdt[i] = sum([ (t[j] - t[i])*(x[j]-x[i]) for j in range(i-m, i+m+1)]) / t_sum
-        dydt[i] = sum([ (t[j] - t[i])*(y[j]-y[i]) for j in range(i-m, i+m+1)]) / t_sum
-        dzdt[i] = sum([ (t[j] - t[i])*(z[j]-z[i]) for j in range(i-m, i+m+1)]) / t_sum
+    for i in range(m, N - m):
+        t_sum = sum([(t[j] - t[i]) ** 2 for j in range(i - m, i + m + 1)])
+        dxdt[i] = sum([(t[j] - t[i]) * (x[j] - x[i]) for j in range(i - m, i + m + 1)]) / t_sum
+        dydt[i] = sum([(t[j] - t[i]) * (y[j] - y[i]) for j in range(i - m, i + m + 1)]) / t_sum
+        dzdt[i] = sum([(t[j] - t[i]) * (z[j] - z[i]) for j in range(i - m, i + m + 1)]) / t_sum
 
-    for i in range(N-m, N):
-        t_sum = sum([ (t[j] - t[i])**2 for j in range(N-2*m, N)])
-        dxdt[i] = sum([ (t[j] - t[i])*(x[j]-x[i]) for j in range(N-2*m-1, N)]) / t_sum
-        dydt[i] = sum([ (t[j] - t[i])*(y[j]-y[i]) for j in range(N-2*m-1, N)]) / t_sum
-        dzdt[i] = sum([ (t[j] - t[i])*(z[j]-z[i]) for j in range(N-2*m-1, N)]) / t_sum
+    for i in range(N - m, N):
+        t_sum = sum([(t[j] - t[i]) ** 2 for j in range(N - 2 * m, N)])
+        dxdt[i] = sum([(t[j] - t[i]) * (x[j] - x[i]) for j in range(N - 2 * m - 1, N)]) / t_sum
+        dydt[i] = sum([(t[j] - t[i]) * (y[j] - y[i]) for j in range(N - 2 * m - 1, N)]) / t_sum
+        dzdt[i] = sum([(t[j] - t[i]) * (z[j] - z[i]) for j in range(N - 2 * m - 1, N)]) / t_sum
 
     dgammadt = []
     dgammadt_norm = np.zeros(N)
@@ -1640,22 +1615,22 @@ def discrete_geometry(line, neigh=10):
     dt3dt = np.zeros(N)
 
     for i in range(0, m):
-        t_sum = sum([ (t[j] - t[i])**2 for j in range(0, 2*m+1)])
-        dt1dt[i] = sum([ (t[j] - t[i])*(t1[j]-t1[i]) for j in range(0, 2*m+1)]) / t_sum
-        dt2dt[i] = sum([ (t[j] - t[i])*(t2[j]-t2[i]) for j in range(0, 2*m+1)]) / t_sum
-        dt3dt[i] = sum([ (t[j] - t[i])*(t3[j]-t3[i]) for j in range(0, 2*m+1)]) / t_sum
+        t_sum = sum([(t[j] - t[i]) ** 2 for j in range(0, 2 * m + 1)])
+        dt1dt[i] = sum([(t[j] - t[i]) * (t1[j] - t1[i]) for j in range(0, 2 * m + 1)]) / t_sum
+        dt2dt[i] = sum([(t[j] - t[i]) * (t2[j] - t2[i]) for j in range(0, 2 * m + 1)]) / t_sum
+        dt3dt[i] = sum([(t[j] - t[i]) * (t3[j] - t3[i]) for j in range(0, 2 * m + 1)]) / t_sum
 
-    for i in range(m, N-m):
-        t_sum = sum([ (t[j] - t[i])**2 for j in range(i-m, i+m+1)])
-        dt1dt[i] = sum([ (t[j] - t[i])*(t1[j]-t1[i]) for j in range(i-m, i+m+1)]) / t_sum
-        dt2dt[i] = sum([ (t[j] - t[i])*(t2[j]-t2[i]) for j in range(i-m, i+m+1)]) / t_sum
-        dt3dt[i] = sum([ (t[j] - t[i])*(t3[j]-t3[i]) for j in range(i-m, i+m+1)]) / t_sum
+    for i in range(m, N - m):
+        t_sum = sum([(t[j] - t[i]) ** 2 for j in range(i - m, i + m + 1)])
+        dt1dt[i] = sum([(t[j] - t[i]) * (t1[j] - t1[i]) for j in range(i - m, i + m + 1)]) / t_sum
+        dt2dt[i] = sum([(t[j] - t[i]) * (t2[j] - t2[i]) for j in range(i - m, i + m + 1)]) / t_sum
+        dt3dt[i] = sum([(t[j] - t[i]) * (t3[j] - t3[i]) for j in range(i - m, i + m + 1)]) / t_sum
 
-    for i in range(N-m, N):
-        t_sum = sum([ (t[j] - t[i])**2 for j in range(N-2*m, N)])
-        dt1dt[i] = sum([ (t[j] - t[i])*(t1[j]-t1[i]) for j in range(N-2*m-1, N)]) / t_sum
-        dt2dt[i] = sum([ (t[j] - t[i])*(t2[j]-t2[i]) for j in range(N-2*m-1, N)]) / t_sum
-        dt3dt[i] = sum([ (t[j] - t[i])*(t3[j]-t3[i]) for j in range(N-2*m-1, N)]) / t_sum
+    for i in range(N - m, N):
+        t_sum = sum([(t[j] - t[i]) ** 2 for j in range(N - 2 * m, N)])
+        dt1dt[i] = sum([(t[j] - t[i]) * (t1[j] - t1[i]) for j in range(N - 2 * m - 1, N)]) / t_sum
+        dt2dt[i] = sum([(t[j] - t[i]) * (t2[j] - t2[i]) for j in range(N - 2 * m - 1, N)]) / t_sum
+        dt3dt[i] = sum([(t[j] - t[i]) * (t3[j] - t3[i]) for j in range(N - 2 * m - 1, N)]) / t_sum
 
     dtgdt = []
     dtgdt_norm = np.zeros(N)
@@ -1695,12 +1670,12 @@ def get_k1k2_basis(curvature, line):
 
     for i in range(E1.shape[0]):
         V = np.eye(3)
-        V[:, 0] = T[i,:]
-        V[:, 1] = E1[i,:]
+        V[:, 0] = T[i, :]
+        V[:, 1] = E1[i, :]
         V = gram_schmidt(V)
 
-        E1[i,:] = V[:,1]
-        E2[i,:] = V[:,2]
+        E1[i, :] = V[:, 1]
+        E2[i, :] = V[:, 2]
 
     # Compute k_1, k_2 furfilling T' = curv(s)*N(s) = k_1(s)*E_1(s) + k_2(s)*E_2(s).
     # This is simply a change of basis for the curvature vector N. The room
@@ -1708,9 +1683,9 @@ def get_k1k2_basis(curvature, line):
     # torsion.
     N = get_array("FrenetNormal", line, k=3)
 
-    k2 = (curvature.T * (E1[:,1]*N[:,0] - N[:,1]*E1[:,0]) / \
-                        (E2[:,1]*E1[:,0] - E2[:,0]*E1[:,1]))[0]
-    k1 = (-(curvature.T * N[:,0] + k2*E2[:,0]) / E1[:,0])[0]
+    k2 = (curvature.T * (E1[:, 1] * N[:, 0] - N[:, 1] * E1[:, 0]) / \
+                        (E2[:, 1] * E1[:, 0] - E2[:, 0] * E1[:, 1]))[0]
+    k1 = (-(curvature.T * N[:, 0] + k2 * E2[:, 0]) / E1[:, 0])[0]
 
     for k in [(k1, "k1"), (k2, "k2")]:
         k_array = create_vtk_array(k[0], k[1])
@@ -1761,22 +1736,22 @@ def spline_centerline(line, get_curv=False, isline=False, nknots=50, get_stats=T
 
     curv_coor = get_curvilinear_coordinate(line)
     for i in range(data.shape[0]):
-        data[i,:] = line.GetPoint(i)
+        data[i, :] = line.GetPoint(i)
 
-    t = np.linspace(curv_coor[0], curv_coor[-1], nknots+2)[1:-1]
-    fx = splrep(curv_coor, data[:,0], k=4, t=t)
-    fy = splrep(curv_coor, data[:,1], k=4, t=t)
-    fz = splrep(curv_coor, data[:,2], k=4, t=t)
+    t = np.linspace(curv_coor[0], curv_coor[-1], nknots + 2)[1:-1]
+    fx = splrep(curv_coor, data[:, 0], k=4, t=t)
+    fy = splrep(curv_coor, data[:, 1], k=4, t=t)
+    fz = splrep(curv_coor, data[:, 2], k=4, t=t)
 
     fx_ = splev(curv_coor, fx)
     fy_ = splev(curv_coor, fy)
     fz_ = splev(curv_coor, fz)
 
     data = np.zeros((len(curv_coor), 4))
-    data[:,0] = fx_
-    data[:,1] = fy_
-    data[:,2] = fz_
-    data[:,3] = MISR[:,0]
+    data[:, 0] = fx_
+    data[:, 1] = fy_
+    data[:, 2] = fz_
+    data[:, 3] = MISR[:, 0]
 
     header = ["X", "Y", "Z", radiusArrayName]
     line = data_to_vtkPolyData(data, header)
@@ -1799,20 +1774,20 @@ def spline_centerline(line, get_curv=False, isline=False, nknots=50, get_stats=T
         C1xC2_2 = ddlsfx * dlsfz - ddlsfz * dlsfx
         C1xC2_3 = ddlsfy * dlsfx - ddlsfx * dlsfy
 
-        curvature = np.sqrt(C1xC2_1**2 + C1xC2_2**2 + C1xC2_3**2) / \
-                            (dlsfx**2 + dlsfy**2 + dlsfz**2)**1.5
+        curvature = np.sqrt(C1xC2_1 ** 2 + C1xC2_2 ** 2 + C1xC2_3 ** 2) / \
+                            (dlsfx ** 2 + dlsfy ** 2 + dlsfz ** 2) ** 1.5
 
         return line, curvature
     else:
         return line
 
-   
+
 def prepare_surface(model_path, parameters):
-    """ 
-    Clean and check connectivity of surface. 
+    """
+    Clean and check connectivity of surface.
     Capps or uncapps surface model at inlet and outlets.
- 
-    Args: 
+
+    Args:
         model_path (str): Path to model.
         parameters (dict): Contains surface model information.
 
@@ -1826,8 +1801,8 @@ def prepare_surface(model_path, parameters):
     surface = surface_cleaner(surface)
     surface = triangulate_surface(surface)
 
-   # Check connectivity and only choose the surface with the largest area
-    if not "check_surface" in parameters.keys():
+    # Check connectivity and only choose the surface with the largest area
+    if "check_surface" not in parameters.keys():
         connected_surface = gat_connectivity(surface, mode="Largest")
         if connected_surface.GetNumberOfPoints() != surface.GetNumberOfPoints():
             WritePolyData(surface, model_path.replace(".vtp", "_test.vtp"))
@@ -1842,14 +1817,15 @@ def prepare_surface(model_path, parameters):
 
     return open_surface, capped_surface
 
-def prepare_voronoi_diagram(model_path, voronoi_path, voronoi_smoothed_path, 
+
+def prepare_voronoi_diagram(model_path, voronoi_path, voronoi_smoothed_path,
                             smooth, smooth_factor, centerlines):
     """
-    Compute and smooth voronoi diagram of surface model. 
+    Compute and smooth voronoi diagram of surface model.
 
     Args:
         model_path (str): Path to surface model.
-        voronoi_path (str): (Save)path to voronoi diagram. 
+        voronoi_path (str): (Save)path to voronoi diagram.
         voronoi_smoothed_path (str): (Save)path to smoothed voronoi diagram.
         smooth (bool): Voronoi is smoothed if True.
         smooth_factor (float): Smoothing factor for voronoi smoothing.
@@ -1872,5 +1848,3 @@ def prepare_voronoi_diagram(model_path, voronoi_path, voronoi_smoothed_path,
     voronoi = voronoi_smoothed if smooth else voronoi
 
     return voronoi
-
-

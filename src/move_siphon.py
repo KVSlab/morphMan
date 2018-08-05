@@ -8,6 +8,7 @@ from clipvoronoidiagram import *
 from paralleltransportvoronoidiagram import *
 from moveandmanipulatetools import *
 
+
 def read_command_line():
     """
     Read arguments from commandline
@@ -16,7 +17,7 @@ def read_command_line():
 
     parser.add_argument('-d', '--dir_path', type=str, default=".",
                         help="Path to the folder with all the cases")
-    parser.add_argument('--case','-c', type=str, default=None, help="Choose case")
+    parser.add_argument('--case', '-c', type=str, default=None, help="Choose case")
     parser.add_argument('-s', '--smooth', type=bool, default=True,
                         help="If the original voronoi diagram (surface) should be" + \
                         "smoothed before it is manipulated", metavar="smooth")
@@ -24,7 +25,7 @@ def read_command_line():
                         help="Compression factor in vertical direction, ranging from -1.0 to 1.0")
     parser.add_argument("-b", "--beta", type=float, default=0.0,
                         help="Compression factor in horizontal direction, ranging from -1.0 to 1.0")
-    parser.add_argument('-sf','--smooth_factor', type=float, default=0.25,
+    parser.add_argument('-sf', '--smooth_factor', type=float, default=0.25,
                          help="If smooth option is true then each voronoi point" + \
                          " that has a radius less then MISR*(1-smooth_factor) at" + \
                          " the closest centerline point is removes", metavar="smoothening_factor")
@@ -66,7 +67,7 @@ def move_vessel(dirpath, smooth, name, point_path, alpha=0.0, beta=0.0, smooth_f
     # Output names
     model_smoothed_path = path.join(dirpath, name, "model_smoothed.vtp")
     model_new_surface = path.join(dirpath, name, "new_model_alpha_%s_beta_%s.vtp" %
-                                  (alpha,beta))
+                                  (alpha, beta))
     model_new_surface_tmp = path.join(dirpath, name, "new_model_alpha_%s_beta_%s_tmp.vtp"
                                       % (alpha, beta))
     model_new_surface_clean = path.join(dirpath, name, "new_model_alpha_%s_beta_%s_clean.vtp"
@@ -74,8 +75,8 @@ def move_vessel(dirpath, smooth, name, point_path, alpha=0.0, beta=0.0, smooth_f
 
     # Centerlines
     centerline_complete_path = path.join(dirpath, name, "centerline_complete.vtp")
-    centerline_clipped_path = path.join(dirpath, name,  "centerline_clipped.vtp")
-    centerline_clipped_part_path = path.join(dirpath, name,  "centerline_clipped_part.vtp")
+    centerline_clipped_path = path.join(dirpath, name, "centerline_clipped.vtp")
+    centerline_clipped_part_path = path.join(dirpath, name, "centerline_clipped_part.vtp")
     new_centerlines_path = path.join(dirpath, name, "new_centerlines_alpha_%s_beta_%s.vtp"
                                      % (alpha, beta))
     new_centerlines_path_clean = path.join(dirpath, name, "new_centerlines_alpha_%s_beta_%s_clean.vtp"
@@ -86,7 +87,7 @@ def move_vessel(dirpath, smooth, name, point_path, alpha=0.0, beta=0.0, smooth_f
 
     # Voronoi diagrams
     voronoi_path = path.join(dirpath, name, "model_voronoi.vtp")
-    voronoi_smoothed_path = path.join(dirpath, name,  "model_voronoi_smoothed.vtp")
+    voronoi_smoothed_path = path.join(dirpath, name, "model_voronoi_smoothed.vtp")
     voronoi_remaining_path = path.join(dirpath, name, "model_voronoi_remaining.vtp")
     voronoi_siphon_path = path.join(dirpath, name, "model_voronoi_siphon.vtp")
 
@@ -122,7 +123,7 @@ def move_vessel(dirpath, smooth, name, point_path, alpha=0.0, beta=0.0, smooth_f
     # Check if case includs the opthalmic artery
     eye, clip_ID, centerlines_in_order, eyeline = find_ophthalmic_artery(centerlines_in_order,
                                                                          clipping_points)
-    if eye == True:
+    if eye:
         print("Clipping opthamlic artery")
         patch_eye = clip_eyeline(eyeline, clipping_points[0], clip_ID)
 
@@ -131,8 +132,8 @@ def move_vessel(dirpath, smooth, name, point_path, alpha=0.0, beta=0.0, smooth_f
     centerline_remaining = CreateParentArteryPatches(centerlines_in_order,
                                                      vtk_clipping_points, siphon=True)
     centerline_siphon = extract_single_line(centerlines_in_order, 0, startID=ID1, endID=ID2)
-    if eye == True:
-        eyeline_end = extract_single_line(patch_eye,1)
+    if eye:
+        eyeline_end = extract_single_line(patch_eye, 1)
         centerline_siphon = merge_data([centerline_siphon, eyeline_end])
 
     write_polydata(centerline_remaining, centerline_clipped_path)
@@ -142,14 +143,14 @@ def move_vessel(dirpath, smooth, name, point_path, alpha=0.0, beta=0.0, smooth_f
     # siphon and remaining part of geometry
     print("Clipping Voronoi diagrams")
     if not path.exists(voronoi_siphon_path):
-        masked_voronoi_clip  = MaskVoronoiDiagram(voronoi, centerline_siphon)
+        masked_voronoi_clip = MaskVoronoiDiagram(voronoi, centerline_siphon)
         voronoi_siphon = ExtractMaskedVoronoiPoints(voronoi, masked_voronoi_clip)
         write_polydata(voronoi_siphon, voronoi_siphon_path)
     else:
         voronoi_siphon = read_polydata(voronoi_siphon_path)
 
     if not path.exists(voronoi_remaining_path):
-        masked_voronoi  = MaskVoronoiDiagram(voronoi, centerline_remaining)
+        masked_voronoi = MaskVoronoiDiagram(voronoi, centerline_remaining)
         voronoi_remaining = ExtractMaskedVoronoiPoints(voronoi, masked_voronoi)
         write_polydata(voronoi_remaining, voronoi_remaining_path)
     else:
@@ -172,7 +173,7 @@ def move_vessel(dirpath, smooth, name, point_path, alpha=0.0, beta=0.0, smooth_f
     newpoints = []
 
     n = centerline_remaining.GetNumberOfCells()
-    for i in range(1,n):
+    for i in range(1, n):
         lines.append(extract_single_line(centerline_remaining, i))
 
     if beta != 0:
@@ -205,20 +206,19 @@ def move_vessel(dirpath, smooth, name, point_path, alpha=0.0, beta=0.0, smooth_f
 
     newpoints.append(centerline_remaining_start.GetPoint(0))
 
-
     if beta != 0.0:
         # Move anterior bend horizontally.
         # Iterate over points P from Voronoi diagram,
         # and move them
         print("Adjusting Voronoi diagram")
         voronoi_remaining = move_voronoi_horizontally(dx_p1, dx_p2, voronoi_remaining,
-                                                      centerline_remaining, ID1,ID2,
+                                                      centerline_remaining, ID1, ID2,
                                                       clip_ID, clip=False)
         voronoi_siphon = move_voronoi_horizontally(dx_p1, dx_p2, voronoi_siphon,
-                                                   centerline_siphon, ID1,ID2, clip_ID,
+                                                   centerline_siphon, ID1, ID2, clip_ID,
                                                    clip=True, eye=eye)
 
-        newVoronoi = merge_data([voronoi_remaining,voronoi_siphon])
+        newVoronoi = merge_data([voronoi_remaining, voronoi_siphon])
         new_surface = create_new_surface(newVoronoi)
         write_polydata(new_surface, model_new_surface_tmp)
 
@@ -247,7 +247,7 @@ def move_vessel(dirpath, smooth, name, point_path, alpha=0.0, beta=0.0, smooth_f
         write_polydata(new_surface, model_new_surface)
 
 
-def move_vessel_vertically(dirpath, name, oldpoints, alpha,  voronoi_remaining,
+def move_vessel_vertically(dirpath, name, oldpoints, alpha, voronoi_remaining,
                            voronoi_siphon, centerline, eye, vtk_clipping_points):
     """
     Secondary script used for vertical displacement of
@@ -269,15 +269,19 @@ def move_vessel_vertically(dirpath, name, oldpoints, alpha,  voronoi_remaining,
     """
 
     # Filenames
-    model_new_surface = path.join(dirpath, name, "new_model_alpha_%s_beta_%s.vtp" % (alpha,beta))
-    model_new_surface_clean = path.join(dirpath, name, "new_model_alpha_%s_beta_%s_clean.vtp" % (alpha,beta))
-    new_centerlines_path = path.join(dirpath, name, "new_centerlines_alpha_%s_beta_%s.vtp" % (alpha, beta))
-    new_centerlines_path_clean  = path.join(dirpath, name, "new_centerlines_alpha_%s_beta_%s_clean.vtp" % (alpha, beta))
+    model_new_surface = path.join(dirpath, name, "new_model_alpha_%s_beta_%s.vtp"
+                                    % (alpha,beta))
+    model_new_surface_clean = path.join(dirpath, name, "new_model_alpha_%s_beta_%s_clean.vtp"
+                                    % (alpha,beta))
+    new_centerlines_path = path.join(dirpath, name, "new_centerlines_alpha_%s_beta_%s.vtp"
+                                    % (alpha, beta))
+    new_centerlines_path_clean  = path.join(dirpath, name, "new_centerlines_alpha_%s_beta_%s_clean.vtp"
+                                    % (alpha, beta))
 
     # Set clipping points in order and make VTK objects
     p1 = vtk_clipping_points.GetPoint(0)
     p2 = vtk_clipping_points.GetPoint(1)
-    centerline_clippedipping_points = [p1,p2]
+    centerline_clippedipping_points = [p1, p2]
     line = extract_single_line(centerline, 0)
     p1, p2, ID1, ID2, vtk_clipping_points, clipping_points = get_vtk_clipping_points(line,
                                                                                      centerline_clippedipping_points)
@@ -287,11 +291,11 @@ def move_vessel_vertically(dirpath, name, oldpoints, alpha,  voronoi_remaining,
 
     # Special cases including the ophthalmic artery
     clip_ID = None
-    if eye == True:
+    if eye:
         eye, clip_ID, centerlines_in_order, eyeline = find_ophthalmic_artery(centerlines_in_order,
                                                                              clipping_points)
 
-    if eye == True:
+    if eye:
         print("Clipping opthamlic artery")
         patch_eye = clip_eyeline(eyeline, clipping_points[0], clip_ID)
 
@@ -302,8 +306,8 @@ def move_vessel_vertically(dirpath, name, oldpoints, alpha,  voronoi_remaining,
     centerline_siphon = extract_single_line(centerlines_in_order, 0, startID=ID1,
                                             endID=ID2)
 
-    if eye == True:
-        eyeline_end = extract_single_line(patch_eye,1)
+    if eye:
+        eyeline_end = extract_single_line(patch_eye, 1)
         centerline_siphon = merge_data([centerline_siphon, eyeline_end])
 
     # Find ID of middle pooint:
@@ -319,8 +323,8 @@ def move_vessel_vertically(dirpath, name, oldpoints, alpha,  voronoi_remaining,
     # Iterate over points P from Voronoi diagram,
     # and move them
     print("Adjust voronoi diagram")
-    voronoi_siphon =  move_voronoi_vertically(voronoi_siphon,centerline_siphon, ID1,
-                                              clip_ID, dx,  eye)
+    voronoi_siphon = move_voronoi_vertically(voronoi_siphon, centerline_siphon, ID1,
+                                              clip_ID, dx, eye)
     newVoronoi = merge_data([voronoi_remaining, voronoi_siphon])
 
     # Move centerline manually for postprocessing
@@ -351,7 +355,7 @@ def move_vessel_vertically(dirpath, name, oldpoints, alpha,  voronoi_remaining,
     write_polydata(new_centerline, new_centerlines_path)
 
 
-def move_voronoi_horizontally(dx_p1, dx_p2, voronoi_clipped, centerline_clipped, ID1,ID2,
+def move_voronoi_horizontally(dx_p1, dx_p2, voronoi_clipped, centerline_clipped, ID1, ID2,
                               clip_ID, clip=False, eye=False):
     """
     Iterate through voronoi diagram and move based on a profile
@@ -378,20 +382,20 @@ def move_voronoi_horizontally(dx_p1, dx_p2, voronoi_clipped, centerline_clipped,
     points = vtk.vtkPoints()
     verts = vtk.vtkCellArray()
 
-    if clip == True:
+    if clip:
         # Find boundaries
         idmid_0 = int((ID1 + ID2)/2.)
         ID1_0 = ID1
         ID1 = 0
-        if eye == True:
+        if eye:
             l1 = extract_single_line(centerline_clipped, 0)
             ID2 = len(get_curvilinear_coordinate(l1))
         else:
             ID2 = len(get_curvilinear_coordinate(centerline_clipped))
-        idmid = int( (ID1 + ID2)/2.)
+        idmid = int((ID1 + ID2)/2.)
 
         # Manpipulation of voronoi diagram..
-        if eye == True:
+        if eye:
             # ..with opthalmic artery
             for p in range(voronoi_clipped.GetNumberOfPoints()):
                 cl_id = centerline_loc.FindClosestPoint(voronoi_clipped.GetPoint(p))
@@ -404,7 +408,7 @@ def move_voronoi_horizontally(dx_p1, dx_p2, voronoi_clipped, centerline_clipped,
                     else:
                         # Move opthalmic artery based on its discovery ID
                         if clip_ID < idmid_0:
-                            cl_id =  clip_ID - ID1_0
+                            cl_id = clip_ID - ID1_0
                             dist = dx_p1 * (idmid**2-cl_id**2) / (idmid**2-ID1**2)
                         else:
                             cl_id = clip_ID - ID1_0
@@ -437,7 +441,7 @@ def move_voronoi_horizontally(dx_p1, dx_p2, voronoi_clipped, centerline_clipped,
             if cl_id <= ID1:
                 dist = dx_p1
             else:
-                dist =  -dx_p1
+                dist = -dx_p1
 
             points.InsertNextPoint(np.asarray(voronoi_clipped.GetPoint(p)) + dist)
             verts.InsertNextCell(1)
@@ -452,7 +456,7 @@ def move_voronoi_horizontally(dx_p1, dx_p2, voronoi_clipped, centerline_clipped,
 
 
 def move_voronoi_vertically(voronoi_clipped, centerline_clipped, ID1_0, clip_ID,
-                            dx,eye=False):
+                            dx, eye=False):
     """
     Iterate through voronoi diagram and move based on a profile
     for vertical movement. Includes special treatment of
@@ -476,21 +480,21 @@ def move_voronoi_vertically(voronoi_clipped, centerline_clipped, ID1_0, clip_ID,
     verts = vtk.vtkCellArray()
 
     # Manpipulation of voronoi diagram..
-    if eye == True:
+    if eye:
         # ..with opthalmic artery
         ID1 = I1 = 0
         l1 = extract_single_line(centerline_clipped, 0)
         ID2 = len(get_curvilinear_coordinate(l1))
         I2 = ID2 - 1
-        IDmid = int( (ID1 + ID2)/2.)
+        IDmid = int((ID1 + ID2) / 2.)
         for p in range(voronoi_clipped.GetNumberOfPoints()):
             cl_id = centerline_loc.FindClosestPoint(voronoi_clipped.GetPoint(p))
 
             if cl_id <= I2:
-                dist = 4 * dx * (cl_id - I1)*(I2 - cl_id) / ( I2 - I1)**2
+                dist = 4 * dx * (cl_id - I1)*(I2 - cl_id) / (I2 - I1)**2
             else:
                 cl_id = clip_ID - ID1_0
-                dist = 4 * dx * (cl_id - ID1)*(ID2 - cl_id) / ( ID2 - ID1)**2
+                dist = 4 * dx * (cl_id - ID1)*(ID2 - cl_id) / (ID2 - ID1)**2
 
             points.InsertNextPoint(np.asarray(voronoi_clipped.GetPoint(p)) + dist)
             verts.InsertNextCell(1)
@@ -500,11 +504,11 @@ def move_voronoi_vertically(voronoi_clipped, centerline_clipped, ID1_0, clip_ID,
         # ..witout opthalmic artery
         ID1 = 0
         ID2 = len(get_curvilinear_coordinate(centerline_clipped)) - 1
-        IDmid = int( (ID1 + ID2)/2.)
+        IDmid = int((ID1 + ID2) / 2.)
         for p in range(voronoi_clipped.GetNumberOfPoints()):
             cl_id = centerline_loc.FindClosestPoint(voronoi_clipped.GetPoint(p))
 
-            dist = 4 * dx * (cl_id - ID1)*(ID2 - cl_id) / ( ID2 - ID1)**2
+            dist = 4 * dx * (cl_id - ID1)*(ID2 - cl_id) / (ID2 - ID1)**2
 
             points.InsertNextPoint(np.asarray(voronoi_clipped.GetPoint(p)) + dist)
             verts.InsertNextCell(1)
@@ -517,7 +521,7 @@ def move_voronoi_vertically(voronoi_clipped, centerline_clipped, ID1_0, clip_ID,
     return newDataSet
 
 
-if  __name__ == "__main__":
+if __name__ == "__main__":
     smooth, basedir, case, alpha, beta, smooth_factor = read_command_line()
     folders = sorted([folder for folder in listdir(basedir) if folder[:2] in ["P0"]])
     name = "surface"
@@ -526,9 +530,9 @@ if  __name__ == "__main__":
     if case is not None:
         print("==== Working on case %s ====" % case)
         dirpath = path.join(basedir, case)
-        move_vessel(dirpath,smooth, name, point_path, alpha, beta)
+        move_vessel(dirpath, smooth, name, point_path, alpha, beta)
     else:
         for folder in folders:
             print("==== Working on case %s ====" % folder)
-            dirpath = path.join(basedir,folder)
-            move_vessel(dirpath,smooth, name, point_path, alpha, beta, smooth_factor)
+            dirpath = path.join(basedir, folder)
+            move_vessel(dirpath, smooth, name, point_path, alpha, beta, smooth_factor)
