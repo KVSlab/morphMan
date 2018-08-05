@@ -283,6 +283,7 @@ def get_factor(lineToChange, beta, ratio, percentage, stenosis, stenosis_size, a
             print("One point detected. Creating stenosis.")
             stenosisPoint = surface.GetPoint(stenosisPointId.GetId(0))
             factor = create_stenosis(lineToChange, stenosisPoint, area, stenosis_size, percentage)
+
         elif stenosisPointId.GetNumberOfIds() == 2:
             print("Two points detected. Removes stenosis between the two points.")
             stenosisPoint1 = surface.GetPoint(stenosisPointId.GetId(0))
@@ -310,6 +311,21 @@ def get_factor(lineToChange, beta, ratio, percentage, stenosis, stenosis_size, a
 
 
 def create_stenosis(lineToChange, stenosisPoint, area, stenosis_size, percentage):
+    """
+    Creates a stenosis along the vessel based
+    on a user selected point representing
+    the center of the stenosis.
+
+    Args:
+        lineToChange (vtkPolyData): Centerline representing area of interest.
+        stenosisPoint (tuple): Center of stenosis.
+        area (ndarray): Array of cross-section area along the abscissa.
+        stenosis_size (float): Length of affected stenosis area. Default is MISR x 2.0 of selected point.
+        percentage (float): Desired increase/decrease in cross-sectional area.
+
+    Returns:
+        factor (float): Factor determining the change in radius.
+    """
     # Find closest point along centerline
     locator = get_locator(lineToChange)
     stenosisLinePointId = int(locator.FindClosestPoint(stenosisPoint))
@@ -347,10 +363,17 @@ def create_stenosis(lineToChange, stenosisPoint, area, stenosis_size, percentage
 def subdivide_centerline(size, startId, stopId, segment_length=1.0):
     """
     Create a linear transition between original
-    and manipulated geometry.
+    and manipulated geometry, by dividing
+    centerline into sections.
 
     Args:
-        size ()
+        size (int): Number of points along centerline.
+        startId (int): ID at starting point.
+        stopId (int): ID at stopping point.
+        segment_length (float): Fraction of centerline used.
+
+    Returns:
+        trans (ndarray): Linear transition between original and new geomtry.
     """
     l = stopId - startId
     diff = size - stopId
@@ -370,6 +393,20 @@ def subdivide_centerline(size, startId, stopId, segment_length=1.0):
 
 
 def remove_stenosis(lineToChange, point1, point2, area):
+    """
+    Removes a stenosis along the vessel based
+    on a two user selected point representing
+    the boundary of the stenosis.
+
+    Args:
+        lineToChange (vtkPolyData): Centerline representing area of interest.
+        point 1 (tuple): Start point of stenosis.
+        point 2 (tuple): End point of stenosis.
+        area (ndarray): Array of cross-section area along the abscissa.
+
+    Returns:
+        factor (float): Factor determining the change in radius.
+    """
     # Find closest point along centerline and sort points
     locator = get_locator(lineToChange)
     lineId1 = int(locator.FindClosestPoint(point1))
@@ -537,6 +574,7 @@ def area_variations(folder, beta, smooth, stats, r_change, percentage, stenosis,
     centerline_area_spline_path = path.join(folder, "surface", "centerline_area_spline.vtp")
     centerline_area_spline_sections_path = path.join(folder, "surface", "centerline_area_sections.vtp")
     centerline_spline_path = path.join(folder, "surface", "centerline_spline.vtp")
+    centerline_new_path = path.join(folder, "surface", "centerline_area_new.vtp")
     model_smoothed_path = path.join(folder, "surface", "model_smoothed.vtp")
     s = ""
     s += "" if not smooth else "_smooth"
@@ -545,7 +583,8 @@ def area_variations(folder, beta, smooth, stats, r_change, percentage, stenosis,
     s += "" if not stenosis else "_stenosis_%smisr" % stenosis_size
     s += "" if not add_noise else "_noise"
     s += "" if percentage is None else "_%s" % percentage
-    model_area_path = path.join(folder, "surface", "model_area%s.vtp" % s)
+    model_new_surface =  path.join(folder, "surface", "model_area%s.vtp" % s)
+    model_new_surface_clean =  path.join(folder, "surface", "model_area%s_clean.vtp" % s)
 
     # Import centerline
     centerlines = make_centerline(model_path, centerlines_path, length=0.1, smooth=False)
@@ -590,12 +629,14 @@ def area_variations(folder, beta, smooth, stats, r_change, percentage, stenosis,
 
         # Make new surface
         print("Create surface")
-        model_new_surface = create_new_surface(newvoronoi)
+        new_surface = create_new_surface(newvoronoi)
 
-        print("Write surface to: {}".format(model_area_path.split("/")[-1]))
+        print("Write surface to: {}".format(model_new_surface.split("/")[-1]))
         # TODO: Add Automated clipping of newmodel
-        model_new_surface = vmtk_surface_smoother(model_new_surface, method="laplace", iterations=100)
-        write_polydata(model_new_surface, model_area_path)
+        new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100)
+        new_surface = clean_and_check_surface(new_surface, centerlines_in_order,
+                                        model_new_surface_clean, centerline_new_path)
+        write_polydata(new_surface, model_new_surface)
 
     return length, area
 
