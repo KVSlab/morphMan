@@ -572,7 +572,7 @@ def get_spline_points(line, param, direction, clip_points):
 def find_diverging_centerlines(centerlines, end_point):
     """
     Collect centerlines diverging from the longest
-    centerline. 
+    centerline.
 
     Args:
         centerlines (vtkPolyData): Collection of all centerlines.
@@ -585,7 +585,7 @@ def find_diverging_centerlines(centerlines, end_point):
     Returns:
         centerlines (vtkPolyData): Collection of centerlines not diverging.
     Returns:
-        div_lines (list): Collection of divering centerlines.  
+        div_lines (list): Collection of divering centerlines.
     """
     # Start with longest line
     longest = extract_single_line(centerlines, 0)
