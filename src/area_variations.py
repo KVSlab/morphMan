@@ -594,7 +594,7 @@ def area_variations(folder, beta, smooth, stats, r_change, percentage, stenosis,
     surface, capped_surface = preare_surface(model_path, parameters)
 
     # Smooth voronoi diagram
-    voronoi = prepare_voronoi_diagram(model_path, voronoi_path, voronoi_smoothed_path,
+    voronoi = prepare_voronoi_diagram(surface, model_smoothed_path, voronoi_path, voronoi_smoothed_path,
                                     smooth, smooth_factor, centerlines)
 
     # Tolerance for finding diverging point

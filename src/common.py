@@ -41,7 +41,7 @@ def read_polydata(filename):
 
     Returns:
         polyData (vtkSTL/vtkPolyData/vtkXMLStructured/
-                    vtkXMLRectilinear∕vtkXMLPolydata/vtkXMLUnstructured/
+                    vtkXMLRectilinear/vtkXMLPolydata/vtkXMLUnstructured/
                     vtkXMLImage/Tecplot): Output data.
     """
 
@@ -89,8 +89,8 @@ def write_polydata(input_data, filename):
     Write the given input data based on the file name extension.
 
     Args:
-        input_data (vtkSTL∕vtkPolyData/vtkXMLStructured/
-                    vtkXMLRectilinear∕vtkXMLPolydata/vtkXMLUnstructured/
+        input_data (vtkSTL/vtkPolyData/vtkXMLStructured/
+                    vtkXMLRectilinear/vtkXMLPolydata/vtkXMLUnstructured/
                     vtkXMLImage/Tecplot): Input data.
         filename (str): Save path location.
     """
@@ -235,6 +235,7 @@ def smooth_voronoi_diagram(voronoi, centerlines, smoothingFactor,
 
     count = 0
     for i in range(numberOfPoints):
+        print i
         point = voronoi.GetPoint(i)
         radius = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
         id_ = locator.FindClosestPoint(point)
@@ -653,9 +654,9 @@ def write_points(points, filename):
 def surface_cleaner(surface):
     """
     Clean surface by merging
-    duplicate points, and∕or
+    duplicate points, and/or
     removing unused points
-    and∕or removing degenerate cells.
+    and/or removing degenerate cells.
 
     Args:
         surface (vtkPolyData): Surface model.
@@ -1818,13 +1819,14 @@ def prepare_surface(model_path, parameters):
     return open_surface, capped_surface
 
 
-def prepare_voronoi_diagram(model_path, voronoi_path, voronoi_smoothed_path,
+def prepare_voronoi_diagram(surface, model_smoothed_path, voronoi_path, voronoi_smoothed_path,
                             smooth, smooth_factor, centerlines):
     """
     Compute and smooth voronoi diagram of surface model.
 
     Args:
-        model_path (str): Path to surface model.
+        surface (str): Surface model.
+        model_smoothed_path (str): (Save)path to smoothed model.
         voronoi_path (str): (Save)path to voronoi diagram.
         voronoi_smoothed_path (str): (Save)path to smoothed voronoi diagram.
         smooth (bool): Voronoi is smoothed if True.
@@ -1835,7 +1837,7 @@ def prepare_voronoi_diagram(model_path, voronoi_path, voronoi_smoothed_path,
         voronoi (vtkPolyData): Voronoi diagram of surface.
     """
     # Smooth voronoi diagram
-    voronoi = make_voronoi_diagram(model_path, voronoi_path)
+    voronoi = make_voronoi_diagram(surface, voronoi_path)
     if not path.exists(voronoi_smoothed_path) and smooth:
         voronoi_smoothed = smooth_voronoi_diagram(voronoi, centerlines, smooth_factor)
         write_polydata(voronoi_smoothed, voronoi_smoothed_path)

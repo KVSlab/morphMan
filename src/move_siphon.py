@@ -117,7 +117,7 @@ def move_vessel(dirpath, smooth, name, point_path, alpha=0.0, beta=0.0, smooth_f
                                                                                      clipping_points)
 
     print("Compute Voronoi diagram")
-    voronoi = prepare_voronoi_diagram(model_path, voronoi_path, voronoi_smoothed_path,
+    voronoi = prepare_voronoi_diagram(surface, model_smoothed_path, voronoi_path, voronoi_smoothed_path,
                                     smooth, smooth_factor, centerlines_complete)
 
     # Check if case includs the opthalmic artery

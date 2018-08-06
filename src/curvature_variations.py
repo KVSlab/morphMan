@@ -95,7 +95,7 @@ def change_curvature(dirpath, name, smooth, smoothingfactor, iterations, smoothm
     centerlines_in_order = sort_centerlines(centerlines_complete)
 
     print("Compute voronoi diagram")
-    voronoi = prepare_voronoi_diagram(model_path, voronoi_path, voronoi_smoothed_path,
+    voronoi = prepare_voronoi_diagram(surface, model_smoothed_path, voronoi_path, voronoi_smoothed_path,
                                     smooth, smooth_factor_voro, centerlines_complete)
 
     # Get Carotid Siphon
