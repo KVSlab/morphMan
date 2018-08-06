@@ -235,7 +235,7 @@ def move_vessel(dirpath, smooth, name, point_path, alpha=0.0, beta=0.0, smooth_f
     if alpha != 0.0:
         # Vertical movement
         print("Moving geometry vertically")
-        move_vessel_vertically(dirpath, name, newpoints, alpha, voronoi_remaining,
+        move_vessel_vertically(dirpath, name, newpoints, alpha, beta, voronoi_remaining,
                                voronoi_siphon, new_centerline, eye, vtk_clipping_points)
     else:
         # TODO: Add Automated clipping of newmodel
@@ -247,7 +247,7 @@ def move_vessel(dirpath, smooth, name, point_path, alpha=0.0, beta=0.0, smooth_f
         write_polydata(new_surface, model_new_surface)
 
 
-def move_vessel_vertically(dirpath, name, oldpoints, alpha, voronoi_remaining,
+def move_vessel_vertically(dirpath, name, oldpoints, alpha, beta, voronoi_remaining,
                            voronoi_siphon, centerline, eye, vtk_clipping_points):
     """
     Secondary script used for vertical displacement of
