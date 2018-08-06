@@ -1694,7 +1694,7 @@ def get_k1k2_basis(curvature, line):
     return line
 
 
-def spline_centerline(line, get_curv=False, isline=False, 
+def spline_centerline(line, get_curv=False, isline=False,
                     nknots=50, get_stats=True, get_misr=True):
     """
     Given the knots and coefficients of a B-spline representation,

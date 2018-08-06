@@ -106,9 +106,9 @@ def compute_angle(dirpath, point_path, name, alpha, beta, method, proj=False, ne
 
     # Special cases including the opthalmic artery
     eye, clip_ID, centerlines_complete, eyeline = find_ophthalmic_artery(centerlines_complete, clipping_points)
-    manipulated_line, dx = get_new_centerline(centerlines_in_order, ID1, ID2, 
-                                            vtk_clipping_points, alpha, 
-                                            beta, eye) 
+    manipulated_line, dx = get_new_centerline(centerlines_in_order, ID1, ID2,
+                                            vtk_clipping_points, alpha,
+                                            beta, eye)
     new_centerline = manipulated_line if new_centerline is None else new_centerline
 
     # Extract old siphon and prepare
@@ -163,7 +163,7 @@ def compute_angle(dirpath, point_path, name, alpha, beta, method, proj=False, ne
         print("Computing 2D Angles")
     else:
         print("Computing 3D Angles")
-    
+
     # Get anterior bend only
     siphon =  extract_single_line(siphon, 0, startID=ID1, endID=ID2)
     moved_siphon =  extract_single_line(moved_siphon, 0, startID=moved_ID1, endID=moved_ID2)
@@ -498,7 +498,7 @@ def compute_curvature(dirpath, point_path, name, alpha, beta, method):
 
     return maxcurv
 
-def get_new_centerline(centerlines_in_order, ID1, ID2, vtk_clipping_points, 
+def get_new_centerline(centerlines_in_order, ID1, ID2, vtk_clipping_points,
                         alpha, beta, eye):
     """
     Perform manipulation of geometry using
@@ -537,7 +537,7 @@ def get_new_centerline(centerlines_in_order, ID1, ID2, vtk_clipping_points,
     p2 = np.asarray(vtk_clipping_points.GetPoint(1))
     dx_p1 = middle_points[0] - p1
     dx_p2 = middle_points[-1] - p2
-    
+
     print("Moving centerline manually")
     # Move horizontally
     patchline_1 = patch_start
@@ -684,7 +684,7 @@ def odr_line(ID1, ID2, line, curvature, limit):
     return d1, d2, curvlines
 
 def get_moved_siphon(new_centerline, siphon, endID, p1, p2):
-    """ 
+    """
     Extracts new siphon from new centerline
     and clipping point information.
 
@@ -704,7 +704,7 @@ def get_moved_siphon(new_centerline, siphon, endID, p1, p2):
     Returns:
         moved_p2 (ndarray): New position of second ipping point.
     Returns:
-        moved_siphon (vtkPolyData): Splined siphon centerline. 
+        moved_siphon (vtkPolyData): Splined siphon centerline.
     Returns:
         moved_siphon_curv (ndarray): Curvature array along siphon.
     """
@@ -825,7 +825,7 @@ def save_angle_or_curvature(values, case, param):
             np.savetxt(f, line, fmt='%.3f')
 
 
-def initialize(basedir, case, kappa, theta, alpha, beta, boundary, 
+def initialize(basedir, case, kappa, theta, alpha, beta, boundary,
                 method_curv, method_angle, n=50):
     """
     Initilization for computing curvature and angle.
