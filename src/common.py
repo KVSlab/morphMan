@@ -1694,7 +1694,8 @@ def get_k1k2_basis(curvature, line):
     return line
 
 
-def spline_centerline(line, get_curv=False, isline=False, nknots=50, get_stats=True):
+def spline_centerline(line, get_curv=False, isline=False, 
+                    nknots=50, get_stats=True, get_misr=True):
     """
     Given the knots and coefficients of a B-spline representation,
     evaluate the value of the smoothing polynomial and its derivatives.
@@ -1706,6 +1707,7 @@ def spline_centerline(line, get_curv=False, isline=False, nknots=50, get_stats=T
         isline (bool): Determines if centerline object is a line or points.
         nknots (int): Number of knots.
         get_stats (bool): Determines if curve attribuites are computed or not.
+        get_misr (bool): Determines if MISR values are computed or not.
 
     Returns:
         line (vtkPolyData): Splined centerline data.
@@ -1732,7 +1734,8 @@ def spline_centerline(line, get_curv=False, isline=False, nknots=50, get_stats=T
 
     # Collect data from centerline
     data = np.zeros((line.GetNumberOfPoints(), 3))
-    MISR = get_array(radiusArrayName, line)
+    if get_misr:
+        MISR = get_array(radiusArrayName, line)
 
     curv_coor = get_curvilinear_coordinate(line)
     for i in range(data.shape[0]):
@@ -1747,13 +1750,18 @@ def spline_centerline(line, get_curv=False, isline=False, nknots=50, get_stats=T
     fy_ = splev(curv_coor, fy)
     fz_ = splev(curv_coor, fz)
 
-    data = np.zeros((len(curv_coor), 4))
+    if get_misr:
+        data = np.zeros((len(curv_coor), 4))
+        data[:, 3] = MISR[:, 0]
+        header = ["X", "Y", "Z", radiusArrayName]
+    else:
+        data = np.zeros((len(curv_coor), 3))
+        header = ["X", "Y", "Z"]
+
     data[:, 0] = fx_
     data[:, 1] = fy_
     data[:, 2] = fz_
-    data[:, 3] = MISR[:, 0]
 
-    header = ["X", "Y", "Z", radiusArrayName]
     line = data_to_vtkPolyData(data, header)
 
     # Let vmtk compute curve attributes
