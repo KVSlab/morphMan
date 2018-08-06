@@ -235,7 +235,6 @@ def smooth_voronoi_diagram(voronoi, centerlines, smoothingFactor,
 
     count = 0
     for i in range(numberOfPoints):
-        print i
         point = voronoi.GetPoint(i)
         radius = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
         id_ = locator.FindClosestPoint(point)
