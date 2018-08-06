@@ -590,7 +590,7 @@ def area_variations(folder, beta, smooth, stats, r_change, percentage, stenosis,
     centerlines = make_centerline(model_path, centerlines_path, length=0.1, smooth=False)
 
     # Clean and capp / uncapp surface
-    parameters = get_parameters(dirpath)
+    parameters = get_parameters(folder)
     surface, capped_surface = preare_surface(model_path, parameters)
 
     # Smooth voronoi diagram
