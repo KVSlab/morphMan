@@ -30,7 +30,7 @@ def read_command_line():
     parser.add_argument('-sf', '--smooth_factor', type=float, default=0.25,
                          help="If smooth option is true then each voronoi point" + \
                          " that has a radius less then MISR*(1-smooth_factor) at" + \
-                         " the closest centerline point is removes" metavar="smoothening_factor")
+                         " the closest centerline point is removes", metavar="smoothening_factor")
     parser.add_argument("--percentage", type=float, default=None, help="Percentage the" + \
                         " area of the geometry is increase/decreased overall or only stenosis")
     parser.add_argument("--stenosis", type=bool, default=False, help="Creates a user selected" + \

@@ -112,7 +112,10 @@ def compute_angle(dirpath, point_path, name, alpha, beta, method, proj=False, ne
     new_centerline = manipulated_line if new_centerline is None else new_centerline
 
     # Extract old siphon and prepare
-    siphon = read_polydata(siphon_path)
+    if path.exists(siphon_path):
+        siphon = read_polydata(siphon_path)
+    else:
+        siphon = extract_carotid_siphon(dirpath)
     locator = get_locator(siphon)
     ID1 = locator.FindClosestPoint(p1)
     ID2 = locator.FindClosestPoint(p2)
