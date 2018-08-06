@@ -1,6 +1,7 @@
 import sys; sys.path.insert(0, '../src/')
 
 from move_siphon import *
+from automated_geometric_quantities import compute_angle
 from IPython import embed
 
 # Global parameters
@@ -78,21 +79,24 @@ def test_decrease_curvature():
 def test_increase_siphon_angle():
     alpha = -0.1 
     beta = 0.4
+    method = "plane"
     move_vessel(dirpath, smooth, name, point_path, alpha, beta)
-    angle_original = 0.5
-    angle_new = 0.7
+    new_centerlines_path = path.join(dirpath, name, "new_centerlines_alpha_%s_beta_%s.vtp"
+                                     % (alpha, beta))
+    new_cl = read_polydata(new_centerlines_path)
+    angle_new, angle_original = compute_angle(dirpath, point_path, name, alpha, 
+                                              beta, method, new_centerline=new_cl)  
     assert angle_original < angle_new 
+
 
 def test_decrease_siphon_angle():
     alpha = 0.4 
     beta = -0.1
+    method = "plane"
     move_vessel(dirpath, smooth, name, point_path, alpha, beta)
-    angle_original = 0.9
-    angle_new = 0.7
+    new_centerlines_path = path.join(dirpath, name, "new_centerlines_alpha_%s_beta_%s.vtp"
+                                     % (alpha, beta))
+    new_cl = read_polydata(new_centerlines_path)
+    angle_new, angle_original = compute_angle(dirpath, point_path, name, alpha, 
+                                              beta, method, new_centerline=new_cl)  
     assert angle_original > angle_new 
-
-
-#test_increase_curvature()
-#test_decrease_curvature()
-test_increase_siphon_angle()
-#test_decrease_siphon_angle()
