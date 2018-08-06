@@ -475,8 +475,8 @@ def change_area(voronoi, lineToChange, beta, ratio, percentage, stenosis, stenos
 
     # Make a sphere at the end of the line
     pointID = lineToChange.GetNumberOfPoints()
-    c1 = lineToChange.GetPoints().GetPoint(pointID)
-    c2 = lineToChange.GetPoints().GetPoint(pointID - 1)
+    c1 = lineToChange.GetPoints().GetPoint(pointID - 1)
+    c2 = lineToChange.GetPoints().GetPoint(pointID - 2)
     r = get_array(radiusArrayName, lineToChange)[-1]
     t = [c1[i] - c2[i] for i in range(len(c1))]
     lastSphere = vtk.vtkSphere()
