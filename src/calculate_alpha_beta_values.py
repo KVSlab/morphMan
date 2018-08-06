@@ -21,8 +21,7 @@ def read_command_line():
     parser.add_argument('-r', '--radius', type=float, default=0.15,
                         help="Radius of bounding circle, limiting the choice of alpha and beta")
     parser.add_argument('-b', '--boundary', nargs='+', default=None,
-                        help='Boundary of grid, as a list: [alpha_min, alpha_max, beta_min, beta_max]',
-                        required=True)
+                        help='Boundary of grid, as a list: [alpha_min, alpha_max, beta_min, beta_max]')
 
     args = parser.parse_args()
 
@@ -50,7 +49,7 @@ def get_alpha_beta(dirpath, i, files, param, boundary):
     print("Working on case %s" % case)
 
     # Get boundaries
-    amin, amax, bmin, bmax = boundary[0], boundary[1], boundary[2], boundary[3]
+    amin, amax, bmin, bmax = float(boundary[0]), float(boundary[1]), float(boundary[2]), float(boundary[3])
 
     # Set standard deviations used to find intersetcion
     if param == "curvature":
