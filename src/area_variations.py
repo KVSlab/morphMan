@@ -591,7 +591,7 @@ def area_variations(folder, beta, smooth, stats, r_change, percentage, stenosis,
 
     # Clean and capp / uncapp surface
     parameters = get_parameters(folder)
-    surface, capped_surface = preare_surface(model_path, parameters)
+    surface, capped_surface = prepare_surface(model_path, parameters)
 
     # Smooth voronoi diagram
     voronoi = prepare_voronoi_diagram(surface, model_smoothed_path, voronoi_path, voronoi_smoothed_path,
@@ -634,7 +634,7 @@ def area_variations(folder, beta, smooth, stats, r_change, percentage, stenosis,
         print("Write surface to: {}".format(model_new_surface.split("/")[-1]))
         # TODO: Add Automated clipping of newmodel
         new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100)
-        new_surface = clean_and_check_surface(new_surface, centerlines_in_order,
+        new_surface = clean_and_check_surface(new_surface, centerlines,
                                         model_new_surface_clean, centerline_new_path)
         write_polydata(new_surface, model_new_surface)
 

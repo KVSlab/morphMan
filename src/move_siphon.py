@@ -17,18 +17,23 @@ def read_command_line():
 
     parser.add_argument('-d', '--dir_path', type=str, default=".",
                         help="Path to the folder with all the cases")
-    parser.add_argument('--case', '-c', type=str, default=None, help="Choose case")
+    parser.add_argument('--case', '-c', type=str, default=None,
+                        help="Choose case")
     parser.add_argument('-s', '--smooth', type=bool, default=True,
-                        help="If the original voronoi diagram (surface) should be" + \
+                        help="If the original voronoi diagram " +
+                        "(surface) should be" +
                         "smoothed before it is manipulated", metavar="smooth")
     parser.add_argument("-a", "--alpha", type=float, default=0.0,
-                        help="Compression factor in vertical direction, ranging from -1.0 to 1.0")
+                        help="Compression factor in vertical direction, " +
+                        "ranging from -1.0 to 1.0")
     parser.add_argument("-b", "--beta", type=float, default=0.0,
-                        help="Compression factor in horizontal direction, ranging from -1.0 to 1.0")
+                        help="Compression factor in horizontal direction, " +
+                        "ranging from -1.0 to 1.0")
     parser.add_argument('-sf', '--smooth_factor', type=float, default=0.25,
-                         help="If smooth option is true then each voronoi point" + \
-                         " that has a radius less then MISR*(1-smooth_factor) at" + \
-                         " the closest centerline point is removes", metavar="smoothening_factor")
+                        help="If smooth is True then each voronoi point" +
+                        " that has a radius less then MISR*(1-sf) at" +
+                        " the closest centerline point is removes",
+                        metavar="smoothening_factor")
 
     args = parser.parse_args()
 
@@ -275,7 +280,7 @@ def move_vessel_vertically(dirpath, name, oldpoints, alpha, beta, voronoi_remain
                                     % (alpha,beta))
     new_centerlines_path = path.join(dirpath, name, "new_centerlines_alpha_%s_beta_%s.vtp"
                                     % (alpha, beta))
-    new_centerlines_path_clean  = path.join(dirpath, name, "new_centerlines_alpha_%s_beta_%s_clean.vtp"
+    new_centerlines_path_clean = path.join(dirpath, name, "new_centerlines_alpha_%s_beta_%s_clean.vtp"
                                     % (alpha, beta))
 
     # Set clipping points in order and make VTK objects

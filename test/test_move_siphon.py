@@ -25,6 +25,7 @@ ID1, ID2 = old_locator.FindClosestPoint(clipping_points[0]), old_locator.FindClo
 if ID1 > ID2: ID1, ID2 = ID2, ID1
 curvature_original = max(old_curv[ID1:ID2])
 
+
 def test_increase_curvature():
     alpha = 0.4 
     beta = -0.1
@@ -49,6 +50,7 @@ def test_increase_curvature():
     # Compare
     curvature_new = max(new_curv[IDA:IDB])
     assert curvature_original < curvature_new
+
 
 def test_decrease_curvature():
     alpha = -0.1 
@@ -76,6 +78,7 @@ def test_decrease_curvature():
     curvature_new = max(new_curv[IDA:IDB])
     assert curvature_original > curvature_new
 
+
 def test_increase_siphon_angle():
     alpha = -0.1 
     beta = 0.4
@@ -100,3 +103,4 @@ def test_decrease_siphon_angle():
     angle_new, angle_original = compute_angle(dirpath, point_path, name, alpha, 
                                               beta, method, new_centerline=new_cl)  
     assert angle_original > angle_new 
+

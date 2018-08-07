@@ -109,7 +109,11 @@ def compute_angle(dirpath, point_path, name, alpha, beta, method, proj=False, ne
     manipulated_line, dx = get_new_centerline(centerlines_in_order, ID1, ID2,
                                             vtk_clipping_points, alpha,
                                             beta, eye)
-    new_centerline = manipulated_line if new_centerline is None else new_centerline
+    if new_centerline is None:
+        new_centerline = manipulated_line
+    else:
+        new_centerline = sort_centerlines(new_centerline)
+        new_centerline = extract_single_line(new_centerline, 0)
 
     # Extract old siphon and prepare
     if path.exists(siphon_path):
@@ -347,6 +351,10 @@ def compute_angle(dirpath, point_path, name, alpha, beta, method, proj=False, ne
                 IDB = int(newmaxID * (1 + (1 - frac)))
                 newpA = moved_siphon.GetPoints().GetPoint(IDA)
                 newpB = moved_siphon.GetPoints().GetPoint(IDB)
+                print moved_p1
+                print newpA
+                print moved_p2
+                print newpB
 
                 deg, l1, l2 = find_angle(pA, pB, p1, p2, proj)
                 newdeg, nl1, nl2 = find_angle(newpA, newpB, moved_p1, moved_p2, proj)

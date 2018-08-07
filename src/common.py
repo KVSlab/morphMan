@@ -1521,6 +1521,8 @@ def vmtk_centerline_geometry(line, smooth, outputsmoothed=False, factor=1.0, ite
         geometry.OutputSmoothedLines = outputsmoothed
         geometry.SmoothingFactor = factor
         geometry.NumberOfSmoothingIterations = iterations
+    geometry.FernetTangentArrayName = "FernetTangent"
+    geometry.FernetNormalArrayName = "FernetNormal"
     geometry.CurvatureArrayName = "Curvature"
     geometry.TorsionArrayName = "Torsion"
     geometry.Execute()
