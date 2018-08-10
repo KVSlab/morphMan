@@ -19,9 +19,8 @@ def read_command_line():
     """
     parser = ArgumentParser()
 
-    parser.add_argument('-d', '--dir_path', type=str, default=".",
-                        help="Path to the folder with all the cases")
-    parser.add_argument('-c', '--case', type=str, default=None, help="Choose case")
+    parser.add_argument('-i', '--ifile', type=str, default=None,
+                        help="Path to input surface")
     parser.add_argument('--s', '--smooth', type=bool, default=False,
                         help="If the original voronoi diagram (surface) should be" + \
                         "smoothed before it is manipulated", metavar="smooth")
@@ -60,7 +59,7 @@ def read_command_line():
     ang_ = 0 if args.a == 0 else math.pi / args.a
 
     return args.s, ang_, args.smooth_factor, args.leave1, args.leave2, \
-           args.bif, args.dir_path, args.case, args.lower, \
+           args.bif, args.ifile, args.lower, \
            args.cylinder_factor, args.version, args.aneurysm, args.anu_num, args.step
 
 
@@ -457,7 +456,7 @@ def sort_outlets(outlets, outlet1, outlet2, dirpath):
     return outlets, outlet1, outlet2
 
 
-def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
+def rotate_branches(surface_path, smooth, smooth_factor, angle, l1, l2, bif, lower,
          cylinder_factor, aneurysm, anu_num, resampling_step, version):
     """
     Objective rotation of daughter branches, by rotating
@@ -469,8 +468,7 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
     Includes the option to rotate only one of the daughter branches.
 
     Args:
-        dirpath (str): Directory where case folder is located.
-        name (str): Name of directory where case model is located.
+        surface_path (str): Path to input surface.
         smooth (bool): Determine if the voronoi diagram should be smoothed.
         smooth_factor (float): Smoothing factor used for voronoi diagram smoothing.
         angle (float): Angle which daughter branches are moved, in radians.
@@ -485,14 +483,14 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
         version (bool): Determines bifurcation interpolation method.
     """
     # Filenames
+    dirpath = path.dirname(surface_path)
+    name = surface_path.split(path.sep)[-1].split(".")[0]
     folder = path.join(dirpath, name + "%s")
-
-    # Input filenames
-    model_path = folder % ".vtp"
 
     # Output names
     # Surface
-    model_smoothed_path = folder % "_smooth.vtp"
+    surface_smoothed_path = folder % "_smooth.vtp"
+    surface_capped_path = folder % "_capped.vtp"
 
     # Centerliens
     centerline_par_path = folder % "_centerline_par.vtp"
@@ -530,11 +528,7 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
     s += "" if not smooth else "_smooth"
     s += "" if not lower else "_lower"
     s += "" if cylinder_factor == 7.0 else "_cyl%s" % cylinder_factor
-    model_new_surface = folder % ("_angle" + s + ".vtp")
-
-    # Read and check model
-    if not path.exists(model_path):
-        RuntimeError("The given directory: %s did not contain the file: model.vtp" % dirpath)
+    new_surface_path = folder % ("_angle" + s + ".vtp")
 
     # Get aneurysm type
     parameters = get_parameters(dirpath)
@@ -543,8 +537,7 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
         print("Aneurysm type read from info.txt file: %s" % aneurysm_type)
 
     # Clean and capp / uncapp surface
-    open_surface, capped_surface = prepare_surface(model_path, parameters)
-    surface = open_surface
+    surface, capped_surface = prepare_surface(surface_path, surface_capped_path, parameters)
 
     # Get aneurysm "end point"
     if aneurysm:
@@ -554,7 +547,7 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
 
     # Get inlet and outlets
     outlet1, outlet2 = get_relevant_outlets(capped_surface, dirpath)
-    inlet, outlets = get_centers(open_surface, dirpath)
+    inlet, outlets = get_centers(surface, dirpath)
 
     # Sort outlets
     outlets, outlet1, outlet2 = sort_outlets(outlets, outlet1, outlet2, dirpath)
@@ -609,7 +602,7 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
         write_polydata(voronoi_smoothed, voronoi_smoothed_path)
 
         surface_smoothed = create_new_surface(voronoi_smoothed)
-        write_polydata(surface_smoothed, model_smoothed_path)
+        write_polydata(surface_smoothed, surface_smoothed_path)
 
     voronoi = voronoi if not smooth else read_polydata(voronoi_smoothed_path)
 
@@ -709,19 +702,15 @@ def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
     print("Create new surface")
     new_surface = create_new_surface(interpolated_voronoi)
 
-    print("Surface saved in: {}".format(model_new_surface.split("/")[-1]))
+    print("Surface saved in: {}".format(new_surface_path.split("/")[-1]))
     # TODO: Add Automated clipping of newmodel
     new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100)
-    write_polydata(new_surface, model_new_surface)
+    write_polydata(new_surface, new_surface_path)
 
 
 if __name__ == "__main__":
-    smooth, angle, smooth_factor, l1, l2, bif, basedir, case, lower, \
+    smooth, angle, smooth_factor, l1, l2, bif, surface_path, lower, \
     cylinder_factor, version, aneurysm, anu_num, resampling_step = read_command_line()
-    folders = listdir(basedir) if case is None else [case]
-    name = "surface/model"
-    for folder in folders:
-        if folder[:2] in ["P0", "C0"]:
-            print("Working on case", folder)
-            main(path.join(basedir, folder), name, smooth, smooth_factor, angle, l1,
-                  l2, bif, lower, cylinder_factor, aneurysm, anu_num, resampling_step, version)
+    rotate_branches(surface_path, smooth, smooth_factor, angle, l1,
+                    l2, bif, lower, cylinder_factor, aneurysm, anu_num, resampling_step,
+                    version)
