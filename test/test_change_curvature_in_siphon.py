@@ -21,13 +21,13 @@ old_longest = extract_single_line(sort_centerlines(old_cl),0)
 old_longest = vmtk_centerline_resampling(old_longest, 0.1)
 _, old_curv = discrete_geometry(old_longest, neigh=20)
 old_locator = get_locator(old_longest)
-ID1, ID2 = old_locator.FindClosestPoint(clipping_points[0]), old_locator.FindClosestPoint(clipping_points[1]) 
+ID1, ID2 = old_locator.FindClosestPoint(clipping_points[0]), old_locator.FindClosestPoint(clipping_points[1])
 if ID1 > ID2: ID1, ID2 = ID2, ID1
 curvature_original = max(old_curv[ID1:ID2])
 
 
 def test_increase_curvature():
-    alpha = 0.4 
+    alpha = 0.4
     beta = -0.1
     move_vessel(dirpath, smooth, name, point_path, alpha, beta)
 
@@ -44,7 +44,7 @@ def test_increase_curvature():
     # Select area based on clipping points
     new_locator = get_locator(new_longest)
 
-    IDA, IDB = new_locator.FindClosestPoint(clipping_points[0]), new_locator.FindClosestPoint(clipping_points[1]) 
+    IDA, IDB = new_locator.FindClosestPoint(clipping_points[0]), new_locator.FindClosestPoint(clipping_points[1])
     if IDA > IDB: IDA, IDB = IDB, IDA
 
     # Compare
@@ -53,7 +53,7 @@ def test_increase_curvature():
 
 
 def test_decrease_curvature():
-    alpha = -0.1 
+    alpha = -0.1
     beta = 0.4
     move_vessel(dirpath, smooth, name, point_path, alpha, beta)
 
@@ -71,36 +71,10 @@ def test_decrease_curvature():
     clipping_points = get_clipping_points(dirpath, point_path)
     new_locator = get_locator(new_longest)
 
-    IDA, IDB = new_locator.FindClosestPoint(clipping_points[0]), new_locator.FindClosestPoint(clipping_points[1]) 
+    IDA, IDB = new_locator.FindClosestPoint(clipping_points[0]), new_locator.FindClosestPoint(clipping_points[1])
     if IDA > IDB: IDA, IDB = IDB, IDA
 
     # Compare
     curvature_new = max(new_curv[IDA:IDB])
     assert curvature_original > curvature_new
-
-
-def test_increase_siphon_angle():
-    alpha = -0.1 
-    beta = 0.4
-    method = "plane"
-    move_vessel(dirpath, smooth, name, point_path, alpha, beta)
-    new_centerlines_path = path.join(dirpath, name, "new_centerlines_alpha_%s_beta_%s.vtp"
-                                     % (alpha, beta))
-    new_cl = read_polydata(new_centerlines_path)
-    angle_new, angle_original = compute_angle(dirpath, point_path, name, alpha, 
-                                              beta, method, new_centerline=new_cl)  
-    assert angle_original < angle_new 
-
-
-def test_decrease_siphon_angle():
-    alpha = 0.4 
-    beta = -0.1
-    method = "plane"
-    move_vessel(dirpath, smooth, name, point_path, alpha, beta)
-    new_centerlines_path = path.join(dirpath, name, "new_centerlines_alpha_%s_beta_%s.vtp"
-                                     % (alpha, beta))
-    new_cl = read_polydata(new_centerlines_path)
-    angle_new, angle_original = compute_angle(dirpath, point_path, name, alpha, 
-                                              beta, method, new_centerline=new_cl)  
-    assert angle_original > angle_new 
 

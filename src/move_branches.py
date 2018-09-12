@@ -454,7 +454,7 @@ def sort_outlets(outlets, outlet1, outlet2, dirpath):
     return outlets, outlet1, outlet2
 
 
-def main(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
+def rotate_branches(dirpath, name, smooth, smooth_factor, angle, l1, l2, bif, lower,
          cylinder_factor, aneurysm, anu_num, resampling_step, version):
     """
     Objective rotation of daughter branches, by rotating
@@ -723,5 +723,5 @@ if __name__ == "__main__":
     for folder in folders:
         if folder[:2] in ["P0", "C0"]:
             print("Working on case", folder)
-            main(path.join(basedir, folder), name, smooth, smooth_factor, angle, l1,
+            rotate_brances(path.join(basedir, folder), name, smooth, smooth_factor, angle, l1,
                   l2, bif, lower, cylinder_factor, aneurysm, anu_num, resampling_step, version)
