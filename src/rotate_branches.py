@@ -4,9 +4,6 @@ from os import path, listdir
 from time import time
 from copy import deepcopy
 
-import sys
-import math
-
 # Local import
 from patchandinterpolatecenterlines import *
 from clipvoronoidiagram import *
@@ -461,7 +458,7 @@ def sort_outlets(outlets, outlet1, outlet2, dirpath):
 
 
 def rotate_branches(surface_path, smooth, smooth_factor, angle, l1, l2, bif, lower,
-         cylinder_factor, aneurysm, anu_num, resampling_step, version):
+                    cylinder_factor, aneurysm, anu_num, resampling_step, version):
     """
     Objective rotation of daughter branches, by rotating
     centerlines and Voronoi diagram about the bifuraction center.
@@ -534,6 +531,13 @@ def rotate_branches(surface_path, smooth, smooth_factor, angle, l1, l2, bif, low
         s += "" if not lower else "_lower"
         s += "" if cylinder_factor == 7.0 else "_cyl%s" % cylinder_factor
         output_filepath = folder % ("_angle" + s + ".vtp")
+    #model_new_surface = folder % ("_angle" + s + ".vtp")
+    #model_new_surface_clean = folder % ("_angle"+s+"_cleaned.vtp")
+
+    # Read and check model
+    if not path.exists(model_path):
+        RuntimeError("The given directory: %s did not contain the file: model.vtp" % dirpath)
+>>>>>>> d62898a2af264d782def4ad649b49d4d3560ac59:src/move_branches.py
 
     # Get aneurysm type
     parameters = get_parameters(dirpath)
@@ -719,3 +723,6 @@ if __name__ == "__main__":
     rotate_branches(surface_path, smooth, smooth_factor, angle, l1,
                     l2, bif, lower, cylinder_factor, aneurysm, anu_num, resampling_step,
                     version, output_filepath)
+    new_surface = clean_and_check_surface(new_surface, None,
+                                          model_new_surface_clean, None)
+    write_polydata(new_surface, model_new_surface)

@@ -523,9 +523,5 @@ def landmark(folder, curv_method, algorithm, resamp_step, nknots, smooth, factor
 
 if __name__ == '__main__':
     basedir, case, curv_method, resamp_step, smooth, algorithm, nknots, factor_curv, factor_torsion, iterations = read_command_line()
-    #folders = listdir(basedir) if case is None else [case]
-    #for folder in sorted(folders):
-    #    dirpath = path.join(basedir, folder)
-    #    if path.isdir(dirpath):
     landmark(dirpath, curv_method, algorithm, resamp_step, nknots, smooth,
              factor_curv, factor_torsion, iterations)

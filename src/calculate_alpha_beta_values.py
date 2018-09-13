@@ -48,7 +48,7 @@ def get_alpha_beta(dirpath, i, files, param, boundary):
     print("Working on case %s" % case)
 
     # Get boundaries
-    amin, amax, bmin, bmax = boundary[0], boundary[1], boundary[2], boundary[3]
+    amin, amax, bmin, bmax = float(boundary[0]), float(boundary[1]), float(boundary[2]), float(boundary[3])
 
     # Set standard deviations used to find intersetcion
     if param == "curvature":

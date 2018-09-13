@@ -29,36 +29,6 @@ def get_clipping_points(dirpath, filename):
     return clipping_points
 
 
-def sort_centerlines(centerlines_complete):
-    """
-    Sort the complete set of centerlines
-    by placing the longest centerline first.
-
-    Args:
-        centerlines_complete (vtkPolyData): Complete set of centerlines.
-
-    Returns:
-        centerlines_in_order (vtkPolyData): Comlete set of sorted centerlines.
-    """
-    lines = []
-    n = centerlines_complete.GetNumberOfCells()
-    for i in range(n):
-        lines.append(extract_single_line(centerlines_complete, i))
-
-    longest = [lines[0]]
-    lenlong = get_curvilinear_coordinate(longest[0])
-    for i in range(1, n):
-        tmplong = get_curvilinear_coordinate(lines[i])
-        if len(tmplong) > len(lenlong):
-            lenlong = tmplong
-            longest.insert(0, lines[i])
-        else:
-            longest.append(lines[i])
-
-    centerlines_in_order = merge_data(longest)
-    return centerlines_in_order
-
-
 def connect_line(line):
     """
     Create edges between points defining a
@@ -600,8 +570,26 @@ def get_spline_points(line, param, direction, clip_points):
 
 
 def find_diverging_centerlines(centerlines, end_point):
+    """
+    Collect centerlines diverging from the longest
+    centerline.
+
+    Args:
+        centerlines (vtkPolyData): Collection of all centerlines.
+        end_point (tuple): End point of relevant centerline.
+
+    Returns:
+        div_ids (list): ID where lines diverege.
+    Returns:
+        div_points (list): Points where lines diverge.
+    Returns:
+        centerlines (vtkPolyData): Collection of centerlines not diverging.
+    Returns:
+        div_lines (list): Collection of divering centerlines.
+    """
     # Start with longest line
     longest = extract_single_line(centerlines, 0)
+    longest = vmtk_centerline_resampling(longest, 0.1)
     longest_locator = get_locator(longest)
     longest_end_id = longest_locator.FindClosestPoint(end_point)
 
@@ -617,6 +605,7 @@ def find_diverging_centerlines(centerlines, end_point):
     for i in range(n):
         div = False
         line_tmp = extract_single_line(centerlines, i + 1)
+        line_tmp = vmtk_centerline_resampling(line_tmp, 0.1)
         stop_id = len(get_curvilinear_coordinate(line_tmp))
         if longest_end_id < stop_id:
             stop_id = longest_end_id
@@ -624,7 +613,7 @@ def find_diverging_centerlines(centerlines, end_point):
             p_cl = np.asarray(longest.GetPoint(j))
             p_tmp = np.asarray(line_tmp.GetPoint(j))
             dist = distance(p_cl, p_tmp)
-            if dist > tol:
+            if dist > tol and j < (longest_end_id-20):
                 div_lines.append(line_tmp)
                 div_ids.append(j)
                 div_points.append(p_tmp)

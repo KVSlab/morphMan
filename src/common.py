@@ -43,7 +43,7 @@ def read_polydata(filename):
 
     Returns:
         polyData (vtkSTL/vtkPolyData/vtkXMLStructured/
-                    vtkXMLRectilinear∕vtkXMLPolydata/vtkXMLUnstructured/
+                    vtkXMLRectilinear/vtkXMLPolydata/vtkXMLUnstructured/
                     vtkXMLImage/Tecplot): Output data.
     """
 
@@ -91,8 +91,8 @@ def write_polydata(input_data, filename):
     Write the given input data based on the file name extension.
 
     Args:
-        input_data (vtkSTL∕vtkPolyData/vtkXMLStructured/
-                    vtkXMLRectilinear∕vtkXMLPolydata/vtkXMLUnstructured/
+        input_data (vtkSTL/vtkPolyData/vtkXMLStructured/
+                    vtkXMLRectilinear/vtkXMLPolydata/vtkXMLUnstructured/
                     vtkXMLImage/Tecplot): Input data.
         filename (str): Save path location.
     """
@@ -673,9 +673,9 @@ def write_points(points, filename):
 def surface_cleaner(surface):
     """
     Clean surface by merging
-    duplicate points, and∕or
+    duplicate points, and/or
     removing unused points
-    and∕or removing degenerate cells.
+    and/or removing degenerate cells.
 
     Args:
         surface (vtkPolyData): Surface model.
@@ -1527,6 +1527,8 @@ def vmtk_centerline_geometry(line, smooth, outputsmoothed=False, factor=1.0, ite
         geometry.OutputSmoothedLines = outputsmoothed
         geometry.SmoothingFactor = factor
         geometry.NumberOfSmoothingIterations = iterations
+    geometry.FernetTangentArrayName = "FernetTangent"
+    geometry.FernetNormalArrayName = "FernetNormal"
     geometry.CurvatureArrayName = "Curvature"
     geometry.TorsionArrayName = "Torsion"
     geometry.Execute()
@@ -1700,7 +1702,8 @@ def get_k1k2_basis(curvature, line):
     return line
 
 
-def spline_centerline(line, get_curv=False, isline=False, nknots=50, get_stats=True):
+def spline_centerline(line, get_curv=False, isline=False,
+                    nknots=50, get_stats=True, get_misr=True):
     """
     Given the knots and coefficients of a B-spline representation,
     evaluate the value of the smoothing polynomial and its derivatives.
@@ -1712,6 +1715,7 @@ def spline_centerline(line, get_curv=False, isline=False, nknots=50, get_stats=T
         isline (bool): Determines if centerline object is a line or points.
         nknots (int): Number of knots.
         get_stats (bool): Determines if curve attribuites are computed or not.
+        get_misr (bool): Determines if MISR values are computed or not.
 
     Returns:
         line (vtkPolyData): Splined centerline data.
@@ -1738,7 +1742,8 @@ def spline_centerline(line, get_curv=False, isline=False, nknots=50, get_stats=T
 
     # Collect data from centerline
     data = np.zeros((line.GetNumberOfPoints(), 3))
-    MISR = get_array(radiusArrayName, line)
+    if get_misr:
+        MISR = get_array(radiusArrayName, line)
 
     curv_coor = get_curvilinear_coordinate(line)
     for i in range(data.shape[0]):
@@ -1753,13 +1758,18 @@ def spline_centerline(line, get_curv=False, isline=False, nknots=50, get_stats=T
     fy_ = splev(curv_coor, fy)
     fz_ = splev(curv_coor, fz)
 
-    data = np.zeros((len(curv_coor), 4))
+    if get_misr:
+        data = np.zeros((len(curv_coor), 4))
+        data[:, 3] = MISR[:, 0]
+        header = ["X", "Y", "Z", radiusArrayName]
+    else:
+        data = np.zeros((len(curv_coor), 3))
+        header = ["X", "Y", "Z"]
+
     data[:, 0] = fx_
     data[:, 1] = fy_
     data[:, 2] = fz_
-    data[:, 3] = MISR[:, 0]
 
-    header = ["X", "Y", "Z", radiusArrayName]
     line = data_to_vtkPolyData(data, header)
 
     # Let vmtk compute curve attributes
@@ -2035,3 +2045,80 @@ def prepare_surface_output(surface, new_cl, original_surface, original_cl,
         # Test if new and old centerline diverges
 
     surface = vmtk_surface_smoother(surface, method="laplace")
+
+
+def sort_centerlines(centerlines_complete):
+    """
+    Sort the complete set of centerlines
+    by placing the longest centerline first.
+
+    Args:
+        centerlines_complete (vtkPolyData): Complete set of centerlines.
+
+    Returns:
+        centerlines_in_order (vtkPolyData): Comlete set of sorted centerlines.
+    """
+    lines = []
+    n = centerlines_complete.GetNumberOfCells()
+    for i in range(n):
+        lines.append(extract_single_line(centerlines_complete, i))
+
+    longest = [lines[0]]
+    lenlong = get_curvilinear_coordinate(longest[0])
+    for i in range(1,n):
+        tmplong = get_curvilinear_coordinate(lines[i])
+        if len(tmplong) > len(lenlong):
+            lenlong = tmplong
+            longest.insert(0, lines[i])
+        else:
+            longest.append(lines[i])
+
+    centerlines_in_order = merge_data(longest)
+
+    return centerlines_in_order
+
+
+def clean_and_check_surface(surface, centerlines, model_path, centerlines_path):
+    """
+    Clean and check surface for overlapping regions.
+
+    Args:
+        surface (str): Surface model.
+        centerlines (str): New centerlines.
+        model_path (str): Path to surface model.
+        centerlines_path (str): Save path to tmp centerlines.
+
+    Returns:
+        surface (vtkPolyData): Cleaned surface model.
+    """
+    # Clean surface
+    surface = surface_cleaner(surface)
+    surface = triangulate_surface(surface)
+    write_polydata(surface, model_path)
+
+   # Check connectivity and only choose the surface with the largest area
+    connected_surface = get_connectivity(surface, mode="Largest")
+    if connected_surface.GetNumberOfPoints() != surface.GetNumberOfPoints():
+        WritePolyData(surface, model_path.replace(".vtp", "_test.vtp"))
+
+    # Check if model has overlapping regions
+    if centerlines is not None:
+        centerlines_to_check = sort_centerlines(make_centerline(model_path,
+                                                centerlines_path, recompute=True))
+        line_to_check = extract_single_line(centerlines_to_check, 0)
+        line_to_check = vmtk_centerline_resampling(line_to_check, length=0.1)
+        line_to_compare = extract_single_line(centerlines, 0)
+        line_to_compare = vmtk_centerline_resampling(line_to_compare, length=0.1)
+
+        # Compare distance between points along both centerliens
+        N = min([line_to_check.GetNumberOfPoints(), line_to_compare.GetNumberOfPoints()])
+        tolerance = get_tolerance(line_to_compare) * 100
+        for i in range(N):
+            p1 = np.asarray(line_to_check.GetPoint(i))
+            p2 = np.asarray(line_to_compare.GetPoint(i))
+            dist = distance(p1, p2)
+            if dist > tolerance:
+                print("\nModel has overlapping regions. Check surface model.")
+                sys.exit(0)
+
+    return surface

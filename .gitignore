@@ -3,5 +3,6 @@
 
 # Temporary files
 *.vtp
+*.particles
 *.swp
 *~

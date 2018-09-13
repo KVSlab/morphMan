@@ -40,6 +40,8 @@ def read_command_line():
             help="Method for computing curv. Available methods: disc | knotfree | vmtkfactor | vmtkit | spline")
     parser.add_argument('-ma', '--method_angle', type=str, default="plane",
             help="Method for computing siphon angle. Available methods: plane | itplane | itplane_clip | maxcurv | smooth | discrete | frac | odrline | MISR ")
+    parser.add_argument('-bd', '--boundary', nargs='+', default=None,
+                        help='Boundary of grid, as a list: [alpha_min, alpha_max, beta_min, beta_max]')
 
     args = parser.parse_args()
 
@@ -63,6 +65,7 @@ def compute_angle(input_filepath, point_path, name, alpha, beta, method, proj=Fa
         beta (float): Extension / Compression factor in horizontal direction.
         method (str): Method used to compute angle.
         proj (bool): True / False for computing 2D / 3D angle.
+        new_centerline (vtkPolyData): Optional data to new centerline.
 
     Returns:
         newdeg (float): New angle of a vessel bend from a manipulated centerline.
@@ -106,72 +109,45 @@ def compute_angle(input_filepath, point_path, name, alpha, beta, method, proj=Fa
 
     # Special cases including the opthalmic artery
     eye, clip_ID, centerlines_complete, eyeline = find_ophthalmic_artery(centerlines_complete, clipping_points)
+    manipulated_line, dx = get_new_centerline(centerlines_in_order, ID1, ID2,
+                                            vtk_clipping_points, alpha,
+                                            beta, eye)
+    if new_centerline is None:
+        new_centerline = manipulated_line
+    else:
+        new_centerline = sort_centerlines(new_centerline)
+        new_centerline = extract_single_line(new_centerline, 0)
 
-    # Move new line manually
-    print("Getting clipped curve.")
-    clipped_curve = extract_single_line(centerlines_in_order, 0, startID=ID1, endID=ID2)
-    patch_cl = CreateParentArteryPatches(centerlines_in_order, vtk_clipping_points, siphon=True)
-    patch_start = extract_single_line(patch_cl, 0)
-    patch_ends = []
-    n = centerlines_in_order.GetNumberOfCells()
-    for i in range(1, n + 1):
-        patch_ends.append(extract_single_line(patch_cl, i))
+    # Extract old siphon and prepare
+    if path.exists(siphon_path):
+        siphon = read_polydata(siphon_path)
+    else:
+        siphon = extract_carotid_siphon(dirpath)
+    locator = get_locator(siphon)
+    ID1 = locator.FindClosestPoint(p1)
+    ID2 = locator.FindClosestPoint(p2)
+    endID = siphon.GetNumberOfPoints() - 1
 
-    # Find directions to move centerline
-    direction = "horizont"
-    middle_points, middleIds = get_spline_points(line, beta, direction, vtk_clipping_points)
-    dx_p1 = middle_points[0] - p1
-    dx_p2 = middle_points[-1] - p2
+    # Get new siphon and prepare
+    moved_ID1, moved_ID2, moved_p1, moved_p2, moved_siphon, \
+             moved_siphon_curv = get_moved_siphon(new_centerline, siphon, endID, p1, p2)
 
-    print("Moving centerline manually")
-    # Move horizontally
-    patchline_1 = patch_start
-    patchline_2 = patch_ends[0]
-    patch_cl_new1 = move_line_horizontally(patchline_1, ID1, ID2, dx_p1, clip=False, side="left")
-    patch_cl_new2 = move_line_horizontally(patchline_2, ID1, ID2, dx_p1, clip=False, side="right")
-    clipped_part_new = move_line_horizontally(clipped_curve, ID1, ID2, dx_p1, clip=True, eye=eye)
-    new_centerline = merge_data([patch_cl_new1, clipped_part_new, patch_cl_new2])
-    clipped_part_new = connect_line(clipped_part_new)
-
-    # Move vertically
-    direction = "vertical"
-    middle_points, middleIds, dx = get_spline_points(new_centerline, alpha, direction, vtk_clipping_points)
-    clipped_part_new = move_points_vertically(clipped_part_new, dx)
-    new_centerline = merge_data([patch_cl_new1, clipped_part_new, patch_cl_new2])
-    new_centerline = connect_line(new_centerline)
-
-    # Extract siphons from old and new centerline
-    locator = get_locator(new_centerline)
-    ica_siphon = read_polydata(siphon_path)
-    endID = ica_siphon.GetNumberOfPoints() - 1
-    endID_new = locator.FindClosestPoint(ica_siphon.GetPoint(endID))
-    new_ica_siphon = newsiphon = cut_centerline(new_centerline, endID_new)
-    newID1 = locator.FindClosestPoint(p1)
-    newID2 = locator.FindClosestPoint(p2)
-    newline_sp, newcurv_sp = spline_centerline(new_ica_siphon, get_curv=True, isline=True, nknots=11)
-    new_p1 = newline_sp.GetPoints().GetPoint(newID1)
-    new_p2 = newline_sp.GetPoints().GetPoint(newID2)
-    moved_carotid_siphon = extract_single_line(newline_sp, 0, startID=newID1, endID=newID2)
-
-    # Rename
-    siphon = ica_siphon
-    moved_siphon = moved_carotid_siphon
 
     if method in ["maxcurv", "odrline", "smooth", "frac"]:
         nknots = 11
-        line_sp, curv_sp = spline_centerline(siphon, get_curv=True, isline=True, nknots=nknots)
-        curv_sp = resample(curv_sp, line_sp.GetNumberOfPoints())
-        newline_sp, newcurv_sp = spline_centerline(newsiphon, get_curv=True, isline=True, nknots=nknots)
-        cutcurv = curv_sp[ID1:ID2]
-        newcutcurv = newcurv_sp[newID1:newID2]
+        siphon_splined, siphon_curv = spline_centerline(siphon, get_curv=True, isline=True, nknots=nknots, get_misr=False)
+        siphon_splined =  extract_single_line(siphon_splined, 0, startID=ID1, endID=ID2)
+        siphon_curv = resample(siphon_curv, siphon_splined.GetNumberOfPoints())
+        cutcurv = siphon_curv[ID1:ID2]
+        newcutcurv = moved_siphon_curv[moved_ID1:moved_ID2]
 
     if method == "discrete":
         # Smooth line with discrete derivatives
         neigh = 30
         line_d, curv_d = discrete_geometry(siphon, neigh=neigh)
-        newline_d, newcurv_d = discrete_geometry(newsiphon, neigh=neigh)
+        newline_d, newcurv_d = discrete_geometry(moved_siphon, neigh=neigh)
         cutcurv_d = curv_d[ID1:ID2]
-        newcutcurv_d = newcurv_d[newID1:newID2]
+        newcutcurv_d = newcurv_d[moved_ID1:moved_ID2]
 
     if method == "MISR":
         # Map MISR values to old and new splined anterior bend
@@ -198,6 +174,12 @@ def compute_angle(input_filepath, point_path, name, alpha, beta, method, proj=Fa
     else:
         print("Computing 3D Angles")
 
+    # Get anterior bend only
+    siphon =  extract_single_line(siphon, 0, startID=ID1, endID=ID2)
+    moved_siphon =  extract_single_line(moved_siphon, 0, startID=moved_ID1, endID=moved_ID2)
+    ID1, ID2 = 0, siphon.GetNumberOfPoints() - 1
+    moved_ID1, moved_ID2 = 0, moved_siphon.GetNumberOfPoints() - 1
+
     # Find adjusted clipping points (and tracing points)
     if method == "plane":
         maxP, maxID = find_furthest_points(dx, siphon)
@@ -215,16 +197,16 @@ def compute_angle(input_filepath, point_path, name, alpha, beta, method, proj=Fa
         p1_1, p1_id = find_closest_point(T1[-1], 0, maxID, p2, siphon)
         p2_2, p2_id = find_closest_point(T1[0], maxID, siphon.GetNumberOfPoints(), p1, siphon)
 
-        newp1_1, np1_id = find_closest_point(T2[-1], 0, newmaxID, new_p2, moved_siphon)
-        newp2_2, np2_id = find_closest_point(T2[0], newmaxID,
-                                             moved_siphon.GetNumberOfPoints(), new_p1,
+        newp1, np1_id = find_closest_point(T2[-1], 0, newmaxID, moved_p2, moved_siphon)
+        newp2, np2_id = find_closest_point(T2[0], newmaxID,
+                                             moved_siphon.GetNumberOfPoints(), moved_p1,
                                              moved_siphon)
 
         N1 = get_array("FrenetBinormal", siphon, k=3)[p1_id]
         N2 = get_array("FrenetBinormal", moved_siphon, k=3)[np1_id]
 
         dP = p1_1 - p2_2
-        dnewP = newp1_1 - newp2_2
+        dnewP = newp1 - newp2
 
         normal = np.cross(dP, N1)
         newnormal = np.cross(dnewP, N2)
@@ -235,12 +217,12 @@ def compute_angle(input_filepath, point_path, name, alpha, beta, method, proj=Fa
     elif method == "maxcurv":
         maxID, v = max(enumerate(cutcurv), key=operator.itemgetter(1))
         newmaxID, v = max(enumerate(newcutcurv), key=operator.itemgetter(1))
-        maxP = line_sp.GetPoint(ID1 + maxID)
-        newmaxP = newline_sp.GetPoint(newID1 + newmaxID)
+        maxP = siphon_splined.GetPoint(ID1 + maxID)
+        newmaxP = moved_siphon.GetPoint(moved_ID1 + newmaxID)
 
     elif method == "smooth":
         allmaxcurv = argrelextrema(cutcurv, np.greater)[0]
-        allnewmaxcurv = argrelextrema(newcurv_sp, np.greater)[0]
+        allnewmaxcurv = argrelextrema(newsiphon_curv, np.greater)[0]
 
         tmpcurv = cutcurv
         while len(allmaxcurv) > 2:
@@ -271,8 +253,8 @@ def compute_angle(input_filepath, point_path, name, alpha, beta, method, proj=Fa
                     max_dist = dist
                     maxID = i
 
-        newnormP1 = [la.norm(np.array(new_p1) - np.array(moved_siphon.GetPoint(i))) for i in range(moved_siphon.GetNumberOfPoints())]
-        newnormP2 = [la.norm(np.array(new_p2) - np.array(moved_siphon.GetPoint(i))) for i in range(moved_siphon.GetNumberOfPoints() - 1, -1, -1)]
+        newnormP1 = [la.norm(np.array(moved_p1) - np.array(moved_siphon.GetPoint(i))) for i in range(moved_siphon.GetNumberOfPoints())]
+        newnormP2 = [la.norm(np.array(moved_p2) - np.array(moved_siphon.GetPoint(i))) for i in range(moved_siphon.GetNumberOfPoints() - 1, -1, -1)]
         newmaxID = 0
         new_max_dist = 0
         for i, n1 in enumerate(newnormP1):
@@ -288,8 +270,8 @@ def compute_angle(input_filepath, point_path, name, alpha, beta, method, proj=Fa
         limits = ["cumulative", "sd"]
         pA = pB = newpA = newpB = np.zeros(3)
         for limit in limits:
-            d1, d2, curvlineold = odr_line(ID1, ID2, line_sp, curv_sp, limit)
-            newd1, newd2, curvlinenew = odr_line(newID1, newID2, newline_sp, newcurv_sp, limit)
+            d1, d2, curvlineold = odr_line(ID1, ID2, siphon_splined, siphon_curv, limit)
+            newd1, newd2, curvlinenew = odr_line(moved_ID1, moved_ID2, moved_siphon, newsiphon_curv, limit)
 
             deg = find_angle_odr(d1, d2, proj)
             newdeg = find_angle_odr(newd1, newd2, proj)
@@ -305,35 +287,35 @@ def compute_angle(input_filepath, point_path, name, alpha, beta, method, proj=Fa
 
         pA, rA = move_past_sphere(siphon, p1, rad1, 0, step=1, stop=N1 - 1, X=param)
         pB, rB = move_past_sphere(siphon, p2, rad2, N1 - 1, step=-1, stop=0, X=param)
-        newpA, rA = move_past_sphere(moved_siphon, new_p1, newrad1, 0, step=1, stop=N2 - 1, X=param)
-        newpB, rB = move_past_sphere(moved_siphon, new_p2, newrad2, N2 - 1, step=-1, stop=0, X=param)
+        newpA, rA = move_past_sphere(moved_siphon, moved_p1, newrad1, 0, step=1, stop=N2 - 1, X=param)
+        newpB, rB = move_past_sphere(moved_siphon, moved_p2, newrad2, N2 - 1, step=-1, stop=0, X=param)
 
         deg, l1, l2 = find_angle(pA, pB, p1, p2, proj)
-        newdeg, nl1, nl2 = find_angle(newpA, newpB, new_p1, new_p2, proj)
+        newdeg, nl1, nl2 = find_angle(newpA, newpB, moved_p1, moved_p2, proj)
 
     else:
         if method == "frac":
             n_values = [5]
             l = [2]
             r = [3]
-
+            i = 0
             dX = 1. / n_values[i]
-            frac = "%sdiv%s" % (l[i], n_values[i])
             IDA = int(ID1 + (ID2 - ID1) * l[i] * dX)
             IDB = int(ID1 + (ID2 - ID1) * r[i] * dX)
-            pA = line_sp.GetPoints().GetPoint(IDA)
-            pB = line_sp.GetPoints().GetPoint(IDB)
+            pA = siphon_splined.GetPoints().GetPoint(IDA)
+            pB = siphon_splined.GetPoints().GetPoint(IDB)
 
-            IDA = int(newID1 + (newID2 - newID1) * l[i] * dX)
-            IDB = int(newID1 + (newID2 - newID1) * r[i] * dX)
-            newpA = newline_sp.GetPoints().GetPoint(IDA)
-            newpB = newline_sp.GetPoints().GetPoint(IDB)
+            IDA = int(moved_ID1 + (moved_ID2 - moved_ID1) * l[i] * dX)
+            IDB = int(moved_ID1 + (moved_ID2 - moved_ID1) * r[i] * dX)
+            newpA = moved_siphon.GetPoints().GetPoint(IDA)
+            newpB = moved_siphon.GetPoints().GetPoint(IDB)
 
-            newdeg, nl1, nl2 = find_angle(newpA, newpB, new_p1, new_p2, proj)
+            deg, l1, l2 = find_angle(pA, pB, p1, p2, proj)
+            newdeg, nl1, nl2 = find_angle(newpA, newpB, moved_p1, moved_p2, proj)
 
         elif method in ["plane", "itplane", "itplane_clip", "maxcurv", "smooth",
                         "discrete", "maxdist"]:
-            frac = [2. / 5.]
+            frac = 4. / 5.
             if method == "itplane_clip":
                 IDmid = (p2_id - p1_id) / 2.
                 newIDmid = (np2_id - np1_id) / 2.
@@ -368,16 +350,15 @@ def compute_angle(input_filepath, point_path, name, alpha, beta, method, proj=Fa
                 pA = siphon.GetPoints().GetPoint(IDA)
                 pB = siphon.GetPoints().GetPoint(IDB)
 
-                deg, l1, l2 = find_angle(pA, pB, p1, p2, proj)
-
                 IDA = int(newmaxID * frac)
                 IDB = int(newmaxID * (1 + (1 - frac)))
                 newpA = moved_siphon.GetPoints().GetPoint(IDA)
                 newpB = moved_siphon.GetPoints().GetPoint(IDB)
 
-                newdeg, nl1, nl2 = find_angle(newpA, newpB, new_p1, new_p2, proj)
+                deg, l1, l2 = find_angle(pA, pB, p1, p2, proj)
+                newdeg, nl1, nl2 = find_angle(newpA, newpB, moved_p1, moved_p2, proj)
 
-    return newdeg
+    return newdeg, deg
 
 
 def compute_curvature(dirpath, name, alpha, beta, method):
@@ -521,13 +502,71 @@ def compute_curvature(dirpath, name, alpha, beta, method):
         # 6) Splines
         if method == "spline":
             nknots = 50
-            line_sp, curv_sp = spline_centerline(new_centerline, get_curv=True,
+            siphon_splined, siphon_curv = spline_centerline(new_centerline, get_curv=True,
                                                  isline=True, nknots=nknots)
-            curv_sp = gauss(curv_sp, 5)
-            maxcurv = max(curv_sp[ID1_new + 10:ID2_new - 10])
+            siphon_curv = gauss(siphon_curv, 5)
+            maxcurv = max(siphon_curv[ID1_new + 10:ID2_new - 10])
 
     return maxcurv
 
+def get_new_centerline(centerlines_in_order, ID1, ID2, vtk_clipping_points,
+                        alpha, beta, eye):
+    """
+    Perform manipulation of geometry using
+    the original centerline as proxy. "
+
+    Args:
+        centerlines_in_order (vtkPolyData): Initial centerliens.
+        ID1 (int): ID of first clipping point.
+        ID2 (int): ID of second clipping point.
+        vtk_clipping_points (vtkPoints): Clipping points.
+        alpha (float): Compression / extension factor.
+        beta (float): Compression / extension factor.
+        eye (bool): True if opthalmic artery is present.
+
+    Returns:
+        new_centerline (vtkPolyData): Manipulated centerline.
+    Returns:
+        dx (ndarray): Manipulation direction
+    """
+    # Move new line manually
+    print("Getting clipped curve.")
+    clipped_curve = extract_single_line(centerlines_in_order, 0, startID=ID1, endID=ID2)
+    patch_cl = CreateParentArteryPatches(centerlines_in_order, vtk_clipping_points, siphon=True)
+    patch_start = extract_single_line(patch_cl, 0)
+    patch_ends = []
+    n = centerlines_in_order.GetNumberOfCells()
+
+    for i in range(1, n + 1):
+        patch_ends.append(extract_single_line(patch_cl, i))
+
+    # Find directions to move centerline
+    direction = "horizont"
+    line = extract_single_line(centerlines_in_order, 0)
+    middle_points, middleIds = get_spline_points(line, beta, direction, vtk_clipping_points)
+    p1 = np.asarray(vtk_clipping_points.GetPoint(0))
+    p2 = np.asarray(vtk_clipping_points.GetPoint(1))
+    dx_p1 = middle_points[0] - p1
+    dx_p2 = middle_points[-1] - p2
+
+    print("Moving centerline manually")
+    # Move horizontally
+    patchline_1 = patch_start
+    patchline_2 = patch_ends[0]
+    patch_cl_new1 = move_line_horizontally(patchline_1, ID1, ID2, dx_p1, clip=False, side="left")
+    patch_cl_new2 = move_line_horizontally(patchline_2, ID1, ID2, dx_p1, clip=False, side="right")
+    clipped_part_new = move_line_horizontally(clipped_curve, ID1, ID2, dx_p1, clip=True, eye=eye)
+    new_centerline = merge_data([patch_cl_new1, clipped_part_new, patch_cl_new2])
+    clipped_part_new = connect_line(clipped_part_new)
+
+    # Move vertically
+    direction = "vertical"
+    middle_points, middleIds, dx = get_spline_points(new_centerline, alpha, direction, vtk_clipping_points)
+    clipped_part_new = move_points_vertically(clipped_part_new, dx)
+    new_centerline = merge_data([patch_cl_new1, clipped_part_new, patch_cl_new2])
+    new_centerline = connect_line(new_centerline)
+
+    return new_centerline, dx
 
 def odr_line(ID1, ID2, line, curvature, limit):
     """
@@ -655,6 +694,42 @@ def odr_line(ID1, ID2, line, curvature, limit):
 
     return d1, d2, curvlines
 
+def get_moved_siphon(new_centerline, siphon, endID, p1, p2):
+    """
+    Extracts new siphon from new centerline
+    and clipping point information.
+
+    Args:
+        new_centerline (vtkPolyData): Centerline data.
+        siphon (vtkPolyData): Initial siphon.
+        endId (int): ID at end of siphon.
+        p1 (ndarray): First clipping point.
+        p2 (ndarray): Second clipping point.
+
+    Returns:
+        moved_ID1 (int): New ID of first clipping point.
+    Returns:
+        moved_ID1 (int): New ID of secon clipping point.
+    Returns:
+        moved_p1 (ndarray): New position of first clipping point.
+    Returns:
+        moved_p2 (ndarray): New position of second ipping point.
+    Returns:
+        moved_siphon (vtkPolyData): Splined siphon centerline.
+    Returns:
+        moved_siphon_curv (ndarray): Curvature array along siphon.
+    """
+    # Extract new siphon and prepare
+    locator = get_locator(new_centerline)
+    moved_endID = locator.FindClosestPoint(siphon.GetPoint(endID))
+    moved_siphon = cut_centerline(new_centerline, moved_endID)
+    moved_ID1 = locator.FindClosestPoint(p1)
+    moved_ID2 = locator.FindClosestPoint(p2)
+    moved_siphon, moved_siphon_curv = spline_centerline(moved_siphon, get_curv=True,
+                                            isline=True, nknots=11, get_misr=False)
+    moved_p1 = moved_siphon.GetPoints().GetPoint(moved_ID1)
+    moved_p2 = moved_siphon.GetPoints().GetPoint(moved_ID2)
+    return moved_ID1, moved_ID2, moved_p1, moved_p2, moved_siphon, moved_siphon_curv
 
 def cut_centerline(line, endID):
     """
@@ -761,7 +836,12 @@ def save_angle_or_curvature(values, case, param):
             np.savetxt(f, line, fmt='%.3f')
 
 
+<<<<<<< HEAD
 def main(surface_filepath, case, kappa, theta, alpha, beta, method_curv, method_angle, n=50):
+=======
+def initialize(basedir, case, kappa, theta, alpha, beta, boundary,
+                method_curv, method_angle, n=50):
+>>>>>>> d62898a2af264d782def4ad649b49d4d3560ac59
     """
     Initilization for computing curvature and angle.
     Values are either printed to terminal or stored in a (n x n) matrix.
@@ -777,30 +857,15 @@ def main(surface_filepath, case, kappa, theta, alpha, beta, method_curv, method_
         method_angle (str): Method used to compute angle.
         n (int): Determines matrix size when computing multiple values.
     """
-    #name = "surface"
-    #point_path = "carotid_siphon_points.particles"
-
-    # One or more cases
-    #if case is not None:
-    #    folders = [case]
-    #else:
-    #    folders = sorted([folder for folder in listdir(basedir) if folder[:2] in ["P0"]])
-
     # Movement in one or multiple directions
     if alpha is not None:
         alphas = [alpha]
         betas = [beta]
     else:
-        ab_bound = np.loadtxt("alphabeta_bound.txt")
         max_curv_values = np.zeros((n, n))
         angle_values = np.zeros((n, n))
-        k = 0
 
     # Iterate through cases and compute quantities
-    #for folder in folders:
-    #print("Working on case " + folder)
-    #casedir = path.join(basedir, folder)
-
     if alpha is None:
         amin, amax, bmin, bmax = ab_bound[k][0], ab_bound[k][1], ab_bound[k][2], ab_bound[k][3]
         alphas = np.linspace(amin, amax, n)
@@ -834,5 +899,5 @@ def main(surface_filepath, case, kappa, theta, alpha, beta, method_curv, method_
 
 
 if __name__ == "__main__":
-    basedir, case, kappa, theta, alpha, beta, method_curv, method_angle = read_command_line()
-    main(basedir, case, kappa, theta, alpha, beta, method_curv, method_angle)
+    basedir, case, kappa, theta, alpha, beta, method_curv, method_angle, boundary = read_command_line()
+    initialize(basedir, case, kappa, theta, alpha, beta, boundary, method_curv, method_angle)
