@@ -102,7 +102,7 @@ def move_vessel(dirpath, smooth, name, point_path, alpha=0.0, beta=0.0, smooth_f
     inlet, outlets = get_centers(surface, dirpath)
 
     # Compute all centerlines
-    centerlines_complete = vmtk_compute_centerlines(inlet, outlets,
+    centerlines_complete = compute_centerlines(inlet, outlets,
                                                centerline_complete_path,
                                                capped_surface, resampling=0.1)
     centerlines_in_order = sort_centerlines(centerlines_complete)

@@ -195,7 +195,6 @@ def InterpolatePatchCenterlines(patchCenterlines, parentCenterlines,
 
 
 def InterpolateSpline(startCell, endCell, additionalPoint):
-
     # If the centerline does not pass the bifurcation, return the centerline
     if startCell.GetPoints().GetPoint(0) == endCell.GetPoints().GetPoint(0):
         return endCell.GetPoints()

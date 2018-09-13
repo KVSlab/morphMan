@@ -4,9 +4,11 @@ import numpy.linalg as la
 import sys
 import math
 from vmtk import vtkvmtk, vmtkscripts
+from vtk.util import numpy_support
 from os import path, listdir
 from scipy.signal import argrelextrema, gaussian, resample
 from scipy.interpolate import splrep, splev
+
 from vmtkpointselector import *
 
 # Global array names
@@ -129,6 +131,24 @@ def write_polydata(input_data, filename):
     writer.Write()
 
 
+def get_path_names(input_filepath):
+    """Takes the input folderpath as argument, and returns the name of the case name, and
+    the path to the parent directory
+
+    Args:
+        input_filepath (str): Input filepath
+
+    Returns:
+        surface_name (str): Name of the case
+        surface_folder_path (str): Name of the parent directory
+    """
+
+    surface_name = input_filepath.split(path.sep)[-1].split(".")[0]
+    surface_folder_path = path.dirname(input_filepath)
+
+    return surface_name, surface_folder_path
+
+
 def make_voronoi_diagram(surface, filename):
     """
     Creates a surface model's
@@ -205,7 +225,7 @@ def get_relevant_outlets(surface, dir_path):
     return relevant_outlets
 
 
-def smooth_voronoi_diagram(voronoi, centerlines, smoothingFactor,
+def smooth_voronoi_diagram(voronoi, centerlines, smoothing_factor,
                          no_smooth_cl=None):
     """
     Smooth voronoi diagram based on a given
@@ -223,7 +243,7 @@ def smooth_voronoi_diagram(voronoi, centerlines, smoothingFactor,
     """
     numberOfPoints = voronoi.GetNumberOfPoints()
 
-    threshold = get_array(radiusArrayName, centerlines) * (1 - smoothingFactor)
+    threshold = get_array(radiusArrayName, centerlines) * (1 - smoothing_factor)
     locator = get_locator(centerlines)
     if no_smooth_cl is not None:
         no_locator = get_locator(no_smooth_cl)
@@ -700,7 +720,7 @@ def get_centers(surface, dir_path, flowext=False):
 
 
 def triangulate_surface(surface):
-    """Triangulate surface or polygon(?)"""
+    """Triangulate surface"""
     surfaceTriangulator = vtk.vtkTriangleFilter()
     surfaceTriangulator.SetInputData(surface)
     surfaceTriangulator.PassLinesOff()
@@ -898,7 +918,7 @@ def get_connectivity(surface, mode="All", closestPoint=None):
 
 
 def compute_circleness(surface):
-    edges = getFeatureEdges(surface)
+    edges = get_feature_edges(surface)
 
     # Get points
     points = []
@@ -961,35 +981,29 @@ def compute_centers(polyData, case_path=None, test_capped=False):
         return region_array.max() >= 1
 
     # Get points
-    points = []
-    get_point = outputs.GetPoints().GetPoint
+    points = np.zeros((region_array.shape[0], 3))
     for i in range(region_array.shape[0]):
-        points.append(get_point(i))
-    points = np.asarray(points)
+        points[i,] = outputs.GetPoint(i)
 
     # Get area and center
     area = []
     center = []
     for i in range(int(region_array.max()) + 1):
         # Extract points for this opening
-        index = (region_array == i).nonzero()[0]
-        n = index.shape[0]
-        tmp_points = np.zeros((n, 3))
-        if n <= 5:
-            continue
+        tmp_points = points[region_array[:, 0] == i, :]
 
-        # Insert points into VTK object
-        points_vtk = vtk.vtkPoints()
-        [points_vtk.InsertNextPoint(tmp_points[k]) for k in range(n)]
+        # Extract the surface edge
+        boundary_points = threshold(outputs, "RegionId", lower=i-0.1, upper=i+0.1,
+                                    type="between", source=0)
 
         # Create surface for computing area of opening
         delaunay = vtk.vtkDelaunay2D()
-        delaunay.SetInputdata(points_vtk)
+        delaunay.SetInputData(boundary_points)
         delaunay.Update()
 
         # Add quanteties
         area.append(compute_area(delaunay.GetOutput()))
-        center.append(np.mean(tmp_points, axsis=0))
+        center.append(np.mean(tmp_points, axis=0))
 
     # Store the center and area
     inlet_ind = area.index(max(area))
@@ -1045,7 +1059,7 @@ def distance(point1, point2):
     return np.sqrt(np.sum((np.asarray(point1) - np.asarray(point2)) ** 2))
 
 
-def remove_distant_points(voronoi, centerline, limit=None):
+def remove_distant_points(voronoi, centerline):
     N = voronoi.GetNumberOfPoints()
     newVoronoi = vtk.vtkPolyData()
     cellArray = vtk.vtkCellArray()
@@ -1054,15 +1068,8 @@ def remove_distant_points(voronoi, centerline, limit=None):
 
     locator = get_locator(centerline)
     get_data = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1
-
-    if limit is None:
-        limit = []
-        m = N // 500
-        steps = list(range(N))[::m]
-        for i in steps:
-            if 1 < get_data(i) < 10:
-                limit.append(get_data(i))
-        limit_ = np.median(limit) * 3
+    limit = get_data(0)
+    limit = limit * 10
 
     count = 0
     for i in range(N):
@@ -1070,7 +1077,7 @@ def remove_distant_points(voronoi, centerline, limit=None):
         ID = locator.FindClosestPoint(point)
         cl_point = centerline.GetPoint(ID)
         dist = distance(point, cl_point)
-        if limit(get_data(i), point, dist):
+        if dist/3 > get_data(i) or get_data(i) > limit:
             count += 1
             continue
 
@@ -1110,10 +1117,10 @@ def vmtk_compute_centerline_sections(surface, centerline):
     return line, CenterlineSections
 
 
-def vmtk_compute_centerlines(inlet, outlet, filepath, surface, resampling=1,
+def compute_centerlines(inlet, outlet, filepath, surface, resampling=1,
                         smooth=False, num_iter=100, smooth_factor=0.1,
-                        endPoint=1, method="pointlist"):
-    if path.isfile(filepath):
+                        endPoint=1, method="pointlist", recompute=False):
+    if path.isfile(filepath) and not recompute:
         return read_polydata(filepath)
 
     centerlines = vmtkscripts.vmtkCenterlines()
@@ -1373,105 +1380,104 @@ def vmtk_surface_smoother(surface, method, iterations=800):
     return surface
 
 
-def make_centerline(ifile, ofile, length=0.1, it=100, factor=0.1, in_out=None,
-                   smooth=False, resampling=False, newpoints=None,
-                   recompute=False, store_points=False, endpoints=0):
-    """
-    A general centerline command. If a centerline file with the same file
-    name alread exists, then the file is just read. To overwrite this set
-    recompute to True. If recomputed is to True then it uses the exsisting points
-    from the old centerline file and no interaction with the interface is
-    needed. Further on one can choose witch points you want to include by
-    giving in_out. The first element in the list is the source point, and if -1
-    is given, is chooses the old inlet, else it chooses outletX, where X is the
-    outlet ID.
-
-    Args:
-        ifile (vtkPolyData): Input surface model.
-        ofile (str): Name of output file.
-        length (float): Number in (0,1], the resampling step.
-        it(int):  Number of iterations of smoothing
-        factor (float): The smoothening factor
-        smooth (bool): Used to turn on/off smoothening
-        resampling (bool): Used to turn in/off resampling
-        in_out (list): Outlet/inlet points that should be used when recompute
-        newpoints (list): Outlet/inlet points that should be used when recompute
-    """
-
-    # Check if ifile exsists
-    if not path.exists(ifile):
-        print("The input file: %s does not exsists!" % ifile)
-        sys.exit(0)
-
-    # Check if it already exsists or if it is to be recomputed
-    if not path.exists(ofile) or recompute:
-        # If recomputed use the old source and target points
-        basedir = path.sep.join(path.join(ifile.split(path.sep)[:-2]))
-        parameters = get_parameters(basedir)
-
-        vmtkcenterlines = vmtkscripts.vmtkCenterlines()
-        vmtkcenterlines.Surface = read_polydata(ifile)
-
-        if newpoints is not None:
-            inlet = newpoints[-1]
-            points_ = newpoints[:-1]
-
-        elif "inlet" in parameters:
-            if in_out is None:
-                inlet = parameters["inlet"]
-                out = [k for k in list(parameters.keys()) if "outlet" in k and len(k) < 12]
-                out.sort()
-                points_ = [parameters[p] for p in out]
-            else:
-                inlet = parameters["inlet"] if in_out[0] == -1 else parameters["outlet%s" % in_out[0]]
-                points_ = [parameters["outlet%s" % i] for i in in_out[1:]]
-
-        if newpoints is not None or "inlet" in parameters:
-            # Extract outlet points
-            outlets = []
-            for p in points_:
-                for p_ in p:
-                    outlets.append(p_)
-
-            vmtkcenterlines.SeedSelectorName = "pointlist"
-            vmtkcenterlines.SourcePoints = inlet
-            vmtkcenterlines.TargetPoints = outlets
-        else:
-            vmtkcenterlines.SeedSelectorName = "pickpoint"
-
-        # Add resampling
-        if resampling:
-            vmtkcenterlines.Resampling = 1
-            vmtkcenterlines.ResamplingStepLength = length
-
-        # Exectue command and save centerline
-        vmtkcenterlines.AppendEndPoints = endpoints
-        vmtkcenterlines.Execute()
-
-        centerline = vmtkcenterlines.Centerlines
-        write_polydata(centerline, ofile)
-
-        # Add smoothing
-        if smooth:
-            centerlineSmoothing = vmtkscripts.vmtkCenterlineSmoothing()
-            centerlineSmoothing.Centerlines = centerline
-            centerlineSmoothing.NumberOfSmoothingIterations = it
-            centerlineSmoothing.SmoothingFactor = factor
-            centerlineSmoothing.Execute()
-            centerline = centerlinesSmooth.Centerlines
-
-        # If the points are not already stored, do it now
-        if store_points:
-            for i in range(centerline.GetNumberOfLines()):
-                tmp_line = extract_single_line(centerline, i)
-                tmp_N = tmp_line.GetNumberOfPoints()
-                parameters["outlet%s" % i] = tmp_line.GetPoint(tmp_N - 1)
-            parameters["inlet"] = tmp_line.GetPoint(0)
-            write_parameters(parameters, basedir)
-    else:
-        centerline = read_polydata(ofile)
-
-    return centerline
+#def make_centerline(ifile, ofile, length=0.1, it=100, factor=0.1, in_out=None,
+#                   smooth=False, resampling=False, newpoints=None,
+#                   recompute=False, store_points=False, endpoints=0):
+#    """
+#    A general centerline command. If a centerline file with the same file
+#    name alread exists, then the file is just read. To overwrite this set
+#    recompute to True. If recomputed is to True then it uses the exsisting points
+#    from the old centerline file and no interaction with the interface is
+#    needed. Further on one can choose witch points you want to include by
+#    giving in_out. The first element in the list is the source point, and if -1
+#    is given, is chooses the old inlet, else it chooses outletX, where X is the
+#    outlet ID.
+#
+#    Args:
+#        ifile (vtkPolyData): Input surface model.
+#        ofile (str): Name of output file.
+#        length (float): Number in (0,1], the resampling step.
+#        it(int):  Number of iterations of smoothing
+#        factor (float): The smoothening factor
+#        smooth (bool): Used to turn on/off smoothening
+#        resampling (bool): Used to turn in/off resampling
+#        in_out (list): Outlet/inlet points that should be used when recompute
+#        newpoints (list): Outlet/inlet points that should be used when recompute
+#    """
+#
+#    # Check if ifile exsists
+#    if not path.exists(ifile):
+#        print("The input file: %s does not exsists!" % ifile)
+#        sys.exit(0)
+#
+#    # Check if it already exsists or if it is to be recomputed
+#    if not path.exists(ofile) or recompute:
+#        # If recomputed use the old source and target points
+#        parameters = get_parameters(path.dirname(ifile))
+#
+#        vmtkcenterlines = vmtkscripts.vmtkCenterlines()
+#        vmtkcenterlines.Surface = read_polydata(ifile)
+#
+#        if newpoints is not None:
+#            inlet = newpoints[-1]
+#            points_ = newpoints[:-1]
+#
+#        elif "inlet" in parameters:
+#            if in_out is None:
+#                inlet = parameters["inlet"]
+#                out = [k for k in list(parameters.keys()) if "outlet" in k and len(k) < 12]
+#                out.sort()
+#                points_ = [parameters[p] for p in out]
+#            else:
+#                inlet = parameters["inlet"] if in_out[0] == -1 else parameters["outlet%s" % in_out[0]]
+#                points_ = [parameters["outlet%s" % i] for i in in_out[1:]]
+#
+#        if newpoints is not None or "inlet" in parameters:
+#            # Extract outlet points
+#            outlets = []
+#            for p in points_:
+#                for p_ in p:
+#                    outlets.append(p_)
+#
+#            vmtkcenterlines.SeedSelectorName = "pointlist"
+#            vmtkcenterlines.SourcePoints = inlet
+#            vmtkcenterlines.TargetPoints = outlets
+#        else:
+#            vmtkcenterlines.SeedSelectorName = "pickpoint"
+#
+#        # Add resampling
+#        if resampling:
+#            vmtkcenterlines.Resampling = 1
+#            vmtkcenterlines.ResamplingStepLength = length
+#
+#        # Exectue command and save centerline
+#        vmtkcenterlines.AppendEndPoints = endpoints
+#        vmtkcenterlines.Execute()
+#
+#        centerline = vmtkcenterlines.Centerlines
+#        write_polydata(centerline, ofile)
+#
+#        # Add smoothing
+#        if smooth:
+#            centerlineSmoothing = vmtkscripts.vmtkCenterlineSmoothing()
+#            centerlineSmoothing.Centerlines = centerline
+#            centerlineSmoothing.NumberOfSmoothingIterations = it
+#            centerlineSmoothing.SmoothingFactor = factor
+#            centerlineSmoothing.Execute()
+#            centerline = centerlinesSmooth.Centerlines
+#
+#        # If the points are not already stored, do it now
+#        if store_points:
+#            for i in range(centerline.GetNumberOfLines()):
+#                tmp_line = extract_single_line(centerline, i)
+#                tmp_N = tmp_line.GetNumberOfPoints()
+#                parameters["outlet%s" % i] = tmp_line.GetPoint(tmp_N - 1)
+#            parameters["inlet"] = tmp_line.GetPoint(0)
+#            write_parameters(parameters, basedir)
+#    else:
+#        centerline = read_polydata(ofile)
+#
+#    return centerline
 
 
 # Extract carotid siphon
@@ -1782,65 +1788,82 @@ def spline_centerline(line, get_curv=False, isline=False, nknots=50, get_stats=T
         return line
 
 
-def prepare_surface(model_path, parameters):
+def prepare_surface(surface_path, surface_capped_path, parameters):
     """
     Clean and check connectivity of surface.
-    Capps or uncapps surface model at inlet and outlets.
+    Capps or uncapps surface at inlet and outlets.
 
     Args:
-        model_path (str): Path to model.
-        parameters (dict): Contains surface model information.
+        surface_path (str): Path to surface.
+        parameters (dict): Contains surface information.
 
     Returns:
-        open_surface (vtkPolyData): Open surface model.
+        open_surface (vtkPolyData): Open surface.
     Returns:
-        capped_surface (vtkPolyData): Closed surface model.
+        capped_surface (vtkPolyData): Closed surface.
     """
+    # Check if surface path exists
+    if not path.exists(surface_path):
+        RuntimeError("Could not find the file: {}".format(surface_path))
+
     # Clean surface
-    surface = read_polydata(model_path)
+    surface = read_polydata(surface_path)
     surface = surface_cleaner(surface)
     surface = triangulate_surface(surface)
 
     # Check connectivity and only choose the surface with the largest area
     if "check_surface" not in parameters.keys():
-        connected_surface = gat_connectivity(surface, mode="Largest")
+        connected_surface = get_connectivity(surface, mode="Largest")
         if connected_surface.GetNumberOfPoints() != surface.GetNumberOfPoints():
-            WritePolyData(surface, model_path.replace(".vtp", "_test.vtp"))
+            WritePolyData(surface, surface_path.replace(".vtp", "_unconnected.vtp"))
+            WritePolyData(connected_surface, surface_path)
+            surface = connected_surface
+
+        parameters["check_surface"] = True
+        write_parameters(parameters, path.dirname(surface_path))
 
     # Get a capped and uncapped version of the surface
     if is_surface_capped(surface):
         open_surface = uncapp_surface(surface)
         capped_surface = surface
+        write_polydata(capped_surface, surface_capped_path)
+        write_polydata(open_surface, surface_path)
     else:
         open_surface = surface
-        capped_surface = capp_surface(surface)
+        if path.exists(surface_capped_path):
+            capped_surface = read_polydata(surface_capped_path)
+        else:
+            capped_surface = capp_surface(surface)
+            write_polydata(capped_surface, surface_capped_path)
 
     return open_surface, capped_surface
 
 
-def prepare_voronoi_diagram(model_path, voronoi_path, voronoi_smoothed_path,
-                            smooth, smooth_factor, centerlines):
+def prepare_voronoi_diagram(surface, voronoi_path, surface_smoothed_path, voronoi_smoothed_path=None,
+                            smooth=False, smooth_factor=0.25, centerlines=None, no_smooth_cl=None):
     """
     Compute and smooth voronoi diagram of surface model.
 
     Args:
-        model_path (str): Path to surface model.
+        surface (polydata): Surface model to create a Voronoi diagram of.
         voronoi_path (str): (Save)path to voronoi diagram.
         voronoi_smoothed_path (str): (Save)path to smoothed voronoi diagram.
         smooth (bool): Voronoi is smoothed if True.
         smooth_factor (float): Smoothing factor for voronoi smoothing.
         centerlines (vtkPolyData): Centerlines throughout geometry.
+        no_smooth_cl (vtkPolyData): Centerline of region which should not be smoothed.
 
     Returns:
         voronoi (vtkPolyData): Voronoi diagram of surface.
     """
     # Smooth voronoi diagram
-    voronoi = make_voronoi_diagram(model_path, voronoi_path)
+    voronoi = make_voronoi_diagram(surface, voronoi_path)
     if not path.exists(voronoi_smoothed_path) and smooth:
-        voronoi_smoothed = smooth_voronoi_diagram(voronoi, centerlines, smooth_factor)
+        voronoi_smoothed = smooth_voronoi_diagram(voronoi, centerlines, smooth_factor,
+                                                  no_smooth_cl)
         write_polydata(voronoi_smoothed, voronoi_smoothed_path)
         surface_smoothed = create_new_surface(voronoi_smoothed)
-        write_polydata(surface_smoothed, model_smoothed_path)
+        write_polydata(surface_smoothed, surface_smoothed_path)
     else:
         voronoi_smoothed = read_polydata(voronoi_smoothed_path)
 
@@ -1848,3 +1871,167 @@ def prepare_voronoi_diagram(model_path, voronoi_path, voronoi_smoothed_path,
     voronoi = voronoi_smoothed if smooth else voronoi
 
     return voronoi
+
+
+def vtk_box(bounds):
+    """Returns a vtk box object based on the bounds
+
+    Args:
+        bounds (list): Bounds x1, x2, y1, y2, z1, z2
+
+    Returns:
+        box (vtkBox): A vtk box
+    """
+    box = vtk.vtkBox()
+    box.SetBounds(bounds)
+
+    return box
+
+
+def clip_polydata(surface, cutter):
+    """Clip the inpute vtkPolyData object with a cutter function (plane, box, etc)
+
+    Args:
+        surface (vtkPolyData): Input vtkPolyData for clipping
+        cutter (vtkBox, vtkPlane): Function for cutting the polydata
+    """
+    clipper = vtk.vtkClipPolyData()
+    clipper.SetInputData(surface)
+    clipper.SetClipFunction(cutter)
+    clipper.GenerateClipScalarsOn()
+    clipper.Update()
+
+    return clipper.GetOutput()
+
+
+def prepare_surface_output(surface, new_cl, original_surface, original_cl,
+                           test_merge=False, rotated=False, margin=1.1, hight_ratio=0.1):
+    # Get planes if outlets of the original surface 
+    boundary_edges = get_feature_edges(original_surface)
+    boundary_connectivity = get_connectivity(boundary_edges)
+
+    vtk_array = boundary_connectivity.GetPointData().GetArray("RegionId")
+    vtk_points = boundary_connectivity.GetPoints().GetData()
+    region_id = numpy_support.vtk_to_numpy(vtk_array)
+    points = numpy_support.vtk_to_numpy(vtk_points)
+
+    # Get information from the original geometry
+    for i in range(region_id.max()):
+        # Get relevant points
+        tmp_points = points[region_id == i]
+
+        # Get normal
+        tmp_normal = np.cross(tmp_points[0] - tmp_points[-1],
+                              tmp_points[0] - tmp_points[tmp_points.shape[0] // 2])
+        normal = tmp_normal / np.sqrt(np.sum(tmp_normal**2))
+
+        # Get Center
+        center = np.mean(tmp_points, axis=0)
+
+        # FIXME: How to deal with the rotated branches when clipping the outlets?
+        if rotated:
+            pass
+            # Translate the center and bounds by comparing the endpoints of the centerlines
+            # Rotate the normal and bounds compared to the direction of the vector of the last
+            # two points in the centerline. (use center as origo)
+
+        tmp_points = tmp_points - center
+        vec = np.eye(3)
+        vec[:, 0] = normal
+        vec[:, 1] = (tmp_points[0] - center)
+        vec[:, 2] = tmp_points[tmp_points.shape[0] // 2] - center
+        vec[:, 1] = vec[:, 1] / np.sqrt(np.sum(vec[:, 1]**2))
+        vec[:, 2] = vec[:, 2] / np.sqrt(np.sum(vec[:, 2]**2))
+
+        # Make normal z-axis
+        R = gram_schmidt(vec)
+        R_inv = np.linalg.inv(R)
+
+        tmp_points = np.dot((tmp_points), R)
+
+        text = "\n".join(["{} {} {}".format(j, k, l) for j, k, l in tmp_points])
+        f = open("raw_points.particles", "w")
+        f.write(text)
+        f.close()
+
+        def convert_to_vtk_polydata(points):
+            """ Converts a numpy array to vtk points"""
+            vtk_points = vtk.vtkPoints()
+            for p in points:
+                vtk_points.InsertNextPoint(p)
+
+            vtk_polydata = vtk.vtkPolyData()
+            vtk_polydata.SetPoints(vtk_points)
+
+            return vtk_polydata
+
+        # Get bounds
+        tmp_points_vtk = vtk.vtkPoints()
+        [tmp_points_vtk.InsertNextPoint(tmp_points[k]) for k in range(tmp_points.shape[0])]
+        bound = list(tmp_points_vtk.GetBounds())
+
+        # TODO: Test direction
+
+        # Create box with safety margin of 10 % and hight of 0.1
+        bound[0] = 0
+        bound[1] = abs(bound[2] - bound[3])*hight_ratio
+        bound[2] *= margin
+        bound[3] *= margin
+        bound[4] *= margin
+        bound[5] *= margin
+
+        # Rotate 
+        rotation_axis = np.array([0, normal[2], -normal[1]]) / np.sqrt(normal[1]**2 + normal[2]**2)
+        angle = -np.arccos(normal[0]) * 180 / np.pi
+
+        # Create an implicit function for clipping
+        # TODO: Rotate box instead of surface
+        box = vtk_box(bound)
+
+        # Clip the surface
+        transform = vtk.vtkTransform()
+        transform.Translate(-center[0], -center[1], -center[2])
+        translationFilter = vtk.vtkTransformPolyDataFilter()
+        translationFilter.SetTransform(transform)
+        translationFilter.SetInputData(surface)
+        translationFilter.Update()
+        surf = translationFilter.GetOutput()
+
+        transform = vtk.vtkTransform()
+        transform.RotateWXYZ(-angle, rotation_axis)
+        translationFilter = vtk.vtkTransformPolyDataFilter()
+        translationFilter.SetTransform(transform)
+        translationFilter.SetInputData(surf)
+        translationFilter.Update()
+        surf = translationFilter.GetOutput()
+
+        write_polydata(surf, "test_rotated_surface.vtp")
+
+        tmp_surface = clip_polydata(surf, box)
+
+        transform = vtk.vtkTransform()
+        transform.RotateWXYZ(angle, rotation_axis)
+        translationFilter = vtk.vtkTransformPolyDataFilter()
+        translationFilter.SetTransform(transform)
+        translationFilter.SetInputData(tmp_surface)
+        translationFilter.Update()
+        surf = translationFilter.GetOutput()
+
+        transform = vtk.vtkTransform()
+        transform.Translate(center[0], center[1], center[2])
+        translationFilter = vtk.vtkTransformPolyDataFilter()
+        translationFilter.SetTransform(transform)
+        translationFilter.SetInputData(surf)
+        translationFilter.Update()
+        surf = translationFilter.GetOutput()
+
+        write_polydata(surf, "test_clip_%d.vtp" % i)
+
+        # NOTE: Should test for number of outlets after each clip
+
+    if test_merge:
+        # TODO: For robustness one could create a test for 
+        pass
+        # Test if new and old centerline diverges
+
+    surface = vmtk_surface_smoother(surface, method="laplace")

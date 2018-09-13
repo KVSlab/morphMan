@@ -4,6 +4,7 @@ from os import path
 from vmtk.vmtkscripts import vmtkRenderer
 from vmtk import vmtkrenderer
 
+# Modified from ...
 
 class VtkText:
     def __init__(self, guiText=""):

@@ -15,9 +15,13 @@ def read_command_line():
     """
     parser = ArgumentParser()
 
-    parser.add_argument('-c', '--case', type=str, default=None, help="Case")
-    parser.add_argument('-d', '--dir_path', type=str, default=".", help="Path")
-    parser.add_argument('--s', '--smooth', type=bool, default=False,
+    # FIXME: mandatory
+    parser.add_argument('-i', '--ifile', type=str, default=None,
+                        help="Path to the surface model")
+
+    # FIXME: sort arguments logically
+    # Optional
+    parser.add_argument('-s', '--smooth', type=bool, default=False,
                         help="If the original voronoi diagram", metavar="smooth")
     parser.add_argument('--beta', type=float, default=0.5,
             help="The new voronoi diagram is computed as (A/mean)**beta*r_old," + \
@@ -30,14 +34,13 @@ def read_command_line():
     parser.add_argument('-sf', '--smooth_factor', type=float, default=0.25,
                          help="If smooth option is true then each voronoi point" + \
                          " that has a radius less then MISR*(1-smooth_factor) at" + \
-                         " the closest centerline point is removes" metavar="smoothening_factor")
+                         " the closest centerline point is removes", metavar="smoothening_factor")
     parser.add_argument("--percentage", type=float, default=None, help="Percentage the" + \
                         " area of the geometry is increase/decreased overall or only stenosis")
     parser.add_argument("--stenosis", type=bool, default=False, help="Creates a user selected" + \
                         " stenosis in in the geometry. Area is decreased by the parameter 'precentage'.")
     parser.add_argument("--size", type=float, default=2.0, help="The length of the area " + \
                         " affected by a stenosis. Default is MISR x 2.0 of selected point.")
-    parser.add_argument("--noise", type=bool, default=False, help="Adds noise to surface area.")
     parser.add_argument("--stats", type=bool, default=False,
                         help="Collect stats")
 
@@ -46,8 +49,8 @@ def read_command_line():
     if args.ratio is not None and args.beta != 0.5:
         print("WARNING: The beta value you provided will be ignored.")
 
-    return args.s, args.beta, args.stats, args.dir_path, args.case, args.ratio, \
-           args.percentage, args.stenosis, args.size, args.noise, args.smooth_factor
+    return args.smooth, args.beta, args.stats, args.ifile, args.ratio, \
+           args.percentage, args.stenosis, args.size, args.smooth_factor
 
 
 def get_stats(centerline_area, folder, centerline):
@@ -201,7 +204,7 @@ def get_line_to_change(centerline, tol):
     return lineToChange
 
 
-def get_factor(lineToChange, beta, ratio, percentage, stenosis, stenosis_size, add_noise, surface):
+def get_factor(lineToChange, beta, ratio, percentage, stenosis, stenosis_size, surface):
     """
     Compute the factor determining
     the change in radius, used to
@@ -218,7 +221,6 @@ def get_factor(lineToChange, beta, ratio, percentage, stenosis, stenosis_size, a
         percentage (float): Desired increase/decrease in cross-sectional area.
         stenosis (bool): Creates or removes a user selected stenosis in the geometry if True.
         stenosis_size (float): Length of affected stenosis area. Default is MISR x 2.0 of selected point.
-        add_noise (bool): Adds noise to surface if true.
 
     Returns:
         factor (float): Factor determining the change in radius.
@@ -276,6 +278,7 @@ def get_factor(lineToChange, beta, ratio, percentage, stenosis, stenosis_size, a
         SeedSelector.Mode = "stenosis"
         SeedSelector.Execute()
         stenosisPointId = SeedSelector.GetTargetSeedIds()
+
         if stenosisPointId.GetNumberOfIds() == 1:
             if percentage is None:
                 percentage = -40
@@ -283,6 +286,7 @@ def get_factor(lineToChange, beta, ratio, percentage, stenosis, stenosis_size, a
             print("One point detected. Creating stenosis.")
             stenosisPoint = surface.GetPoint(stenosisPointId.GetId(0))
             factor = create_stenosis(lineToChange, stenosisPoint, area, stenosis_size, percentage)
+
         elif stenosisPointId.GetNumberOfIds() == 2:
             print("Two points detected. Removes stenosis between the two points.")
             stenosisPoint1 = surface.GetPoint(stenosisPointId.GetId(0))
@@ -293,7 +297,8 @@ def get_factor(lineToChange, beta, ratio, percentage, stenosis, stenosis_size, a
         # Increase or deacrease overall area by a percentage
         k = int(round(area.shape[0] * 0.10, 0))
         l = area.shape[0] - k*2
-        trans = np.asarray(np.linspace(1, 0, k).tolist() + np.zeros(l).tolist() + np.linspace(0, 1, k).tolist())
+        trans = np.asarray(np.linspace(1, 0, k).tolist() + np.zeros(l).tolist() +
+                           np.linspace(0, 1, k).tolist())
         factor_ = np.ones(len(trans)) * (1 + percentage*0.01)
         factor = factor_*(1-trans) + trans
 
@@ -407,7 +412,7 @@ def remove_stenosis(lineToChange, point1, point2, area):
     return factor
 
 
-def change_area(voronoi, lineToChange, beta, ratio, percentage, stenosis, stenosis_size, add_noise, surface):
+def change_area(voronoi, lineToChange, beta, ratio, percentage, stenosis, stenosis_size, surface):
     """
     Change the cross-sectional area of an input
     voronoi diagram along the corresponding area
@@ -421,7 +426,6 @@ def change_area(voronoi, lineToChange, beta, ratio, percentage, stenosis, stenos
         percentage (float): Percentage the area of the geometry / stenosis is increase/decreased.
         stenosis (bool): Creates or removes a user selected stenosis in the geometry if True.
         stenosis_size (float): Length of affected stenosis area. Default is MISR x 2.0 of selected point.
-        add_noise (bool): Adds noise to surface if true.
 
     Returns:
         newVoronoi (vtkPolyData): Manipulated Voronoi diagram.
@@ -447,7 +451,7 @@ def change_area(voronoi, lineToChange, beta, ratio, percentage, stenosis, stenos
     lastSphere.SetCenter(c1)
 
     # Get factor
-    factor = get_factor(lineToChange, beta, ratio, percentage, stenosis, stenosis_size, add_noise, surface)
+    factor = get_factor(lineToChange, beta, ratio, percentage, stenosis, stenosis_size, surface)
 
     # Locator to find closest point on centerline
     locator = get_locator(lineToChange)
@@ -475,13 +479,7 @@ def change_area(voronoi, lineToChange, beta, ratio, percentage, stenosis, stenos
         if (tubeValue <= 0.0) and not ((sphereValue < 0.0) and (vectorValue < 0.0)):
             tmp_ID = locator.FindClosestPoint(point)
             v1 = np.asarray(lineToChange.GetPoint(tmp_ID)) - np.asarray(point)
-
-            # Add noise
-            if 0.1*M < tmp_ID < 0.9*M and add_noise:
-                v2 = v1 * (1 - factor[tmp_ID]*np.random.uniform(0.4, 1.2))
-            else:
-                v2 = v1 * (1 - factor[tmp_ID])
-
+            v2 = v1 * (1 - factor[tmp_ID])
             point = (np.asarray(point) + v2).tolist()
 
             # Change radius
@@ -499,8 +497,8 @@ def change_area(voronoi, lineToChange, beta, ratio, percentage, stenosis, stenos
     return newVoronoi
 
 
-def area_variations(folder, beta, smooth, stats, r_change, percentage, stenosis,
-                    stenosis_size, add_noise, smooth_factor):
+def area_variations(surface_path, beta, smooth, stats, r_change, percentage, stenosis,
+                    stenosis_size, smooth_factor):
     """
     Objective manipulation of area variation in
     patient-specific models of blood vessels.
@@ -517,7 +515,6 @@ def area_variations(folder, beta, smooth, stats, r_change, percentage, stenosis,
         percentage (float): Percentage the area of the geometry / stenosis is increase/decreased.
         stenosis (bool): Creates or removes a user selected stenosis in the geometry if True.
         stenosis_size (float): Length of affected stenosis area. Default is MISR x 2.0 of selected point.
-        add_noise (bool): Adds noise to surface if true.
         smooth_factor (float): Smoothing factor used for voronoi diagram smoothing.
 
     Returns:
@@ -525,38 +522,43 @@ def area_variations(folder, beta, smooth, stats, r_change, percentage, stenosis,
     Returns:
         area (ndarray): Array of cross-section area along the abscissa.
     """
-    # Input files
-    model_path = path.join(folder, "surface", "model.vtp")
-    centerlines_path = path.join(folder, "surface", "model_usr_centerline.vtp")
-    voronoi_path = path.join(folder, "surface", "voronoi.vtp")
+    folder = path.dirname(surface_path)
+    name = surface_path.split(path.sep)[-1].split(".")[0]
 
-    # Output files
-    voronoi_smoothed_path = path.join(folder, "surface", "voronoi_smoothed.vtp")
-    voronoi_new_path = path.join(folder, "surface", "voronoi_area.vtp")
-    centerline_area_path = path.join(folder, "surface", "centerline_area.vtp")
-    centerline_area_spline_path = path.join(folder, "surface", "centerline_area_spline.vtp")
-    centerline_area_spline_sections_path = path.join(folder, "surface", "centerline_area_sections.vtp")
-    centerline_spline_path = path.join(folder, "surface", "centerline_spline.vtp")
-    model_smoothed_path = path.join(folder, "surface", "model_smoothed.vtp")
+    # Files paths
+    surface_capped_path = path.join(folder, name + "_capped.vtp")
+    surface_smoothed_path = path.join(folder, name + "_smoothed.vtp")
+    centerlines_path = path.join(folder, name + "_usr_centerline.vtp")
+    voronoi_path = path.join(folder, name + "_voronoi.vtp")
+    voronoi_smoothed_path = path.join(folder, name + "_voronoi_smoothed.vtp")
+    voronoi_new_path = path.join(folder, name + "_voronoi_area.vtp")
+    centerline_area_path = path.join(folder, name + "_centerline_area.vtp")
+    centerline_area_spline_path = path.join(folder, name + "_centerline_area_spline.vtp")
+    centerline_area_spline_sections_path = path.join(folder, name + "_centerline_area_sections.vtp")
+    centerline_spline_path = path.join(folder, name + "_centerline_spline.vtp")
+
+    # Output path of manipulated surface
     s = ""
     s += "" if not smooth else "_smooth"
     s += "" if r_change is not None or percentage is not None else "_%s" % beta
     s += "" if r_change is None else "_ratio%s" % r_change
     s += "" if not stenosis else "_stenosis_%smisr" % stenosis_size
-    s += "" if not add_noise else "_noise"
     s += "" if percentage is None else "_%s" % percentage
-    model_area_path = path.join(folder, "surface", "model_area%s.vtp" % s)
-
-    # Import centerline
-    centerlines = make_centerline(model_path, centerlines_path, length=0.1, smooth=False)
+    surface_area_path = path.join(folder, name + "_area%s.vtp" % s)
 
     # Clean and capp / uncapp surface
-    parameters = get_parameters(dirpath)
-    surface, capped_surface = preare_surface(model_path, parameters)
+    parameters = get_parameters(folder)
+    surface, capped_surface = prepare_surface(surface_path, surface_capped_path, parameters)
+
+    # Import centerline
+    inlet, outlets = get_centers(surface, folder)
+    centerlines = compute_centerlines(inlet, outlets, centerlines_path, capped_surface,
+                                           resampling=0.1, smooth=False)
 
     # Smooth voronoi diagram
-    voronoi = prepare_voronoi_diagram(model_path, voronoi_path, voronoi_smoothed_path,
-                                    smooth, smooth_factor, centerlines)
+    voronoi = prepare_voronoi_diagram(surface, voronoi_path, surface_smoothed_path,
+                                      voronoi_smoothed_path, smooth, smooth_factor,
+                                      centerlines)
 
     # Tolerance for finding diverging point
     tolerance = get_tolerance(centerlines)
@@ -582,28 +584,23 @@ def area_variations(folder, beta, smooth, stats, r_change, percentage, stenosis,
         # Change and compute the new voronoi diagram
         print("Change Voronoi diagram")
         newvoronoi = change_area(voronoi, centerline_area, beta, ratio, percentage,
-                    stenosis, stenosis_size, add_noise, surface)
+                    stenosis, stenosis_size, surface)
 
         print("Write Voronoi diagram")
         write_polydata(newvoronoi, voronoi_new_path)
 
         # Make new surface
         print("Create surface")
-        model_new_surface = create_new_surface(newvoronoi)
+        new_surface = create_new_surface(newvoronoi)
 
-        print("Write surface to: {}".format(model_area_path.split("/")[-1]))
+        print("Write surface to: {}".format(surface_area_path.split("/")[-1]))
         # TODO: Add Automated clipping of newmodel
-        model_new_surface = vmtk_surface_smoother(model_new_surface, method="laplace", iterations=100)
-        write_polydata(model_new_surface, model_area_path)
+        # new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100)
+        write_polydata(new_surface, surface_area_path)
 
     return length, area
 
 
 if __name__ == '__main__':
-    smooth, beta, stats, basefolder, case, ratio, percentage, stenosis, stenosis_size, add_noise, smooth_factor = read_command_line()
-    folders = listdir(basefolder) if case is None else [case]
-    for i, folder in enumerate(folders):
-        if folder.startswith("P0"):
-            print("Working on: {}".format(folder))
-            case = path.join(basefolder, folder)
-            area_variations(case, beta, smooth, stats, ratio, percentage, stenosis, stenosis_size, add_noise, smooth_factor)
+    smooth, beta, stats, surface_path, ratio, percentage, stenosis, stenosis_size, smooth_factor = read_command_line()
+    area_variations(surface_path, beta, smooth, stats, ratio, percentage, stenosis, stenosis_size, smooth_factor)

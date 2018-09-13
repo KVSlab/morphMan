@@ -19,10 +19,14 @@ def read_command_line():
     """
     Read arguments from commandline
     """
-    parser = ArgumentParser()
+    parser = ArgumentParser(description="Foo")
+    required = parser.add_argument_group('required named arguments')
 
-    parser.add_argument('-d', '--dir_path', type=str, default=".",
+    # Required arguments
+    required.add_argument('-i', '--ifile', type=str, required=True,
                         help="Path to the folder with all the cases")
+
+    # Optional arguments
     parser.add_argument('-c', '--case', type=str, default=None, help="Choose case")
     parser.add_argument('-k', '--curvature', type=bool, default=False,
                         help="Compute curvature variation", metavar="curvature")
@@ -39,10 +43,11 @@ def read_command_line():
 
     args = parser.parse_args()
 
-    return args.dir_path, args.case, args.curvature, args.angle, args.alpha, args.beta, args.method_curv, args.method_angle
+    return args.dir_path, args.case, args.curvature, args.angle, args.alpha, args.beta, \
+            args.method_curv, args.method_angle
 
 
-def compute_angle(dirpath, point_path, name, alpha, beta, method, proj=False):
+def compute_angle(input_filepath, point_path, name, alpha, beta, method, proj=False):
     """
     Primary collection of methods for computing the angle of a vessel bend.
     Three main methods are currently implemented:
@@ -62,36 +67,34 @@ def compute_angle(dirpath, point_path, name, alpha, beta, method, proj=False):
     Returns:
         newdeg (float): New angle of a vessel bend from a manipulated centerline.
     """
-    # Input filenames
-    model_path = path.join(dirpath, name, "model.vtp")
+    # Case name
+    surface_name, surface_folder_path = get_path_names(input_filepath)
+
+    # Surface
+    surface_capped_path = path.join(surface_folder_path, surface_name + "_capped.vtp")
 
     # Centerliens
-    centerline_complete_path = path.join(dirpath, name, "centerline_complete.vtp")
+    centerline_complete_path = path.join(surface_folder_path,  surface_name +
+                                         "_centerline_complete.vtp")
 
     # Find endID from landmarking
-    siphon_path = path.join(dirpath, "surface", "carotid_siphon.vtp")
+    siphon_path = path.join(surface_folder_path, surface_name + "_ica_centerline.vtp")
 
     # Extract Clipping points
     clipping_points = get_clipping_points(dirpath, point_path)
 
-    # Read and check model
-    if not path.exists(model_path):
-        RuntimeError("The given directory: %s did not contain the file: model.vtp" % dirpath)
+    # Get parameters
+    parameters = get_parameters(surface_folder_path)
 
-    # Clean surface
-    surface = read_polydata(model_path)
-    surface = surface_cleaner(surface)
-    surface = triangulate_surface(surface)
-
-    # Get a capped and uncapped version of the surface
-    open_surface = surface
-    capped_surface = capp_surface(surface)
+    # Get open and capped surface
+    open_surface, capped_surface = prepare_surface(input_filepath, surface_capped_path,
+                                                   parameters)
 
     # Get inlet and outlets
     inlet, outlets = get_centers(open_surface, dirpath)
 
     # Compute centerline
-    centerlines_complete = vmtk_compute_centerlines(inlet, outlets,
+    centerlines_complete = compute_centerlines(inlet, outlets,
                                                centerline_complete_path,
                                                capped_surface, resampling=0.1)
     centerlines_in_order = sort_centerlines(centerlines_complete)
@@ -191,9 +194,9 @@ def compute_angle(dirpath, point_path, name, alpha, beta, method, proj=False):
         moved_siphon.GetPointData().AddArray(newmisrArray)
 
     if proj:
-        print "Computing 2D Angles"
+        print("Computing 2D Angles")
     else:
-        print "Computing 3D Angles"
+        print("Computing 3D Angles")
 
     # Find adjusted clipping points (and tracing points)
     if method == "plane":
@@ -377,7 +380,7 @@ def compute_angle(dirpath, point_path, name, alpha, beta, method, proj=False):
     return newdeg
 
 
-def compute_curvature(dirpath, point_path, name, alpha, beta, method):
+def compute_curvature(dirpath, name, alpha, beta, method):
     """
     Primary collection of methods for computing curvature of a centerline.
     Five methods are currently implemented:
@@ -389,7 +392,6 @@ def compute_curvature(dirpath, point_path, name, alpha, beta, method):
 
     Args:
         dirpath (str): Path to case folder.
-        point_path (str): Filename of clipping point file.
         name (str): Directory where surface models are located.
         alpha (float): Extension / Compression factor in vertical direction.
         beta (float): Extension / Compression factor in horizontal direction.
@@ -399,23 +401,25 @@ def compute_curvature(dirpath, point_path, name, alpha, beta, method):
         maxcurv (float): Maximum curvature within the selected siphon.
     """
     # Input filenames
-    model_path = path.join(dirpath, name, "model.vtp")
-    model_new_surface = path.join(dirpath, name, "new_model_alpha_%s_beta_%s.vtp" % (alpha, beta))
+    surface_name, surface_folder_path = get_path_names(input_filepath)
+    surface_new_surface = path.join(surface_folder_path, surface_name + "_new_surface_alpha_%s_beta_%s.vtp" % (alpha, beta))
+    point_path = path.join(surface_folder_path, surface_name + "_carotid_siphon_points.particles")
 
     # Centerliens
-    centerline_complete_path = path.join(dirpath, name, "centerline_complete.vtp")
-    new_centerlines_path = path.join(dirpath, name, "new_centerlines_alpha_%s_beta_%s.vtp"
+    centerline_complete_path = path.join(surface_folder_path, surface_name + "_centerline_complete.vtp")
+    new_centerlines_path = path.join(surface_folder_path, surface_name + "_new_centerlines_alpha_%s_beta_%s.vtp"
                                      % (alpha, beta))
 
     # Extract Clipping points
+    # TODO: Add test
     clipping_points = get_clipping_points(dirpath, point_path)
 
-    # Read and check model
-    if not path.exists(model_path):
-        RuntimeError("The given directory: %s did not contain the file: model.vtp" % dirpath)
+    # Read and check surface
+    if not path.exists(surface_path):
+        RuntimeError("The given directory: %s did not contain the file: surface.vtp" % dirpath)
 
     # Clean surface
-    surface = read_polydata(model_path)
+    surface = read_polydata(surface_path)
     surface = surface_cleaner(surface)
     surface = triangulate_surface(surface)
 
@@ -427,7 +431,7 @@ def compute_curvature(dirpath, point_path, name, alpha, beta, method):
     inlet, outlets = get_centers(open_surface, dirpath)
 
     # Compute centerline
-    centerlines_complete = vmtk_compute_centerlines(inlet, outlets,
+    centerlines_complete = compute_centerlines(inlet, outlets,
                                                centerline_complete_path,
                                                capped_surface, resampling=0.1)
 
@@ -460,7 +464,7 @@ def compute_curvature(dirpath, point_path, name, alpha, beta, method):
 
     # Compute new centerline using VMTK
     if "vmtk" in method:
-        new_centerline_vmtk = make_centerline(model_new_surface, new_centerlines_path, smooth=False, resampling=False)
+        new_centerline_vmtk = make_centerline(surface_new_surface, new_centerlines_path, smooth=False, resampling=False)
         centerlines_in_order = sort_centerlines(new_centerline_vmtk)
         new_line_vmtk = extract_single_line(centerlines_in_order, 0)
 
@@ -757,7 +761,7 @@ def save_angle_or_curvature(values, case, param):
             np.savetxt(f, line, fmt='%.3f')
 
 
-def main(basedir, case, kappa, theta, alpha, beta, method_curv, method_angle, n=50):
+def main(surface_filepath, case, kappa, theta, alpha, beta, method_curv, method_angle, n=50):
     """
     Initilization for computing curvature and angle.
     Values are either printed to terminal or stored in a (n x n) matrix.
@@ -773,14 +777,14 @@ def main(basedir, case, kappa, theta, alpha, beta, method_curv, method_angle, n=
         method_angle (str): Method used to compute angle.
         n (int): Determines matrix size when computing multiple values.
     """
-    name = "surface"
-    point_path = "carotid_siphon_points.particles"
+    #name = "surface"
+    #point_path = "carotid_siphon_points.particles"
 
     # One or more cases
-    if case is not None:
-        folders = [case]
-    else:
-        folders = sorted([folder for folder in listdir(basedir) if folder[:2] in ["P0"]])
+    #if case is not None:
+    #    folders = [case]
+    #else:
+    #    folders = sorted([folder for folder in listdir(basedir) if folder[:2] in ["P0"]])
 
     # Movement in one or multiple directions
     if alpha is not None:
@@ -793,40 +797,40 @@ def main(basedir, case, kappa, theta, alpha, beta, method_curv, method_angle, n=
         k = 0
 
     # Iterate through cases and compute quantities
-    for folder in folders:
-        print("Working on case " + folder)
-        casedir = path.join(basedir, folder)
+    #for folder in folders:
+    #print("Working on case " + folder)
+    #casedir = path.join(basedir, folder)
 
-        if alpha is None:
-            amin, amax, bmin, bmax = ab_bound[k][0], ab_bound[k][1], ab_bound[k][2], ab_bound[k][3]
-            alphas = np.linspace(amin, amax, n)
-            betas = np.linspace(bmin, bmax, n)
+    if alpha is None:
+        amin, amax, bmin, bmax = ab_bound[k][0], ab_bound[k][1], ab_bound[k][2], ab_bound[k][3]
+        alphas = np.linspace(amin, amax, n)
+        betas = np.linspace(bmin, bmax, n)
 
-        for i, alpha in enumerate(alphas):
-            for j, beta in enumerate(betas):
-                # Compute curvature (kappa) or / and angle (theta)
-                if kappa:
-                    maxcurv = compute_curvature(casedir, point_path, name, alpha, beta, method_curv)
-                if theta:
-                    angle = compute_angle(casedir, point_path, name, alpha, beta, method_angle)
-
-                if len(alphas) > 1:
-                    if kappa:
-                        max_curv_values[i, j] = maxcurv
-                    if theta:
-                        angle_values[i, j] = angle
-                else:
-                    if kappa:
-                        print("Curvature = %.3f" % maxcurv)
-                    if theta:
-                        print("Angle = %.3f" % angle)
-
-        if len(alphas) > 1:
+    for i, alpha in enumerate(alphas):
+        for j, beta in enumerate(betas):
+            # Compute curvature (kappa) or / and angle (theta)
             if kappa:
-                save_angle_or_curvature(max_curv_values, folder, "curvature")
+                maxcurv = compute_curvature(surface_filepath, alpha, beta, method_curv)
             if theta:
-                save_angle_or_curvature(angle_values, folder, "angle")
-            k += 1
+                angle = compute_angle(surface_filepath, alpha, beta, method_angle)
+
+            if len(alphas) > 1:
+                if kappa:
+                    max_curv_values[i, j] = maxcurv
+                if theta:
+                    angle_values[i, j] = angle
+            else:
+                if kappa:
+                    print("Curvature = %.3f" % maxcurv)
+                if theta:
+                    print("Angle = %.3f" % angle)
+
+    if len(alphas) > 1:
+        if kappa:
+            save_angle_or_curvature(max_curv_values, folder, "curvature")
+        if theta:
+            save_angle_or_curvature(angle_values, folder, "angle")
+        k += 1
 
 
 if __name__ == "__main__":

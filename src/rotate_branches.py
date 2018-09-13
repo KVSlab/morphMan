@@ -21,10 +21,10 @@ def read_command_line():
 
     parser.add_argument('-i', '--ifile', type=str, default=None,
                         help="Path to input surface")
-    parser.add_argument('--s', '--smooth', type=bool, default=False,
+    parser.add_argument('-s', '--smooth', type=bool, default=False,
                         help="If the original voronoi diagram (surface) should be" + \
                         "smoothed before it is manipulated", metavar="smooth")
-    parser.add_argument('--a', '--angle', type=float, default=10,
+    parser.add_argument('-a', '--angle', type=float, default=10,
                         help="Each daughter branch is rotated an angle a in the" + \
                         " bifurcation plane. a should be expressed in radians as" + \
                         " any math expression from the" + \
@@ -51,6 +51,10 @@ def read_command_line():
                         help="Determines if there is an aneurysm or not")
     parser.add_argument("--anu_num", type=int, default=0,
                         help="If multiple aneurysms, choise one")
+    parser.add_argument("-o", "--ofile", type=str, default=None,
+                        help="Relative path to the output surface. The default folder is
+                        the same as the input file, and a name with a combination of the
+                        parameters."
 
     parser.add_argument("--step", type=float, default=0.1,
                         help="Resampling step used to resample centerlines")
@@ -521,14 +525,15 @@ def rotate_branches(surface_path, smooth, smooth_factor, angle, l1, l2, bif, low
     points_div_path = folder % "_divergingpoints.vtp"
 
     # Naming based on different options
-    s = "_pi%s" % angle if angle == 0 else "_pi%s" % (math.pi / angle)
-    s += "" if not l1 else "_l1"
-    s += "" if not l2 else "_l2"
-    s += "" if not bif else "_bif"
-    s += "" if not smooth else "_smooth"
-    s += "" if not lower else "_lower"
-    s += "" if cylinder_factor == 7.0 else "_cyl%s" % cylinder_factor
-    new_surface_path = folder % ("_angle" + s + ".vtp")
+    if output_filepath is not None:
+        s = "_pi%s" % angle if angle == 0 else "_pi%s" % (math.pi / angle)
+        s += "" if not l1 else "_l1"
+        s += "" if not l2 else "_l2"
+        s += "" if not bif else "_bif"
+        s += "" if not smooth else "_smooth"
+        s += "" if not lower else "_lower"
+        s += "" if cylinder_factor == 7.0 else "_cyl%s" % cylinder_factor
+        output_filepath = folder % ("_angle" + s + ".vtp")
 
     # Get aneurysm type
     parameters = get_parameters(dirpath)
@@ -553,19 +558,19 @@ def rotate_branches(surface_path, smooth, smooth_factor, angle, l1, l2, bif, low
     outlets, outlet1, outlet2 = sort_outlets(outlets, outlet1, outlet2, dirpath)
 
     # Compute parent artery and aneurysm centerline
-    centerline_par = vmtk_compute_centerlines(inlet, outlets,
+    centerline_par = compute_centerlines(inlet, outlets,
                                           centerline_par_path,
                                           capped_surface, resampling=resampling_step)
-    centerlines_complete = vmtk_compute_centerlines(inlet, outlets + aneurysm_point,
+    centerlines_complete = compute_centerlines(inlet, outlets + aneurysm_point,
                                                centerline_complete_path,
                                                capped_surface, resampling=resampling_step)
 
     # Additional centerline for bifurcation
-    centerline_relevant_outlets = vmtk_compute_centerlines(inlet, outlet1 + outlet2,
+    centerline_relevant_outlets = compute_centerlines(inlet, outlet1 + outlet2,
                                                           centerline_relevant_outlets_path,
                                                           capped_surface,
                                                           resampling=resampling_step)
-    centerline_bif = vmtk_compute_centerlines(outlet1, outlet2,
+    centerline_bif = compute_centerlines(outlet1, outlet2,
                                          centerline_bif_path,
                                          capped_surface, resampling=resampling_step)
 
@@ -702,15 +707,15 @@ def rotate_branches(surface_path, smooth, smooth_factor, angle, l1, l2, bif, low
     print("Create new surface")
     new_surface = create_new_surface(interpolated_voronoi)
 
-    print("Surface saved in: {}".format(new_surface_path.split("/")[-1]))
+    print("Surface saved in: {}".format(output_filepath.split("/")[-1]))
     # TODO: Add Automated clipping of newmodel
     new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100)
-    write_polydata(new_surface, new_surface_path)
+    write_polydata(new_surface, output_filepath)
 
 
 if __name__ == "__main__":
     smooth, angle, smooth_factor, l1, l2, bif, surface_path, lower, \
-    cylinder_factor, version, aneurysm, anu_num, resampling_step = read_command_line()
+    cylinder_factor, version, aneurysm, anu_num, resampling_step, output_filepath = read_command_line()
     rotate_branches(surface_path, smooth, smooth_factor, angle, l1,
                     l2, bif, lower, cylinder_factor, aneurysm, anu_num, resampling_step,
-                    version)
+                    version, output_filepath)

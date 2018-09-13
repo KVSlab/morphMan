@@ -16,12 +16,10 @@ def read_command_line():
                         help="Path to the folder with alpha-beta_vales")
     parser.add_argument("-p", "--param", type=str, default="curvature",
                         help="Parameter to compute.")
-    parser.add_argument("-p", "--param", type=str, default="curvature",
-                        help="Parameter to compute.")
     parser.add_argument('-r', '--radius', type=float, default=0.15,
                         help="Radius of bounding circle, limiting the choice of alpha and beta")
-    parser.add_argument('-b', '--boundary', nargs='+', default=None,
-                        help='Boundary of grid, as a list: [alpha_min, alpha_max, beta_min, beta_max]',
+    parser.add_argument('-b', '--bounds', nargs='+', default=None,
+                        help='Bounds of grid, as a list: [alpha_min, alpha_max, beta_min, beta_max]',
                         required=True)
 
     args = parser.parse_args()

@@ -87,7 +87,7 @@ def change_curvature(dirpath, name, smooth, smoothingfactor, iterations, smoothm
     inlet, outlets = get_centers(open_surface, dirpath)
 
     # Compute all centerlines
-    centerlines_complete = vmtk_compute_centerlines(inlet, outlets,
+    centerlines_complete = compute_centerlines(inlet, outlets,
                                                centerline_complete_path,
                                                capped_surface, resampling=0.1)
     centerlines_in_order = sort_centerlines(centerlines_complete)

@@ -489,7 +489,7 @@ def create_particles(folder, algorithm, method):
     output_siphon.close()
 
 
-def main(folder, curv_method, algorithm, resamp_step, nknots, smooth, factor_curv,
+def landmark(folder, curv_method, algorithm, resamp_step, nknots, smooth, factor_curv,
          factor_torsion, iterations):
     """
     Compute carotid siphon and perform landmarking.
@@ -523,9 +523,9 @@ def main(folder, curv_method, algorithm, resamp_step, nknots, smooth, factor_cur
 
 if __name__ == '__main__':
     basedir, case, curv_method, resamp_step, smooth, algorithm, nknots, factor_curv, factor_torsion, iterations = read_command_line()
-    folders = listdir(basedir) if case is None else [case]
-    for folder in sorted(folders):
-        dirpath = path.join(basedir, folder)
-        if path.isdir(dirpath):
-            main(dirpath, curv_method, algorithm, resamp_step, nknots, smooth,
-                    factor_curv, factor_torsion, iterations)
+    #folders = listdir(basedir) if case is None else [case]
+    #for folder in sorted(folders):
+    #    dirpath = path.join(basedir, folder)
+    #    if path.isdir(dirpath):
+    landmark(dirpath, curv_method, algorithm, resamp_step, nknots, smooth,
+             factor_curv, factor_torsion, iterations)
