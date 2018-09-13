@@ -6,10 +6,27 @@ Using VMTK Tools
 
 Application
 ===========
-This tutorial illustrates the steps for the automated geometric manipulation in patient-spesific morphologies of carotid arteries.  
-The framework of the algorithm was originally proposed and implemented in Aslak's and Henrik's master theses (2016, 2018). 
+VMTK Tools is a collection of scripts to objectivly manipulate geometric features of patient-specific vascular geometries. In this tutorial we examplify the usage by manipulating internal carotid arteries (wiki link), but the tool can be applied to any geometry with a tubular shape. The geometries used here were 
 
-The algorithm relies on the definition of Voronoi Diagram and on its properties, particularly on the fact that given the model surface its Voronoi Diagram can be derived and vice versa.
+Centence from removal: on geometries
+
+The algorithms presented in the framework was originally proposed and implemented in Bergersen's and Kjeldsberg's master theses (2016, 2018). TODO: Add link.
+
+[//]: <> (The goal with VMTK Tools is to provide researchers with a set of tools to manipulate one specific geometric feature at the time to to better understand the impact of geometry in )
+[//]: <> (When the JOSS paper is published, add a note that it should be cited)
+[//]: <> (When the method paper is published, add a note that it should be cited)
+
+[//]: <> (This tutorial illustrates the steps for the automated geometric manipulation in patient-spesific morphologies of carotid arteries.)
+
+Manipulating surfaces is no trivial task, therefore we derive an alternative representation  All the algorithms are based on lgorithm all utilizes Voronoi Diagrams and on its properties, particularly on the fact that given the model surface its Voronoi Diagram can be derived and vice versa.
+
+Give credit where credit it due: Thank the VTK, VMTK projects, and Ford et al. from where we gathered these ideas. 
+
+Definitions
+===========
+
+Inlet seed
+
 
 Initialize cases
 ================
@@ -30,7 +47,7 @@ To initialize, run the ``initialize_cases.py`` file::
 
     python initialize_cases.py --dir_path PATH_TO_CASES
 
-Running this commando will cause a render window to pop ut, asking you to specify points on the surface which will act as source points. 
+Running this command will cause a render window to appear, asking you to specify points on the surface which will act as source points. 
 This will trigger the following prompt::
 
     Please position the mouse and press space to add source points, 'u' to undo
@@ -92,16 +109,17 @@ The framework presented here allows for geometric manipulation of four independa
 morphological features of the carotid arteries. 
 
 * Bifurcation angle rotation
-* Cross-sectional vessel area variation
+* Cross-sectional area variation
 * Curvature variation in the anterior bend
 * Angle variation in the anterior bend
+
 
 Bifurcation angle rotation
 --------------------------
 The script ``move_branches.py`` performes an objective rotation of two daughter branches, moving them a given angle along the bifurcation plane. 
 In this implementation, positive and negative angles rotate the branches upward and downward, respectively.
-The implementation rotates both branches by default, but the user is given the option to only rotate a single branch. 
-This is achieved by setting the argument ``leave1`` or ``leave2`` to **True**, to leave the first or second branch, respectively.
+The implementation rotates both branches by default, but the user can specificy that only rotate a single branch. 
+This is achieved by setting the argument ``keep-fixed1`` or ``keep-fixed2`` to **True**, to leave the first or second branch, respectively.
 
 To perform rotation of the daughter branches, run the following generalized command::
     
@@ -110,10 +128,11 @@ To perform rotation of the daughter branches, run the following generalized comm
 
 .. figure:: angle_updown.png
 
-  Figure 5: Rotation of daughter branches, in both directions. 
+  Figure 5: Rotation of daughter branches, in both a widening and narrowing of the bifurcation angle. 
 
-In addition, the script includes two options for reconstruction of the bifurcation, determined by the parameters ``bif`` and ``lower`` set to **True**.
+In addition, the user includes two options for reconstruction of the bifurcation, determined by the parameters ``bif`` and ``lower`` set to **True**.
 The ``lower`` parameter creates a more realistic looking bifurcation, while the ``bif`` parameter creates a straight segment between the daughter branches.
+[\\]: <> (Cite or refer to reconstruction paper)
 A comparison is shown below, where the straight segment is created by running::
 
     python move_branches.py --dir_path [PATH_TO_CASES] --case [CASENAME] --angle [ANGLE] --bif True
@@ -123,28 +142,33 @@ A comparison is shown below, where the straight segment is created by running::
   Figure 6: Rotation of daughter branches with different reconstruction of the bifurcation.
 
 
+Cross-sectional area variation
+-------------------------------
+Manipulation of the cross-sectional area is performed by running the script ``area_variations.py``.
+[\\]: <> (The script performs geometric manipulation of the cross sectional area, represented by a centerline.)
+In order to preserve the inlet and the end of the geometry segment, the first and last 10% of the area of interest are left unchange. 
 
+The script ``area_variations.py`` includes several options for area variations:
 
-Cross-sectional vessel area variation
--------------------------------------
-Manipulation of the cross-sectional area of a vessel is performed by running the script ``area_variations.py``. The script performs geometric manipulation along the a vessel, represented by a centerline.
-In order to preserve the inlet and the end of the geometry segment, the first and last 10% of the area of interest are left untouched. 
+* Area variations
+* In-/deflation
+* Stenosis creation/removal
 
-The script ``area_variations.py`` has been extended to include several options related to the vessel area:
-
-* Area variations of the vessel
-* Overall area increase / decrease
-* Stenosis creation / removal
-* Vessel tapering (?) 
 
 Area variations
 ^^^^^^^^^^^^^^^
+
+Tulle illustrasjon av geometrien
+
+Focus on R, and not beta.
 
 Area variation is initialized by a factor :math:`\beta` or a ratio, :math:`R = A_{min} / A_{max}`. 
 The script takes ``beta`` and ``ratio`` as command line arguments.
 However, the script requires only one of the two parameters to perform area variation. 
 Setting :math:`\beta < 0` will cause the ratio :math:`R` to decrease,  whereas :math:`\beta > 0` will cause the ratio to increase. 
 The ratio, :math:`R`, behaves as shown in the illustration below. 
+
+Examplified in Figure 3, where the ICA is defined as the region of interest.
 
 To perform area variations of the vessel area, run the following command::
     
@@ -158,6 +182,8 @@ or::
 .. figure:: area_vary.png
 
   Figure : Area variations throughout the geometry for different ratios. 
+
+Comment to the Figure: Old, new --> original and manipulated.
 
 Overall area variation
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -179,14 +205,17 @@ Stenosis creation / removal
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The framework allows for creation or removal of one stenosis located along the area of interest.  
-Creation and removal of a stenosis is performed by setting input argument ``stenosis`` to **True**.
-Spesifically for stenosis creation, the input arguments ``percentage`` and ``size`` determine the narrowness and length of the stenosis, respectively. 
-The ``size`` argument is a factor multiplied with the radius at the selected center point of the stenosis, in order to expand the stenosis exposed area. 
+Creation and removal of a stenosis is performed by specifying input argument ``stenosis`` to **True**.
+Spesifically for stenosis creation, the input arguments ``percentage`` and ``length`` determine the area reduction and length of the stenosis, respectively. 
+The ``length`` argument is multiplied with the radius at the selected center point of the stenosis, to expand the stenosis exposed area.
+
+Comment KVS: Upstream and downstream. Write sine function, can easly be modified in the script.
+
 For creation of a stenosis, run the follwing command::
     
     python area_variations.py --dir_path [PATH_TO_CASES] --case [CASENAME] --smooth True --percentage [%] --stenosis True --size [SIZE]
 
-Running this commando will cause a render window to pop ut, asking you to specify points on the surface which will act as the center point of the stenosis. 
+Running this command will cause a render window to appear, asking (replace!) you to specify points on the surface which will act as the center point of the stenosis. 
 This will trigger the following prompt, with a suggested point placement:
 
 .. figure:: single_stenosis.png
@@ -203,7 +232,10 @@ Similarly, removal of a stenosis is achieved by running the command::
     
     python area_variations.py --dir_path [PATH_TO_CASES] --case [CASENAME] --smooth True --stenosis True 
 
-The commando will cause a render window to pop ut, asking you to specify points on the surface which will now act as the boundaries of the stenosis. 
+The command will cause a render window to appear, asking you to specify points on the surface which will now act as the boundaries of the stenosis. 
+
+Comment: Linear change in area between the two points.
+
 This will trigger the following prompt, with a suggested point placement:
 
 .. figure:: place_stenosis.png
@@ -213,18 +245,21 @@ This will trigger the following prompt, with a suggested point placement:
 
 .. figure:: fixed_stenosis.png
 
-  Figure : Comparison of new and old model, with and without stenosis.
+  Figure : Comparison of new and old model, with and without stenosis. 
 
 
-Curvature and angle variation in the anterior bend
+Curvature and angle variation of the anterior bend
 --------------------------------------------------
 
 .. note::
-    Manipulation is initialized by selecting a segment of the vessel, bounded by two clipping points. 
+    Can be used for a general bend, but if used in ICA...
+        Manipulation is initialized by selecting a segment of the vessel, bounded by two clipping points. 
     The two clipping points can be freely chosen along the centerline, but it is highly recommended to landmark the geometry in order to objectively segment the geometry, and use the resulting landmarking points as clipping points.  
 
 Adjusting curvature and angle in the anterior bend utilizes a common script: ``move_siphon.py``. The script performs geometric manipulation of the anterior bend segment, as defined in the landmarking section.
-Adjusting the anterior bend relies only on two parameters, the compression/extension factors :math:`\alpha \text{ and } \beta`. Selection of these factors in order to increase or decrease the curvature or angle of the anterior bend is performed by the scripts ``automated_geometric_quantities.py`` and ``calculate_alpha_beta_values.py``. The pipeline for increasing or decreasing either peak curvature or the bend angle in the anterior bend is described below.   
+Adjusting the anterior bend relies only on two parameters, the compression/extension factors :math:`\alpha \text{ and } \beta`.
+Alteration of the curvature or angle of the anterior bend is performed by specifying these factors in the script  ``automated_geometric_quantities.py`` and ``calculate_alpha_beta_values.py``.
+The pipeline for increasing or decreasing either curvature or the bend angle in the anterior bend is described below.   
 
 Alternatively the user may choose any arbitrary values for :math:`\alpha \text{ and } \beta`. 
 
@@ -240,12 +275,12 @@ In general, the compression / extension factors :math:`\alpha \text{ and } \beta
 
 .. figure:: alpha.png
 
-  Figure 6: Movement in the vertical direction, determined by :math:`\alpha` 
+  Figure 6: Movement in the vertical direction, determined by :math:`\alpha`. FIXME: New model, old model. 
 
 
 .. figure:: beta.png
 
-  Figure 7: Movement in the horizontal direction, determined by :math:`\beta` 
+  Figure 7: Movement in the horizontal direction, determined by :math:`\beta`. FIXME: New model, old model. 
 
 
 
@@ -262,7 +297,3 @@ Selection of compression / extension factors
 
 The compression / extension factors :math:`\alpha \text{ and } \beta` determine the magnitude and direction in which the anterior bend is translated. 
 Running the scripts  ``automated_geometric_quantities.py`` and ``calculate_alpha_beta_values.py`` is required if the user is interested in reaching a spesific change in angle or curvature. 
-
-
-
-
