@@ -122,7 +122,8 @@ class vmtkPickPointSeedSelector(vmtkSeedSelector):
 
         self.vmtkRenderer.Renderer.AddActor(surfaceActor)
         if self.Mode == "stenosis":
-            text = 'Place one point where stenosis is centered OR place two points to heal stenosis, \'u\' to undo\n'
+            text = 'Place one point to indicate the center of a new stenosis OR place two' + \
+                    ' points on each side of an existing stenosis to remove it, \'u\' to undo\n'
         elif self.Mode == "outlet":
             text = 'Please select the two relevant outlets, \'u\' to undo\n'
         elif self.Mode == "aneurysm":

@@ -1120,7 +1120,7 @@ def vmtk_compute_centerline_sections(surface, centerline):
 def compute_centerlines(inlet, outlet, filepath, surface, resampling=1,
                         smooth=False, num_iter=100, smooth_factor=0.1,
                         endPoint=1, method="pointlist", recompute=False):
-    if path.isfile(filepath) and not recompute:
+    if path.isfile(str(filepath)) and not recompute:  # Filepath might be None
         return read_polydata(filepath)
 
     centerlines = vmtkscripts.vmtkCenterlines()
@@ -1914,8 +1914,9 @@ def clip_polydata(surface, cutter):
     return clipper.GetOutput()
 
 
-def prepare_surface_output(surface, new_cl, original_surface, original_cl,
-                           test_merge=False, rotated=False, margin=1.1, hight_ratio=0.1):
+def prepare_surface_output(surface, original_surface, new_centerline, output_filepath,
+                           test_merge=False, rotated=False, original_centerline=None,
+                           margin=1.1, hight_ratio=0.1):
     # Get planes if outlets of the original surface 
     boundary_edges = get_feature_edges(original_surface)
     boundary_connectivity = get_connectivity(boundary_edges)
@@ -1959,22 +1960,6 @@ def prepare_surface_output(surface, new_cl, original_surface, original_cl,
 
         tmp_points = np.dot((tmp_points), R)
 
-        text = "\n".join(["{} {} {}".format(j, k, l) for j, k, l in tmp_points])
-        f = open("raw_points.particles", "w")
-        f.write(text)
-        f.close()
-
-        def convert_to_vtk_polydata(points):
-            """ Converts a numpy array to vtk points"""
-            vtk_points = vtk.vtkPoints()
-            for p in points:
-                vtk_points.InsertNextPoint(p)
-
-            vtk_polydata = vtk.vtkPolyData()
-            vtk_polydata.SetPoints(vtk_points)
-
-            return vtk_polydata
-
         # Get bounds
         tmp_points_vtk = vtk.vtkPoints()
         [tmp_points_vtk.InsertNextPoint(tmp_points[k]) for k in range(tmp_points.shape[0])]
@@ -1995,7 +1980,6 @@ def prepare_surface_output(surface, new_cl, original_surface, original_cl,
         angle = -np.arccos(normal[0]) * 180 / np.pi
 
         # Create an implicit function for clipping
-        # TODO: Rotate box instead of surface
         box = vtk_box(bound)
 
         # Clip the surface
@@ -2035,90 +2019,90 @@ def prepare_surface_output(surface, new_cl, original_surface, original_cl,
         translationFilter.Update()
         surf = translationFilter.GetOutput()
 
-        write_polydata(surf, "test_clip_%d.vtp" % i)
+        #write_polydata(surf, "test_clip_%d.vtp" % i)
+        surface = get_connectivity(surface, mode="Largest")
 
         # NOTE: Should test for number of outlets after each clip
 
-    if test_merge:
-        # TODO: For robustness one could create a test for 
-        pass
-        # Test if new and old centerline diverges
+    # Check connectivity and only choose the surface with the largest area
 
+    # Perform a 'light' smoothing to obtain a nicer surface
     surface = vmtk_surface_smoother(surface, method="laplace")
 
+    # Clean surface
+    surface = surface_cleaner(surface)
+    surface = triangulate_surface(surface)
 
-def sort_centerlines(centerlines_complete):
-    """
-    Sort the complete set of centerlines
-    by placing the longest centerline first.
+    # Capped surface
+    capped_surface = capp_surface(surface)
 
-    Args:
-        centerlines_complete (vtkPolyData): Complete set of centerlines.
+    if test_merge:
+        surface = check_if_surface_is_merged(capped_surface, new_centerline,
+                                             output_filepath)
 
-    Returns:
-        centerlines_in_order (vtkPolyData): Comlete set of sorted centerlines.
-    """
-    lines = []
-    n = centerlines_complete.GetNumberOfCells()
-    for i in range(n):
-        lines.append(extract_single_line(centerlines_complete, i))
-
-    longest = [lines[0]]
-    lenlong = get_curvilinear_coordinate(longest[0])
-    for i in range(1,n):
-        tmplong = get_curvilinear_coordinate(lines[i])
-        if len(tmplong) > len(lenlong):
-            lenlong = tmplong
-            longest.insert(0, lines[i])
-        else:
-            longest.append(lines[i])
-
-    centerlines_in_order = merge_data(longest)
-
-    return centerlines_in_order
+    return surface, capped_surface
 
 
-def clean_and_check_surface(surface, centerlines, model_path, centerlines_path):
+#def sort_centerlines(centerlines_complete):
+#    """
+#    Sort the complete set of centerlines
+#    by placing the longest centerline first.
+#
+#    Args:
+#        centerlines_complete (vtkPolyData): Complete set of centerlines.
+#
+#    Returns:
+#        centerlines_in_order (vtkPolyData): Comlete set of sorted centerlines.
+#    """
+#    lines = []
+#    n = centerlines_complete.GetNumberOfCells()
+#    for i in range(n):
+#        lines.append(extract_single_line(centerlines_complete, i))
+#
+#    longest = [lines[0]]
+#    lenlong = get_curvilinear_coordinate(longest[0])
+#    for i in range(1,n):
+#        tmplong = get_curvilinear_coordinate(lines[i])
+#        if len(tmplong) > len(lenlong):
+#            lenlong = tmplong
+#            longest.insert(0, lines[i])
+#        else:
+#            longest.append(lines[i])
+#
+#    centerlines_in_order = merge_data(longest)
+#
+#    return centerlines_in_order
+
+
+def check_if_surface_is_merged(surface, centerlines, output_filepath):
     """
     Clean and check surface for overlapping regions.
 
     Args:
-        surface (str): Surface model.
-        centerlines (str): New centerlines.
-        model_path (str): Path to surface model.
-        centerlines_path (str): Save path to tmp centerlines.
-
-    Returns:
-        surface (vtkPolyData): Cleaned surface model.
+        surface (vtkPolyData): Surface model.
+        centerlines (vtkPolyData): New centerlines.
     """
-    # Clean surface
-    surface = surface_cleaner(surface)
-    surface = triangulate_surface(surface)
-    write_polydata(surface, model_path)
-
-   # Check connectivity and only choose the surface with the largest area
-    connected_surface = get_connectivity(surface, mode="Largest")
-    if connected_surface.GetNumberOfPoints() != surface.GetNumberOfPoints():
-        WritePolyData(surface, model_path.replace(".vtp", "_test.vtp"))
-
-    # Check if model has overlapping regions
-    if centerlines is not None:
-        centerlines_to_check = sort_centerlines(make_centerline(model_path,
-                                                centerlines_path, recompute=True))
-        line_to_check = extract_single_line(centerlines_to_check, 0)
-        line_to_check = vmtk_centerline_resampling(line_to_check, length=0.1)
-        line_to_compare = extract_single_line(centerlines, 0)
+    # Check if the manipulated centerline and the centerline from the new surface
+    # significantly differ, if so it is likely that part of the surface is now merged
+    for i in range(centerlines.GetNumberOfLines()):
+        line_to_compare = extract_single_line(centerlines, i)
         line_to_compare = vmtk_centerline_resampling(line_to_compare, length=0.1)
+        inlet = line_to_compare.GetPoint(0)
+        outlet = line_to_compare.GetPoint(line_to_compare.GetNumberOfPoints() - 1)
+
+        line_to_check = compute_centerlines(inlet, outlet, None, surface,
+                                            resampling=0.1, recompute=True)
 
         # Compare distance between points along both centerliens
         N = min([line_to_check.GetNumberOfPoints(), line_to_compare.GetNumberOfPoints()])
         tolerance = get_tolerance(line_to_compare) * 100
-        for i in range(N):
-            p1 = np.asarray(line_to_check.GetPoint(i))
-            p2 = np.asarray(line_to_compare.GetPoint(i))
+        for j in range(N):
+            p1 = np.asarray(line_to_check.GetPoint(j))
+            p2 = np.asarray(line_to_compare.GetPoint(j))
             dist = distance(p1, p2)
             if dist > tolerance:
-                print("\nModel has overlapping regions. Check surface model.")
-                sys.exit(0)
-
-    return surface
+                tmp_path = output_filepath.replace(".vtp", "_ERROR_MERGED.vtp")
+                write_polydata(surface, tmp_path)
+                ValueError(("\nERROR: Model has most likely overlapping regions. Please check" + \
+                            " the surface model {} and provide other parameters for" + \
+                            " manipulation.").format(tmp_path))

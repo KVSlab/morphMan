@@ -9,38 +9,7 @@ from paralleltransportvoronoidiagram import *
 from moveandmanipulatetools import *
 
 
-def read_command_line():
-    """
-    Read arguments from commandline
-    """
-    parser = ArgumentParser()
-
-    parser.add_argument('-d', '--dir_path', type=str, default=".",
-                        help="Path to the folder with all the cases")
-    parser.add_argument('--case', '-c', type=str, default=None,
-                        help="Choose case")
-    parser.add_argument('-s', '--smooth', type=bool, default=True,
-                        help="If the original voronoi diagram " +
-                        "(surface) should be" +
-                        "smoothed before it is manipulated", metavar="smooth")
-    parser.add_argument("-a", "--alpha", type=float, default=0.0,
-                        help="Compression factor in vertical direction, " +
-                        "ranging from -1.0 to 1.0")
-    parser.add_argument("-b", "--beta", type=float, default=0.0,
-                        help="Compression factor in horizontal direction, " +
-                        "ranging from -1.0 to 1.0")
-    parser.add_argument('-sf', '--smooth_factor', type=float, default=0.25,
-                        help="If smooth is True then each voronoi point" +
-                        " that has a radius less then MISR*(1-sf) at" +
-                        " the closest centerline point is removes",
-                        metavar="smoothening_factor")
-
-    args = parser.parse_args()
-
-    return args.smooth, args.dir_path, args.case, args.alpha, args.beta, args.smooth_factor
-
-
-def move_vessel(dirpath, smooth, name, point_path, alpha=0.0, beta=0.0, smooth_factor=0.25):
+def move_vessel(input_filepath, smooth, smooth_factor, alpha=0.0, beta=0.0, smooth_factor=0.25):
     """
     Primary script for moving a selected part of any blood vessel.
     Relies on an input centerline, a surface geometry of a 3D blood vessel network,
@@ -59,58 +28,49 @@ def move_vessel(dirpath, smooth, name, point_path, alpha=0.0, beta=0.0, smooth_f
     Args:
         dirpath (str): Directory where case is located.
         smooth (bool): Adjusts smoothing of the voronoi diagram.
-        name (str): Directory where surface models are located.
-        point_path (str): Location of boundary points of the vessel to be manipulated.
+        smooth_factor (float): Smoothing factor used for voronoi diagram smoothing.
         alpha (float): Extension / Compression factor in vertical direction.
         beta (float): Extension / Compression factor in horizontal direction.
         smooth_factor (float): Smoothing factor used for voronoi diagram smoothing.
     """
 
     # Input filenames
-    model_path = path.join(dirpath, name, "model.vtp")
+    surface_name, folder = get_path_names(input_filepath)
 
     # Output names
-    model_smoothed_path = path.join(dirpath, name, "model_smoothed.vtp")
-    model_new_surface = path.join(dirpath, name, "new_model_alpha_%s_beta_%s.vtp" %
-                                  (alpha, beta))
-    model_new_surface_tmp = path.join(dirpath, name, "new_model_alpha_%s_beta_%s_tmp.vtp"
-                                      % (alpha, beta))
-    model_new_surface_clean = path.join(dirpath, name, "new_model_alpha_%s_beta_%s_clean.vtp"
-                                      % (alpha, beta))
+    model_smoothed_path = path.join(folder, surface_name + "_smoothed.vtp")
+    model_new_surface = path.join(folder, surface_name + "_alpha_%s_beta_%s.vtp" % (alpha, beta))
+    model_new_surface_tmp = path.join(folder, surface_name + "_alpha_%s_beta_%s_tmp.vtp" % (alpha, beta))
+    model_new_surface_clean = path.join(folder, surface_name + "_alpha_%s_beta_%s_clean.vtp" % (alpha, beta))
 
     # Centerlines
-    centerline_complete_path = path.join(dirpath, name, "centerline_complete.vtp")
-    centerline_clipped_path = path.join(dirpath, name, "centerline_clipped.vtp")
-    centerline_clipped_part_path = path.join(dirpath, name, "centerline_clipped_part.vtp")
-    new_centerlines_path = path.join(dirpath, name, "new_centerlines_alpha_%s_beta_%s.vtp"
-                                     % (alpha, beta))
-    new_centerlines_path_clean = path.join(dirpath, name, "new_centerlines_alpha_%s_beta_%s_clean.vtp"
-                                     % (alpha, beta))
-    new_centerlines_path_tmp = path.join(dirpath, name,
-                                         "new_centerlines_alpha_%s_beta_%s_tmp.vtp" %
-                                         (alpha, beta))
+    centerline_complete_path = path.join(folder, surface_name + "_centerline_complete.vtp")
+    centerline_clipped_path = path.join(folder, surface_name + "_centerline_clipped.vtp")
+    centerline_clipped_part_path = path.join(folder, surface_name + "_centerline_clipped_part.vtp")
+    new_centerlines_path = path.join(folder, surface_name + "_centerlines_alpha_%s_beta_%s.vtp" % (alpha, beta))
+    new_centerlines_path_clean = path.join(folder, surface_name + "_centerlines_alpha_%s_beta_%s_clean.vtp" % (alpha, beta))
+    new_centerlines_path_tmp = path.join(dirpath, name, "new_centerlines_alpha_%s_beta_%s_tmp.vtp" % (alpha, beta))
 
     # Voronoi diagrams
-    voronoi_path = path.join(dirpath, name, "model_voronoi.vtp")
-    voronoi_smoothed_path = path.join(dirpath, name, "model_voronoi_smoothed.vtp")
-    voronoi_remaining_path = path.join(dirpath, name, "model_voronoi_remaining.vtp")
-    voronoi_siphon_path = path.join(dirpath, name, "model_voronoi_siphon.vtp")
+    voronoi_path = path.join(folder, surface_name + "_voronoi.vtp")
+    voronoi_smoothed_path = path.join(folder, surface_name + "_voronoi_smoothed.vtp")
+    voronoi_remaining_path = path.join(folder, surface_name + "_voronoi_remaining.vtp")
+    voronoi_siphon_path = path.join(folder, surface_name + "_voronoi_siphon.vtp")
 
     # Extract Clipping points
-    clipping_points = get_clipping_points(dirpath, point_path)
+    point_path = "carotid_siphon_points.particles"  # Hard coded for consistency
+    clipping_points = get_clipping_points(folder, point_path)
 
     # Read and check model
-    if not path.exists(model_path):
+    if not path.exists(input_filepath):
         RuntimeError("The given directory: %s did not contain the file: model.vtp" % dirpath)
 
     # Clean and capp / uncapp surface
     parameters = get_parameters(dirpath)
-    surface, capped_surface = prepare_surface(model_path, parameters)
+    surface, capped_surface = prepare_surface(input_filepath, parameters)
 
-    # Get inlet and outlets
+    # Compute centerlines
     inlet, outlets = get_centers(surface, dirpath)
-
-    # Compute all centerlines
     centerlines_complete = compute_centerlines(inlet, outlets,
                                                centerline_complete_path,
                                                capped_surface, resampling=0.1)
@@ -122,8 +82,9 @@ def move_vessel(dirpath, smooth, name, point_path, alpha=0.0, beta=0.0, smooth_f
                                                                                      clipping_points)
 
     print("Compute Voronoi diagram")
-    voronoi = prepare_voronoi_diagram(surface, model_smoothed_path, voronoi_path, voronoi_smoothed_path,
-                                    smooth, smooth_factor, centerlines_complete)
+    voronoi = prepare_voronoi_diagram(surface, model_smoothed_path, voronoi_path,
+                                      voronoi_smoothed_path, smooth, smooth_factor,
+                                      centerlines_complete)
 
     # Check if case includs the opthalmic artery
     eye, clip_ID, centerlines_in_order, eyeline = find_ophthalmic_artery(centerlines_in_order,
@@ -235,25 +196,26 @@ def move_vessel(dirpath, smooth, name, point_path, alpha=0.0, beta=0.0, smooth_f
     else:
         print("No horizontal movement. Initiating vertical movement")
         new_centerline = centerlines_complete
+        new_surface = surface
         write_polydata(new_centerline, new_centerlines_path_tmp)
 
+    # TODO: Return surface / centerline here, and then only store in one location
     if alpha != 0.0:
         # Vertical movement
         print("Moving geometry vertically")
-        move_vessel_vertically(dirpath, name, newpoints, alpha, beta, voronoi_remaining,
+        move_vessel_vertically(new_surface, newpoints, alpha, beta, voronoi_remaining,
                                voronoi_siphon, new_centerline, eye, vtk_clipping_points)
-    else:
-        # TODO: Add Automated clipping of newmodel
-        print("Smoothing, clean, and check surface")
-        new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100)
-        new_surface = clean_and_check_surface(new_surface, centerlines_in_order,
-                                        model_new_surface_clean, new_centerlines_path)
-        write_polydata(new_centerline, new_centerlines_path)
-        write_polydata(new_surface, model_new_surface)
+
+    print("Smoothing, clean, and check surface")
+    surface, surface_capped = prepare_surface_output(new_surface, surface,
+                                                     centerlines_in_order,
+                                                     model_new_surface, test_merge=True)
+    write_polydata(new_centerline, new_centerlines_path)
+    write_polydata(new_surface, model_new_surface)
 
 
 def move_vessel_vertically(dirpath, name, oldpoints, alpha, beta, voronoi_remaining,
-                           voronoi_siphon, centerline, eye, vtk_clipping_points):
+                           voronoi_siphon, centerline, eye, clipping_points):
     """
     Secondary script used for vertical displacement of
     the blood vessel. Moves the input voronoi diagram and
@@ -270,26 +232,22 @@ def move_vessel_vertically(dirpath, name, oldpoints, alpha, beta, voronoi_remain
         voronoi_siphon (vtkPolyData): Voronoi diagram representing siphon.
         centerline (vtkPolyData): Centerline through the geometry.
         eye (bool): Determines if opthalmic artery is present.
-        vtk_clipping_points (vtkPoints): Points defining the siphon to be manipulated.
+        clipping_points (list): Points defining the siphon to be manipulated.
     """
 
     # Filenames
-    model_new_surface = path.join(dirpath, name, "new_model_alpha_%s_beta_%s.vtp"
-                                    % (alpha,beta))
-    model_new_surface_clean = path.join(dirpath, name, "new_model_alpha_%s_beta_%s_clean.vtp"
-                                    % (alpha,beta))
-    new_centerlines_path = path.join(dirpath, name, "new_centerlines_alpha_%s_beta_%s.vtp"
-                                    % (alpha, beta))
-    new_centerlines_path_clean = path.join(dirpath, name, "new_centerlines_alpha_%s_beta_%s_clean.vtp"
-                                    % (alpha, beta))
+    #model_new_surface = path.join(folder, surface_name + "_new_model_alpha_%s_beta_%s.vtp"
+    #                                % (alpha,beta))
+    #model_new_surface_clean = path.join(folder, surface_name + "_new_model_alpha_%s_beta_%s_clean.vtp"
+    #                                % (alpha,beta))
+    #new_centerlines_path = path.join(folder, surface_name + "_new_centerlines_alpha_%s_beta_%s.vtp"
+    #                                % (alpha, beta))
+    #new_centerlines_path_clean = path.join(folder, surface_name + "_new_centerlines_alpha_%s_beta_%s_clean.vtp"
+    #                                % (alpha, beta))
 
     # Set clipping points in order and make VTK objects
-    p1 = vtk_clipping_points.GetPoint(0)
-    p2 = vtk_clipping_points.GetPoint(1)
-    centerline_clippedipping_points = [p1, p2]
     line = extract_single_line(centerline, 0)
-    p1, p2, ID1, ID2, vtk_clipping_points, clipping_points = get_vtk_clipping_points(line,
-                                                                                     centerline_clippedipping_points)
+    p1, p2, ID1, ID2, vtk_clipping_points, clipping_points = get_vtk_clipping_points(line, clipping_points)
 
     # Sort centerlines
     centerlines_in_order = sort_centerlines(centerline)
@@ -347,7 +305,7 @@ def move_vessel_vertically(dirpath, name, oldpoints, alpha, beta, voronoi_remain
     print("Writing new surface")
     new_surface = create_new_surface(newVoronoi)
     new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100)
-    new_surface = clean_and_check_surface(new_surface, centerlines_in_order,
+    new_surface = check_if_surface_is_merged(new_surface, centerlines_in_order,
                                     model_new_surface_clean, new_centerlines_path)
     # TODO: Add Automated clipping of newmodel
     write_polydata(new_surface, model_new_surface)
@@ -526,18 +484,49 @@ def move_voronoi_vertically(voronoi_clipped, centerline_clipped, ID1_0, clip_ID,
     return newDataSet
 
 
-if __name__ == "__main__":
-    smooth, basedir, case, alpha, beta, smooth_factor = read_command_line()
-    folders = sorted([folder for folder in listdir(basedir) if folder[:2] in ["P0"]])
-    name = "surface"
-    point_path = "carotid_siphon_points.particles"
+def read_command_line():
+    """
+    Read arguments from commandline
+    """
+    parser = ArgumentParser()
 
-    if case is not None:
-        print("==== Working on case %s ====" % case)
-        dirpath = path.join(basedir, case)
-        move_vessel(dirpath, smooth, name, point_path, alpha, beta)
-    else:
-        for folder in folders:
-            print("==== Working on case %s ====" % folder)
-            dirpath = path.join(basedir, folder)
-            move_vessel(dirpath, smooth, name, point_path, alpha, beta, smooth_factor)
+    parser.add_argument('-d', '--dir_path', type=str, default=".",
+                        help="Path to the folder with all the cases")
+    parser.add_argument('--case', '-c', type=str, default=None,
+                        help="Choose case")
+    parser.add_argument('-s', '--smooth', type=bool, default=True,
+                        help="If the original voronoi diagram " +
+                        "(surface) should be" +
+                        "smoothed before it is manipulated", metavar="smooth")
+    parser.add_argument("-a", "--alpha", type=float, default=0.0,
+                        help="Compression factor in vertical direction, " +
+                        "ranging from -1.0 to 1.0")
+    parser.add_argument("-b", "--beta", type=float, default=0.0,
+                        help="Compression factor in horizontal direction, " +
+                        "ranging from -1.0 to 1.0")
+    parser.add_argument('-sf', '--smooth_factor', type=float, default=0.25,
+                        help="If smooth is True then each voronoi point" +
+                        " that has a radius less then MISR*(1-sf) at" +
+                        " the closest centerline point is removes",
+                        metavar="smoothening_factor")
+
+    args = parser.parse_args()
+
+    return args.smooth, args.dir_path, args.case, args.alpha, args.beta, args.smooth_factor
+
+
+
+if __name__ == "__main__":
+    #smooth, basedir, case, alpha, beta, smooth_factor = read_command_line()
+    #folders = sorted([folder for folder in listdir(basedir) if folder[:2] in ["P0"]])
+    move_vessel(**read_command_line())
+    #dirpath, smooth, name, point_path, alpha, beta, smooth_factor)
+
+    #if case is not None:
+    #    print("==== Working on case %s ====" % case)
+    #    dirpath = path.join(basedir, case)
+    #    move_vessel(dirpath, smooth, name, point_path, alpha, beta)
+    #else:
+    #    for folder in folders:
+    #        print("==== Working on case %s ====" % folder)
+    #        dirpath = path.join(basedir, folder)

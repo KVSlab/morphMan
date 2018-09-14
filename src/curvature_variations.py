@@ -180,7 +180,7 @@ def change_curvature(dirpath, name, smooth, smoothingfactor, iterations, smoothm
     new_surface = create_new_surface(newVoronoi)
     # TODO: Add Automated clipping of newmodel
     new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100)
-    new_surface = clean_and_check_surface(new_surface, None,
+    new_surface = check_if_surface_is_merged(new_surface, None,
                                           model_new_surface_clean, None)
     write_polydata(new_surface, model_new_surface)
 

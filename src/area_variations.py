@@ -50,7 +50,7 @@ def area_variations(input_filepath, method, smooth, smooth_factor, beta, ratio, 
     centerline_spline_path = path.join(folder,surface_name+ "_centerline_spline.vtp")
 
     # Output path of manipulated surface
-    if output_filepath is not None:
+    if output_filepath is None:
         s = "_" + method
         s += "" if not smooth else "_smooth"
         if method == "variation":
@@ -75,7 +75,7 @@ def area_variations(input_filepath, method, smooth, smooth_factor, beta, ratio, 
     # Import centerline
     inlet, outlets = get_centers(surface, folder)
     centerlines = compute_centerlines(inlet, outlets, centerlines_path, capped_surface,
-                                           resampling=0.1, smooth=False)
+                                       resampling=0.1, smooth=False)
 
     # Smooth voronoi diagram
     voronoi = prepare_voronoi_diagram(surface, voronoi_path, surface_smoothed_path,
@@ -107,9 +107,9 @@ def area_variations(input_filepath, method, smooth, smooth_factor, beta, ratio, 
     print("Create surface")
     new_surface = create_new_surface(newvoronoi)
 
-    print("Write surface to: {}".format(model_new_surface))
-    new_surface = prepare_surface_output(new_surface, open_surface, centerlines,
-                                         test_merge=True)
+    print("Write surface to: {}".format(new_surface_path))
+    new_surface = prepare_surface_output(new_surface, surface, centerlines,
+                                         new_surface_path, test_merge=True)
     write_polydata(new_surface, new_surface_path)
 
 

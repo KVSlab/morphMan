@@ -537,7 +537,6 @@ def rotate_branches(surface_path, smooth, smooth_factor, angle, l1, l2, bif, low
     # Read and check model
     if not path.exists(model_path):
         RuntimeError("The given directory: %s did not contain the file: model.vtp" % dirpath)
->>>>>>> d62898a2af264d782def4ad649b49d4d3560ac59:src/move_branches.py
 
     # Get aneurysm type
     parameters = get_parameters(dirpath)
@@ -723,6 +722,6 @@ if __name__ == "__main__":
     rotate_branches(surface_path, smooth, smooth_factor, angle, l1,
                     l2, bif, lower, cylinder_factor, aneurysm, anu_num, resampling_step,
                     version, output_filepath)
-    new_surface = clean_and_check_surface(new_surface, None,
+    new_surface = check_if_surface_is_merged(new_surface, None,
                                           model_new_surface_clean, None)
     write_polydata(new_surface, model_new_surface)
