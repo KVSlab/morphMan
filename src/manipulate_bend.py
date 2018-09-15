@@ -49,7 +49,7 @@ def move_vessel(input_filepath, smooth, smooth_factor, alpha=0.0, beta=0.0):
     centerline_clipped_part_path = path.join(folder, surface_name + "_centerline_clipped_part.vtp")
     new_centerlines_path = path.join(folder, surface_name + "_centerlines_alpha_%s_beta_%s.vtp" % (alpha, beta))
     new_centerlines_path_clean = path.join(folder, surface_name + "_centerlines_alpha_%s_beta_%s_clean.vtp" % (alpha, beta))
-    new_centerlines_path_tmp = path.join(dirpath, name, "new_centerlines_alpha_%s_beta_%s_tmp.vtp" % (alpha, beta))
+    new_centerlines_path_tmp = path.join(folder, surface_name, "new_centerlines_alpha_%s_beta_%s_tmp.vtp" % (alpha, beta))
 
     # Voronoi diagrams
     voronoi_path = path.join(folder, surface_name + "_voronoi.vtp")
@@ -63,14 +63,14 @@ def move_vessel(input_filepath, smooth, smooth_factor, alpha=0.0, beta=0.0):
 
     # Read and check model
     if not path.exists(input_filepath):
-        RuntimeError("The given directory: %s did not contain the file: model.vtp" % dirpath)
+        RuntimeError("The given directory: %s did not contain the file: model.vtp" % input_filepath)
 
     # Clean and capp / uncapp surface
-    parameters = get_parameters(dirpath)
+    parameters = get_parameters(input_filepath)
     surface, capped_surface = prepare_surface(input_filepath, parameters)
 
     # Compute centerlines
-    inlet, outlets = get_centers(surface, dirpath)
+    inlet, outlets = get_centers(surface, input_filepath)
     centerlines_complete = compute_centerlines(inlet, outlets,
                                                centerline_complete_path,
                                                capped_surface, resampling=0.1)
