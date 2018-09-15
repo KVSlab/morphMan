@@ -142,14 +142,15 @@ def get_path_names(input_filepath):
         input_filepath (str): Input filepath
 
     Returns:
-        surface_name (str): Name of the case
-        surface_folder_path (str): Name of the parent directory
+        surface_base_path (str): Name of the parent directory
     """
 
     surface_name = input_filepath.split(path.sep)[-1].split(".")[0]
     surface_folder_path = path.dirname(input_filepath)
+    surface_base_path = path.join(surface_folder_path, surface_name)
 
-    return surface_name, surface_folder_path
+    return surface_base_path
+
 
 
 def make_voronoi_diagram(surface, filename):
@@ -1144,11 +1145,11 @@ def compute_centerlines(inlet, outlet, filepath, surface, resampling=1,
     centerlines.SourcePoints = inlet
     centerlines.TargetPoints = outlet
     centerlines.Execute()
-    centerlines_output = centerlines.Centerlines
+    centerlines = centerlines.Centerlines
 
     if smooth:
         centerlineSmoothing = vmtkscripts.vmtkCenterlineSmoothing()
-        centerlineSmoothing.SetInputData(centerlines_output)
+        centerlineSmoothing.SetInputData(centerlines)
         centerlineSmoothing.SetNumberOfSmoothingIterations(num_iter)
         centerlineSmoothing.SetSmoothingFactor(smooth_factor)
         centerlineSmoothing.Update()
@@ -1159,7 +1160,7 @@ def compute_centerlines(inlet, outlet, filepath, surface, resampling=1,
     if filepath is not None:
         write_polydata(centerlines, filepath)
 
-    return centerlines_output, centerlines.VoronoiDiagram, centerlines.PoleIds
+    return centerlines, centerlines.VoronoiDiagram, centerlines.PoleIds
 
 
 def create_vtk_array(values, name, k=1):
@@ -1203,11 +1204,11 @@ def gram_schmidt(V):
 
 def get_parameters(folder):
     # If info.txt file, return an empty dict
-    if not path.isfile(path.join(folder, "info.txt")):
+    if not path.isfile(folder + "_info.txt"):
         return {}
 
     # Get text
-    f = open(path.join(folder, "info.txt"), "r")
+    f = open(folder + "_info.txt", "r")
     text = f.read()
     f.close()
     text = text.split("\n")
@@ -1242,7 +1243,7 @@ def write_parameters(data, folder):
     text = "\n".join(text)
 
     # Write text
-    f = open(path.join(folder, "info.txt"), "w")
+    f = open(folder + "info.txt", "w")
     f.write(text)
     f.close()
 
@@ -2171,7 +2172,7 @@ def get_clipping_points(dirpath, filename):
     Returns:
         clipping_points (ndarray): Clipping points.
     """
-    particles = path.join(dirpath, filename)
+    particles = dirpath + filename
     all_points = np.loadtxt(particles)
     clipping_points = all_points
 

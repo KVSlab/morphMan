@@ -6,3 +6,6 @@
 *.particles
 *.swp
 *~
+
+# IDE files
+.idea

@@ -31,46 +31,49 @@ def move_vessel(input_filepath, smooth, smooth_factor, alpha=0.0, beta=0.0):
     """
 
     # Input filenames
-    surface_name, folder = get_path_names(input_filepath)
+    base_path = get_path_names(input_filepath)
 
     # Output names
-    model_smoothed_path = path.join(folder, surface_name + "_smoothed.vtp")
-    model_new_surface = path.join(folder, surface_name + "_alpha_%s_beta_%s.vtp" % (alpha, beta))
-    model_new_surface_tmp = path.join(folder, surface_name + "_alpha_%s_beta_%s_tmp.vtp" % (alpha, beta))
-    model_new_surface_clean = path.join(folder, surface_name + "_alpha_%s_beta_%s_clean.vtp" % (alpha, beta))
+    surface_capped_path = base_path + "_capped.vtp"
+    surface_smoothed_path = base_path + "_smoothed.vtp"
+    surface_new_surface = base_path + "_alpha_%s_beta_%s.vtp" % (alpha, beta)
+    surface_new_surface_tmp = base_path + "_alpha_%s_beta_%s_tmp.vtp" % (alpha, beta)
+    surface_new_surface_clean = base_path + "_alpha_%s_beta_%s_clean.vtp" % (alpha, beta)
+    surface_new_surface_clean = base_path + "_alpha_%s_beta_%s_clean.vtp" % (alpha, beta)
 
     # Centerlines
-    centerline_complete_path = path.join(folder, surface_name + "_centerline_complete.vtp")
-    centerline_clipped_path = path.join(folder, surface_name + "_centerline_clipped.vtp")
-    centerline_clipped_part_path = path.join(folder, surface_name + "_centerline_clipped_part.vtp")
-    new_centerlines_path = path.join(folder, surface_name + "_centerlines_alpha_%s_beta_%s.vtp" % (alpha, beta))
-    new_centerlines_path_clean = path.join(folder, surface_name + "_centerlines_alpha_%s_beta_%s_clean.vtp" % (alpha, beta))
-    new_centerlines_path_tmp = path.join(folder, surface_name, "new_centerlines_alpha_%s_beta_%s_tmp.vtp" % (alpha, beta))
+    centerline_complete_path = base_path + "_centerline_complete.vtp"
+    centerline_clipped_path = base_path + "_centerline_clipped.vtp"
+    centerline_clipped_part_path = base_path + "_centerline_clipped_part.vtp"
+    new_centerlines_path = base_path + "_centerlines_alpha_%s_beta_%s.vtp" % (alpha, beta)
+    new_centerlines_path_clean = base_path + "_centerlines_alpha_%s_beta_%s_clean.vtp" % (alpha, beta)
+    new_centerlines_path_tmp = base_path, "new_centerlines_alpha_%s_beta_%s_tmp.vtp" % (alpha, beta)
 
     # Voronoi diagrams
-    voronoi_path = path.join(folder, surface_name + "_voronoi.vtp")
-    voronoi_smoothed_path = path.join(folder, surface_name + "_voronoi_smoothed.vtp")
-    voronoi_remaining_path = path.join(folder, surface_name + "_voronoi_remaining.vtp")
-    voronoi_siphon_path = path.join(folder, surface_name + "_voronoi_siphon.vtp")
+    voronoi_path = base_path + "_voronoi.vtp"
+    voronoi_smoothed_path = base_path + "_voronoi_smoothed.vtp"
+    voronoi_remaining_path = base_path + "_voronoi_remaining.vtp"
+    voronoi_siphon_path = base_path + "_voronoi_siphon.vtp"
 
     # Extract Clipping points
-    point_path = "carotid_siphon_points.particles"  # Hard coded for consistency
-    clipping_points = get_clipping_points(folder, point_path)
+    point_path = "_carotid_siphon_points.particles"  # Hard coded for consistency
+    clipping_points = get_clipping_points(base_path, point_path)
 
     # Read and check model
     if not path.exists(input_filepath):
         RuntimeError("The given directory: %s did not contain the file: model.vtp" % input_filepath)
 
     # Clean and capp / uncapp surface
-    parameters = get_parameters(input_filepath)
-    surface, capped_surface = prepare_surface(input_filepath, parameters)
+    parameters = get_parameters(base_path)
+    surface, capped_surface = prepare_surface(input_filepath, surface_capped_path, parameters)
 
     # Compute centerlines
     inlet, outlets = get_centers(surface, input_filepath)
     centerlines_complete = compute_centerlines(inlet, outlets,
                                                centerline_complete_path,
                                                capped_surface, resampling=0.1)
-    centerlines_in_order = sort_centerlines(centerlines_complete)
+    # centerlines_in_order = sort_centerlines(centerlines_complete)
+    centerlines_in_order = centerlines_complete
 
     # Set clipping points in order and make VTK objects
     line = extract_single_line(centerlines_in_order, 0)
@@ -78,7 +81,7 @@ def move_vessel(input_filepath, smooth, smooth_factor, alpha=0.0, beta=0.0):
                                                                                      clipping_points)
 
     print("Compute Voronoi diagram")
-    voronoi = prepare_voronoi_diagram(surface, model_smoothed_path, voronoi_path,
+    voronoi = prepare_voronoi_diagram(surface, surface_smoothed_path, voronoi_path,
                                       voronoi_smoothed_path, smooth, smooth_factor,
                                       centerlines_complete)
 
@@ -182,10 +185,10 @@ def move_vessel(input_filepath, smooth, smooth_factor, alpha=0.0, beta=0.0):
 
         newVoronoi = merge_data([voronoi_remaining, voronoi_siphon])
         new_surface = create_new_surface(newVoronoi)
-        write_polydata(new_surface, model_new_surface_tmp)
+        write_polydata(new_surface, surface_new_surface_tmp)
 
         print("Creating new_centerline_complete.vtp of horizontally moved model")
-        new_centerline = make_centerline(model_new_surface_tmp, new_centerlines_path_tmp,
+        new_centerline = make_centerline(surface_new_surface_tmp, new_centerlines_path_tmp,
                                          smooth=False, resampling=False,
                                          newpoints=newpoints, recompute=True,
                                          store_points=False)
@@ -205,9 +208,9 @@ def move_vessel(input_filepath, smooth, smooth_factor, alpha=0.0, beta=0.0):
     print("Smoothing, clean, and check surface")
     surface, surface_capped = prepare_surface_output(new_surface, surface,
                                                      centerlines_in_order,
-                                                     model_new_surface, test_merge=True)
+                                                     surface_new_surface, test_merge=True)
     write_polydata(new_centerline, new_centerlines_path)
-    write_polydata(new_surface, model_new_surface)
+    write_polydata(new_surface, surface_new_surface)
 
 
 def move_vessel_vertically(dirpath, name, oldpoints, alpha, beta, voronoi_remaining,
@@ -232,13 +235,13 @@ def move_vessel_vertically(dirpath, name, oldpoints, alpha, beta, voronoi_remain
     """
 
     # Filenames
-    #model_new_surface = path.join(folder, surface_name + "_new_model_alpha_%s_beta_%s.vtp"
+    #surface_new_surface = base_path + "_new_surface_alpha_%s_beta_%s.vtp"
     #                                % (alpha,beta))
-    #model_new_surface_clean = path.join(folder, surface_name + "_new_model_alpha_%s_beta_%s_clean.vtp"
+    #surface_new_surface_clean = base_path + "_new_surface_alpha_%s_beta_%s_clean.vtp"
     #                                % (alpha,beta))
-    #new_centerlines_path = path.join(folder, surface_name + "_new_centerlines_alpha_%s_beta_%s.vtp"
+    #new_centerlines_path = base_path + "_new_centerlines_alpha_%s_beta_%s.vtp"
     #                                % (alpha, beta))
-    #new_centerlines_path_clean = path.join(folder, surface_name + "_new_centerlines_alpha_%s_beta_%s_clean.vtp"
+    #new_centerlines_path_clean = base_path + "_new_centerlines_alpha_%s_beta_%s_clean.vtp"
     #                                % (alpha, beta))
 
     # Set clipping points in order and make VTK objects
@@ -302,12 +305,12 @@ def move_vessel_vertically(dirpath, name, oldpoints, alpha, beta, voronoi_remain
     new_surface = create_new_surface(newVoronoi)
     new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100)
     new_surface = check_if_surface_is_merged(new_surface, centerlines_in_order,
-                                    model_new_surface_clean, new_centerlines_path)
+                                    surface_new_surface_clean, new_centerlines_path)
     # TODO: Add Automated clipping of newmodel
-    write_polydata(new_surface, model_new_surface)
+    write_polydata(new_surface, surface_new_surface)
 
     print("Creating new_centerline_complete.vtp of vertically moved model")
-    new_centerline = make_centerline(model_new_surface, new_centerlines_path,
+    new_centerline = make_centerline(surface_new_surface, new_centerlines_path,
                                      smooth=False, resampling=False, newpoints=newpoints,
                                      recompute=True)
 

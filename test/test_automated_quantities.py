@@ -1,15 +1,16 @@
 import pytest
+import sys
+from os import path
+rel_path = path.dirname(path.abspath(__file__))
+sys.path.insert(0, path.join(rel_path, '..', 'src'))
 from manipulate_bend import *
 from automated_geometric_quantities import compute_angle
-
-sys.path.insert(0, '../src/')
-
 
 @pytest.fixture(scope='module')
 def init_data():
     # Global parameters
     basedir = "testdata"
-    case = "P0134"
+    case = "P0134/surface/model.vtp"
     point_path = "carotid_siphon_points.particles"
     dirpath = path.join(basedir, case)
     name = "surface"
@@ -21,16 +22,18 @@ def init_data():
 def test_increase_siphon_angle(init_data):
     name = init_data['name']
     smooth = init_data['smooth']
-    dirpath = init_data['dirpath']
+    input_filepath = init_data['dirpath']
     point_path = init_data['point_path']
     smooth_factor = init_data['smooth_factor']
     alpha = -0.1
     beta = 0.4
     method = "plane"
-    move_vessel(dirpath, smooth, name, point_path, alpha, beta, smooth_factor)
-    new_centerlines_path = path.join(dirpath, name, "new_centerlines_alpha_%s_beta_%s.vtp"
+
+
+    move_vessel(input_filepath, smooth, smooth_factor,  alpha, beta )
+    new_centerlines_path = path.join(input_filepath, name, "new_centerlines_alpha_%s_beta_%s.vtp"
                                      % (alpha, beta))
     new_cl = read_polydata(new_centerlines_path)
-    angle_new, angle_original = compute_angle(dirpath, point_path, name, alpha,
+    angle_new, angle_original = compute_angle(input_filepath, point_path, name, alpha,
                                               beta, method, new_centerline=new_cl)
     assert angle_original < angle_new
