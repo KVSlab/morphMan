@@ -1148,18 +1148,18 @@ def compute_centerlines(inlet, outlet, filepath, surface, resampling=1,
 
     if smooth:
         centerlineSmoothing = vmtkscripts.vmtkCenterlineSmoothing()
-        centerlineSmoothing.SetInputData(centerlines_)
+        centerlineSmoothing.SetInputData(centerlines_output)
         centerlineSmoothing.SetNumberOfSmoothingIterations(num_iter)
         centerlineSmoothing.SetSmoothingFactor(smooth_factor)
         centerlineSmoothing.Update()
 
-        centerlines = centerlinesSmooth.GetOutput()
+        centerlines = centerlineSmoothing.GetOutput()
 
     # Save the computed centerline.
     if filepath is not None:
         write_polydata(centerlines, filepath)
 
-    return centerlines_, centerlines.VoronoiDiagram, centerlines.PoleIds
+    return centerlines_output, centerlines.VoronoiDiagram, centerlines.PoleIds
 
 
 def create_vtk_array(values, name, k=1):
@@ -2138,6 +2138,7 @@ def check_if_surface_is_merged(surface, centerlines, output_filepath):
     for i in range(centerlines.GetNumberOfLines()):
         lines_to_compare.append(extract_single_line(centerlines, i))
         outlets += lines_to_compare[-1].GetPoint(lines_to_compare[-1].GetNumberOfPoints() - 1)
+
     lines_to_check = compute_centerlines(inlet, outlets, None, surface,
                                                resampling=0.1, recompute=True)
     for i in range(centerlines.GetNumberOfLines()):
