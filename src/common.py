@@ -2062,7 +2062,7 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
 
 
     # Perform a 'light' smoothing to obtain a nicer surface
-    surface = vmtk_surface_smoother(surface, method="laplace")
+    surface = vmtk_surface_smoother(surface, method="laplace", iterations=100)
 
     # Clean surface
     surface = surface_cleaner(surface)

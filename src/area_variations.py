@@ -77,6 +77,7 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
                                        resampling=0.1, smooth=False)
 
     # Smooth voronoi diagram
+    # TODO: Store smoothed surface.
     voronoi = prepare_voronoi_diagram(surface, capped_surface, centerlines, base_path,
                                       smooth, smooth_factor, no_smooth, no_smooth_point)
     tolerance = get_tolerance(centerlines)
@@ -101,7 +102,7 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
 
     # Make new surface
     print("Create surface")
-    new_surface = create_new_surface(newvoronoi, poly_ball_size=poly_ball_size)
+    new_surface = create_new_surface(newvoronoi, polyBallImageSize=poly_ball_size)
 
     print("Cleaning surface for output")
     new_surface = prepare_surface_output(new_surface, surface, centerlines,
