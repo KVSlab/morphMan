@@ -245,10 +245,19 @@ def smooth_voronoi_diagram(voronoi, centerlines, smoothing_factor,
     Returns: smoothedDiagram (vtkPolyData): Smoothed voronoi diagram.
     """
     numberOfPoints = voronoi.GetNumberOfPoints()
-
-    # TODO: Change the radius array theshold to 0 at beging and end of centerlines
-    from IPython import embed; embed()
     threshold = get_array(radiusArrayName, centerlines) * (1 - smoothing_factor)
+
+    # Do not smooth inlet and outlets, set threshold to 0
+    start = 0
+    end = 0
+    for i in range(centerlines.GetNumberOfLines()):
+        end_ = extract_single_line(centerlines, i).GetNumberOfPoints() - 1
+        end += end_
+        threshold[start:start+5] = -1
+        threshold[end-5:end] = -1
+        start += end_ + 1
+        end += 1
+
     locator = get_locator(centerlines)
     if no_smooth_cl is not None:
         no_locator = get_locator(no_smooth_cl)
@@ -1135,11 +1144,11 @@ def compute_centerlines(inlet, outlet, filepath, surface, resampling=1,
     centerlines.SourcePoints = inlet
     centerlines.TargetPoints = outlet
     centerlines.Execute()
-    centerlines = centerlines.Centerlines
+    centerlines_output = centerlines.Centerlines
 
     if smooth:
         centerlineSmoothing = vmtkscripts.vmtkCenterlineSmoothing()
-        centerlineSmoothing.SetInputData(self.Centerlines)
+        centerlineSmoothing.SetInputData(centerlines_)
         centerlineSmoothing.SetNumberOfSmoothingIterations(num_iter)
         centerlineSmoothing.SetSmoothingFactor(smooth_factor)
         centerlineSmoothing.Update()
@@ -1150,7 +1159,7 @@ def compute_centerlines(inlet, outlet, filepath, surface, resampling=1,
     if filepath is not None:
         write_polydata(centerlines, filepath)
 
-    return centerlines
+    return centerlines_, centerlines.VoronoiDiagram, centerlines.PoleIds
 
 
 def create_vtk_array(values, name, k=1):
@@ -1869,7 +1878,7 @@ def prepare_voronoi_diagram(surface, capped_surface, centerlines, base_path,
     Returns:
         voronoi (vtkPolyData): Voronoi diagram of surface.
     """
-    # Check if an area is not to be smoothed
+    # Check if a region should not be smoothed
     if smooth and no_smooth:
         no_smooth_centerline_path = base_path + "_centerlines_no_smooth.vtp"
         # Get inlet and outlets
@@ -2147,7 +2156,7 @@ def check_if_surface_is_merged(surface, centerlines, output_filepath):
                 write_polydata(surface, tmp_path)
                 raise RuntimeError(("\nERROR: Model has most likely overlapping regions. Please check" + \
                             " the surface model {} and provide other parameters for" + \
-                            " manipulation.").format(tmp_path))
+                            " the manipulation or poly_ball_size.").format(tmp_path))
 
 
 def get_clipping_points(dirpath, filename):
