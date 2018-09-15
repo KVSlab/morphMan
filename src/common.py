@@ -142,14 +142,14 @@ def get_path_names(input_filepath):
         input_filepath (str): Input filepath
 
     Returns:
-        surface_name (str): Name of the case
-        surface_folder_path (str): Name of the parent directory
+        base_path (str): Path to the surface, but without the extension
     """
 
     surface_name = input_filepath.split(path.sep)[-1].split(".")[0]
-    surface_folder_path = path.dirname(input_filepath)
+    folder = path.dirname(input_filepath)
+    base_path = path.join(folder, surface_name)
 
-    return surface_name, surface_folder_path
+    return base_path
 
 
 def make_voronoi_diagram(surface, filename):
@@ -1148,7 +1148,7 @@ def compute_centerlines(inlet, outlet, filepath, surface, resampling=1,
 
     if smooth:
         centerlineSmoothing = vmtkscripts.vmtkCenterlineSmoothing()
-        centerlineSmoothing.SetInputData(centerlines_)
+        centerlineSmoothing.SetInputData(centerlines_output)
         centerlineSmoothing.SetNumberOfSmoothingIterations(num_iter)
         centerlineSmoothing.SetSmoothingFactor(smooth_factor)
         centerlineSmoothing.Update()
@@ -1159,7 +1159,7 @@ def compute_centerlines(inlet, outlet, filepath, surface, resampling=1,
     if filepath is not None:
         write_polydata(centerlines, filepath)
 
-    return centerlines_, centerlines.VoronoiDiagram, centerlines.PoleIds
+    return centerlines_output, centerlines.VoronoiDiagram, centerlines.PoleIds
 
 
 def create_vtk_array(values, name, k=1):
