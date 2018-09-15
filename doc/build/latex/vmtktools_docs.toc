@@ -1,0 +1,33 @@
+\babel@toc {english}{}
+\contentsline {chapter}{\numberline {1}Installation}{3}{chapter.1}
+\contentsline {section}{\numberline {1.1}Compatibility and Dependencies}{3}{section.1.1}
+\contentsline {section}{\numberline {1.2}Basic Installation}{3}{section.1.2}
+\contentsline {chapter}{\numberline {2}Using VMTK Tools}{5}{chapter.2}
+\contentsline {section}{\numberline {2.1}Application}{5}{section.2.1}
+\contentsline {section}{\numberline {2.2}Definitions}{5}{section.2.2}
+\contentsline {section}{\numberline {2.3}Initialize cases}{5}{section.2.3}
+\contentsline {section}{\numberline {2.4}Landmarking}{6}{section.2.4}
+\contentsline {section}{\numberline {2.5}Geometric manipulation}{8}{section.2.5}
+\contentsline {subsection}{\numberline {2.5.1}Bifurcation angle rotation}{8}{subsection.2.5.1}
+\contentsline {subsection}{\numberline {2.5.2}Cross-sectional area variation}{9}{subsection.2.5.2}
+\contentsline {subsubsection}{Area variations}{11}{subsubsection*.3}
+\contentsline {subsubsection}{Overall area variation}{12}{subsubsection*.4}
+\contentsline {subsubsection}{Stenosis creation / removal}{12}{subsubsection*.5}
+\contentsline {subsection}{\numberline {2.5.3}Curvature and angle variation of the anterior bend}{15}{subsection.2.5.3}
+\contentsline {subsection}{\numberline {2.5.4}Curvature and torsion variation in the vessel}{16}{subsection.2.5.4}
+\contentsline {subsubsection}{Selection of compression / extension factors}{16}{subsubsection*.6}
+\contentsline {chapter}{\numberline {3}Documentation for the Python Scripts}{19}{chapter.3}
+\contentsline {section}{\numberline {3.1}Initialization}{19}{section.3.1}
+\contentsline {subsection}{\numberline {3.1.1}initialize\_cases.py}{19}{subsection.3.1.1}
+\contentsline {section}{\numberline {3.2}Landmarking of the Carotid Siphon}{19}{section.3.2}
+\contentsline {subsection}{\numberline {3.2.1}automated\_landmarking.py}{19}{subsection.3.2.1}
+\contentsline {section}{\numberline {3.3}Manipulation of the Carotid Siphon}{19}{section.3.3}
+\contentsline {subsection}{\numberline {3.3.1}move\_siphon.py}{19}{subsection.3.3.1}
+\contentsline {subsection}{\numberline {3.3.2}calculate\_alpha\_beta\_values.py}{19}{subsection.3.3.2}
+\contentsline {section}{\numberline {3.4}Computing angle and curvature of the Carotid Siphon}{19}{section.3.4}
+\contentsline {subsection}{\numberline {3.4.1}automated\_geometric\_quantities.py}{19}{subsection.3.4.1}
+\contentsline {section}{\numberline {3.5}Manipulation of the ICA Bifurcation}{19}{section.3.5}
+\contentsline {subsection}{\numberline {3.5.1}move\_branches.py}{19}{subsection.3.5.1}
+\contentsline {section}{\numberline {3.6}Miscellaneous}{19}{section.3.6}
+\contentsline {subsection}{\numberline {3.6.1}common.py}{19}{subsection.3.6.1}
+\contentsline {subsection}{\numberline {3.6.2}moveandmanipulatetools.py}{19}{subsection.3.6.2}

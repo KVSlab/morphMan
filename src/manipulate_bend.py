@@ -9,7 +9,7 @@ from paralleltransportvoronoidiagram import *
 from moveandmanipulatetools import *
 
 
-def move_vessel(input_filepath, smooth, smooth_factor, alpha=0.0, beta=0.0, smooth_factor=0.25):
+def move_vessel(input_filepath, smooth, smooth_factor, alpha=0.0, beta=0.0):
     """
     Primary script for moving a selected part of any blood vessel.
     Relies on an input centerline, a surface geometry of a 3D blood vessel network,
@@ -188,7 +188,7 @@ def move_vessel(input_filepath, smooth, smooth_factor, alpha=0.0, beta=0.0, smoo
         new_surface = create_new_surface(newVoronoi)
         write_polydata(new_surface, model_new_surface_tmp)
 
-        print "Creating new_centerline_complete.vtp of horizontally moved model"
+        print("Creating new_centerline_complete.vtp of horizontally moved model")
         new_centerline = make_centerline(model_new_surface_tmp, new_centerlines_path_tmp,
                                          smooth=False, resampling=False,
                                          newpoints=newpoints, recompute=True,
@@ -310,7 +310,7 @@ def move_vessel_vertically(dirpath, name, oldpoints, alpha, beta, voronoi_remain
     # TODO: Add Automated clipping of newmodel
     write_polydata(new_surface, model_new_surface)
 
-    print "Creating new_centerline_complete.vtp of vertically moved model"
+    print("Creating new_centerline_complete.vtp of vertically moved model")
     new_centerline = make_centerline(model_new_surface, new_centerlines_path,
                                      smooth=False, resampling=False, newpoints=newpoints,
                                      recompute=True)

@@ -836,12 +836,8 @@ def save_angle_or_curvature(values, case, param):
             np.savetxt(f, line, fmt='%.3f')
 
 
-<<<<<<< HEAD
-def main(surface_filepath, case, kappa, theta, alpha, beta, method_curv, method_angle, n=50):
-=======
 def initialize(basedir, case, kappa, theta, alpha, beta, boundary,
                 method_curv, method_angle, n=50):
->>>>>>> d62898a2af264d782def4ad649b49d4d3560ac59
     """
     Initilization for computing curvature and angle.
     Values are either printed to terminal or stored in a (n x n) matrix.
