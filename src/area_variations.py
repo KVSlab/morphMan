@@ -1,6 +1,6 @@
 from scipy.ndimage.filters import gaussian_filter
 from scipy.signal import argrelextrema
-from argparse import ArgumentParser
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from os import path, listdir
 
 # Local import
@@ -8,8 +8,9 @@ from common import *
 from clipvoronoidiagram import *
 from paralleltransportvoronoidiagram import *
 
-def area_variations(input_filepath, method, smooth, smooth_factor, beta, ratio, stenosis_size,
-                    stenosis_points, percentage, output_filepath):
+def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
+                    no_smooth_point, beta, ratio, stenosis_size, stenosis_points,
+                    percentage, output_filepath, poly_ball_size):
     """
     Objective manipulation of area variation in
     patient-specific models of blood vessels.
@@ -36,25 +37,23 @@ def area_variations(input_filepath, method, smooth, smooth_factor, beta, ratio, 
         area (ndarray): Array of cross-section area along the abscissa.
     """
     surface_name, folder = get_path_names(input_filepath)
+    base_path = path.join(folder, surface_name)
 
     # Files paths
-    surface_capped_path = path.join(folder, surface_name+ "_capped.vtp")
-    surface_smoothed_path = path.join(folder, surface_name+ "_smoothed.vtp")
-    centerlines_path = path.join(folder, surface_name+ "_usr_centerline.vtp")
-    voronoi_path = path.join(folder, surface_name+ "_voronoi.vtp")
-    voronoi_smoothed_path = path.join(folder, surface_name+ "_voronoi_smoothed.vtp")
-    voronoi_new_path = path.join(folder, surface_name+ "_voronoi_area.vtp")
-    centerline_area_path = path.join(folder, surface_name+ "_centerline_area.vtp")
-    centerline_area_spline_path = path.join(folder, surface_name+ "_centerline_area_spline.vtp")
-    centerline_area_spline_sections_path = path.join(folder, surface_name+ "_centerline_area_sections.vtp")
-    centerline_spline_path = path.join(folder,surface_name+ "_centerline_spline.vtp")
+    surface_capped_path = base_path + "_capped.vtp"
+    voronoi_new_path = base_path + "_voronoi_manipulated.vtp"
+    centerlines_path = base_path + "_centerline.vtp"
+    centerline_area_path = base_path + "_centerline_area.vtp"
+    centerline_area_spline_path = base_path + "_centerline_area_spline.vtp"
+    centerline_area_spline_sections_path = base_path + "_centerline_area_sections.vtp"
+    centerline_spline_path = base_path + "_centerline_spline.vtp"
 
     # Output path of manipulated surface
     if output_filepath is None:
         s = "_" + method
         s += "" if not smooth else "_smooth"
         if method == "variation":
-            s += "_beta_" + str(beta) if ratio is not None else "_ratio_" + str(ratio)
+            s += "_beta_" + str(beta) if beta is not None else "_ratio_" + str(ratio)
         elif method == "area":
             s += "_area_" + str(percentage)
         elif method == "stenosis":
@@ -78,11 +77,8 @@ def area_variations(input_filepath, method, smooth, smooth_factor, beta, ratio, 
                                        resampling=0.1, smooth=False)
 
     # Smooth voronoi diagram
-    voronoi = prepare_voronoi_diagram(surface, voronoi_path, surface_smoothed_path,
-                                      voronoi_smoothed_path, smooth, smooth_factor,
-                                      centerlines)
-
-    # Tolerance for finding diverging point
+    voronoi = prepare_voronoi_diagram(surface, capped_surface, centerlines, base_path,
+                                      smooth, smooth_factor, no_smooth, no_smooth_point)
     tolerance = get_tolerance(centerlines)
 
     # Spline centerline and compute cross-sectional areas along line
@@ -105,11 +101,13 @@ def area_variations(input_filepath, method, smooth, smooth_factor, beta, ratio, 
 
     # Make new surface
     print("Create surface")
-    new_surface = create_new_surface(newvoronoi)
+    new_surface = create_new_surface(newvoronoi, poly_ball_size=poly_ball_size)
 
-    print("Write surface to: {}".format(new_surface_path))
+    print("Cleaning surface for output")
     new_surface = prepare_surface_output(new_surface, surface, centerlines,
                                          new_surface_path, test_merge=True)
+
+    print("Write surface to: {}".format(new_surface_path))
     write_polydata(new_surface, new_surface_path)
 
 
@@ -241,11 +239,11 @@ def get_factor(line_to_change, method, beta, ratio, percentage, stenosis_points,
                 if not first:
                     print("Please provide only one or two points, try again.")
                 # Select point on surface
-                SeedSelector = vmtkPickPointSeedSelector()
-                SeedSelector.SetSurface(surface)
-                SeedSelector.Mode = "stenosis"
-                SeedSelector.Execute()
-                stenosisPointId = SeedSelector.GetTargetSeedIds()
+                seed_selector = vmtkPickPointSeedSelector()
+                seed_selector.SetSurface(surface)
+                seed_selector.Mode = "stenosis"
+                seed_selector.Execute()
+                stenosisPointId = seed_selector.GetTargetSeedIds()
                 first = False
 
             if stenosisPointId.GetNumberOfIds() == 1:
@@ -504,13 +502,13 @@ def read_command_line():
     Read arguments from commandline
     """
     # Description of the script
-    description = """Manipulates the area of a tubular geometry. The script changes the area
-    in three different ways:
-        1) Increase or decrease the area variation along the region of interest. (variation)
-        2) Create or remove a local narrowing. (stenosis)
-        3) Inflate or deflate the entire region of interest. (area)
-    """
-    parser = ArgumentParser(description=description)
+    description = "Manipulates the area of a tubular geometry. The script changes the area" + \
+                  " in three different ways:" + \
+                  "\n1) Increase or decrease the area variation along the region of" + \
+                  " interest. (variation)\n2) Create or remove a local narrowing. (stenosis)" + \
+                  "\n3) Inflate or deflate the entire region of interest. (area)"
+
+    parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
     required = parser.add_argument_group('required named arguments')
 
     # Required arguments
@@ -531,13 +529,28 @@ def read_command_line():
                              " other shape may be easly implemented." + \
                              "\n3) 'area' will inflate or deflate the area in the region of" + \
                              " interest.")
-
     parser.add_argument('-s', '--smooth', type=bool, default=False,
                         help="Smooth the voronoi diagram, default is False")
     parser.add_argument('-f', '--smooth_factor', type=float, default=0.25,
-                         help="If smooth option is true then each voronoi point" + \
-                         " that has a radius less then MISR*(1-smooth_factor) at" + \
-                         " the closest centerline point is removed.")
+                        help="If smooth option is true then each voronoi point" + \
+                             " that has a radius less then MISR*(1-smooth_factor) at" + \
+                             " the closest centerline point is removed.")
+    parser.add_argument("-n", "--no_smooth", type=bool, default=False,
+                        help="If true and smooth is true the user, if no_smooth_point is" + \
+                             " not given, the user can provide points where the surface not will" + \
+                             " be smoothed.")
+    parser.add_argument("--no_smooth_point", nargs="+", type=float, default=None,
+                        help="If model is smoothed the user can manually select points on" + \
+                             " the surface that will not be smoothed. A centerline will be" + \
+                             " created to the extra point, and the section were the centerline" + \
+                             " differ from the other centerlines will be keept un-smoothed. This" + \
+                             " can be practicle for instance when manipulating geometries" + \
+                             " with aneurysms")
+    parser.add_argument("-b", "--poly-ball-size", nargs=3, type=int, default=[120, 120, 120],
+                        help="The size of the poly balls that will envelope the new" + \
+                             " surface. The default value is 120, 120, 120. If two tubular" + \
+                             " structures are very close compared to the bounds, the poly ball" + \
+                             " size should be adjusted", metavar="size")
 
     # "Variation" argments
     parser.add_argument('--beta', type=float, default=0.5,
@@ -578,10 +591,22 @@ def read_command_line():
     if args.method == "variation" and args.ratio is not None and args.beta != 0.5:
         print("WARNING: The beta value you provided will be ignored, using ration instead.")
 
+    if args.stenosis_points is not None and len(args.stenosis_points):
+        if len(args.stenosis_points) % 3 != 0 and len(args.stenosis_points) < 7:
+            raise ValueError("ERROR: Please provide a stenosis point as a multiple of 3, and maximum" + \
+                             " two points")
+
+    if args.no_smooth_point is not None and len(args.no_smooth_point):
+        if len(args.no_smooth_point) % 3 != 0:
+            raise ValueError("ERROR: Please provide the no smooth point(s) as a multiple of 3")
+
+
     return dict(input_filepath=args.ifile, method=args.method, smooth=args.smooth,
                 smooth_factor=args.smooth_factor, beta=args.beta,
                 ratio=args.ratio, stenosis_size=args.stenosis_size, stenosis_points=args.stenosis_points,
-                percentage=args.percentage, output_filepath=args.ofile)
+                percentage=args.percentage, output_filepath=args.ofile,
+                poly_ball_size=args.poly_ball_size, no_smooth=args.no_smooth,
+                no_smooth_point=args.no_smooth_point)
 
 if __name__ == '__main__':
     area_variations(**read_command_line())

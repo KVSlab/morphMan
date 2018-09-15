@@ -226,7 +226,7 @@ def get_relevant_outlets(surface, dir_path):
 
 
 def smooth_voronoi_diagram(voronoi, centerlines, smoothing_factor,
-                         no_smooth_cl=None):
+                           no_smooth_cl=None):
     """
     Smooth voronoi diagram based on a given
     smoothingfactor. Each voronoi point
@@ -243,6 +243,8 @@ def smooth_voronoi_diagram(voronoi, centerlines, smoothing_factor,
     """
     numberOfPoints = voronoi.GetNumberOfPoints()
 
+    # TODO: Change the radius array theshold to 0 at beging and end of centerlines
+    from IPython import embed; embed()
     threshold = get_array(radiusArrayName, centerlines) * (1 - smoothing_factor)
     locator = get_locator(centerlines)
     if no_smooth_cl is not None:
@@ -260,7 +262,7 @@ def smooth_voronoi_diagram(voronoi, centerlines, smoothing_factor,
         id_ = locator.FindClosestPoint(point)
         cl_point = centerlines.GetPoint(id_)
 
-        if distance(point, cl_point) > 3 * threshold[id_]:
+        if distance(point, cl_point) > 2 * threshold[id_] / (1 - smoothing_factor):
             points.InsertNextPoint(point)
             cellArray.InsertNextCell(1)
             cellArray.InsertCellPoint(count)
@@ -401,6 +403,7 @@ def get_array_cell(arrayName, line, k=1):
 
 
 def create_new_surface(completeVoronoiDiagram, polyBallImageSize=[120, 120, 120]):
+ #                      centerlines=None):
     """
     Envelops an input voronoi diagram
     into a new surface model at a
@@ -414,9 +417,6 @@ def create_new_surface(completeVoronoiDiagram, polyBallImageSize=[120, 120, 120]
     Returns:
         envelope (vtkPolyData): Enveloped surface model.
     """
-    # TODO: Get bounds and compute polyballs based on that
-    #       bounds = surface.GetBounds()
-    # Get the x,y, and z range of the completeVoronoiDiagram
     modeller = vtkvmtk.vtkvmtkPolyBallModeller()
     modeller.SetInputData(completeVoronoiDiagram)
     modeller.SetRadiusArrayName(radiusArrayName)
@@ -1125,7 +1125,7 @@ def compute_centerlines(inlet, outlet, filepath, surface, resampling=1,
 
     centerlines = vmtkscripts.vmtkCenterlines()
     centerlines.Surface = surface
-    centerlines.SeedSelectorName = 'pointlist'
+    centerlines.SeedSelectorName = method
     centerlines.AppendEndPoints = endPoint
     centerlines.Resampling = 1
     centerlines.ResamplingStepLength = resampling
@@ -1849,8 +1849,8 @@ def prepare_surface(surface_path, surface_capped_path, parameters):
     return open_surface, capped_surface
 
 
-def prepare_voronoi_diagram(surface, voronoi_path, surface_smoothed_path, voronoi_smoothed_path=None,
-                            smooth=False, smooth_factor=0.25, centerlines=None, no_smooth_cl=None):
+def prepare_voronoi_diagram(surface, capped_surface, centerlines, base_path,
+                            smooth, smooth_factor, no_smooth, no_smooth_point):
     """
     Compute and smooth voronoi diagram of surface model.
 
@@ -1866,19 +1866,56 @@ def prepare_voronoi_diagram(surface, voronoi_path, surface_smoothed_path, vorono
     Returns:
         voronoi (vtkPolyData): Voronoi diagram of surface.
     """
-    # Smooth voronoi diagram
-    voronoi = make_voronoi_diagram(surface, voronoi_path)
+    # Check if an area is not to be smoothed
+    if smooth and no_smooth:
+        no_smooth_centerline_path = base_path + "_centerlines_no_smooth.vtp"
+        # Get inlet and outlets
+        inlet = centerlines.GetPoint(0)
+        outlets = []
+        if no_smooth_point is None:
+            seed_selector = vmtkPickPointSeedSelector()
+            seed_selector.SetSurface(capped_surface)
+            seed_selector.Mode = "no_smooth"
+            seed_selector.Execute()
+            point_ids = SeedSelector.GetTargetSeedIds()
+            outlets = [surface.GetPoint(point_ids.GetId(i)) for i in range(point_ids.GetNumberOfIds())]
+        else:
+            locator = get_locator(surface)
+            for i in range(len(no_smooth_point) // 3):
+                outlets.append(surface.GetPoint(locator.FindClosestPoint(no_smooth_point[3*i:3*(i+1)])))
+
+        no_smooth_centerlines = compute_centerlines(inlet, outlets,
+                                                    no_smooth_centerline_path,
+                                                    capped_surface, resampling=0.1,
+                                                    smooth=False)
+        no_smooth_segments = []
+        for i in range(no_smooth_centerlines.GetNumberOfLines()):
+            tmp_line = extract_single_line(no_smooth_centerlines, i)
+            div_ids = []
+            for j in range(centerlines.GetNumberOfLines()):
+                div_ids.append(centerline_div(tmp_line, extract_single_line(centerlines, j)))
+            div_id = max(div_ids)
+            no_smooth_segments.append(extract_single_line(tmp_line, div_id))
+
+        no_smooth_centerlines = merge_data(no_smooth_segments)
+
+    else:
+        no_smooth_cl = None
+
+    # Create Voronoi diagram
+    voronoi = make_voronoi_diagram(surface, base_path + "_voronoi.vtp")
+
+    voronoi_smoothed_path = base_path + "_voronoi_smoothed.vtp"
     if not path.exists(voronoi_smoothed_path) and smooth:
-        voronoi_smoothed = smooth_voronoi_diagram(voronoi, centerlines, smooth_factor,
-                                                  no_smooth_cl)
+        # Smooth voronoi diagram
+        voronoi = smooth_voronoi_diagram(voronoi, centerlines, smooth_factor, no_smooth_cl)
         write_polydata(voronoi_smoothed, voronoi_smoothed_path)
+
+        # Create new surface from the smoothed Voronoi
         surface_smoothed = create_new_surface(voronoi_smoothed)
         write_polydata(surface_smoothed, surface_smoothed_path)
-    else:
-        voronoi_smoothed = read_polydata(voronoi_smoothed_path)
-
-    # Use smoothed voronoi or not
-    voronoi = voronoi_smoothed if smooth else voronoi
+    elif smooth:
+        voronoi = read_polydata(voronoi_smoothed_path)
 
     return voronoi
 
@@ -1989,42 +2026,40 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
         translationFilter.SetTransform(transform)
         translationFilter.SetInputData(surface)
         translationFilter.Update()
-        surf = translationFilter.GetOutput()
+        surface = translationFilter.GetOutput()
 
         transform = vtk.vtkTransform()
         transform.RotateWXYZ(-angle, rotation_axis)
         translationFilter = vtk.vtkTransformPolyDataFilter()
         translationFilter.SetTransform(transform)
-        translationFilter.SetInputData(surf)
+        translationFilter.SetInputData(surface)
         translationFilter.Update()
-        surf = translationFilter.GetOutput()
+        surface = translationFilter.GetOutput()
 
-        write_polydata(surf, "test_rotated_surface.vtp")
-
-        tmp_surface = clip_polydata(surf, box)
+        surface = clip_polydata(surface, box)
 
         transform = vtk.vtkTransform()
         transform.RotateWXYZ(angle, rotation_axis)
         translationFilter = vtk.vtkTransformPolyDataFilter()
         translationFilter.SetTransform(transform)
-        translationFilter.SetInputData(tmp_surface)
+        translationFilter.SetInputData(surface)
         translationFilter.Update()
-        surf = translationFilter.GetOutput()
+        surface = translationFilter.GetOutput()
 
         transform = vtk.vtkTransform()
         transform.Translate(center[0], center[1], center[2])
         translationFilter = vtk.vtkTransformPolyDataFilter()
         translationFilter.SetTransform(transform)
-        translationFilter.SetInputData(surf)
+        translationFilter.SetInputData(surface)
         translationFilter.Update()
-        surf = translationFilter.GetOutput()
+        surface = translationFilter.GetOutput()
 
-        #write_polydata(surf, "test_clip_%d.vtp" % i)
+        # Check connectivity and only choose the surface with the largest area
         surface = get_connectivity(surface, mode="Largest")
 
+        write_polydata(surface, "test_rotated_surface.vtp")
         # NOTE: Should test for number of outlets after each clip
 
-    # Check connectivity and only choose the surface with the largest area
 
     # Perform a 'light' smoothing to obtain a nicer surface
     surface = vmtk_surface_smoother(surface, method="laplace")
@@ -2040,7 +2075,7 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
         surface = check_if_surface_is_merged(capped_surface, new_centerline,
                                              output_filepath)
 
-    return surface, capped_surface
+    return surface
 
 
 #def sort_centerlines(centerlines_complete):
@@ -2084,14 +2119,18 @@ def check_if_surface_is_merged(surface, centerlines, output_filepath):
     """
     # Check if the manipulated centerline and the centerline from the new surface
     # significantly differ, if so it is likely that part of the surface is now merged
+    centerlines = vmtk_centerline_resampling(centerlines, length=0.1)
+    inlet = centerlines.GetPoint(0)
+    outlets = []
+    lines_to_compare = []
     for i in range(centerlines.GetNumberOfLines()):
-        line_to_compare = extract_single_line(centerlines, i)
-        line_to_compare = vmtk_centerline_resampling(line_to_compare, length=0.1)
-        inlet = line_to_compare.GetPoint(0)
-        outlet = line_to_compare.GetPoint(line_to_compare.GetNumberOfPoints() - 1)
-
-        line_to_check = compute_centerlines(inlet, outlet, None, surface,
-                                            resampling=0.1, recompute=True)
+        lines_to_compare.append(extract_single_line(centerlines, i))
+        outlets += lines_to_compare[-1].GetPoint(lines_to_compare[-1].GetNumberOfPoints() - 1)
+    lines_to_check = compute_centerlines(inlet, outlets, None, surface,
+                                               resampling=0.1, recompute=True)
+    for i in range(centerlines.GetNumberOfLines()):
+        line_to_compare = lines_to_compare[i]
+        line_to_check = extract_single_line(lines_to_check, i)
 
         # Compare distance between points along both centerliens
         N = min([line_to_check.GetNumberOfPoints(), line_to_compare.GetNumberOfPoints()])
@@ -2103,6 +2142,6 @@ def check_if_surface_is_merged(surface, centerlines, output_filepath):
             if dist > tolerance:
                 tmp_path = output_filepath.replace(".vtp", "_ERROR_MERGED.vtp")
                 write_polydata(surface, tmp_path)
-                ValueError(("\nERROR: Model has most likely overlapping regions. Please check" + \
+                raise RuntimeError(("\nERROR: Model has most likely overlapping regions. Please check" + \
                             " the surface model {} and provide other parameters for" + \
                             " manipulation.").format(tmp_path))

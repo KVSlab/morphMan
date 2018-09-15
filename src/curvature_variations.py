@@ -9,34 +9,8 @@ from paralleltransportvoronoidiagram import *
 from moveandmanipulatetools import *
 
 
-def read_command_line():
-    """Read arguments from commandline"""
-    parser = ArgumentParser()
-
-    parser.add_argument('-d', '--dir_path', type=str, default=".",
-                        help="Path to the folder with all the cases")
-    parser.add_argument('-case', type=str, default=None, help="Choose case")
-    parser.add_argument('-s', '--smooth', type=bool, default=False,
-                        help="If the original voronoi diagram (surface) should be" + \
-                        "smoothed before it is manipulated", metavar="smooth")
-    parser.add_argument("-sf", "--smoothingfactor", type=float, default=1.0,
-                        help="Smoothing factor of centerline curve.")
-    parser.add_argument("-sf_voro", "--smoothingfactor_voro", type=float, default=0.25,
-                         help="If smooth option is true then each voronoi point" + \
-                         " that has a radius less then MISR*(1-smooth_factor) at" + \
-                         " the closest centerline point is removes" metavar="smoothening_factor")
-    parser.add_argument("-sm", "--smoothmode", type=str2bool, default=True,
-                        help="Smoothes centerline if True, anti-smoothes if False", metavar="smoothmode")
-    parser.add_argument("-it", "--iterations", type=int, default=100,
-                        help="Smoothing iterations of centerline curve.")
-
-    args = parser.parse_args()
-
-    return args.smooth, args.dir_path, args.case, args.smoothmode, args.smoothingfactor, \
-           args.iterations, args.smoothingfactor_voro
-
-
-def change_curvature(dirpath, name, smooth, smoothingfactor, iterations, smoothmode, smooth_factor_voro):
+def curvature_variations(input_filename, smooth, smoothingfactor, iterations, smoothmode,
+                         smooth_factor_voro, output_filename):
     """
     Create a sharper or smoother version of the input geometry,
     determined by a smoothed version of the siphon centerline.
@@ -49,8 +23,8 @@ def change_curvature(dirpath, name, smooth, smoothingfactor, iterations, smoothm
         iterations (int): Number of smoothing iterations.
         smoothmode (bool): Determines if models is sharpened or smoothed.
     """
-    it = iterations
-    sf = smoothingfactor
+    #it = iterations
+    #sf = smoothingfactor
 
     # Input filenames
     model_path = path.join(dirpath, name, "model.vtp")
@@ -245,11 +219,43 @@ def make_voronoi_smooth(voronoi, old_cl, new_cl, smoothmode, div=False, div_poin
     return newDataSet
 
 
+def read_command_line():
+    """Read arguments from commandline"""
+    parser = ArgumentParser()
+
+    parser.add_argument('-d', '--dir_path', type=str, default=".",
+                        help="Path to the folder with all the cases")
+    parser.add_argument('-case', type=str, default=None, help="Choose case")
+    parser.add_argument('-s', '--smooth', type=bool, default=False,
+                        help="If the original voronoi diagram (surface) should be" + \
+                        "smoothed before it is manipulated", metavar="smooth")
+    parser.add_argument("-sf", "--smoothingfactor", type=float, default=1.0,
+                        help="Smoothing factor of centerline curve.")
+    parser.add_argument("-sf_voro", "--smoothingfactor_voro", type=float, default=0.25,
+                         help="If smooth option is true then each voronoi point" + \
+                         " that has a radius less then MISR*(1-smooth_factor) at" + \
+                         " the closest centerline point is removes" metavar="smoothening_factor")
+    parser.add_argument("-sm", "--smoothmode", type=str2bool, default=True,
+                        help="Smoothes centerline if True, anti-smoothes if False", metavar="smoothmode")
+    parser.add_argument("-it", "--iterations", type=int, default=100,
+                        help="Smoothing iterations of centerline curve.")
+
+    args = parser.parse_args()
+
+                 smoothingfactor, iterations, smoothmode, smooth_factor_voro, output_filename
+    return dict(input_filepath=args.ifile, smooth=args.smooth,
+                smooth_factor_voro=args.smootheningfactor_voro,
+                smoothmode=args.smoothmode, iterations=args.iterations,
+                output_filename=args.ofile)
+
+
+
 if __name__ == "__main__":
-    smooth, basedir, case, smoothmode, smoothingfactor, iterations, smooth_factor_voro = read_command_line()
-    name = "surface"
-    folders = listdir(basedir) if case is None else [case]
-    for folder in folders:
-        print("==== Working on case %s ====" % folder)
-        dirpath = path.join(basedir, folder)
-        change_curvature(dirpath, name, smooth, smoothingfactor, iterations, smoothmode, smooth_factor_voro)
+    #smooth, basedir, case, smoothmode, smoothingfactor, iterations, smooth_factor_voro = read_command_line()
+    curvature_variations(**read_command_line())
+    #name = "surface"
+    #folders = listdir(basedir) if case is None else [case]
+    #for folder in folders:
+    #    print("==== Working on case %s ====" % folder)
+    #    dirpath = path.join(basedir, folder)
+    #    change_curvature(dirpath, name, smooth, smoothingfactor, iterations, smoothmode, smooth_factor_voro)

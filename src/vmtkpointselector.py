@@ -54,7 +54,8 @@ class vmtkPickPointSeedSelector(vmtkSeedSelector):
         picker = vtk.vtkCellPicker()
         picker.SetTolerance(1E-4 * self._Surface.GetLength())
         eventPosition = self.vmtkRenderer.RenderWindowInteractor.GetEventPosition()
-        result = picker.Pick(float(eventPosition[0]), float(eventPosition[1]), 0.0, self.vmtkRenderer.Renderer)
+        result = picker.Pick(float(eventPosition[0]), float(eventPosition[1]), 0.0,
+                             self.vmtkRenderer.Renderer)
         if result == 0:
             return
         pickPosition = picker.GetPickPosition()
@@ -123,13 +124,17 @@ class vmtkPickPointSeedSelector(vmtkSeedSelector):
         self.vmtkRenderer.Renderer.AddActor(surfaceActor)
         if self.Mode == "stenosis":
             text = 'Place one point to indicate the center of a new stenosis OR place two' + \
-                    ' points on each side of an existing stenosis to remove it, \'u\' to undo\n'
+                   ' points on each side of an existing stenosis to remove it, \'u\' to undo\n'
         elif self.Mode == "outlet":
             text = 'Please select the two relevant outlets, \'u\' to undo\n'
         elif self.Mode == "aneurysm":
-            text = 'Please position the mouse and press space to add the top of the aneurysm, \'u\' to undo\n'
+            text = 'Please position the mouse and press space to add the top of the' + \
+                   'aneurysm, \'u\' to undo\n'
+        elif self.Mode == "no_smooth":
+            text = 'Please place a point on the segments you do not want to smooth, e.g.' + \
+                   ' an aneurysm, \'u\' to undo\n'
         else:
-            text = "Place points, \'u\' to undo\n"
+            text = 'Place points, \'u\' to undo\n'
 
         guiText = VtkText(text)
         self.vmtkRenderer.Renderer.AddActor(guiText.text)
