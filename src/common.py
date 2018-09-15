@@ -2046,7 +2046,7 @@ def clip_polydata(surface, cutter):
 
 def prepare_surface_output(surface, original_surface, new_centerline, output_filepath,
                            test_merge=False, rotated=False, original_centerline=None,
-                           margin=1.1, hight_ratio=0.1):
+                           margin=1.15, hight_ratio=0.1):
     # Get planes if outlets of the original surface 
     boundary_edges = get_feature_edges(original_surface)
     boundary_connectivity = get_connectivity(boundary_edges)
@@ -2098,8 +2098,9 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
         # TODO: Test direction
 
         # Create box with safety margin of 10 % and hight of 0.1
-        bound[0] = 0
-        bound[1] = abs(bound[2] - bound[3])*hight_ratio
+        bound[0] = (abs(bound[4] - bound[5]) + abs(bound[2] - bound[3]))*hight_ratio / 2
+        #bound[0] =
+        bound[1] = 0
         bound[2] *= margin
         bound[3] *= margin
         bound[4] *= margin
@@ -2129,7 +2130,19 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
         translationFilter.Update()
         surface = translationFilter.GetOutput()
 
+        print(bound)
+        write_polydata(surface, "test_pre_clip_%d.vtp" % i)
+        from IPython import embed; embed()
         surface = clip_polydata(surface, box)
+        write_polydata(surface, "test_post_clip_%d.vtp" % i)
+        plane = vtk.vtkPlaneSource()
+        plane.SetXResolution(4);
+        plane.SetYResolution(4);
+        plane.SetOrigin(2, -2, 26)
+        plane.SetPoint1(2,  2, 26)
+        plane.SetPoint2(2, -2, 32)
+        plane = plane.GetOuput()
+        write_polydata(plane, "test_plane_%d.vtp" % i)
 
         transform = vtk.vtkTransform()
         transform.RotateWXYZ(angle, rotation_axis)
