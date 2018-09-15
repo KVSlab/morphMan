@@ -1,13 +1,10 @@
-from common import *
 from argparse import ArgumentParser
 from os import path, listdir
 from time import time
 from copy import deepcopy
 
 # Local import
-from patchandinterpolatecenterlines import *
-from clipvoronoidiagram import *
-from paralleltransportvoronoidiagram import *
+from common import *
 
 
 def read_command_line():

@@ -3,10 +3,6 @@ from os import path, listdir
 
 # Local import
 from common import *
-from patchandinterpolatecenterlines import *
-from clipvoronoidiagram import *
-from paralleltransportvoronoidiagram import *
-from moveandmanipulatetools import *
 
 
 def move_vessel(input_filepath, smooth, smooth_factor, alpha=0.0, beta=0.0):
