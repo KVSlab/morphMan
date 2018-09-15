@@ -197,16 +197,14 @@ def move_vessel(input_filepath, smooth, smooth_factor, alpha, beta, output_filep
 
         print("Creating new_centerline_complete.vtp of horizontally moved model")
 
-        # new_centerline = make_centerline(surface_new_surface_tmp, new_centerlines_path_tmp,
-        #                                 smooth=False, resampling=False,
-        #                                 newpoints=newpoints, recompute=True,
-        #                                 store_points=False)
         inlet = list(newpoints[-1])
         outlet = [num for point in newpoints[:-1] for num in point]
         filepath = new_centerlines_path_tmp
         print(inlet)
         print(outlet)
         write_polydata(newVoronoi, "newvorf.vtp")
+
+        # TODO: Compute centerlines successfully
         new_centerline, newvoro, newvoropoles = compute_centerlines(inlet, outlet, filepath, new_surface, resampling=1,
                                                                     smooth=False, num_iter=100, smooth_factor=0.1,
                                                                     endPoint=1, method="pointlist", recompute=False)

@@ -454,7 +454,7 @@ def sort_outlets(outlets, outlet1, outlet2, dirpath):
     return outlets, outlet1, outlet2
 
 
-def rotate_branches(surface_path, smooth, smooth_factor, angle, l1, l2, bif, lower,
+def rotate_branches(input_filepath, smooth, smooth_factor, angle, l1, l2, bif, lower,
                     cylinder_factor, aneurysm, anu_num, resampling_step, version):
     """
     Objective rotation of daughter branches, by rotating
@@ -481,42 +481,40 @@ def rotate_branches(surface_path, smooth, smooth_factor, angle, l1, l2, bif, low
         version (bool): Determines bifurcation interpolation method.
     """
     # Filenames
-    dirpath = path.dirname(surface_path)
-    name = surface_path.split(path.sep)[-1].split(".")[0]
-    folder = path.join(dirpath, name + "%s")
+    base_path = get_path_names(input_filepath)
 
-    # Output names
+    # Output filepaths
     # Surface
-    surface_smoothed_path = folder % "_smooth.vtp"
-    surface_capped_path = folder % "_capped.vtp"
+    surface_smoothed_path = base_path + "_smooth.vtp"
+    surface_capped_path = base_path + "_capped.vtp"
 
     # Centerliens
-    centerline_par_path = folder % "_centerline_par.vtp"
-    centerline_aneurysm_path = folder % "_centerline_aneurysm.vtp"
-    centerline_bif_path = folder % "_centerline_bif.vtp"
-    centerline_complete_path = folder % "_centerline_complete.vtp"
-    centerline_clipped_path = folder % "_centerline_clipped_ang.vtp"
-    centerline_clipped_bif_path = folder % "_centerline_clipped_bif_ang.vtp"
-    centerline_bif_clipped_path = folder % "centerline_clipped_bif_ang.vtp"
-    centerline_dau_clipped_path = folder % "centerline_clipped_dau_ang.vtp"
-    centerline_new_path = folder % "_centerline_interpolated_ang.vtp"
-    centerline_new_bif_path = folder % "_centerline_interpolated_bif_ang.vtp"
-    centerline_new_bif_lower_path = folder % "_centerline_interpolated_bif_lower_ang.vtp"
-    centerline_relevant_outlets_path = folder % "_centerline_relevant_outlets.vtp"
-    centerline_rotated_path = folder % "centerline_rotated_ang.vtp"
-    centerline_rotated_bif_path = folder % "centerline_rotated_bif_ang.vtp"
-    centerline_rotated_dau_path = folder % "centerline_rotated_dau_ang.vtp"
+    centerline_par_path = base_path + "_centerline_par.vtp"
+    centerline_aneurysm_path = base_path + "_centerline_aneurysm.vtp"
+    centerline_bif_path = base_path + "_centerline_bif.vtp"
+    centerline_complete_path = base_path + "_centerline_complete.vtp"
+    centerline_clipped_path = base_path + "_centerline_clipped_ang.vtp"
+    centerline_clipped_bif_path = base_path + "_centerline_clipped_bif_ang.vtp"
+    centerline_bif_clipped_path = base_path + "centerline_clipped_bif_ang.vtp"
+    centerline_dau_clipped_path = base_path + "centerline_clipped_dau_ang.vtp"
+    centerline_new_path = base_path + "_centerline_interpolated_ang.vtp"
+    centerline_new_bif_path = base_path + "_centerline_interpolated_bif_ang.vtp"
+    centerline_new_bif_lower_path = base_path + "_centerline_interpolated_bif_lower_ang.vtp"
+    centerline_relevant_outlets_path = base_path + "_centerline_relevant_outlets.vtp"
+    centerline_rotated_path = base_path + "centerline_rotated_ang.vtp"
+    centerline_rotated_bif_path = base_path + "centerline_rotated_bif_ang.vtp"
+    centerline_rotated_dau_path = base_path + "centerline_rotated_dau_ang.vtp"
 
     # Voronoi diagrams
-    voronoi_path = folder % "_voronoi.vtp"
-    voronoi_smoothed_path = folder % "_voronoi_smoothed.vtp"
-    voronoi_clipped_path = folder % "_voronoi_clipped_ang.vtp"
-    voronoi_ang_path = folder % "_voronoi_ang.vtp"
-    voronoi_rotated_path = folder % "voronoi_rotated_ang.vtp"
+    voronoi_path = base_path + "_voronoi.vtp"
+    voronoi_smoothed_path = base_path + "_voronoi_smoothed.vtp"
+    voronoi_clipped_path = base_path + "_voronoi_clipped_ang.vtp"
+    voronoi_ang_path = base_path + "_voronoi_ang.vtp"
+    voronoi_rotated_path = base_path + "voronoi_rotated_ang.vtp"
 
     # Points
-    points_clipp_path = folder % "_clippingpoints.vtp"
-    points_div_path = folder % "_divergingpoints.vtp"
+    points_clipp_path = base_path + "_clippingpoints.vtp"
+    points_div_path = base_path + "_divergingpoints.vtp"
 
     # Naming based on different options
     if output_filepath is not None:
@@ -527,16 +525,10 @@ def rotate_branches(surface_path, smooth, smooth_factor, angle, l1, l2, bif, low
         s += "" if not smooth else "_smooth"
         s += "" if not lower else "_lower"
         s += "" if cylinder_factor == 7.0 else "_cyl%s" % cylinder_factor
-        output_filepath = folder % ("_angle" + s + ".vtp")
-    #model_new_surface = folder % ("_angle" + s + ".vtp")
-    #model_new_surface_clean = folder % ("_angle"+s+"_cleaned.vtp")
-
-    # Read and check model
-    if not path.exists(model_path):
-        RuntimeError("The given directory: %s did not contain the file: model.vtp" % dirpath)
+        output_filepath = base_path + ("_angle" + s + ".vtp")
 
     # Get aneurysm type
-    parameters = get_parameters(dirpath)
+    parameters = get_parameters(base_path)
     if "aneurysm_type" in parameters.keys():
         aneurysm_type = parameters["aneurysm_type"]
         print("Aneurysm type read from info.txt file: %s" % aneurysm_type)
@@ -546,16 +538,16 @@ def rotate_branches(surface_path, smooth, smooth_factor, angle, l1, l2, bif, low
 
     # Get aneurysm "end point"
     if aneurysm:
-        aneurysm_point = get_aneurysm_dome(capped_surface, dirpath, anu_num)
+        aneurysm_point = get_aneurysm_dome(capped_surface, base_path, anu_num)
     else:
         aneurysm_point = []
 
     # Get inlet and outlets
-    outlet1, outlet2 = get_relevant_outlets(capped_surface, dirpath)
-    inlet, outlets = get_centers(surface, dirpath)
+    outlet1, outlet2 = get_relevant_outlets(capped_surface, base_dir)
+    inlet, outlets = get_centers(surface, base_path)
 
     # Sort outlets
-    outlets, outlet1, outlet2 = sort_outlets(outlets, outlet1, outlet2, dirpath)
+    outlets, outlet1, outlet2 = sort_outlets(outlets, outlet1, outlet2, base_path)
 
     # Compute parent artery and aneurysm centerline
     centerline_par = compute_centerlines(inlet, outlets,
@@ -580,13 +572,13 @@ def rotate_branches(surface_path, smooth, smooth_factor, angle, l1, l2, bif, low
     # Get data from centerlines and rotation matrix
     data = get_data(centerline_relevant_outlets, centerline_bif, tolerance)
     R, m = rotation_matrix(data, angle, l1, l2)
-    write_parameters(data, dirpath)
+    write_parameters(data, base_dir)
 
     # Compute and smooth voornoi diagram (not aneurysm)
     print("Compute voronoi diagram")
     voronoi = make_voronoi_diagram(surface, voronoi_path)
     if not path.exists(voronoi_smoothed_path) and smooth:
-        parameters = get_parameters(dirpath)
+        parameters = get_parameters(base_dir)
         number_of_aneurysms = len([a for a in parameters.keys() if "aneurysm_" in a])
         if number_of_aneurysms == 1:
             voronoi_smoothed = SmoothClippedVoronoiDiagram(voronoi, centerline_par, smooth_factor)
