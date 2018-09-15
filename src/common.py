@@ -3,6 +3,7 @@ import numpy as np
 import numpy.linalg as la
 import sys
 import math
+import copy
 import operator
 
 from vmtk import vtkvmtk, vmtkscripts
@@ -37,7 +38,7 @@ phiValues = [float(i) for i in range(2, 43, 2)]
 thetaStep = 2.0
 
 
-def read_polydata(filename):
+def read_polydata(filename, type=None):
     """
     Load the given file, and return a vtkPolyData object for it.
 
@@ -78,6 +79,16 @@ def read_polydata(filename):
     elif fileType == "tec":
         polyData = ReadTecplotSurfaceFile(filename)
         return polyData
+    elif fileType == "np":
+        result = np.load(filename).astype(np.int)
+        id_list = vtk.vtkIdList()
+        id_list.SetNumberOfIds(result.shape[0])
+        # SetArray produces memory error
+        #id_list.SetArray(copy.copy(result), int(result.shape[0]))
+        for i in range(result.shape[0]):
+            id_list.SetId(i, result[i])
+        #del result
+        return
     else:
         raise RuntimeError('Unknown file type %s' % fileType)
 
@@ -89,7 +100,7 @@ def read_polydata(filename):
     return polyData
 
 
-def write_polydata(input_data, filename):
+def write_polydata(input_data, filename, type=None):
     """
     Write the given input data based on the file name extension.
 
@@ -121,6 +132,12 @@ def write_polydata(input_data, filename):
         writer = vtk.vtkXMLImageDataWriter()
     elif fileType == "tec":
         WriteTecplotSurfaceFile(input_data, filename)
+        return
+    elif fileType == "np" and type=="vtkIdList":
+        output_data = np.zeros(input_data.GetNumberOfIds())
+        for i in range(input_data.GetNumberOfIds()):
+            output_data[i] = input_data.GetId(i)
+        output_data.dump(filename)
         return
     else:
         raise RuntimeError('Unknown file type %s' % fileType)
@@ -169,7 +186,7 @@ def make_voronoi_diagram(surface, filename):
 
     voronoi = vmtkscripts.vmtkDelaunayVoronoi()
     voronoi.Surface = surface
-    voronoi.RemoveSubresolutionTetrahedra = 0
+    voronoi.RemoveSubresolutionTetrahedra = 1
     voronoi.Execute()
 
     write_polydata(voronoi.VoronoiDiagram, filename)
@@ -199,7 +216,7 @@ def get_tolerance(centerline, N=50):
     return tolerance
 
 
-def get_relevant_outlets(surface, dir_path):
+def get_relevant_outlets(surface, base_path):
     """
     Extract relevant outlets of the
     input surface model.
@@ -212,7 +229,7 @@ def get_relevant_outlets(surface, dir_path):
         relevant_outlets (list): List of relevant outlet IDs.
     """
     # Check if info exists
-    if not path.isfile(path.join(dir_path, "info.txt")):
+    if not path.isfile(base_path + "info.txt"):
         provide_relevant_outlets(surface, dir_path)
 
     # Open info
@@ -414,17 +431,16 @@ def get_array_cell(arrayName, line, k=1):
     return array
 
 
-def create_new_surface(completeVoronoiDiagram, polyBallImageSize=[120, 120, 120]):
- #                      centerlines=None):
+def create_new_surface(completeVoronoiDiagram, poly_ball_size=[120, 120, 120]):
     """
     Envelops an input voronoi diagram
     into a new surface model at a
     given resolution determined by
-    the polyBallImageSize.
+    the poly_ball_size.
 
     Args:
         completeVoronoiDiagram (vtkPolyData): Voronoi diagram
-        polyBallImageSize (list): List of dimensional resolution of output model
+        poly_ball_size (list): List of dimensional resolution of output model
 
     Returns:
         envelope (vtkPolyData): Enveloped surface model.
@@ -433,7 +449,7 @@ def create_new_surface(completeVoronoiDiagram, polyBallImageSize=[120, 120, 120]
     modeller.SetInputData(completeVoronoiDiagram)
     modeller.SetRadiusArrayName(radiusArrayName)
     modeller.UsePolyBallLineOff()
-    modeller.SetSampleDimensions(polyBallImageSize)
+    modeller.SetSampleDimensions(poly_ball_size)
     modeller.Update()
 
     # Write the new surface
@@ -704,13 +720,13 @@ def surface_cleaner(surface):
     return cleanSurface
 
 
-def get_centers(surface, dir_path, flowext=False):
+def get_centers(surface, base_path, flowext=False):
     # Check if info exists
-    if flowext or not path.isfile(path.join(dir_path, "info.txt")):
-        compute_centers(surface, dir_path)
+    if flowext or not path.isfile(base_path + "info.txt"):
+        compute_centers(surface, base_path)
 
     # Open info
-    parameters = get_parameters(dir_path)
+    parameters = get_parameters(base_path)
     outlets = []
     inlet = []
     for key, value in list(parameters.items()):
@@ -726,7 +742,7 @@ def get_centers(surface, dir_path, flowext=False):
             outlets += parameters["outlet%d" % i]
 
     if inlet == [] and outlets == []:
-        inlet, outlets = compute_centers(surface, dir_path)
+        inlet, outlets = compute_centers(surface, base_path)
 
     return inlet, outlets
 
@@ -786,6 +802,34 @@ def compute_area(surface):
     mass.SetInputData(surface)
 
     return mass.GetSurfaceArea()
+
+
+def clipp_capped_surface(surface, centerlines, clipspheres=0):
+    extractor = vmtkscripts.vmtkEndpointExtractor()
+    extractor.Centerlines = centerlines
+    extractor.RadiusArrayName = radiusArrayName
+    extractor.GroupIdsArrayName = groupIDsArrayName
+    extractor.BlankingArrayName = branchClippingArrayName
+    extractor.NumberOfEndPointSpheres = clipspheres
+    extractor.Execute()
+    clipped_centerlines = extractor.Centerlines
+
+    clipper = vmtkscripts.vmtkBranchClipper()
+    clipper.Surface = surface
+    clipper.Centerlines = clipped_centerlines
+    clipper.RadiusArrayName = radiusArrayName
+    clipper.GroupIdsArrayName = groupIDsArrayName
+    clipper.BlankingArrayName = branchClippingArrayName
+    clipper.Execute()
+    surface = clipper.Surface
+
+    connector = vmtkscripts.vmtkSurfaceConnectivity()
+    connector.Surface = surface
+    connector.CleanOutput = 1
+    connector.Execute()
+    surface = connector.Surface
+
+    return surface
 
 
 def uncapp_surface(surface):
@@ -903,8 +947,16 @@ def capp_surface(surface):
     return surfaceCapper.GetOutput()
 
 
-def is_surface_capped(surface):
-    return compute_centers(surface, test_capped=True)
+def check_if_surface_is_capped(surface):
+    # Get cells which are open
+    cells = get_feature_edges(surface)
+
+    # Check is the model is closed
+    if cells.GetNumberOfCells() == 0:
+        return True, 0
+    else:
+        return False, cells.GetNumberOfCells()
+
 
 
 def get_connectivity(surface, mode="All", closestPoint=None):
@@ -974,9 +1026,9 @@ def compute_centers(polyData, case_path=None, test_capped=False):
     # Check is the model is closed
     if test_capped:
         if cells.GetNumberOfCells() == 0:
-            return True
+            return True, 0
         else:
-            return False
+            return False, cells.GetNumberOfCells()
 
     if cells.GetNumberOfCells() == 0:
         print("WARNING: The model is capped, so it is uncapped, but the method is experimental.")
@@ -1129,11 +1181,19 @@ def vmtk_compute_centerline_sections(surface, centerline):
     return line, CenterlineSections
 
 
-def compute_centerlines(inlet, outlet, filepath, surface, resampling=1,
-                        smooth=False, num_iter=100, smooth_factor=0.1,
-                        endPoint=1, method="pointlist", recompute=False):
+def compute_centerlines(inlet, outlet, filepath, surface, resampling=1, smooth=False,
+                        num_iter=100, smooth_factor=0.1, endPoint=1, method="pointlist",
+                        recompute=False, voronoi=None, pole_ids=None, base_path=None):
     if path.isfile(str(filepath)) and not recompute:  # Filepath might be None
-        return read_polydata(filepath)
+        centerlines_output = read_polydata(filepath)
+        if base_path is not None and path.isfile(base_path + "_voronoi.vtp"):
+            voronoi = read_polydata(base_path + "_voronoi.vtp")
+            pole_ids = read_polydata(base_path + "_pole_ids.np", type="vtkIdList")
+        else:
+            voronoi = None
+            pole_ids = None
+
+        return read_polydata(filepath), voronoi, pole_ids
 
     centerlines = vmtkscripts.vmtkCenterlines()
     centerlines.Surface = surface
@@ -1143,6 +1203,9 @@ def compute_centerlines(inlet, outlet, filepath, surface, resampling=1,
     centerlines.ResamplingStepLength = resampling
     centerlines.SourcePoints = inlet
     centerlines.TargetPoints = outlet
+    if voronoi is not None and pole_ids is not None:
+        centerlines.VoronoiDiagram = voronoi
+        centerlines.PoleIds = pole_ids
     centerlines.Execute()
     centerlines_output = centerlines.Centerlines
 
@@ -1157,9 +1220,15 @@ def compute_centerlines(inlet, outlet, filepath, surface, resampling=1,
 
     # Save the computed centerline.
     if filepath is not None:
-        write_polydata(centerlines, filepath)
+        write_polydata(centerlines_output, filepath)
 
-    return centerlines_output, centerlines.VoronoiDiagram, centerlines.PoleIds
+    voronoi = centerlines.VoronoiDiagram
+    pole_ids = centerlines.PoleIds
+    if base_path is not None:
+        write_polydata(voronoi, base_path + "_voronoi.vtp")
+        write_polydata(pole_ids, base_path + "_pole_ids.np", type="vtkIdList")
+
+    return centerlines_output, voronoi, pole_ids
 
 
 def create_vtk_array(values, name, k=1):
@@ -1203,11 +1272,11 @@ def gram_schmidt(V):
 
 def get_parameters(folder):
     # If info.txt file, return an empty dict
-    if not path.isfile(path.join(folder, "info.txt")):
+    if not path.isfile(folder + "_info.txt"):
         return {}
 
     # Get text
-    f = open(path.join(folder, "info.txt"), "r")
+    f = open(folder + "_info.txt", "r")
     text = f.read()
     f.close()
     text = text.split("\n")
@@ -1242,7 +1311,7 @@ def write_parameters(data, folder):
     text = "\n".join(text)
 
     # Write text
-    f = open(path.join(folder, "info.txt"), "w")
+    f = open(folder + "_info.txt", "w")
     f.write(text)
     f.close()
 
@@ -1810,7 +1879,7 @@ def spline_centerline(line, get_curv=False, isline=False,
         return line
 
 
-def prepare_surface(surface_path, surface_capped_path, parameters):
+def prepare_surface(base_path, surface_path):
     """
     Clean and check connectivity of surface.
     Capps or uncapps surface at inlet and outlets.
@@ -1825,6 +1894,7 @@ def prepare_surface(surface_path, surface_capped_path, parameters):
         capped_surface (vtkPolyData): Closed surface.
     """
     # Check if surface path exists
+    surface_capped_path = base_path + "_capped.vtp"
     if not path.exists(surface_path):
         RuntimeError("Could not find the file: {}".format(surface_path))
 
@@ -1834,6 +1904,7 @@ def prepare_surface(surface_path, surface_capped_path, parameters):
     surface = triangulate_surface(surface)
 
     # Check connectivity and only choose the surface with the largest area
+    parameters = get_parameters(base_path)
     if "check_surface" not in parameters.keys():
         connected_surface = get_connectivity(surface, mode="Largest")
         if connected_surface.GetNumberOfPoints() != surface.GetNumberOfPoints():
@@ -1842,11 +1913,17 @@ def prepare_surface(surface_path, surface_capped_path, parameters):
             surface = connected_surface
 
         parameters["check_surface"] = True
-        write_parameters(parameters, path.dirname(surface_path))
+        write_parameters(parameters, base_path)
 
     # Get a capped and uncapped version of the surface
-    if is_surface_capped(surface):
+    cap_bool, num_out = check_if_surface_is_capped(surface)
+    if cap_bool:
         open_surface = uncapp_surface(surface)
+        cap_bool, num_out = check_if_surface_is_capped(open_surface)
+        print(("WARNING: Tried to automagically uncapp the input surface. Uncapped {}" + \
+               " inlet/outlets in total. If this number if incorrect please provide an" + \
+               " uncapped surface as input, or use the clipped_capped_surface" + \
+               " method.".fomat(num_out)))
         capped_surface = surface
         write_polydata(capped_surface, surface_capped_path)
         write_polydata(open_surface, surface_path)
@@ -1862,7 +1939,8 @@ def prepare_surface(surface_path, surface_capped_path, parameters):
 
 
 def prepare_voronoi_diagram(surface, capped_surface, centerlines, base_path,
-                            smooth, smooth_factor, no_smooth, no_smooth_point):
+                            smooth, smooth_factor, no_smooth, no_smooth_point,
+                            voronoi, pole_ids):
     """
     Compute and smooth voronoi diagram of surface model.
 
@@ -1881,50 +1959,52 @@ def prepare_voronoi_diagram(surface, capped_surface, centerlines, base_path,
     # Check if a region should not be smoothed
     if smooth and no_smooth:
         no_smooth_centerline_path = base_path + "_centerlines_no_smooth.vtp"
-        # Get inlet and outlets
-        inlet = centerlines.GetPoint(0)
-        outlets = []
-        if no_smooth_point is None:
-            seed_selector = vmtkPickPointSeedSelector()
-            seed_selector.SetSurface(capped_surface)
-            seed_selector.Mode = "no_smooth"
-            seed_selector.Execute()
-            point_ids = SeedSelector.GetTargetSeedIds()
-            outlets = [surface.GetPoint(point_ids.GetId(i)) for i in range(point_ids.GetNumberOfIds())]
+        if not path.exists(no_smooth_centerline_path):
+            # Get inlet and outlets
+            inlet = centerlines.GetPoint(0)
+            outlets = []
+            if no_smooth_point is None:
+                seed_selector = vmtkPickPointSeedSelector()
+                seed_selector.SetSurface(capped_surface)
+                seed_selector.Mode = "no_smooth"
+                seed_selector.Execute()
+                point_ids = SeedSelector.GetTargetSeedIds()
+                outlets = [surface.GetPoint(point_ids.GetId(i)) for i in range(point_ids.GetNumberOfIds())]
+            else:
+                locator = get_locator(surface)
+                for i in range(len(no_smooth_point) // 3):
+                    outlets.append(surface.GetPoint(locator.FindClosestPoint(no_smooth_point[3*i:3*(i+1)])))
+
+            no_smooth_centerlines = compute_centerlines(inlet, outlets,
+                                                        no_smooth_centerline_path,
+                                                        capped_surface, resampling=0.1,
+                                                        smooth=False, voronoi=voronoi,
+                                                        pole_ids=pole_ids)
+            no_smooth_segments = []
+            for i in range(no_smooth_centerlines.GetNumberOfLines()):
+                tmp_line = extract_single_line(no_smooth_centerlines, i)
+                div_ids = []
+                for j in range(centerlines.GetNumberOfLines()):
+                    div_ids.append(centerline_div(tmp_line, extract_single_line(centerlines, j)))
+                div_id = max(div_ids)
+                no_smooth_segments.append(extract_single_line(tmp_line, div_id))
+
+            no_smooth_centerlines = merge_data(no_smooth_segments)
         else:
-            locator = get_locator(surface)
-            for i in range(len(no_smooth_point) // 3):
-                outlets.append(surface.GetPoint(locator.FindClosestPoint(no_smooth_point[3*i:3*(i+1)])))
-
-        no_smooth_centerlines = compute_centerlines(inlet, outlets,
-                                                    no_smooth_centerline_path,
-                                                    capped_surface, resampling=0.1,
-                                                    smooth=False)
-        no_smooth_segments = []
-        for i in range(no_smooth_centerlines.GetNumberOfLines()):
-            tmp_line = extract_single_line(no_smooth_centerlines, i)
-            div_ids = []
-            for j in range(centerlines.GetNumberOfLines()):
-                div_ids.append(centerline_div(tmp_line, extract_single_line(centerlines, j)))
-            div_id = max(div_ids)
-            no_smooth_segments.append(extract_single_line(tmp_line, div_id))
-
-        no_smooth_centerlines = merge_data(no_smooth_segments)
+            no_smooth_centerlines = read_polydata(no_smooth_centerline_path)
 
     else:
         no_smooth_cl = None
 
-    # Create Voronoi diagram
-    voronoi = make_voronoi_diagram(surface, base_path + "_voronoi.vtp")
-
+    # Smooth voronoi
     voronoi_smoothed_path = base_path + "_voronoi_smoothed.vtp"
     if not path.exists(voronoi_smoothed_path) and smooth:
         # Smooth voronoi diagram
         voronoi = smooth_voronoi_diagram(voronoi, centerlines, smooth_factor, no_smooth_cl)
-        write_polydata(voronoi_smoothed, voronoi_smoothed_path)
+        write_polydata(voronoi, voronoi_smoothed_path)
 
         # Create new surface from the smoothed Voronoi
-        surface_smoothed = create_new_surface(voronoi_smoothed)
+        surface_smoothed = create_new_surface(voronoi)
         write_polydata(surface_smoothed, surface_smoothed_path)
     elif smooth:
         voronoi = read_polydata(voronoi_smoothed_path)
@@ -1957,6 +2037,7 @@ def clip_polydata(surface, cutter):
     clipper = vtk.vtkClipPolyData()
     clipper.SetInputData(surface)
     clipper.SetClipFunction(cutter)
+    clipper.SetValue(0)
     clipper.GenerateClipScalarsOn()
     clipper.Update()
 
@@ -2138,7 +2219,7 @@ def check_if_surface_is_merged(surface, centerlines, output_filepath):
     for i in range(centerlines.GetNumberOfLines()):
         lines_to_compare.append(extract_single_line(centerlines, i))
         outlets += lines_to_compare[-1].GetPoint(lines_to_compare[-1].GetNumberOfPoints() - 1)
-    lines_to_check = compute_centerlines(inlet, outlets, None, surface,
+    lines_to_check, _, _ = compute_centerlines(inlet, outlets, None, surface,
                                                resampling=0.1, recompute=True)
     for i in range(centerlines.GetNumberOfLines()):
         line_to_compare = lines_to_compare[i]
@@ -2154,9 +2235,10 @@ def check_if_surface_is_merged(surface, centerlines, output_filepath):
             if dist > tolerance:
                 tmp_path = output_filepath.replace(".vtp", "_ERROR_MERGED.vtp")
                 write_polydata(surface, tmp_path)
-                raise RuntimeError(("\nERROR: Model has most likely overlapping regions. Please check" + \
-                            " the surface model {} and provide other parameters for" + \
-                            " the manipulation or poly_ball_size.").format(tmp_path))
+                raise RuntimeError(("\nERROR: Model has most likely overlapping regions." + \
+                                    " Please check  the surface model {} and provide other" + \
+                                    " parameters for the manipulation or" + \
+                                    " poly_ball_size.").format(tmp_path))
 
 
 def get_clipping_points(dirpath, filename):

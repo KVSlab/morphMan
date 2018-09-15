@@ -34,8 +34,7 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
     Returns:
         area (ndarray): Array of cross-section area along the abscissa.
     """
-    surface_name, folder = get_path_names(input_filepath)
-    base_path = path.join(folder, surface_name)
+    base_path = get_path_names(input_filepath)
 
     # Files paths
     surface_capped_path = base_path + "_capped.vtp"
@@ -61,23 +60,23 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
                 s += "_length_{}_narrowing_{}".format(stenosis_size, percentage)
             elif stenosis_points is not None and len(stenosis_points) == 6:
                 s += "_remove_stenosis"
-        new_surface_path =  path.join(folder, surface_name + "{}.vtp".format(s))
+        new_surface_path =  path.join(base_path + "{}.vtp".format(s))
     else:
         new_surface_path = output_filepath
 
     # Clean and capp / uncapp surface
-    parameters = get_parameters(folder)
-    surface, capped_surface = prepare_surface(input_filepath, surface_capped_path, parameters)
+    surface, capped_surface = prepare_surface(base_path, input_filepath)
 
     # Import centerline
-    inlet, outlets = get_centers(surface, folder)
-    centerlines = compute_centerlines(inlet, outlets, centerlines_path, capped_surface,
-                                       resampling=0.1, smooth=False)
-
+    inlet, outlets = get_centers(surface, base_path)
+    centerlines, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path,
+                                                         surface, resampling=0.1,
+                                                         smooth=False, base_path=base_path)
     # Smooth voronoi diagram
-    # TODO: Store smoothed surface.
-    voronoi = prepare_voronoi_diagram(surface, capped_surface, centerlines, base_path,
-                                      smooth, smooth_factor, no_smooth, no_smooth_point)
+    if smooth:
+        voronoi = prepare_voronoi_diagram(surface, capped_surface, centerlines, base_path,
+                                          smooth, smooth_factor, no_smooth,
+                                          no_smooth_point, voronoi, pole_ids)
     tolerance = get_tolerance(centerlines)
 
     # Spline centerline and compute cross-sectional areas along line
@@ -86,7 +85,7 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
         write_polydata(centerline_splined, centerline_spline_path)
 
         centerline_area, centerline_area_sections = vmtk_compute_centerline_sections(surface,
-                                                                centerline_splined)
+                                                                              centerline_splined)
         write_polydata(centerline_area, centerline_area_spline_path)
         write_polydata(centerline_area_sections, centerline_area_spline_sections_path)
     else:
@@ -100,7 +99,7 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
 
     # Make new surface
     print("Create surface")
-    new_surface = create_new_surface(newvoronoi, polyBallImageSize=poly_ball_size)
+    new_surface = create_new_surface(newvoronoi, poly_ball_size=poly_ball_size)
 
     print("Cleaning surface for output")
     new_surface = prepare_surface_output(new_surface, surface, centerlines,
@@ -511,7 +510,7 @@ def read_command_line():
     required = parser.add_argument_group('required named arguments')
 
     # Required arguments
-    required.add_argument('-i', '--ifile', type=str, default=None,
+    required.add_argument('-i', '--ifile', type=str, default=None, required=True,
                           help="Path to the surface model")
 
     # General arguments
