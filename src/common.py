@@ -1874,7 +1874,8 @@ def prepare_voronoi_diagram(surface, capped_surface, centerlines, base_path,
         smooth (bool): Voronoi is smoothed if True.
         smooth_factor (float): Smoothing factor for voronoi smoothing.
         centerlines (vtkPolyData): Centerlines throughout geometry.
-        no_smooth_cl (vtkPolyData): Centerline of region which should not be smoothed.
+        no_smooth (bool): Part of Voronoi is not smoothed.
+        no_smooth_point (vtkPolyData): Point which defines unsmoothed area.
 
     Returns:
         voronoi (vtkPolyData): Voronoi diagram of surface.
@@ -2159,25 +2160,6 @@ def check_if_surface_is_merged(surface, centerlines, output_filepath):
                 raise RuntimeError(("\nERROR: Model has most likely overlapping regions. Please check" + \
                             " the surface model {} and provide other parameters for" + \
                             " the manipulation or poly_ball_size.").format(tmp_path))
-
-
-def get_clipping_points(dirpath, filename):
-    """
-    Read clipping points from file
-
-    Args:
-        dirpath (str): Location of directory.
-        filename (str): Name of clipping point file.
-
-    Returns:
-        clipping_points (ndarray): Clipping points.
-    """
-    particles = dirpath + filename
-    all_points = np.loadtxt(particles)
-    clipping_points = all_points
-
-    return clipping_points
-
 
 def connect_line(line):
     """
@@ -3772,3 +3754,54 @@ def get_start_ids(points, line):
         return 1, 2
     else:
         return 2, 1
+
+
+
+def find_region_of_interest_and_diverging_centerlines(centerlines_complete, clipping_points):
+    centerlines = []
+    diverging_centerlines =[]
+    p1 = clipping_points[0]
+    p2 = clipping_points[1]
+
+    # Search for divering centerlines
+    tol = get_tolerance(centerlines_complete) * 10
+    for i in range(centerlines_complete.GetNumberOfLines()):
+        line = extract_single_line(centerlines_complete, i)
+        locator = get_locator(line)
+        id1 = locator.FindClosestPoint(p1)
+        id2 = locator.FindClosestPoint(p2)
+        p1_tmp = line.GetPoint(id1)
+        p2_tmp = line.GetPoint(id2)
+        if distance(p1, p1_tmp) < tol and distance(p2, p2_tmp) < tol:
+            centerlines.append(line)
+        else:
+            diverging_centerlines.append(line)
+
+    # Sort and set clipping points to vtk object
+    centerline = centerlines[0]
+    locator = get_locator(centerline)
+    id1 = locator.FindClosestPoint(clipping_points[0])
+    id2 = locator.FindClosestPoint(clipping_points[1])
+    if id1 > id2:
+        clipping_points = clipping_points[::-1]
+        id1, id2 = id2, id1
+
+    clipping_points_vtk = vtk.vtkPoints()
+    for point in np.asarray(clipping_points):
+        clipping_points_vtk.InsertNextPoint(point)
+
+    # Find diverging point(s)
+    diverging_ids = []
+    for line in diverging_centerlines:
+        id_end= min([line.GetNumberOfPoints(), centerline.GetNumberOfPoints()])
+        for i in np.arange(id1, id_end):
+            p_div = np.asarray(line.GetPoint(i))
+            p_cl = np.asarray(centerline.GetPoint(i))
+            if distance(p_div, p_cl) > tol:
+                diverging_ids.append(i)
+                break
+
+    centerlines = merge_data(centerlines)
+    diverging_centerlines = merge_data(diverging_centerlines) if len(diverging_centerlines) > 0 else None
+
+    return centerlines, diverging_centerlines, clipping_points, clipping_points_vtk, diverging_ids
