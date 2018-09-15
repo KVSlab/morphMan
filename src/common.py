@@ -2889,6 +2889,10 @@ def get_vtk_clipping_points(line, clipping_points):
     return p1, p2, ID1, ID2, clip_points, clipping_points
 
 
+### The following code is adapted from:
+### https://github.com/vmtk/vmtk/tree/master/vmtkApps/CerebralAneurysms/ParentVesselReconstruction
+### Written by Marina Piccinelli, and distrubuted within vmtk.
+
 def MaskVoronoiDiagram(voronoi, centerlines):
     numberOfCenterlinesPatches = centerlines.GetNumberOfCells()
     numberOfVoronoiPoints = voronoi.GetNumberOfPoints()
@@ -2904,10 +2908,6 @@ def MaskVoronoiDiagram(voronoi, centerlines):
 
     return maskArray
 
-
-### The following code is adapted from:
-### https://github.com/vmtk/vmtk/tree/master/vmtkApps/CerebralAneurysms/ParentVesselReconstruction
-### Written by Marina Piccinelli, and distrubuted within vmtk.
 
 def compute_patch_end_point_parameters(id, centerlines):
     point0 = [0.0, 0.0, 0.0]
