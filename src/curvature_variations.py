@@ -1,12 +1,8 @@
-from common import *
 from argparse import ArgumentParser
 from os import path, listdir
 
 # Local import
-from patchandinterpolatecenterlines import *
-from clipvoronoidiagram import *
-from paralleltransportvoronoidiagram import *
-from moveandmanipulatetools import *
+from common import *
 
 
 def curvature_variations(input_filename, smooth, smoothingfactor, iterations, smoothmode,

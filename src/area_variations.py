@@ -5,8 +5,6 @@ from os import path, listdir
 
 # Local import
 from common import *
-from clipvoronoidiagram import *
-from paralleltransportvoronoidiagram import *
 
 def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
                     no_smooth_point, beta, ratio, stenosis_size, stenosis_points,

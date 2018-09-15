@@ -2,13 +2,12 @@ import sys
 import math
 import numpy as np
 from argparse import ArgumentParser
-from common import *
 from os import path, listdir
 from scipy.interpolate import splrep, splev
 from scipy.ndimage.filters import gaussian_filter
 
-from patchandinterpolatecenterlines import *
-
+# Local import
+from common import *
 
 def read_command_line():
     """

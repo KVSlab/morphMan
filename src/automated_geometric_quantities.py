@@ -9,10 +9,6 @@ import numpy.linalg as la
 
 # Local import
 from common import *
-from patchandinterpolatecenterlines import *
-from clipvoronoidiagram import *
-from paralleltransportvoronoidiagram import *
-from moveandmanipulatetools import *
 
 
 def read_command_line():
