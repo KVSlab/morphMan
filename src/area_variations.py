@@ -70,7 +70,7 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
     # Import centerline
     inlet, outlets = get_centers(surface, base_path)
     centerlines, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path,
-                                                         surface, resampling=0.1,
+                                                         capped_surface, resampling=0.1,
                                                          smooth=False, base_path=base_path)
     # Smooth voronoi diagram
     if smooth:
@@ -548,7 +548,9 @@ def read_command_line():
                         help="The size of the poly balls that will envelope the new" + \
                              " surface. The default value is 120, 120, 120. If two tubular" + \
                              " structures are very close compared to the bounds, the poly ball" + \
-                             " size should be adjusted", metavar="size")
+                             " size should be adjusted. For quick proto typing we" + \
+                             " recommend ~100 in all directions, but >250 for a final " + \
+                             " surface.", metavar="size")
 
     # "Variation" argments
     parser.add_argument('--beta', type=float, default=0.5,

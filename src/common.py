@@ -389,6 +389,9 @@ def get_array(arrayName, line, k=1):
     Returns:
         array (ndarray): Array containing data points.
     """
+    # w numpy support, n=63000 32.7 ms, wo numpy support 33.4 ms
+    #vtk_array = line.GetPointData().GetArray(arrayName)
+    #array = numpy_support.vtk_to_numpy(vtk_array)
     array = np.zeros((line.GetNumberOfPoints(), k))
     if k == 1:
         getData = line.GetPointData().GetArray(arrayName).GetTuple1
@@ -415,6 +418,8 @@ def get_array_cell(arrayName, line, k=1):
     Returns:
         array (ndarray): Array containing data points.
     """
+    #vtk_array = line.GetCellData().GetArray(arrayName)
+    #array = numpy_support.vtk_to_numpy(vtk_array)
     array = np.zeros((line.GetNumberOfCells(), k))
     if k == 1:
         getData = line.GetCellData().GetArray(arrayName).GetTuple1
@@ -534,7 +539,7 @@ def provide_relevant_outlets(surface, dir_path=None):
     """
 
     # Fix surface
-    cleaned_surface = surface_cleaner(surface)
+    cleaned_surface = clean_surface(surface)
     triangulated_surface = triangulate_surface(cleaned_surface)
 
     # Select seeds
@@ -568,7 +573,7 @@ def provide_aneurysm_points(surface, dir_path=None):
         points (list): List of aneurysm location IDs
     """
     # Fix surface
-    cleaned_surface = surface_cleaner(surface)
+    cleaned_surface = clean_surface(surface)
     triangulated_surface = triangulate_surface(cleaned_surface)
 
     # Select seeds
@@ -698,7 +703,7 @@ def write_points(points, filename):
     write_polydata(pointSet, filename)
 
 
-def surface_cleaner(surface):
+def clean_surface(surface):
     """
     Clean surface by merging
     duplicate points, and/or
@@ -1450,10 +1455,14 @@ def move_past_sphere(centerline, center, r, start, step=-1, stop=0, X=0.8):
     return tempPoint, r
 
 
-def vmtk_surface_smoother(surface, method, iterations=800):
+def vmtk_surface_smoother(surface, method, iterations=800, passband=1.0, relaxation=0.01):
     smoother = vmtkscripts.vmtkSurfaceSmoothing()
     smoother.Surface = surface
     smoother.NumberOfIterations = iterations
+    if method == "laplace":
+        smoother.RelaxationFactor = relaxation
+    elif method == "taubin":
+        smoother.PassBand = passband
     smoother.Method = method
     smoother.Execute()
     surface = smoother.Surface
@@ -1900,7 +1909,7 @@ def prepare_surface(base_path, surface_path):
 
     # Clean surface
     surface = read_polydata(surface_path)
-    surface = surface_cleaner(surface)
+    surface = clean_surface(surface)
     surface = triangulate_surface(surface)
 
     # Check connectivity and only choose the surface with the largest area
@@ -1923,7 +1932,7 @@ def prepare_surface(base_path, surface_path):
         print(("WARNING: Tried to automagically uncapp the input surface. Uncapped {}" + \
                " inlet/outlets in total. If this number if incorrect please provide an" + \
                " uncapped surface as input, or use the clipped_capped_surface" + \
-               " method.".fomat(num_out)))
+               " method or vmtksurfaceendclipper.").fomat(num_out))
         capped_surface = surface
         write_polydata(capped_surface, surface_capped_path)
         write_polydata(open_surface, surface_path)
@@ -2028,21 +2037,67 @@ def vtk_box(bounds):
     return box
 
 
-def clip_polydata(surface, cutter):
+def vtk_plane(origin, normal):
+    """Returns a vtk box object based on the bounds
+
+    Args:
+        origin (list): Center of plane [x, y, z]
+        normal (list): Planes normal [x, y, z]
+
+    Returns:
+        plane (vtkPlane): A vtkPlane
+    """
+    plane = vtk.vtkPlane()
+    plane.SetOrigin(origin)
+    plane.SetNormal(normal)
+
+    return plane
+
+
+def clip_polydata(surface, cutter=None, value=0):
     """Clip the inpute vtkPolyData object with a cutter function (plane, box, etc)
 
     Args:
         surface (vtkPolyData): Input vtkPolyData for clipping
-        cutter (vtkBox, vtkPlane): Function for cutting the polydata
+        cutter (vtkBox, vtkPlane): Function for cutting the polydata (default None).
+        value (float): Distance to the ImplicteFunction or scalar value to clip.
+
+    Returns:
+        clipper (vtkPolyData): The clipped surface
     """
     clipper = vtk.vtkClipPolyData()
     clipper.SetInputData(surface)
-    clipper.SetClipFunction(cutter)
-    clipper.SetValue(0)
-    clipper.GenerateClipScalarsOn()
+    if cutter is None:
+        clipper.GenerateClipScalarsOff()
+    else:
+        clipper.SetClipFunction(cutter)
+    clipper.GenerateClippedOutputOn()
+    clipper.SetValue(value)
     clipper.Update()
 
-    return clipper.GetOutput()
+    return clipper.GetOutput(), clipper.GetClippedOutput()
+
+
+def attach_clipped_regions(surface, clipped, center):
+    connectivity = get_connectivity(clipped, mode="All")
+    region_id = get_array("RegionId", connectivity)
+    distances = []
+    regions = []
+    for i in range(int(region_id.max() + 1)):
+        regions.append(threshold(connectivity, "RegionId", lower=i-0.1, upper=i+0.1, source=0))
+        locator = get_locator(regions[-1])
+        region_point = regions[-1].GetPoint(locator.FindClosestPoint(center))
+        distances.append(distance(region_point, center))
+
+    # Remove the region with the closest distance
+    regions.pop(distances.index(min(distances)))
+
+    # Add the other regions back to the surface
+    surface = merge_data(regions + [surface])
+    surface = clean_surface(surface)
+    surface = triangulate_surface(surface)
+
+    return surface
 
 
 def prepare_surface_output(surface, original_surface, new_centerline, output_filepath,
@@ -2057,8 +2112,16 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
     region_id = numpy_support.vtk_to_numpy(vtk_array)
     points = numpy_support.vtk_to_numpy(vtk_points)
 
+    outlets = []
+    lines = []
+    for i in range(new_centerline.GetNumberOfLines()):
+        lines.append(extract_single_line(new_centerline, i))
+        outlets.append(lines[-1].GetPoint(lines[-1].GetNumberOfPoints() - 1))
+    inlet_point = lines[-1].GetPoint(0)
+
     # Get information from the original geometry
-    for i in range(region_id.max()):
+    inlet = False
+    for i in range(region_id.max() + 1):
         # Get relevant points
         tmp_points = points[region_id == i]
 
@@ -2072,108 +2135,58 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
 
         # FIXME: How to deal with the rotated branches when clipping the outlets?
         if rotated:
+            # TODO: Is the new and original centerline sorted equally?
+            # TODO: If so, extract first old by id, then the new
+            # TODO: Create a rotation based on the cross product of the centerline
+            #       directions
+            # TODO: Then compute the new center and new normal
             pass
-            # Translate the center and bounds by comparing the endpoints of the centerlines
-            # Rotate the normal and bounds compared to the direction of the vector of the last
-            # two points in the centerline. (use center as origo)
 
-        tmp_points = tmp_points - center
-        vec = np.eye(3)
-        vec[:, 0] = normal
-        vec[:, 1] = (tmp_points[0] - center)
-        vec[:, 2] = tmp_points[tmp_points.shape[0] // 2] - center
-        vec[:, 1] = vec[:, 1] / np.sqrt(np.sum(vec[:, 1]**2))
-        vec[:, 2] = vec[:, 2] / np.sqrt(np.sum(vec[:, 2]**2))
+            print(center, np.array(center) + np.array(normal))
+            tmp_points = tmp_points - center
+            vec = np.eye(3)
+            vec[:, 0] = normal
+            vec[:, 1] = (tmp_points[0] - center)
+            vec[:, 2] = tmp_points[tmp_points.shape[0] // 2] - center
+            vec[:, 1] = vec[:, 1] / np.sqrt(np.sum(vec[:, 1]**2))
+            vec[:, 2] = vec[:, 2] / np.sqrt(np.sum(vec[:, 2]**2))
 
-        # Make normal z-axis
-        R = gram_schmidt(vec)
-        R_inv = np.linalg.inv(R)
+        # Get corresponding centerline to in/outlet
+        if np.sqrt(np.sum((np.array(inlet_point) - center)**2)) < 0.5:
+            line = lines[0]
+            inlet = True
+        else:
+            line = lines[np.argmin(np.sqrt(np.sum((np.array(outlets) - center)**2, axis=1)))]
 
-        tmp_points = np.dot((tmp_points), R)
+        # Set correct direction of normal
+        if inlet:
+            in_dir = np.array(line.GetPoint(5)) - \
+                     np.array(line.GetPoint(0))
+        else:
+            in_dir = np.array(line.GetPoint(line.GetNumberOfPoints() - 5)) - \
+                     np.array(line.GetPoint(line.GetNumberOfPoints() - 1))
 
-        # Get bounds
-        tmp_points_vtk = vtk.vtkPoints()
-        [tmp_points_vtk.InsertNextPoint(tmp_points[k]) for k in range(tmp_points.shape[0])]
-        bound = list(tmp_points_vtk.GetBounds())
+        in_dir = in_dir / np.sqrt(np.sum(in_dir**2))
+        angle = np.arccos(np.dot(in_dir, normal)) * 180 / np.pi
+        flipped = True if 90 < angle < 270 else False
+        normal = -normal if 90 < angle < 270 else normal
 
-        # TODO: Test direction
+        # Set plane
+        plane = vtk_plane(center, normal)
 
-        # Create box with safety margin of 10 % and hight of 0.1
-        bound[0] = (abs(bound[4] - bound[5]) + abs(bound[2] - bound[3]))*hight_ratio / 2
-        #bound[0] =
-        bound[1] = 0
-        bound[2] *= margin
-        bound[3] *= margin
-        bound[4] *= margin
-        bound[5] *= margin
+        # Clip data (naivly)
+        surface, clipped = clip_polydata(surface, plane)
 
-        # Rotate 
-        rotation_axis = np.array([0, normal[2], -normal[1]]) / np.sqrt(normal[1]**2 + normal[2]**2)
-        angle = -np.arccos(normal[0]) * 180 / np.pi
-
-        # Create an implicit function for clipping
-        box = vtk_box(bound)
-
-        # Clip the surface
-        transform = vtk.vtkTransform()
-        transform.Translate(-center[0], -center[1], -center[2])
-        translationFilter = vtk.vtkTransformPolyDataFilter()
-        translationFilter.SetTransform(transform)
-        translationFilter.SetInputData(surface)
-        translationFilter.Update()
-        surface = translationFilter.GetOutput()
-
-        transform = vtk.vtkTransform()
-        transform.RotateWXYZ(-angle, rotation_axis)
-        translationFilter = vtk.vtkTransformPolyDataFilter()
-        translationFilter.SetTransform(transform)
-        translationFilter.SetInputData(surface)
-        translationFilter.Update()
-        surface = translationFilter.GetOutput()
-
-        print(bound)
-        write_polydata(surface, "test_pre_clip_%d.vtp" % i)
-        #from IPython import embed; embed()
-        surface = clip_polydata(surface, box)
-        write_polydata(surface, "test_post_clip_%d.vtp" % i)
-        plane = vtk.vtkPlaneSource()
-        plane.SetXResolution(4);
-        plane.SetYResolution(4);
-        plane.SetOrigin(2, -2, 26)
-        plane.SetPoint1(2,  2, 26)
-        plane.SetPoint2(2, -2, 32)
-        plane = plane.GetOuput()
-        write_polydata(plane, "test_plane_%d.vtp" % i)
-
-        transform = vtk.vtkTransform()
-        transform.RotateWXYZ(angle, rotation_axis)
-        translationFilter = vtk.vtkTransformPolyDataFilter()
-        translationFilter.SetTransform(transform)
-        translationFilter.SetInputData(surface)
-        translationFilter.Update()
-        surface = translationFilter.GetOutput()
-
-        transform = vtk.vtkTransform()
-        transform.Translate(center[0], center[1], center[2])
-        translationFilter = vtk.vtkTransformPolyDataFilter()
-        translationFilter.SetTransform(transform)
-        translationFilter.SetInputData(surface)
-        translationFilter.Update()
-        surface = translationFilter.GetOutput()
-
-        # Check connectivity and only choose the surface with the largest area
-        surface = get_connectivity(surface, mode="Largest")
-
-        write_polydata(surface, "test_rotated_surface.vtp")
-        # NOTE: Should test for number of outlets after each clip
-
+        # Reattach data which should not have been clipped
+        surface = attach_clipped_regions(surface, clipped, center)
 
     # Perform a 'light' smoothing to obtain a nicer surface
     surface = vmtk_surface_smoother(surface, method="laplace", iterations=100)
 
     # Clean surface
-    surface = surface_cleaner(surface)
+    surface = clean_surface(surface)
     surface = triangulate_surface(surface)
+    write_polydata(surface, "test_clipped.vtp")
 
     # Capped surface
     capped_surface = capp_surface(surface)
@@ -2250,7 +2263,7 @@ def check_if_surface_is_merged(surface, centerlines, output_filepath):
                 tmp_path = output_filepath.replace(".vtp", "_ERROR_MERGED.vtp")
                 write_polydata(surface, tmp_path)
                 raise RuntimeError(("\nERROR: Model has most likely overlapping regions." + \
-                                    " Please check  the surface model {} and provide other" + \
+                                    " Please check the surface model {} and provide other" + \
                                     " parameters for the manipulation or" + \
                                     " poly_ball_size.").format(tmp_path))
 

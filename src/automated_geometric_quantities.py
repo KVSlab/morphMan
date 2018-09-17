@@ -397,7 +397,7 @@ def compute_curvature(dirpath, name, alpha, beta, method):
 
     # Clean surface
     surface = read_polydata(surface_path)
-    surface = surface_cleaner(surface)
+    surface = clean_surface(surface)
     surface = triangulate_surface(surface)
 
     # Get a capped and uncapped version of the surface
