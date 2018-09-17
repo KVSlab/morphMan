@@ -61,13 +61,10 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
                                                            region_of_interest, method,
                                                            region_points, stenosis_length)
     write_polydata(centerline_splined, centerline_spline_path)
-    if not path.exists(centerline_area_spline_sections_path):
-        centerline_area, centerline_area_sections = vmtk_compute_centerline_sections(surface,
-                                                                                     centerline_splined)
-        write_polydata(centerline_area, centerline_area_spline_path)
-        write_polydata(centerline_area_sections, centerline_area_spline_sections_path)
-    else:
-        centerline_area = read_polydata(centerline_area_spline_path)
+    centerline_area, centerline_area_sections = vmtk_compute_centerline_sections(surface,
+                                                                                    centerline_splined)
+    write_polydata(centerline_area, centerline_area_spline_path)
+    write_polydata(centerline_area_sections, centerline_area_spline_sections_path)
 
     # Manipulate the voronoi diagram
     print("Change Voronoi diagram")
@@ -103,7 +100,7 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
         line_to_change (vtkPolyData): Part of centerline.
     """
     if region_of_interest == "first_line":
-        tol = get_tolerance(centerlines)
+        tol = get_tolerance(centerline)
         line2 = extract_single_line(centerline, 0)
         numberOfPoints2 = line2.GetNumberOfPoints()
 
@@ -255,9 +252,9 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
         area = gaussian_filter(area, 5)
     mean = np.mean(area)
 
-    # Exclude first and last 10 % if region_of_intrest == first_line
-    if region_of_interest == "first_line":
-        k = int(round(factor_.shape[0] * 0.10, 0))
+    # Exclude first and last 5 % for some combinations of method an region_of_interest
+    if region_of_interest in ["manuall", "commandline"] and method in ["area", "variation"]:
+        k = int(round(factor_.shape[0] * 0.05, 0))
         l = area.shape[0] - k*2
     else:
         k = 0
@@ -300,25 +297,24 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
             beta = beta - 1
 
         else:
-            factor_ = (area / mean)**beta
-            factor = factor_[:, 0]*(1-trans) + trans
+            factor_ = ((area / mean)**beta)[:, 0]
+            factor = factor_ * (1 - trans) + trans
 
     elif method == "stenosis":
         if len(region_points) == 3:
             t = np.linspace(0, np.pi, line_to_change.GetNumberOfPoints())
-            factor = (1 - np.sin(t)*percentage*0.01).tolist()
+            factor = (1 - np.sin(t) * percentage * 0.01).tolist()
+            factor = factor * (1 - trans) + trans
 
         elif len(region_points) == 6:
-            start_area = area[0]
-            end_area = area[-1]
             length = get_curvilinear_coordinate(line_to_change)
-            length = length / length.max()
-            factor = start_area + (end_area - start_area) * length
+            factor = area[0] + (area[-1] - area[0]) * (length / length.max())
+            factor = factor * (1- trans) + trans
 
+    # Increase or deacrease overall area by a percentage
     elif method == "area":
-        # Increase or deacrease overall area by a percentage
         factor_ = np.ones(len(trans)) * (1 + percentage*0.01)
-        factor = factor_*(1-trans) + trans
+        factor = factor_ * (1 - trans) + trans
 
     return factor
 
@@ -344,7 +340,12 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
         newVoronoi (vtkPolyData): Manipulated Voronoi diagram.
     """
     arrayForTube = get_vtk_array("TubeRadius", 1, line_to_change.GetNumberOfPoints())
-    MISR = get_array(radiusArrayName, line_to_change)*1.7
+
+    # Note: If you are looking at the ICA or other vascular structure which can be rather
+    # non-circular, please multiply MISR by a factor of, e.g. ~1.7. For arteries that are
+    # very close, there is an oposite problem, and one can include points from the Voronoi
+    # diagram belonging to other arteries. For robustness, the factor is now 1.05.
+    MISR = get_array(radiusArrayName, line_to_change)*1.05
     for i in range(MISR.shape[0]):
         arrayForTube.SetTuple1(i, MISR[i])
     line_to_change.GetPointData().AddArray(arrayForTube)
@@ -449,7 +450,7 @@ def read_command_line():
                              " other shape may be easly implemented." + \
                              "\n3) 'area' will inflate or deflate the area in the region of" + \
                              " interest.")
-    parser.add_argument('-s', '--smooth', type=bool, default=False,
+    parser.add_argument('-s', '--smooth', type=str2bool, default=True,
                         help="Smooth the voronoi diagram, default is False")
     parser.add_argument('-f', '--smooth_factor', type=float, default=0.25,
                         help="If smooth option is true then each voronoi point" + \
