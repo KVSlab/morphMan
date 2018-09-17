@@ -43,7 +43,7 @@ class vmtkPickPointSeedSelector(vmtkSeedSelector):
         self.vmtkRenderer = None
         self.OwnRenderer = 0
         self.Script = None
-        self.Mode = None
+        text = 'Place points, \'u\' to undo\n'
 
     def UndoCallback(self, obj):
         self.InitializeSeeds()
@@ -122,21 +122,8 @@ class vmtkPickPointSeedSelector(vmtkSeedSelector):
         surfaceActor.GetProperty().SetOpacity(1.0)
 
         self.vmtkRenderer.Renderer.AddActor(surfaceActor)
-        if self.Mode == "stenosis":
-            text = 'Place one point to indicate the center of a new stenosis OR place two' + \
-                   ' points on each side of an existing stenosis to remove it, \'u\' to undo\n'
-        elif self.Mode == "outlet":
-            text = 'Please select the two relevant outlets, \'u\' to undo\n'
-        elif self.Mode == "aneurysm":
-            text = 'Please position the mouse and press space to add the top of the' + \
-                   'aneurysm, \'u\' to undo\n'
-        elif self.Mode == "no_smooth":
-            text = 'Please place a point on the segments you do not want to smooth, e.g.' + \
-                   ' an aneurysm, \'u\' to undo\n'
-        else:
-            text = 'Place points, \'u\' to undo\n'
 
-        guiText = VtkText(text)
+        guiText = VtkText(self.text)
         self.vmtkRenderer.Renderer.AddActor(guiText.text)
 
         any = 0

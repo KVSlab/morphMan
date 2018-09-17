@@ -543,11 +543,12 @@ def provide_relevant_outlets(surface, dir_path=None):
     triangulated_surface = triangulate_surface(cleaned_surface)
 
     # Select seeds
-    SeedSelector = vmtkPickPointSeedSelector()
-    SeedSelector.SetSurface(triangulated_surface)
-    SeedSelector.Execute()
+    seed_selector = vmtkPickPointSeedSelector()
+    seed_selector.SetSurface(triangulated_surface)
+    seed_selector.text = "Please select the two relevant outlets, \'u\' to undo\n"
+    seed_selector.Execute()
 
-    aneurysmSeedIds = SeedSelector.GetTargetSeedIds()
+    aneurysmSeedIds = seed_selector.GetTargetSeedIds()
     get_point = surface.GetPoints().GetPoint
     points = [list(get_point(aneurysmSeedIds.GetId(i))) for i in range(aneurysmSeedIds.GetNumberOfIds())]
     info = {}
@@ -577,11 +578,13 @@ def provide_aneurysm_points(surface, dir_path=None):
     triangulated_surface = triangulate_surface(cleaned_surface)
 
     # Select seeds
-    SeedSelector = vmtkPickPointSeedSelector()
-    SeedSelector.SetSurface(triangulated_surface)
-    SeedSelector.Execute()
+    seed_selector = vmtkPickPointSeedSelector()
+    seed_selector.SetSurface(triangulated_surface)
+    seed_selector.text = "Please position the mouse and press space to add the top of the" + \
+                         " aneurysm, \'u\' to undo\n"
+    seed_selector.Execute()
 
-    aneurysmSeedIds = SeedSelector.GetTargetSeedIds()
+    aneurysmSeedIds = seed_selector.GetTargetSeedIds()
     get_point = surface.GetPoints().GetPoint
     points = [list(get_point(aneurysmSeedIds.GetId(i))) for i in range(aneurysmSeedIds.GetNumberOfIds())]
 
@@ -1976,9 +1979,10 @@ def prepare_voronoi_diagram(surface, capped_surface, centerlines, base_path,
             if no_smooth_point is None:
                 seed_selector = vmtkPickPointSeedSelector()
                 seed_selector.SetSurface(capped_surface)
-                seed_selector.Mode = "no_smooth"
+                seed_selector.text = "Please place a point on the segments you do not want" + \
+                                     " to smooth, e.g. an aneurysm, \'u\' to undo\n"
                 seed_selector.Execute()
-                point_ids = SeedSelector.GetTargetSeedIds()
+                point_ids = seed_selector.GetTargetSeedIds()
                 outlets = [surface.GetPoint(point_ids.GetId(i)) for i in range(point_ids.GetNumberOfIds())]
             else:
                 locator = get_locator(surface)
@@ -2179,6 +2183,7 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
 
         # Reattach data which should not have been clipped
         surface = attach_clipped_regions(surface, clipped, center)
+        write_polydata(surface, "test_clipped_%d.vtp" % i)
 
     # Perform a 'light' smoothing to obtain a nicer surface
     surface = vmtk_surface_smoother(surface, method="laplace", iterations=100)
