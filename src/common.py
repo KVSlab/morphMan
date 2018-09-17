@@ -2166,6 +2166,7 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
         if inlet:
             in_dir = np.array(line.GetPoint(5)) - \
                      np.array(line.GetPoint(0))
+            inlet = False
         else:
             in_dir = np.array(line.GetPoint(line.GetNumberOfPoints() - 5)) - \
                      np.array(line.GetPoint(line.GetNumberOfPoints() - 1))
