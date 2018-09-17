@@ -7,8 +7,8 @@ from os import path, listdir
 from common import *
 
 def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
-                    no_smooth_point, beta, ratio, stenosis_size, stenosis_points,
-                    percentage, output_filepath, poly_ball_size):
+                    no_smooth_point, region_of_interest, region_points, beta, ratio,
+                    stenosis_length, percentage, output_filepath, poly_ball_size):
     """
     Objective manipulation of area variation in
     patient-specific models of blood vessels.
@@ -21,18 +21,14 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
         method (str): Type of manipulation of the centerline.
         smooth (bool): Determines Voronoi smoothing or not.
         smooth_factor (float): Smoothing factor used for voronoi diagram smoothing.
+        no_smooth (bool): If True, define a region where the Voronoi diagram should not be smoothed.
+        no_smooth_pooint (list): A flattend list to the 'end' points of the regions not to smooth.
         beta (float): Factor determining how much the geometry will differ.
         ratio (float): Target ratio, A_max / A_min. Beta is ignored (and estimated) if given.
         percentage (float): Percentage the area of the geometry / stenosis is increase/decreased.
-        stenosis_size (float): Length of affected stenosis area. Default is MISR x 2.0 of selected point.
-        stenosis_points (float): Points of the stenosis. If one point is provided it is
-        assumed to be the center of the new stenosis, and if two points are provided then
-        they are assumbed to be the start and endpoint of an existing stenosis.
-
-    Returns:
-        length (ndarray): Array of abscissa coordinates.
-    Returns:
-        area (ndarray): Array of cross-section area along the abscissa.
+        stenosis_length (float): Length of affected stenosis area. Default is MISR x 2.0 of selected point.
+        region_of_interest (str): Method for setting the region of interest ['manuall' | 'commandline' | 'first_line']
+        region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint
     """
     base_path = get_path_names(input_filepath)
 
@@ -45,47 +41,29 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
     centerline_area_spline_sections_path = base_path + "_centerline_area_sections.vtp"
     centerline_spline_path = base_path + "_centerline_spline.vtp"
 
-    # Output path of manipulated surface
-    if output_filepath is None:
-        s = "_" + method
-        s += "" if not smooth else "_smooth"
-        if method == "variation":
-            s += "_beta_" + str(beta) if beta is not None else "_ratio_" + str(ratio)
-        elif method == "area":
-            s += "_area_" + str(percentage)
-        elif method == "stenosis":
-            if stenosis_points is None:
-                s += "_manual_size_{}_precentege_{}".format(stenosis_size, percentage)
-            if stenosis_points is not None and len(stenosis_points) == 3:
-                s += "_length_{}_narrowing_{}".format(stenosis_size, percentage)
-            elif stenosis_points is not None and len(stenosis_points) == 6:
-                s += "_remove_stenosis"
-        new_surface_path =  path.join(base_path + "{}.vtp".format(s))
-    else:
-        new_surface_path = output_filepath
-
-    # Clean and capp / uncapp surface
+    # Clean, triangulate, and capp/uncapp surface
     surface, capped_surface = prepare_surface(base_path, input_filepath)
 
-    # Import centerline
+    # Create centerline and voronoi diagram
     inlet, outlets = get_centers(surface, base_path)
     centerlines, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path,
                                                          capped_surface, resampling=0.1,
                                                          smooth=False, base_path=base_path)
+
     # Smooth voronoi diagram
     if smooth:
         voronoi = prepare_voronoi_diagram(surface, capped_surface, centerlines, base_path,
                                           smooth, smooth_factor, no_smooth,
                                           no_smooth_point, voronoi, pole_ids)
-    tolerance = get_tolerance(centerlines)
 
     # Spline centerline and compute cross-sectional areas along line
-    if not path.exists(centerline_area_spline_path):
-        centerline_splined = get_line_to_change(centerlines, tolerance)
-        write_polydata(centerline_splined, centerline_spline_path)
-
+    centerline_splined, region_points = get_line_to_change(capped_surface, centerlines,
+                                                           region_of_interest, method,
+                                                           region_points, stenosis_length)
+    write_polydata(centerline_splined, centerline_spline_path)
+    if not path.exists(centerline_area_spline_sections_path):
         centerline_area, centerline_area_sections = vmtk_compute_centerline_sections(surface,
-                                                                              centerline_splined)
+                                                                                     centerline_splined)
         write_polydata(centerline_area, centerline_area_spline_path)
         write_polydata(centerline_area_sections, centerline_area_spline_sections_path)
     else:
@@ -94,7 +72,7 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
     # Manipulate the voronoi diagram
     print("Change Voronoi diagram")
     newvoronoi = change_area(voronoi, centerline_area, method, beta, ratio, percentage,
-                             stenosis_points, stenosis_size, surface)
+                             region_of_interest, region_points, stenosis_length, surface)
     write_polydata(newvoronoi, voronoi_new_path)
 
     # Make new surface
@@ -103,13 +81,14 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
 
     print("Cleaning surface for output")
     new_surface = prepare_surface_output(new_surface, surface, centerlines,
-                                         new_surface_path, test_merge=True)
+                                         output_filepath, test_merge=True)
 
-    print("Write surface to: {}".format(new_surface_path))
-    write_polydata(new_surface, new_surface_path)
+    print("Write surface to: {}".format(output_filepath))
+    write_polydata(new_surface, output_filepath)
 
 
-def get_line_to_change(centerline, tol):
+def get_line_to_change(surface, centerline, region_of_interest, method, region_points,
+                       stenosis_length):
     """
     Extract and spline part of centerline
     within the geometry where
@@ -117,40 +96,136 @@ def get_line_to_change(centerline, tol):
 
     Args:
         centerline (vtkPolyData): Centerline in geometry.
-        tol (float): Tolerance parameter.
+        region_of_interest (str): Method for setting the region of interest ['manuall' | 'commandline' | 'first_line']
+        region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint.
 
     Returns:
         line_to_change (vtkPolyData): Part of centerline.
     """
-    line2 = extract_single_line(centerline, 0)
-    numberOfPoints2 = line2.GetNumberOfPoints()
+    if region_of_interest == "first_line":
+        tol = get_tolerance(centerlines)
+        line2 = extract_single_line(centerline, 0)
+        numberOfPoints2 = line2.GetNumberOfPoints()
 
-    n = 2
-    pointIDs = []
-    # Iterate through lines and find diverging point
-    for j in range(1, n):
-        line1 = extract_single_line(centerline, j)
-        numberOfPoints1 = line1.GetNumberOfPoints()
+        # Iterate through lines and find diverging point
+        n = 2
+        pointIDs = []
+        for j in range(1, n):
+            line1 = extract_single_line(centerline, j)
+            numberOfPoints1 = line1.GetNumberOfPoints()
 
-        N = min(numberOfPoints1, numberOfPoints2)
-        for i in range(N):
-            point1 = line1.GetPoints().GetPoint(i)
-            point2 = line2.GetPoints().GetPoint(i)
-            if distance(point1, point2) > tol:
-                pointID = i
-                break
-        pointIDs.append(pointID)
+            N = min(numberOfPoints1, numberOfPoints2)
+            for i in range(N):
+                point1 = line1.GetPoints().GetPoint(i)
+                point2 = line2.GetPoints().GetPoint(i)
+                if distance(point1, point2) > tol:
+                    pointID = i
+                    break
+            pointIDs.append(pointID)
 
-    pointID = min(pointIDs)
+        startID = 0
+        endID = min(pointIDs)
+        cl_id = 0
+
+        region_points = []
+
+    elif region_of_interest == "commandline" or region_of_interest == "manuall":
+        # Get points from the user
+        if region_of_interest == "manuall":
+            stenosis_point_id = vtk.vtkIdList()
+            first = True
+            while stenosis_point_id.GetNumberOfIds() not in [1, 2]:
+                if not first:
+                    print("Please provide only one or two points, try again")
+
+                # Select point on surface
+                seed_selector = vmtkPickPointSeedSelector()
+                seed_selector.SetSurface(surface)
+                if method == "variation" or method == "area":
+                    seed_selector.text = "Press space to select the start and endpoint of the" + \
+                                        " region of interest, 'u' to undo.\n"
+                elif method == "stenosis":
+                    seed_selector.text = "Press space to select, the center of a new" + \
+                                         " stenosis (one point),\nOR place two points on each side" + \
+                                         " of an existing stenosis to remove it, \'u\' to undo."
+                seed_selector.Execute()
+                stenosis_point_id = seed_selector.GetTargetSeedIds()
+                first = True
+            region_points = []
+            for i in range(stenosis_point_id.GetNumberOfIds()):
+                region_points += surface.GetPoint(stenosis_point_id.GetId(i))
+
+        # Get locator
+        locator = get_locator(centerline)
+
+        if len(region_points) == 3:
+            # Project point onto centerline
+            point1 = region_points
+            point1 = centerline.GetPoint(locator.FindClosestPoint(point1))
+
+            # Get relevant line
+            tol = get_tolerance(centerline)
+            cl_id = -1
+            dist = 1e10
+            while dist > tol / 10:
+                cl_id += 1
+                line = extract_single_line(centerline, cl_id)
+                tmp_loc = get_locator(line)
+                tmp_id = tmp_loc.FindClosestPoint(point1)
+                dist = distance(point1, line.GetPoint(tmp_id))
+
+            # Get length of stenosis
+            misr = get_array(radiusArrayName, line)
+            length = stenosis_length * misr[tmp_loc.FindClosestPoint(point1)]
+
+            # Get ids of start and stop
+            centerline_length = get_curvilinear_coordinate(line)
+            center = centerline_length[tmp_id]
+            region_of_interest_id = (center - length <= centerline_length) \
+                                 * (centerline_length <= center + length)
+            startID = np.argmax(region_of_interest_id)
+            endID = region_of_interest_id.shape[0] - 1 - np.argmax(region_of_interest_id[::-1])
+
+        else:
+            point1 = region_points[:3]
+            point2 = region_points[3:]
+            point1 = centerline.GetPoint(locator.FindClosestPoint(point1))
+            point2 = centerline.GetPoint(locator.FindClosestPoint(point2))
+
+            distance1 = []
+            distance2 = []
+            ids1 = []
+            ids2 = []
+            for i in range(centerline.GetNumberOfLines()):
+                line = extract_single_line(centerline, i)
+                tmp_loc = get_locator(line)
+                ids1.append(tmp_loc.FindClosestPoint(point1))
+                ids2.append(tmp_loc.FindClosestPoint(point2))
+                cl_point1 = line.GetPoint(ids1[-1])
+                cl_point2 = line.GetPoint(ids[-1])
+                distance1.append(distance(point1, cl_point1))
+                distance2.append(distance(point2, cl_point2))
+
+            tol = get_tolerance(centerlines) / 10
+            total_distance = (np.array(distance1) < tol) * (np.array(distnace2) < tol)
+            cl_id = np.argmax(total_distance)
+
+            if total_distance[cl_id] == 0:
+                raise RuntimeError("The two points provided have to be on the same " + \
+                                   " line (from inlet to outlet), and not at two different" + \
+                                   " outlets")
+            startID = ids1[cl_id]
+            endID = ids2[cl_id]
 
     # Extract and spline a single line
-    line_to_change = extract_single_line(centerline, 0, endID=pointID)
+    line_to_change = extract_single_line(centerline, cl_id, startID=startID, endID=endID)
     line_to_change = spline_centerline(line_to_change, nknots=25, isline=True)
 
-    return line_to_change
+    return line_to_change, region_points
 
 
-def get_factor(line_to_change, method, beta, ratio, percentage, stenosis_points, stenosis_size, surface):
+def get_factor(line_to_change, method, beta, ratio, percentage, region_of_interest,
+               region_points, stenosis_length, surface):
     """
     Compute the factor determining
     the change in radius, used to
@@ -165,18 +240,32 @@ def get_factor(line_to_change, method, beta, ratio, percentage, stenosis_points,
         beta (float): Factor deciding how area will change. Ignored if ratio is given.
         ratio (float): Desired ratio between min and max cross-sectional area.
         percentage (float): Desired increase/decrease in cross-sectional area.
-        stenosis_points (bool): List of points for the stenosis.
-        stenosis_size (float): Length of affected stenosis area. Default is MISR x 2.0 of selected point.
+        region_of_interest (str): Method for setting the region of interest.
+        region_points (bool): List of points for the stenosis.
+        stenosis_length (float): Length of affected stenosis area. Default is MISR x 2.0 of selected point.
 
     Returns:
         factor (float): Factor determining the change in radius.
     """
     # Array to change the radius
     area = get_array("CenterlineSectionArea", line_to_change)
+
+    # Safety smoothing, section area does not always work perfectly
     for i in range(2):
         area = gaussian_filter(area, 5)
     mean = np.mean(area)
 
+    # Exclude first and last 10 % if region_of_intrest == first_line
+    if region_of_interest == "first_line":
+        k = int(round(factor_.shape[0] * 0.10, 0))
+        l = area.shape[0] - k*2
+    else:
+        k = 0
+        l = area.shape[0]
+    trans = np.asarray(np.linspace(1, 0, k).tolist() + np.zeros(l).tolist() +
+                        np.linspace(0, 1, k).tolist())
+
+    # Get factor
     if method == "variation":
         if ratio is not None:
             # Inital guess
@@ -191,22 +280,14 @@ def get_factor(line_to_change, method, beta, ratio, percentage, stenosis_points,
             max_iter = 30
             iter = 0
 
-            # Exclude first and last 10 %
-            area_ = area[int(area.shape[0]*0.02):-int(area.shape[0]*0.02)]
-
-            # Estimate beta and find factor
+            # Estimate beta with bisection method
             while abs(R - ratio) >= 0.001 and iter < max_iter:
                 factor_ = (area / mean)**(beta-1)
-                k = int(round(factor_.shape[0] * 0.10, 0))
-                l = factor_.shape[0] - k*2
-                trans = np.asarray(np.linspace(1, 0, k).tolist() + np.zeros(l).tolist() +
-                                   np.linspace(0, 1, k).tolist())
                 factor = factor_[:, 0]*(1-trans) + trans
 
                 area_new = (np.sqrt(area[:, 0]/math.pi)*factor)**2 * math.pi
                 R = area_new.max() / area_new.min()
 
-                print(("R now: {:4f}  Want: {:2f}  R old: {:6f}".format(R, ratio, R_old)))
                 if R < ratio:
                     a = beta
                     beta = a + (b - a) / 2.
@@ -220,196 +301,30 @@ def get_factor(line_to_change, method, beta, ratio, percentage, stenosis_points,
 
         else:
             factor_ = (area / mean)**beta
-
-            # A linear transition of the old and new geometry
-            k = int(round(factor_.shape[0] * 0.10, 0))
-            l = factor_.shape[0] - k*2
-            trans = np.asarray(np.linspace(1, 0, k).tolist() + np.zeros(l).tolist() +
-                               np.linspace(0, 1, k).tolist())
             factor = factor_[:, 0]*(1-trans) + trans
 
-
     elif method == "stenosis":
-        if stenosis_points is not None:
-            stenosisPointId = vtk.vtkIdList()
-            first = True
-            while stenosisPointId.GetNumberOfIds() not in [1, 2]:
-                if not first:
-                    print("Please provide only one or two points, try again.")
-                # Select point on surface
-                seed_selector = vmtkPickPointSeedSelector()
-                seed_selector.SetSurface(surface)
-                seed_selector.Mode = "stenosis"
-                seed_selector.Execute()
-                stenosisPointId = seed_selector.GetTargetSeedIds()
-                first = False
+        if len(region_points) == 3:
+            t = np.linspace(0, np.pi, line_to_change.GetNumberOfPoints())
+            factor = (1 - np.sin(t)*percentage*0.01).tolist()
 
-            if stenosisPointId.GetNumberOfIds() == 1:
-                print("One point detected. Creating stenosis.")
-                stenosisPoint = surface.GetPoint(stenosisPointId.GetId(0))
-                factor = create_stenosis(line_to_change, stenosisPoint, area, stenosis_size, percentage)
-
-            elif stenosisPointId.GetNumberOfIds() == 2:
-                print("Two points detected. Removeing stenosis between the two points.")
-                stenosisPoint1 = surface.GetPoint(stenosisPointId.GetId(0))
-                stenosisPoint2 = surface.GetPoint(stenosisPointId.GetId(1))
-                factor = remove_stenosis(line_to_change, stenosisPoint1, stenosisPoint2, area)
-
-        else:
-            if len(stenosis_points) == 6:
-                factor = remove_stenosis(line_to_change, stenosis_points[:3],
-                                         stenosis_points[3:], area)
-            else:
-                factor = create_stenosis(line_to_change, stenosis_points, area, stenosis_size, percentage)
+        elif len(region_points) == 6:
+            start_area = area[0]
+            end_area = area[-1]
+            length = get_curvilinear_coordinate(line_to_change)
+            length = length / length.max()
+            factor = start_area + (end_area - start_area) * length
 
     elif method == "area":
         # Increase or deacrease overall area by a percentage
-        k = int(round(area.shape[0] * 0.10, 0))
-        l = area.shape[0] - k*2
-        trans = np.asarray(np.linspace(1, 0, k).tolist() + np.zeros(l).tolist() +
-                           np.linspace(0, 1, k).tolist())
         factor_ = np.ones(len(trans)) * (1 + percentage*0.01)
         factor = factor_*(1-trans) + trans
 
     return factor
 
 
-def create_stenosis(line_to_change, stenosisPoint, area, stenosis_size, percentage):
-    """
-    Creates a stenosis along the vessel based
-    on a user selected point representing
-    the center of the stenosis.
-
-    Args:
-        line_to_change (vtkPolyData): Centerline representing area of interest.
-        stenosisPoint (tuple): Center of stenosis.
-        area (ndarray): Array of cross-section area along the abscissa.
-        stenosis_size (float): Length of affected stenosis area. Default is MISR x 2.0 of selected point.
-        percentage (float): Desired increase/decrease in cross-sectional area.
-
-    Returns:
-        factor (float): Factor determining the change in radius.
-    """
-    # Find closest point along centerline
-    locator = get_locator(line_to_change)
-    stenosisLinePointId = int(locator.FindClosestPoint(stenosisPoint))
-    stenosisLinePoint = line_to_change.GetPoint(stenosisLinePointId)
-
-    # Find start and stop based on MISR
-    stenosisLinePointMISR = get_array(radiusArrayName, line_to_change)[stenosisLinePointId]
-    tolerance = stenosisLinePointMISR * stenosis_size
-    startId = 0
-    stopId = line_to_change.GetNumberOfPoints()-1
-    for i in range(stenosisLinePointId + 1, 0, -1):
-        stenosisPoint_tmp = line_to_change.GetPoint(i)
-        if distance(np.asarray(stenosisPoint_tmp), np.asarray(stenosisLinePoint)) > tolerance:
-            startId = i
-            break
-
-    for i in range(stenosisLinePointId + 1, line_to_change.GetNumberOfPoints(), 1):
-        stenosisPoint_tmp = line_to_change.GetPoint(i)
-        if distance(np.asarray(stenosisPoint_tmp), np.asarray(stenosisLinePoint)) > tolerance:
-            stopId = i
-            break
-
-    # Subdivide centerline into sections
-    trans = subdivide_centerline(area.shape[0], startId, stopId, segment_length=0.9)
-
-    # Define sine profile
-    t = np.linspace(0, np.pi, stopId-startId)
-    sine_profile = (np.sin(t)*percentage*0.01 + 1.0).tolist()
-    factor_ = np.asarray(np.ones(startId).tolist() + sine_profile + np.ones(area.shape[0]-stopId).tolist())
-    factor = factor_*(1-trans) + trans
-
-    return factor
-
-
-def subdivide_centerline(size, startId, stopId, segment_length=1.0):
-    """
-    Create a linear transition between original
-    and manipulated geometry, by dividing
-    centerline into sections.
-
-    Args:
-        size (int): Number of points along centerline.
-        startId (int): ID at starting point.
-        stopId (int): ID at stopping point.
-        segment_length (float): Fraction of centerline used.
-
-    Returns:
-        trans (ndarray): Linear transition between original and new geomtry.
-    """
-    l = stopId - startId
-    diff = size - stopId
-    end_l = int(diff * segment_length)
-    endmid_l = diff - end_l
-    start_l = int(startId * segment_length)
-    startmid_l = startId - start_l
-
-    start = np.asarray(np.ones(start_l)).tolist()
-    startmid = np.asarray(np.linspace(1, 0, startmid_l)).tolist()
-    mid = np.zeros(l).tolist()
-    endmid = np.linspace(0, 1, endmid_l).tolist()
-    end = np.asarray(np.ones(end_l)).tolist()
-    trans = np.asarray(start + startmid + mid + endmid + end)
-
-    return trans
-
-
-def remove_stenosis(line_to_change, point1, point2, area):
-    """
-    Removes a stenosis along the vessel based
-    on a two user selected point representing
-    the boundary of the stenosis.
-
-    Args:
-        line_to_change (vtkPolyData): Centerline representing area of interest.
-        point 1 (tuple): Start point of stenosis.
-        point 2 (tuple): End point of stenosis.
-        area (ndarray): Array of cross-section area along the abscissa.
-
-    Returns:
-        factor (float): Factor determining the change in radius.
-    """
-    # Find closest point along centerline and sort points
-    locator = get_locator(line_to_change)
-    lineId1 = int(locator.FindClosestPoint(point1))
-    lineId2 = int(locator.FindClosestPoint(point2))
-    if lineId1 < lineId2:
-        startId = lineId1
-        stopId = lineId2
-    else:
-        startId = lineId2
-        stopId = lineId1
-
-    # Get areas at start and end
-    startPoint = line_to_change.GetPoint(startId)
-    endPoint = line_to_change.GetPoint(stopId)
-    startMISR = get_array(radiusArrayName, line_to_change)[startId]
-    endMISR = get_array(radiusArrayName, line_to_change)[stopId]
-
-    def new_area(s):
-        tmpId = int(s)
-        tmprad = get_array(radiusArrayName, line_to_change)[tmpId]
-        s = (s - startId) / (stopId - startId)
-        return (startMISR * (1 - s) + s * endMISR) / tmprad
-
-    # Subdivide centerline into sections
-    trans = subdivide_centerline(area.shape[0], startId, stopId, segment_length=1.0)
-
-    # Define stenosis area and factor
-    t = np.linspace(startId, stopId, stopId-startId)
-    fixed_area = []
-    for t_ in t:
-        fixed_area.append(new_area(t_))
-    factor_ = np.asarray(np.ones(startId).tolist() + fixed_area + np.ones(area.shape[0]-stopId).tolist())
-    factor = factor_*(1-trans) + trans
-
-    return factor
-
-
-def change_area(voronoi, line_to_change, method, beta, ratio, percentage, stenosis_points,
-                stenosis_size, surface):
+def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
+                region_of_interest, region_points, stenosis_length, surface):
     """
     Change the cross-sectional area of an input
     voronoi diagram along the corresponding area
@@ -421,8 +336,9 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage, stenos
         beta (float): Factor deciding how area will change. Ignored if ratio is given.
         ratio (float): Desired ratio between min and max cross-sectional area.
         percentage (float): Percentage the area of the geometry / stenosis is increase/decreased.
-        stenosis_points (list): List of points for the stenosis.
-        stenosis_size (float): Length of affected stenosis area. Default is MISR x 2.0 of selected point.
+        region_of_interest (str): Method for setting the region of interest ['manuall' | 'commandline' | 'first_line']
+        region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint
+        stenosis_length (float): Length of affected stenosis area. Default is MISR x 2.0 of selected point.
 
     Returns:
         newVoronoi (vtkPolyData): Manipulated Voronoi diagram.
@@ -448,8 +364,8 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage, stenos
     lastSphere.SetCenter(c1)
 
     # Get factor
-    factor = get_factor(line_to_change, method, beta, ratio, percentage, stenosis_points,
-                        stenosis_size, surface)
+    factor = get_factor(line_to_change, method, beta, ratio, percentage,
+                        region_of_interest, region_points, stenosis_length, surface)
 
     # Locator to find closest point on centerline
     locator = get_locator(line_to_change)
@@ -512,10 +428,16 @@ def read_command_line():
     # Required arguments
     required.add_argument('-i', '--ifile', type=str, default=None, required=True,
                           help="Path to the surface model")
+    # Output filename
+    required.add_argument("-o", "--ofile", type=str, default=None, required=True,
+                          help="Relative path to the output surface. The default folder is" + \
+                               " the same as the input file, and a name with a combination of the" + \
+                               " parameters.")
+
 
     # General arguments
     parser.add_argument("-m", "--method", type=str, default="variation",
-                        choices=["variation", "stenosis", "area"], metavar="method",
+                        choices=["variation", "stenosis", "area"],
                         help="Methods for manipulating the area in the region of interest:" + \
                              "\n1) 'variation' will increase or decrease the changes in area" + \
                              " along the centerline of the region of interest." + \
@@ -551,6 +473,26 @@ def read_command_line():
                              " size should be adjusted. For quick proto typing we" + \
                              " recommend ~100 in all directions, but >250 for a final " + \
                              " surface.", metavar="size")
+    parser.add_argument("-r", "--region-of-interest", type=str, default="manuall",
+                        choices=["manuall", "commandline", "first_line"],
+                        help="The method for defining the region to be changed. There are" + \
+                             " three options: 'manuall', 'commandline', 'first_line'. In" + \
+                             " 'manuall' the user will be provided with a visualization of the" + \
+                             " input surface, and asked to provide an end and start point of the" + \
+                             " region of interest. Note that not all algorithms are robust over" + \
+                             " bifurcations. If 'commandline' is provided, then '--region-points'" + \
+                             " is expected to be provided. Finally, if 'first_line' is given, the" + \
+                             " line from the inlet (largest opening) to the first bifurcation" + \
+                             " will be altered, not that method='stenosis' can not be used" + \
+                             " with 'first_line'.")
+    parser.add_argument("--region-points", nargs="+", type=float, default=None, metavar="points",
+                        help="If -r or --region-of-interest is 'commandline' then this" + \
+                             " argument have to be given. The method expects two points" + \
+                             " which defines the start and end of the region of interest. If" + \
+                             " 'method' is set to stenosis, then one point can be provided as well," + \
+                             " which is assumbed to be the center of a new stenosis." + \
+                             " Example providing the points (1, 5, 1) and (2, 4, 3):" + \
+                             " --stenosis-points 1 5 1 2 4 3")
 
     # "Variation" argments
     parser.add_argument('--beta', type=float, default=0.5,
@@ -558,52 +500,49 @@ def read_command_line():
                              " (A/A_mean)**beta*r_old, over the respective area. If beta <" + \
                              " -1 the geometry will have less area variation, and" + \
                              " if beta > 1, the variations in area will increase")
-    parser.add_argument("--ratio", type=float, default=None, help="For method=variation: " + \
-                        "Target ratio of A_max/A_min, when this is given beta will be ignored" + \
-                       " and instead approximated to obtain the target ratio")
+    parser.add_argument("--ratio", type=float, default=None,
+                        help="For method=variation: " + \
+                             " Target ratio of A_max/A_min, when this is given beta will be ignored" + \
+                             " and instead approximated to obtain the target ratio")
 
     # "Stenosis" argument
-    parser.add_argument("--stenosis-size", type=float, default=2.0, metavar="size",
+    parser.add_argument("--stenosis-length", type=float, default=2.0, metavar="length",
                         help="For method=stenosis: The length of the area " + \
-                        " affected by a stenosis. Default is 2.0 times the minimal" + \
-                        " inscribed spehere radius of the selected point.")
-    parser.add_argument("--stenosis-points", nargs="+", type=float, default=None, metavar="points",
-                        help="If the points are not provided, the user will be asked to" + \
-                        " give them provide the points by clicking on the input surface." + \
-                        " If one point is provided it is assumed to be the center of the" + \
-                        " stenosis, and if two points are provided it is assumed to be" + \
-                        " the start and end of an existing stenosis. Example providing two" + \
-                        " points: --stenosis-points 1.0 1.0 1.0 2.0 2.0 2.0")
+                             " affected by a stenosis relative to the minimal inscribed" + \
+                             " sphere radius of the selected point. Default is 2.0.")
 
     # "area" / "stenosis" argument
-    parser.add_argument("--percentage", type=float, default=50.0, help="Percentage the" + \
-                        " area of the geometry is increase/decreased overall or only stenosis")
-
-    # Output filename
-    parser.add_argument("-o", "--ofile", type=str, default=None,
-                        help="Relative path to the output surface. The default folder is" + \
-                        " the same as the input file, and a name with a combination of the" + \
-                        " parameters.")
+    parser.add_argument("--percentage", type=float, default=50.0,
+                        help="Percentage the" + \
+                             " area of the geometry is increase/decreased overall or only" + \
+                             " stenosis")
 
     # Outputfile argument
     args = parser.parse_args()
 
+    if args.method == "stenosis" and args.region_of_interest == "first_line":
+        raise ValueError("Can not set region of interest to 'first_line' when creating or" + \
+                         " removing a stenosis")
+
     if args.method == "variation" and args.ratio is not None and args.beta != 0.5:
         print("WARNING: The beta value you provided will be ignored, using ration instead.")
 
-    if args.stenosis_points is not None and len(args.stenosis_points):
-        if len(args.stenosis_points) % 3 != 0 and len(args.stenosis_points) < 7:
-            raise ValueError("ERROR: Please provide a stenosis point as a multiple of 3, and maximum" + \
-                             " two points")
+    if args.region_points is not None:
+        if len(args.region_points) % 3 != 0 or len(args.region_points) > 6:
+            raise ValueError("ERROR: Please provide region point(s) as a multiple of 3, and maximum" + \
+                             " two points.")
 
     if args.no_smooth_point is not None and len(args.no_smooth_point):
         if len(args.no_smooth_point) % 3 != 0:
-            raise ValueError("ERROR: Please provide the no smooth point(s) as a multiple of 3")
+            raise ValueError("ERROR: Please provide the no smooth point(s) as a multiple" + \
+                             " of 3.")
 
 
     return dict(input_filepath=args.ifile, method=args.method, smooth=args.smooth,
                 smooth_factor=args.smooth_factor, beta=args.beta,
-                ratio=args.ratio, stenosis_size=args.stenosis_size, stenosis_points=args.stenosis_points,
+                region_of_interest=args.region_of_interest,
+                region_points=args.region_points, ratio=args.ratio,
+                stenosis_length=args.stenosis_length,
                 percentage=args.percentage, output_filepath=args.ofile,
                 poly_ball_size=args.poly_ball_size, no_smooth=args.no_smooth,
                 no_smooth_point=args.no_smooth_point)
