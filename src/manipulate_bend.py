@@ -129,7 +129,6 @@ def move_vessel(input_filepath, smooth, smooth_factor, alpha, beta, output_filep
     direction = "horizont"
     middle_points, middle_ids = get_spline_points(centerlines, beta, direction, clipping_points_vtk)
     dx_p1 = middle_points[0] - p1
-    dx_p2 = middle_points[-1] - p2
 
     # Move centerline manually for updating inlet
     # and outlet positions used to compute
@@ -149,10 +148,10 @@ def move_vessel(input_filepath, smooth, smooth_factor, alpha, beta, output_filep
         # Move anterior bend horizontally.
         # Iterate over points P from Voronoi diagram and manioulate
         print("Adjusting Voronoi diagram")
-        voronoi_remaining = move_voronoi_horizontally(dx_p1, dx_p2, voronoi_remaining,
+        voronoi_remaining = move_voronoi_horizontally(dx_p1, voronoi_remaining,
                                                       centerline_remaining, id1, id2,
                                                       diverging_id, clip=False)
-        voronoi_siphon = move_voronoi_horizontally(dx_p1, dx_p2, voronoi_siphon,
+        voronoi_siphon = move_voronoi_horizontally(dx_p1, voronoi_siphon,
                                                    centerline_siphon, id1, id2, diverging_id,
                                                    clip=True, eye=diverging_centerline_ispresent)
     else:
