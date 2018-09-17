@@ -36,10 +36,6 @@ def move_vessel(input_filepath, smooth, smooth_factor, alpha, beta, output_filep
     # Input filenames
     base_path = get_path_names(input_filepath)
 
-    # Output names
-    surface_new_surface = output_filepath if output_filepath is not None \
-        else base_path + "_alpha_%s_beta_%s.vtp" % (alpha, beta)
-
     # Centerlines
     centerline_clipped_path = base_path + "_centerline_clipped.vtp"
     centerline_clipped_part_path = base_path + "_centerline_clipped_part.vtp"
@@ -124,6 +120,9 @@ def move_vessel(input_filepath, smooth, smooth_factor, alpha, beta, output_filep
     else:
         voronoi_remaining = read_polydata(voronoi_remaining_path)
 
+    from IPython import embed
+    embed()
+
     # Extract translation vectors
     print("Computing translation directions.")
     direction = "horizont"
@@ -153,7 +152,8 @@ def move_vessel(input_filepath, smooth, smooth_factor, alpha, beta, output_filep
                                                       diverging_id, clip=False)
         voronoi_siphon = move_voronoi_horizontally(dx_p1, voronoi_siphon,
                                                    centerline_siphon, id1, id2, diverging_id,
-                                                   clip=True, eye=diverging_centerline_ispresent)
+                                                   clip=True,
+                                                   diverging_centerline_ispresent=diverging_centerline_ispresent)
     else:
         print("No horizontal movement. Initiating vertical movement")
         new_centerlines = centerlines
@@ -174,9 +174,9 @@ def move_vessel(input_filepath, smooth, smooth_factor, alpha, beta, output_filep
     print("Smoothing, clean, and check surface")
     new_surface = prepare_surface_output(new_surface, surface,
                                          new_centerlines,
-                                         surface_new_surface, test_merge=True)
+                                         output_filepath, test_merge=True)
     write_polydata(new_centerlines, new_centerlines_path)
-    write_polydata(new_surface, surface_new_surface)
+    write_polydata(new_surface, output_filepath)
 
 
 def move_vessel_vertically(alpha, voronoi_remaining,
@@ -247,7 +247,7 @@ def move_vessel_vertically(alpha, voronoi_remaining,
 
 
 def move_voronoi_horizontally(dx_p1, voronoi_clipped, centerline_clipped, id1, id2,
-                              clip_id, clip=False, eye=False):
+                              clip_id, clip=False, diverging_centerline_ispresent=False):
     """
     Iterate through voronoi diagram and move based on a profile
     for horizontal movement. Includes special treatment of
@@ -261,7 +261,7 @@ def move_voronoi_horizontally(dx_p1, voronoi_clipped, centerline_clipped, id1, i
         id2 (int): Index of second clipping point.
         clip_id (int): Index where opthamlic artery is located (if present)
         clip (bool): Determines which part of geometry is being moved, True if siphon.
-        eye (bool): Determines presence of opthamlic artery.
+        diverging_centerline_ispresent (bool): Determines presence of opthamlic artery.
 
     Returns:
         newDataSet (vtkPolyData): Manipulated Voronoi diagram.
@@ -277,7 +277,7 @@ def move_voronoi_horizontally(dx_p1, voronoi_clipped, centerline_clipped, id1, i
         idmid_0 = int((id1 + id2) / 2.)
         id1_0 = id1
         id1 = 0
-        if eye:
+        if diverging_centerline_ispresent:
             l1 = extract_single_line(centerline_clipped, 0)
             id2 = len(get_curvilinear_coordinate(l1))
         else:
@@ -285,7 +285,7 @@ def move_voronoi_horizontally(dx_p1, voronoi_clipped, centerline_clipped, id1, i
         idmid = int((id1 + id2) / 2.)
 
         # Manpipulation of voronoi diagram..
-        if eye:
+        if diverging_centerline_ispresent:
             # ..with opthalmic artery
             for p in range(voronoi_clipped.GetNumberOfPoints()):
                 cl_id = centerline_loc.FindClosestPoint(voronoi_clipped.GetPoint(p))
@@ -346,7 +346,7 @@ def move_voronoi_horizontally(dx_p1, voronoi_clipped, centerline_clipped, id1, i
 
 
 def move_voronoi_vertically(voronoi_clipped, centerline_clipped, id1_0, clip_id,
-                            dx, eye=False):
+                            dx, diverging_centerline_ispresent=False):
     """
     Iterate through voronoi diagram and move based on a profile
     for vertical movement. Includes special treatment of
@@ -358,7 +358,7 @@ def move_voronoi_vertically(voronoi_clipped, centerline_clipped, id1_0, clip_id,
         id1_0 (int): Index of first clipping point.
         clip_id (int): Index where opthamlic artery is located (if present)
         dx (ndarray): Direction to move.
-        eye (bool): Determines presence of opthamlic artery.
+        diverging_centerline_ispresent (bool): Determines presence of opthamlic artery.
 
     Returns:
         newDataSet (vtkPolyData): Manipulated Voronoi diagram.
@@ -370,7 +370,7 @@ def move_voronoi_vertically(voronoi_clipped, centerline_clipped, id1_0, clip_id,
     verts = vtk.vtkCellArray()
 
     # Manpipulation of voronoi diagram..
-    if eye:
+    if diverging_centerline_ispresent:
         # ..with opthalmic artery
         id1 = I1 = 0
         l1 = extract_single_line(centerline_clipped, 0)
@@ -407,37 +407,6 @@ def move_voronoi_vertically(voronoi_clipped, centerline_clipped, id1_0, clip_id,
     newDataSet.SetVerts(verts)
     newDataSet.GetPointData().AddArray(voronoi_clipped.GetPointData().GetArray(radiusArrayName))
     return newDataSet
-
-
-def read_command_line():
-    """
-    Read arguments from commandline
-    """
-    parser = ArgumentParser()
-
-    parser.add_argument('-d', '--dir_path', type=str, default=".",
-                        help="Path to the folder with all the cases")
-    parser.add_argument('--case', '-c', type=str, default=None,
-                        help="Choose case")
-    parser.add_argument('-s', '--smooth', type=bool, default=True,
-                        help="If the original voronoi diagram " +
-                             "(surface) should be" +
-                             "smoothed before it is manipulated", metavar="smooth")
-    parser.add_argument("-a", "--alpha", type=float, default=0.0,
-                        help="Compression factor in vertical direction, " +
-                             "ranging from -1.0 to 1.0")
-    parser.add_argument("-b", "--beta", type=float, default=0.0,
-                        help="Compression factor in horizontal direction, " +
-                             "ranging from -1.0 to 1.0")
-    parser.add_argument('-sf', '--smooth_factor', type=float, default=0.25,
-                        help="If smooth is True then each voronoi point" +
-                             " that has a radius less then MISR*(1-sf) at" +
-                             " the closest centerline point is removes",
-                        metavar="smoothening_factor")
-
-    args = parser.parse_args()
-
-    return args.smooth, args.dir_path, args.case, args.alpha, args.beta, args.smooth_factor
 
 
 def read_command_line():
@@ -490,10 +459,8 @@ def read_command_line():
                              "of streching or compression of the tubular structure.")
 
     # Output filename
-    parser.add_argument("-o", "--ofile", type=str, default=None,
-                        help="Relative path to the output surface. The default folder is" +
-                             " the same as the input file, and a name with a combination of the" +
-                             " parameters.")
+    parser.add_argument("-o", "--ofile", type=str, default=None, required=True,
+                        help="Relative path to the output surface.")
 
     # Outputfile argument
     args = parser.parse_args()
