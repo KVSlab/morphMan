@@ -19,8 +19,8 @@ def curvature_variations(input_filename, smooth, smoothingfactor, iterations, sm
         iterations (int): Number of smoothing iterations.
         smoothmode (bool): Determines if models is sharpened or smoothed.
     """
-    #it = iterations
-    #sf = smoothingfactor
+    # it = iterations
+    # sf = smoothingfactor
 
     # Input filenames
     model_path = path.join(dirpath, name, "model.vtp")
@@ -29,7 +29,7 @@ def curvature_variations(input_filename, smooth, smoothingfactor, iterations, sm
     model_smoothed_path = path.join(dirpath, name, "model_smoothed.vtp")
     method = "smoothed" if smoothmode else "extended"
     model_new_surface = path.join(dirpath, name, "model_%s_fac_%s_it_%s.vtp" % (method, sf, it))
-    model_new_surface_clean = path.join(dirpath, name , "model_%s_fac_%s_it_%s_clean.vtp" % ( method, sf, it))
+    model_new_surface_clean = path.join(dirpath, name, "model_%s_fac_%s_it_%s_clean.vtp" % (method, sf, it))
 
     # Centerlines
     centerline_complete_path = path.join(dirpath, name, "centerline_complete.vtp")
@@ -66,7 +66,7 @@ def curvature_variations(input_filename, smooth, smoothingfactor, iterations, sm
 
     print("Compute voronoi diagram")
     voronoi = prepare_voronoi_diagram(surface, model_smoothed_path, voronoi_path, voronoi_smoothed_path,
-                                    smooth, smooth_factor_voro, centerlines_complete)
+                                      smooth, smooth_factor_voro, centerlines_complete)
 
     # Get Carotid Siphon
     if path.exists(carotid_siphon_path):
@@ -75,7 +75,7 @@ def curvature_variations(input_filename, smooth, smoothingfactor, iterations, sm
         carotid_siphon = extract_carotid_siphon(dirpath)
 
     # Search for diverging clipping points along the siphon
-    siphon_end_point = carotid_siphon.GetPoint(carotid_siphon.GetNumberOfPoints()-1)
+    siphon_end_point = carotid_siphon.GetPoint(carotid_siphon.GetNumberOfPoints() - 1)
     div_ids, div_points, centerlines_in_order, div_lines = find_diverging_centerlines(centerlines_in_order,
                                                                                       siphon_end_point)
 
@@ -83,7 +83,7 @@ def curvature_variations(input_filename, smooth, smoothingfactor, iterations, sm
         print("Clipping diverging centerlines")
         div_patch_cl = []
         for i, divline in enumerate(div_lines):
-            clip_id = int((divline.GetNumberOfPoints() - div_ids[i])*0.2 + div_ids[i])
+            clip_id = int((divline.GetNumberOfPoints() - div_ids[i]) * 0.2 + div_ids[i])
             patch_eye = clip_eyeline(divline, carotid_siphon.GetPoint(0), clip_id)
             div_patch_cl.append(extract_single_line(patch_eye, 1))
 
@@ -151,7 +151,7 @@ def curvature_variations(input_filename, smooth, smoothingfactor, iterations, sm
     # TODO: Add Automated clipping of newmodel
     new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100)
     new_surface = check_if_surface_is_merged(new_surface, None,
-                                          model_new_surface_clean, None)
+                                             model_new_surface_clean, None)
     write_polydata(new_surface, model_new_surface)
 
 
@@ -179,9 +179,9 @@ def make_voronoi_smooth(voronoi, old_cl, new_cl, smoothmode, div=False, div_poin
 
     # Define segments for transitioning
     IDend = old_cl.GetNumberOfPoints() - 1
-    IDmidend = int(IDend*0.9)
-    IDstartmid = int(IDend*0.1)
-    IDmid = int(IDend*0.2)
+    IDmidend = int(IDend * 0.9)
+    IDstartmid = int(IDend * 0.1)
+    IDmid = int(IDend * 0.2)
     # Iterate through voronoi points
     for i in range(N):
         if div:
@@ -199,9 +199,9 @@ def make_voronoi_smooth(voronoi, old_cl, new_cl, smoothmode, div=False, div_poin
         if cl_id < IDstartmid:
             dx = 0
         elif IDstartmid <= cl_id < IDmid:
-            dx = dx*(cl_id - IDstartmid) / float(IDmid - IDstartmid)
+            dx = dx * (cl_id - IDstartmid) / float(IDmid - IDstartmid)
         elif cl_id > IDmidend:
-            dx = dx*(IDend - cl_id) / float(IDend - IDmidend)
+            dx = dx * (IDend - cl_id) / float(IDend - IDmidend)
 
         dist = dx
         points.InsertNextPoint(np.asarray(voronoi.GetPoint(i)) + dist)
@@ -224,13 +224,14 @@ def read_command_line():
     parser.add_argument('-case', type=str, default=None, help="Choose case")
     parser.add_argument('-s', '--smooth', type=bool, default=False,
                         help="If the original voronoi diagram (surface) should be" + \
-                        "smoothed before it is manipulated", metavar="smooth")
+                             "smoothed before it is manipulated", metavar="smooth")
     parser.add_argument("-sf", "--smoothingfactor", type=float, default=1.0,
                         help="Smoothing factor of centerline curve.")
     parser.add_argument("-sf_voro", "--smoothingfactor_voro", type=float, default=0.25,
-                         help="If smooth option is true then each voronoi point" + \
-                         " that has a radius less then MISR*(1-smooth_factor) at" + \
-                         " the closest centerline point is removes" metavar="smoothening_factor")
+                        help="If smooth option is true then each voronoi point" + \
+                             " that has a radius less then MISR*(1-smooth_factor) at" + \
+                             " the closest centerline point is removes"
+    metavar = "smoothening_factor")
     parser.add_argument("-sm", "--smoothmode", type=str2bool, default=True,
                         help="Smoothes centerline if True, anti-smoothes if False", metavar="smoothmode")
     parser.add_argument("-it", "--iterations", type=int, default=100,
@@ -238,20 +239,20 @@ def read_command_line():
 
     args = parser.parse_args()
 
-                 smoothingfactor, iterations, smoothmode, smooth_factor_voro, output_filename
-    return dict(input_filepath=args.ifile, smooth=args.smooth,
-                smooth_factor_voro=args.smootheningfactor_voro,
-                smoothmode=args.smoothmode, iterations=args.iterations,
-                output_filename=args.ofile)
+    smoothingfactor, iterations, smoothmode, smooth_factor_voro, output_filename
 
 
+return dict(input_filepath=args.ifile, smooth=args.smooth,
+            smooth_factor_voro=args.smootheningfactor_voro,
+            smoothmode=args.smoothmode, iterations=args.iterations,
+            output_filename=args.ofile)
 
 if __name__ == "__main__":
-    #smooth, basedir, case, smoothmode, smoothingfactor, iterations, smooth_factor_voro = read_command_line()
+    # smooth, basedir, case, smoothmode, smoothingfactor, iterations, smooth_factor_voro = read_command_line()
     curvature_variations(**read_command_line())
-    #name = "surface"
-    #folders = listdir(basedir) if case is None else [case]
-    #for folder in folders:
+    # name = "surface"
+    # folders = listdir(basedir) if case is None else [case]
+    # for folder in folders:
     #    print("==== Working on case %s ====" % folder)
     #    dirpath = path.join(basedir, folder)
     #    change_curvature(dirpath, name, smooth, smoothingfactor, iterations, smoothmode, smooth_factor_voro)

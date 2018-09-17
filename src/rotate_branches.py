@@ -16,18 +16,18 @@ def read_command_line():
     parser.add_argument('-i', '--ifile', type=str, default=None,
                         help="Path to input surface")
     parser.add_argument('-s', '--smooth', type=bool, default=False,
-                        help="If the original voronoi diagram (surface) should be" + \
-                        "smoothed before it is manipulated", metavar="smooth")
+                        help="If the original voronoi diagram (surface) should be" +
+                             "smoothed before it is manipulated", metavar="smooth")
     parser.add_argument('-a', '--angle', type=float, default=10,
-                        help="Each daughter branch is rotated an angle a in the" + \
-                        " bifurcation plane. a should be expressed in radians as" + \
-                        " any math expression from the" + \
-                        " math module in python", metavar="rotation_angle")
+                        help="Each daughter branch is rotated an angle a in the" +
+                             " bifurcation plane. a should be expressed in radians as" +
+                             " any math expression from the" +
+                             " math module in python", metavar="rotation_angle")
     parser.add_argument('--smooth_factor', type=float, default=0.25,
-                         help="If smooth option is true then each voronoi point" + \
-                         " that has a radius less then MISR*(1-smooth_factor) at" + \
-                         " the closest centerline point is removes",
-                         metavar="smoothening_factor")
+                        help="If smooth option is true then each voronoi point" +
+                             " that has a radius less then MISR*(1-smooth_factor) at" +
+                             " the closest centerline point is removes",
+                        metavar="smoothening_factor")
     parser.add_argument("--leave1", type=bool, default=False,
                         help="Leave one branch untuched")
     parser.add_argument("--leave2", type=bool, default=False,
@@ -35,20 +35,20 @@ def read_command_line():
     parser.add_argument("--bif", type=bool, default=False,
                         help="interpolate bif as well")
     parser.add_argument("--lower", type=bool, default=False,
-                        help="Make a fourth line to interpolate along that" + \
+                        help="Make a fourth line to interpolate along that" +
                              " is lower than the other bif line.")
     parser.add_argument("--cylinder_factor", type=float, default=7.0,
                         help="Factor for choosing the smaller cylinder")
-    parser.add_argument("--version", type=bool, default=True, help="Type of" + \
-                        "interpolation")
+    parser.add_argument("--version", type=bool, default=True, help="Type of" +
+                                                                   "interpolation")
     parser.add_argument("--aneurysm", type=bool, default=False,
                         help="Determines if there is an aneurysm or not")
     parser.add_argument("--anu_num", type=int, default=0,
                         help="If multiple aneurysms, choise one")
     parser.add_argument("-o", "--ofile", type=str, default=None,
-                        help="Relative path to the output surface. The default folder is
-                        the same as the input file, and a name with a combination of the
-                        parameters."
+                        help="Relative path to the output surface. The default folder is" +
+                             "the same as the input file, and a name with a combination of the" +
+                             "parameters.")
 
     parser.add_argument("--step", type=float, default=0.1,
                         help="Resampling step used to resample centerlines")
@@ -273,8 +273,8 @@ def rotation_matrix(data, angle, leave1, leave2):
 
     # Create basis vectors defining bifurcation plane
     d = (np.asarray(data[0]["div_point"]) + \
-        np.asarray(data[1]["div_point"]) + \
-        np.asarray(data["bif"]["div_point"])) / 3.
+         np.asarray(data[1]["div_point"]) + \
+         np.asarray(data["bif"]["div_point"])) / 3.
     vec = np.eye(3)
     for i in range(2):
         e = np.asarray(data[i]["end_point"])
@@ -386,7 +386,7 @@ def merge_cl(centerline, end_point, div_point):
             # Add point
             if div_ID[i] < j < end_ID[i] and merge_bool:
                 new = (np.asarray(other.GetPoint(j)) +
-                    np.asarray(line.GetPoint(j))) / 2.
+                       np.asarray(line.GetPoint(j))) / 2.
                 points.InsertNextPoint(new)
             else:
                 points.InsertNextPoint(line.GetPoint(j))
@@ -551,17 +551,17 @@ def rotate_branches(input_filepath, smooth, smooth_factor, angle, l1, l2, bif, l
 
     # Compute parent artery and aneurysm centerline
     centerline_par = compute_centerlines(inlet, outlets,
-                                          centerline_par_path,
-                                          capped_surface, resampling=resampling_step)
+                                         centerline_par_path,
+                                         capped_surface, resampling=resampling_step)
     centerlines_complete = compute_centerlines(inlet, outlets + aneurysm_point,
                                                centerline_complete_path,
                                                capped_surface, resampling=resampling_step)
 
     # Additional centerline for bifurcation
     centerline_relevant_outlets = compute_centerlines(inlet, outlet1 + outlet2,
-                                                          centerline_relevant_outlets_path,
-                                                          capped_surface,
-                                                          resampling=resampling_step)
+                                                      centerline_relevant_outlets_path,
+                                                      capped_surface,
+                                                      resampling=resampling_step)
     centerline_bif = compute_centerlines(outlet1, outlet2,
                                          centerline_bif_path,
                                          capped_surface, resampling=resampling_step)
@@ -584,7 +584,7 @@ def rotate_branches(input_filepath, smooth, smooth_factor, angle, l1, l2, bif, l
             voronoi_smoothed = SmoothClippedVoronoiDiagram(voronoi, centerline_par, smooth_factor)
         else:
             aneu_centerline = extract_single_line(centerline_complete,
-                                                centerline_complete.GetNumberOfCells() - 1)
+                                                  centerline_complete.GetNumberOfCells() - 1)
             div_aneu_id = []
             for i in range(centerline_complete.GetNumberOfCells() - 1):
                 div_aneu_id.append(centerline_div(aneu_centerline,
@@ -592,8 +592,8 @@ def rotate_branches(input_filepath, smooth, smooth_factor, angle, l1, l2, bif, l
             div_aneu_id = max(div_aneu_id)
             aneu_centerline = extract_single_line(aneu_centerline, start=div_aneu_id)
             voronoi_smoothed = SmoothClippedVoronoiDiagram(voronoi,
-                                                          centerline_par, smooth_factor,
-                                                          no_smooth=aneu_centerline)
+                                                           centerline_par, smooth_factor,
+                                                           no_smooth=aneu_centerline)
 
         voronoi_smoothed = remove_extreme_points(voronoi_smoothed, voronoi)
         write_polydata(voronoi_smoothed, voronoi_smoothed_path)
@@ -658,13 +658,13 @@ def rotate_branches(input_filepath, smooth, smooth_factor, angle, l1, l2, bif, l
     if bif:
         print("Start interpolate bif")
         interpolated_bif = InterpolatePatchCenterlines(rotated_bif_cl, centerline_bif,
-                                                        None, "bif", True)
+                                                       None, "bif", True)
         write_polydata(interpolated_bif, centerline_new_bif_path)
 
     if lower:
         print("Start interpolate lower")
         center = ((1 / 9.) * div_points[1][0] + (4 / 9.) * div_points[1][1] + \
-                        (4 / 9.) * div_points[1][2]).tolist()
+                  (4 / 9.) * div_points[1][2]).tolist()
         div_points_rotated_bif[0].SetPoint(0, center[0], center[1], center[2])
         interpolated_bif_lower = InterpolatePatchCenterlines(rotated_bif_cl, centerline_bif,
                                                              div_points_rotated_bif[0].GetPoint(0),
@@ -712,5 +712,5 @@ if __name__ == "__main__":
                     l2, bif, lower, cylinder_factor, aneurysm, anu_num, resampling_step,
                     version, output_filepath)
     new_surface = check_if_surface_is_merged(new_surface, None,
-                                          model_new_surface_clean, None)
+                                             model_new_surface_clean, None)
     write_polydata(new_surface, model_new_surface)
