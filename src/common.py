@@ -1863,45 +1863,50 @@ def prepare_voronoi_diagram(capped_surface, centerlines, base_path,
     """
     # Check if a region should not be smoothed
     if smooth and no_smooth:
-        # Get inlet and outlets
-        tol = get_tolerance(centerlines)
-        inlet = extract_single_line(centerlines, 0)
-        inlet = inlet.GetPoint(inlet.GetNumberOfPoints() - 1)
-        outlets = []
-        if no_smooth_point is None:
-            seed_selector = vmtkPickPointSeedSelector()
-            seed_selector.SetSurface(capped_surface)
-            seed_selector.text = "Please place a point on the segments you do not want" + \
-                                " to smooth, e.g. an aneurysm, \'u\' to undo\n"
-            seed_selector.Execute()
-            point_ids = seed_selector.GetTargetSeedIds()
-            for i in range(point_ids.GetNumberOfIds()):
-                outlets += capped_surface.GetPoint(point_ids.GetId(i))
+        no_smooth_path = base_path + "centerline_no_smooth.vtp"
+        if not path.exists(no_smooth_path):
+            # Get inlet and outlets
+            tol = get_tolerance(centerlines)
+            inlet = extract_single_line(centerlines, 0)
+            inlet = inlet.GetPoint(inlet.GetNumberOfPoints() - 1)
+            outlets = []
+            if no_smooth_point is None:
+                seed_selector = vmtkPickPointSeedSelector()
+                seed_selector.SetSurface(capped_surface)
+                seed_selector.text = "Please place a point on the segments you do not want" + \
+                                    " to smooth, e.g. an aneurysm, \'u\' to undo\n"
+                seed_selector.Execute()
+                point_ids = seed_selector.GetTargetSeedIds()
+                for i in range(point_ids.GetNumberOfIds()):
+                    outlets += capped_surface.GetPoint(point_ids.GetId(i))
+            else:
+                locator = get_locator(capped_surface)
+                for i in range(len(no_smooth_point) // 3):
+                    tmp_id = locator.FindClosestPoint(no_smooth_point[3 * i:3 * (i + 1)])
+                    outlets.append(capped_surface.GetPoint(tmp_id))
+
+            # Create the centerline
+            no_smooth_centerlines, _, _ = compute_centerlines(inlet, outlets,
+                                                              None, capped_surface,
+                                                              resampling=0.1,
+                                                              smooth=False,voronoi=voronoi,
+                                                              pole_ids=pole_ids)
+
+            # Extract the centerline region which diverges from the existing centerlines
+            no_smooth_segments = []
+            for i in range(no_smooth_centerlines.GetNumberOfLines()):
+                tmp_line = extract_single_line(no_smooth_centerlines, i)
+                div_ids = []
+                for j in range(centerlines.GetNumberOfLines()):
+                    div_ids.append(centerline_div(tmp_line, extract_single_line(centerlines, j), tol))
+                div_id = max(div_ids)
+                no_smooth_segments.append(extract_single_line(tmp_line, div_id))
+
+                no_smooth_cl = merge_data(no_smooth_segments)
+            write_polydata(no_smooth_cl, no_smooth_path)
         else:
-            locator = get_locator(capped_surface)
-            for i in range(len(no_smooth_point) // 3):
-                tmp_id = locator.FindClosestPoint(no_smooth_point[3 * i:3 * (i + 1)])
-                outlets.append(capped_surface.GetPoint(tmp_id))
+            no_smooth_cl = read_polydata(no_smooth_path)
 
-        # Create the centerline
-        no_smooth_centerlines, _, _ = compute_centerlines(inlet, outlets,
-                                                          None, capped_surface,
-                                                          resampling=0.1,
-                                                          smooth=False,voronoi=voronoi,
-                                                          pole_ids=pole_ids)
-
-        # Extract the centerline region which diverges from the existing centerlines
-        no_smooth_segments = []
-        for i in range(no_smooth_centerlines.GetNumberOfLines()):
-            tmp_line = extract_single_line(no_smooth_centerlines, i)
-            div_ids = []
-            for j in range(centerlines.GetNumberOfLines()):
-                div_ids.append(centerline_div(tmp_line, extract_single_line(centerlines, j), tol))
-            div_id = max(div_ids)
-            no_smooth_segments.append(extract_single_line(tmp_line, div_id))
-
-            no_smooth_cl = merge_data(no_smooth_segments)
-        write_polydata(no_smooth_cl, base_path + "_centerline_no_smooth.vtp")
     else:
         no_smooth_cl = None
 
@@ -2012,15 +2017,17 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
     region_id = numpy_support.vtk_to_numpy(vtk_array)
     points = numpy_support.vtk_to_numpy(vtk_points)
 
+    centerline = new_centerline if old_centerline is None else old_centerline
     outlets = []
     lines = []
-    for i in range(new_centerline.GetNumberOfLines()):
-        lines.append(extract_single_line(new_centerline, i))
+    for i in range(centerline.GetNumberOfLines()):
+        lines.append(extract_single_line(centerline, i))
         outlets.append(lines[-1].GetPoint(lines[-1].GetNumberOfPoints() - 1))
     inlet_point = lines[-1].GetPoint(0)
 
     if changed and old_centerline is None:
-        print("WARNING: ")
+        print("WARNING: The changed flag is true, but the old centerline is not provided," + \
+              " and the outlet location can therefore not be changed.")
 
     # Get information from the original geometry
     inlet = False
@@ -2036,36 +2043,19 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
         # Get Center
         center = np.mean(tmp_points, axis=0)
 
-        if changed:
-            
-            # TODO: Is the new and original centerline sorted equally?
-            # TODO: If so, extract first old by id, then the new
-            # TODO: Create a rotation based on the cross product of the centerline
-            #       directions
-            # TODO: Then compute the new center and new normal
-            #pass
-
-            #print(center, np.array(center) + np.array(normal))
-            tmp_points = tmp_points - center
-            vec = np.eye(3)
-            vec[:, 0] = normal
-            vec[:, 1] = (tmp_points[0] - center)
-            vec[:, 2] = tmp_points[tmp_points.shape[0] // 2] - center
-            vec[:, 1] = vec[:, 1] / np.sqrt(np.sum(vec[:, 1] ** 2))
-            vec[:, 2] = vec[:, 2] / np.sqrt(np.sum(vec[:, 2] ** 2))
-
         # Get corresponding centerline to in/outlet
         if np.sqrt(np.sum((np.array(inlet_point) - center) ** 2)) < 0.5:
             line = lines[0]
+            line_id = 0
             inlet = True
         else:
-            line = lines[np.argmin(np.sqrt(np.sum((np.array(outlets) - center) ** 2, axis=1)))]
+            line_id = np.argmin(np.sqrt(np.sum((np.array(outlets) - center) ** 2, axis=1)))
+            line = lines[line_id]
 
         # Set correct direction of normal
         if inlet:
             in_dir = np.array(line.GetPoint(5)) - \
                      np.array(line.GetPoint(0))
-            inlet = False
         else:
             in_dir = np.array(line.GetPoint(line.GetNumberOfPoints() - 5)) - \
                      np.array(line.GetPoint(line.GetNumberOfPoints() - 1))
@@ -2074,6 +2064,35 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
         angle = np.arccos(np.dot(in_dir, normal)) * 180 / np.pi
         flipped = True if 90 < angle < 270 else False
         normal = -normal if 90 < angle < 270 else normal
+
+        # Mapp the old center and normals to the altered model 
+        if changed and old_centerline is not None:
+            new_line = extract_single_line(new_centerline, line_id)
+
+            # Set correct direction of normal
+            if inlet:
+                new_outlet = np.array(new_line.GetPoint(0))
+                in_dir_new = np.array(new_line.GetPoint(5)) - \
+                             new_outlet
+                translation = new_outlet - np.array(inlet_point)
+            else:
+                new_outlet = np.array(new_line.GetPoint(new_line.GetNumberOfPoints() - 1))
+                in_dir_new = np.array(new_line.GetPoint(new_line.GetNumberOfPoints() - 5)) - \
+                             new_outlet
+                translation = new_outlet - np.array(outlets[line_id])
+
+            center += translation
+
+            in_dir_normal = np.cross(in_dir_new, in_dir)
+            dir_angle = np.arccos(np.dot(in_dir, normal)) * 180 / np.pi
+
+            translation = vtk.vtkTransform()
+            translation.RotateWXYZ(dir_angle, in_dir_normal)
+            tmp_normal = normal
+            normal = [0, 0, 0]
+            translation.TransformNormal(tmp_normal, normal)
+            if inlet:
+                print(tmp_normal, normal)
 
         # Set plane
         plane = vtk_plane(center, normal)
@@ -2084,6 +2103,7 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
         # Reattach data which should not have been clipped
         surface = attach_clipped_regions(surface, clipped, center)
         write_polydata(surface, "test_clipped_%d.vtp" % i)
+        inlet = False
 
     # Perform a 'light' smoothing to obtain a nicer surface
     surface = vmtk_surface_smoother(surface, method="laplace", iterations=100)
