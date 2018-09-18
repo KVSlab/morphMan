@@ -1856,43 +1856,45 @@ def prepare_voronoi_diagram(capped_surface, centerlines, base_path,
     """
     # Check if a region should not be smoothed
     if smooth and no_smooth:
-        no_smooth_centerline_path = base_path + "_centerlines_no_smooth.vtp"
-        if not path.exists(no_smooth_centerline_path):
-            # Get inlet and outlets
-            inlet = centerlines.GetPoint(0)
-            outlets = []
-            if no_smooth_point is None:
-                seed_selector = vmtkPickPointSeedSelector()
-                seed_selector.SetSurface(capped_surface)
-                seed_selector.text = "Please place a point on the segments you do not want" + \
-                                     " to smooth, e.g. an aneurysm, \'u\' to undo\n"
-                seed_selector.Execute()
-                point_ids = seed_selector.GetTargetSeedIds()
-                for i in range(point_ids.GetNumberOfIds()):
-                    outlets += capped_surface.GetPoint(point_ids.GetId(i))
-            else:
-                locator = get_locator(capped_surface)
-                for i in range(len(no_smooth_point) // 3):
-                    outlets.append(capped_surface.GetPoint(locator.FindClosestPoint(no_smooth_point[3 * i:3 * (i + 1)])))
+        # Get inlet and outlets
+        tol = get_tolerance(centerlines)
+        inlet = extract_single_line(centerlines, 0)
+        inlet = inlet.GetPoint(inlet.GetNumberOfPoints() - 1)
+        outlets = []
+        if no_smooth_point is None:
+            seed_selector = vmtkPickPointSeedSelector()
+            seed_selector.SetSurface(capped_surface)
+            seed_selector.text = "Please place a point on the segments you do not want" + \
+                                " to smooth, e.g. an aneurysm, \'u\' to undo\n"
+            seed_selector.Execute()
+            point_ids = seed_selector.GetTargetSeedIds()
+            for i in range(point_ids.GetNumberOfIds()):
+                outlets += capped_surface.GetPoint(point_ids.GetId(i))
+        else:
+            locator = get_locator(capped_surface)
+            for i in range(len(no_smooth_point) // 3):
+                tmp_id = locator.FindClosestPoint(no_smooth_point[3 * i:3 * (i + 1)])
+                outlets.append(capped_surface.GetPoint(tmp_id))
 
-            no_smooth_centerlines, _, _ = compute_centerlines(inlet, outlets,
-                                                              no_smooth_centerline_path,
-                                                              capped_surface, resampling=0.1,
-                                                              smooth=False, voronoi=voronoi,
-                                                              pole_ids=pole_ids)
-            no_smooth_segments = []
-            for i in range(no_smooth_centerlines.GetNumberOfLines()):
-                tmp_line = extract_single_line(no_smooth_centerlines, i)
-                div_ids = []
-                for j in range(centerlines.GetNumberOfLines()):
-                    div_ids.append(centerline_div(tmp_line, extract_single_line(centerlines, j)))
-                div_id = max(div_ids)
-                no_smooth_segments.append(extract_single_line(tmp_line, div_id))
+        # Create the centerline
+        no_smooth_centerlines, _, _ = compute_centerlines(inlet, outlets,
+                                                          None, capped_surface,
+                                                          resampling=0.1,
+                                                          smooth=False,voronoi=voronoi,
+                                                          pole_ids=pole_ids)
+
+        # Extract the centerline region which diverges from the existing centerlines
+        no_smooth_segments = []
+        for i in range(no_smooth_centerlines.GetNumberOfLines()):
+            tmp_line = extract_single_line(no_smooth_centerlines, i)
+            div_ids = []
+            for j in range(centerlines.GetNumberOfLines()):
+                div_ids.append(centerline_div(tmp_line, extract_single_line(centerlines, j), tol))
+            div_id = max(div_ids)
+            no_smooth_segments.append(extract_single_line(tmp_line, div_id))
 
             no_smooth_cl = merge_data(no_smooth_segments)
-        else:
-            no_smooth_cl = read_polydata(no_smooth_centerline_path)
-
+        write_polydata(no_smooth_cl, base_path + "_centerline_no_smooth.vtp")
     else:
         no_smooth_cl = None
 
@@ -1993,7 +1995,7 @@ def attach_clipped_regions(surface, clipped, center):
 
 
 def prepare_surface_output(surface, original_surface, new_centerline, output_filepath,
-                           test_merge=False, rotated=False):
+                           test_merge=False, changed=True, old_centerline=None):
     # Get planes if outlets of the original surface
     boundary_edges = get_feature_edges(original_surface)
     boundary_connectivity = get_connectivity(boundary_edges)
@@ -2025,15 +2027,15 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
         center = np.mean(tmp_points, axis=0)
 
         # FIXME: How to deal with the rotated branches when clipping the outlets?
-        if rotated:
+        if changed:
             # TODO: Is the new and original centerline sorted equally?
             # TODO: If so, extract first old by id, then the new
             # TODO: Create a rotation based on the cross product of the centerline
             #       directions
             # TODO: Then compute the new center and new normal
-            pass
+            #pass
 
-            print(center, np.array(center) + np.array(normal))
+            #print(center, np.array(center) + np.array(normal))
             tmp_points = tmp_points - center
             vec = np.eye(3)
             vec[:, 0] = normal
@@ -2821,10 +2823,11 @@ def move_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_centerlines, 
         locator = get_locator(line)
         id1 = locator.FindClosestPoint(p1)
         if diverging_id is not None and i == (numberOfCells - 1):
-            id2 = diverging_id
+            pass
+            # Note, reuse id2, idmid from previous loop
         else:
             id2 = locator.FindClosestPoint(p2)
-        idmid = int((id1 + id2) * 0.5)
+            idmid = int((id1 + id2) * 0.5)
 
         for p in range(line.GetNumberOfPoints()):
             point = line.GetPoint(p)
@@ -2835,15 +2838,16 @@ def move_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_centerlines, 
                     dist = dx
                 elif id1 <= cl_id < idmid:
                     dist = dx * (idmid ** 2 - cl_id ** 2) / (idmid ** 2 - id1 ** 2)
+                elif idmid <= cl_id < (diverging_id - 1) and diverging_id is not None:
+                    dist = -dx * (cl_id - idmid) ** 0.5 / (id2 - idmid) ** 0.5
                 elif idmid <= cl_id < (id2 - 1):
                     dist = -dx * (cl_id - idmid) ** 0.5 / (id2 - idmid) ** 0.5
                 else:
                     if diverging_id is not None and i == (numberOfCells - 1):
-                        line_non_diverging = extract_single_line(patch_cl, 0)
-                        locator = get_locator(line_non_diverging)
-                        pp = line_non_diverging.GetPoint(cl_id)
-                        id_main = locator.FindClosestPoint(pp)
-                        dist = -dx * (id_main - idmid) ** 0.5 / (id_main - idmid) ** 0.5
+                        #pp = line_non_diverging.GetPoint(cl_id)
+                        #id_main = locator.FindClosestPoint(pp)
+                        id_main = diverging_id
+                        dist = -dx * (diverging_id - idmid) ** 0.5 / (diverging_id - idmid) ** 0.5
                     else:
                         dist = -dx
 
@@ -2851,7 +2855,8 @@ def move_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_centerlines, 
                 if id1 <= cl_id <= id2:
                     dist = 4 * dx * (cl_id - id1) * (id2 - cl_id) / (id2 - id1) ** 2
                 elif diverging_id is not None and i == (numberOfCells - 1) and cl_id > id2:
-                    cl_id = diverging_id - id1 + int((id2 - (diverging_id - id1)) * 0.4)
+                    #cl_id = diverging_id - id1 + int((id2 - (diverging_id - id1)) * 0.4)
+                    cl_id = diverging_id
                     dist = 4 * dx * (cl_id - id1) * (id2 - cl_id) / (id2 - id1) ** 2
                 else:
                     dist = 0

@@ -52,7 +52,7 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
 
     # Smooth voronoi diagram
     if smooth:
-        voronoi = prepare_voronoi_diagram(surface, capped_surface, centerlines, base_path,
+        voronoi = prepare_voronoi_diagram(capped_surface, centerlines, base_path,
                                           smooth, smooth_factor, no_smooth,
                                           no_smooth_point, voronoi, pole_ids)
 

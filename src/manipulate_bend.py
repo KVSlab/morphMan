@@ -63,7 +63,7 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
                                                          capped_surface, resampling=0.1,
                                                          smooth=False, base_path=base_path)
     if smooth:
-        voronoi = prepare_voronoi_diagram(surface, capped_surface, centerlines, base_path,
+        voronoi = prepare_voronoi_diagram(capped_surface, centerlines, base_path,
                                           smooth, smooth_factor, no_smooth,
                                           no_smooth_point, voronoi, pole_ids)
 
@@ -134,18 +134,10 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
     # Move centerline manually for updating inlet
     # and outlet positions used to compute
     # new centerlines
-    print("Adjusting line manually")
-
-    # Move remaining centerline
-    if beta != 0:
-        new_centerlines = move_centerlines(centerlines, dx_p1, p1, p2, diverging_id, diverging_centerlines, direction)
-    else:
-        if diverging_centerline_ispresent:
-            new_centerlines = merge_data([centerlines, extract_single_line(diverging_centerlines, 0)])
-        else:
-            new_centerlines = centerlines
-
     if beta != 0.0:
+        new_centerlines = move_centerlines(centerlines, dx_p1, p1, p2, diverging_id,
+                                           diverging_centerlines, direction)
+
         # Move anterior bend horizontally.
         # Iterate over points P from Voronoi diagram and manioulate
         print("Adjusting Voronoi diagram")
@@ -153,12 +145,15 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
                                                       centerline_remaining, id1, id2,
                                                       diverging_id, clip=False)
         voronoi_siphon = move_voronoi_horizontally(dx_p1, voronoi_siphon,
-                                                   centerline_siphon, id1, id2, diverging_id,
-                                                   clip=True,
+                                                   centerline_siphon, id1, id2,
+                                                   diverging_id, clip=True,
                                                    diverging_centerline_ispresent=diverging_centerline_ispresent)
     else:
-        print("No horizontal movement. Initiating vertical movement")
-        new_centerlines = centerlines
+        if diverging_centerline_ispresent:
+            new_centerlines = merge_data([centerlines, extract_single_line(diverging_centerlines, 0)])
+        else:
+            new_centerlines = centerlines
+
         new_surface = surface
         write_polydata(new_centerlines, new_centerlines_path_tmp)
 
@@ -174,9 +169,12 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
                                                               new_centerlines, region_points, poly_ball_size)
 
     print("Smoothing, clean, and check surface")
+    write_polydata(new_centerlines, "test_new_cl_alpha_{}_beta_{}.vtp".format(alpha, beta))
     new_surface = prepare_surface_output(new_surface, surface,
-                                         new_centerlines,
-                                         output_filepath, test_merge=True)
+                                         new_centerlines, output_filepath,
+                                         test_merge=True, changed=True,
+                                         old_centerline=merge_data([centerlines,
+                                                                   diverging_centerlines]))
     write_polydata(new_centerlines, new_centerlines_path)
     write_polydata(new_surface, output_filepath)
 
@@ -238,12 +236,12 @@ def move_vessel_vertically(alpha, voronoi_remaining,
     new_voronoi = merge_data([voronoi_remaining, voronoi_siphon])
 
     # Move centerline manually for postprocessing
-    print("Adjusting line manually")
+    #print("Adjusting line manually")
     new_centerlines = move_centerlines(centerlines, dx, p1, p2, diverging_id, diverging_centerlines, direction)
 
     # Write a new surface from the new voronoi diagram
-    print("Writing new surface")
     new_surface = create_new_surface(new_voronoi, poly_ball_size=poly_ball_size)
+
     return new_surface, new_centerlines
 
 
