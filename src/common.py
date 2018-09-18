@@ -2663,6 +2663,7 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
     elif region_of_interest == "commandline" or region_of_interest == "manuall":
         # Get points from the user
         if region_of_interest == "manuall":
+            print("Please select region of interest the render window.")
             stenosis_point_id = vtk.vtkIdList()
             first = True
             while stenosis_point_id.GetNumberOfIds() != 2 or \
