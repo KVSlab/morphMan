@@ -1834,14 +1834,13 @@ def prepare_surface(base_path, surface_path):
     return open_surface, capped_surface
 
 
-def prepare_voronoi_diagram(surface, capped_surface, centerlines, base_path,
+def prepare_voronoi_diagram(capped_surface, centerlines, base_path,
                             smooth, smooth_factor, no_smooth, no_smooth_point,
                             voronoi, pole_ids):
     """
     Compute and smooth voronoi diagram of surface model.
 
     Args:
-        surface (polydata): Surface model to create a Voronoi diagram of.
         capped_surface (polydata): Cappedsurface model to create a Voronoi diagram of.
         base_path (str): Absolute path to surface model path.
         voronoi (vtkPolyData): Voronoi diagram.
@@ -1869,17 +1868,18 @@ def prepare_voronoi_diagram(surface, capped_surface, centerlines, base_path,
                                      " to smooth, e.g. an aneurysm, \'u\' to undo\n"
                 seed_selector.Execute()
                 point_ids = seed_selector.GetTargetSeedIds()
-                outlets = [surface.GetPoint(point_ids.GetId(i)) for i in range(point_ids.GetNumberOfIds())]
+                for i in range(point_ids.GetNumberOfIds()):
+                    outlets += capped_surface.GetPoint(point_ids.GetId(i))
             else:
-                locator = get_locator(surface)
+                locator = get_locator(capped_surface)
                 for i in range(len(no_smooth_point) // 3):
-                    outlets.append(surface.GetPoint(locator.FindClosestPoint(no_smooth_point[3 * i:3 * (i + 1)])))
+                    outlets.append(capped_surface.GetPoint(locator.FindClosestPoint(no_smooth_point[3 * i:3 * (i + 1)])))
 
-            no_smooth_centerlines = compute_centerlines(inlet, outlets,
-                                                        no_smooth_centerline_path,
-                                                        capped_surface, resampling=0.1,
-                                                        smooth=False, voronoi=voronoi,
-                                                        pole_ids=pole_ids)
+            no_smooth_centerlines, _, _ = compute_centerlines(inlet, outlets,
+                                                              no_smooth_centerline_path,
+                                                              capped_surface, resampling=0.1,
+                                                              smooth=False, voronoi=voronoi,
+                                                              pole_ids=pole_ids)
             no_smooth_segments = []
             for i in range(no_smooth_centerlines.GetNumberOfLines()):
                 tmp_line = extract_single_line(no_smooth_centerlines, i)
