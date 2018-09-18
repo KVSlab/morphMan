@@ -154,7 +154,8 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
                                                       diverging_id, clip=False)
         voronoi_siphon = move_voronoi_horizontally(dx_p1, voronoi_siphon,
                                                    centerline_siphon, id1, id2, diverging_id,
-                                                   clip=True, eye=diverging_centerline_ispresent)
+                                                   clip=True,
+                                                   diverging_centerline_ispresent=diverging_centerline_ispresent)
     else:
         print("No horizontal movement. Initiating vertical movement")
         new_centerlines = centerlines
@@ -247,7 +248,7 @@ def move_vessel_vertically(alpha, voronoi_remaining,
 
 
 def move_voronoi_horizontally(dx_p1, voronoi_clipped, centerline_clipped, id1, id2,
-                              clip_id, clip=False, eye=False):
+                              clip_id, clip=False, diverging_centerline_ispresent=False):
     """
     Iterate through voronoi diagram and move based on a profile
     for horizontal movement. Includes special treatment of
@@ -261,7 +262,7 @@ def move_voronoi_horizontally(dx_p1, voronoi_clipped, centerline_clipped, id1, i
         id2 (int): Index of second clipping point.
         clip_id (int): Index where opthamlic artery is located (if present)
         clip (bool): Determines which part of geometry is being moved, True if siphon.
-        eye (bool): Determines presence of opthamlic artery.
+        diverging_centerline_ispresent (bool): Determines presence of opthamlic artery.
 
     Returns:
         newDataSet (vtkPolyData): Manipulated Voronoi diagram.
@@ -277,7 +278,7 @@ def move_voronoi_horizontally(dx_p1, voronoi_clipped, centerline_clipped, id1, i
         idmid_0 = int((id1 + id2) / 2.)
         id1_0 = id1
         id1 = 0
-        if eye:
+        if diverging_centerline_ispresent:
             l1 = extract_single_line(centerline_clipped, 0)
             id2 = len(get_curvilinear_coordinate(l1))
         else:
@@ -285,7 +286,7 @@ def move_voronoi_horizontally(dx_p1, voronoi_clipped, centerline_clipped, id1, i
         idmid = int((id1 + id2) / 2.)
 
         # Manpipulation of voronoi diagram..
-        if eye:
+        if diverging_centerline_ispresent:
             # ..with opthalmic artery
             for p in range(voronoi_clipped.GetNumberOfPoints()):
                 cl_id = centerline_loc.FindClosestPoint(voronoi_clipped.GetPoint(p))
@@ -346,7 +347,7 @@ def move_voronoi_horizontally(dx_p1, voronoi_clipped, centerline_clipped, id1, i
 
 
 def move_voronoi_vertically(voronoi_clipped, centerline_clipped, id1_0, clip_id,
-                            dx, eye=False):
+                            dx, diverging_centerline_ispresent=False):
     """
     Iterate through voronoi diagram and move based on a profile
     for vertical movement. Includes special treatment of
@@ -358,7 +359,7 @@ def move_voronoi_vertically(voronoi_clipped, centerline_clipped, id1_0, clip_id,
         id1_0 (int): Index of first clipping point.
         clip_id (int): Index where opthamlic artery is located (if present)
         dx (ndarray): Direction to move.
-        eye (bool): Determines presence of opthamlic artery.
+        diverging_centerline_ispresent (bool): Determines presence of opthamlic artery.
 
     Returns:
         newDataSet (vtkPolyData): Manipulated Voronoi diagram.
@@ -370,7 +371,7 @@ def move_voronoi_vertically(voronoi_clipped, centerline_clipped, id1_0, clip_id,
     verts = vtk.vtkCellArray()
 
     # Manpipulation of voronoi diagram..
-    if eye:
+    if diverging_centerline_ispresent:
         # ..with opthalmic artery
         id1 = I1 = 0
         l1 = extract_single_line(centerline_clipped, 0)
