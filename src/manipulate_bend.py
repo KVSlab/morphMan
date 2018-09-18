@@ -456,7 +456,7 @@ def read_command_line():
 
     # Set region of interest:
     parser.add_argument("-r", "--region-of-interest", type=str, default="manuall",
-                        choices=["manuall", "commandline", "first_line"],
+                        choices=["manuall", "commandline", "landmarking"],
                         help="The method for defining the region to be changed. There are" + \
                              " three options: 'manuall', 'commandline', 'landmarking'. In" + \
                              " 'manuall' the user will be provided with a visualization of the" + \

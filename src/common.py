@@ -256,14 +256,21 @@ def smooth_voronoi_diagram(voronoi, centerlines, smoothing_factor,
     numberOfPoints = voronoi.GetNumberOfPoints()
     threshold = get_array(radiusArrayName, centerlines) * (1 - smoothing_factor)
 
-    # Do not smooth inlet and outlets, set threshold to 0
+    # Do not smooth inlet and outlets, set threshold to -1
     start = 0
     end = 0
     for i in range(centerlines.GetNumberOfLines()):
-        end_ = extract_single_line(centerlines, i).GetNumberOfPoints() - 1
+        line = extract_single_line(centerlines, i)
+        length = get_curvilinear_coordinate(line)
+        end_ = line.GetNumberOfPoints() - 1
         end += end_
-        threshold[start:start + 5] = -1
-        threshold[end - 5:end] = -1
+
+        # Point buffer start
+        end_id = np.argmin(np.abs(-(length-length.max()) - threshold[end]))
+        start_id = np.argmin(np.abs(length - threshold[start]))
+
+        threshold[start:start + end_id] = -1
+        threshold[end - start_id:end] = -1
         start += end_ + 1
         end += 1
 
@@ -2012,6 +2019,9 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
         outlets.append(lines[-1].GetPoint(lines[-1].GetNumberOfPoints() - 1))
     inlet_point = lines[-1].GetPoint(0)
 
+    if changed and old_centerline is None:
+        print("WARNING: ")
+
     # Get information from the original geometry
     inlet = False
     for i in range(region_id.max() + 1):
@@ -2026,8 +2036,8 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
         # Get Center
         center = np.mean(tmp_points, axis=0)
 
-        # FIXME: How to deal with the rotated branches when clipping the outlets?
         if changed:
+            
             # TODO: Is the new and original centerline sorted equally?
             # TODO: If so, extract first old by id, then the new
             # TODO: Create a rotation based on the cross product of the centerline
