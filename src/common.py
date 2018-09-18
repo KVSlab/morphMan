@@ -2083,6 +2083,8 @@ def clip_polydata(surface, cutter=None, value=0):
 
 def attach_clipped_regions(surface, clipped, center):
     connectivity = get_connectivity(clipped, mode="All")
+    if connectivity.GetNumberOfPoints() == 0:
+        return surface
     region_id = get_array("RegionId", connectivity)
     distances = []
     regions = []
@@ -2786,10 +2788,272 @@ def get_vtk_clipping_points(line, clipping_points):
     return p1, p2, ID1, ID2, clip_points, clipping_points
 
 
+def get_line_to_change(surface, centerline, region_of_interest, method, region_points,
+                       stenosis_length):
+    """
+    Extract and spline part of centerline
+    within the geometry where
+    area variations will be performed.
+
+    Args:
+        centerline (vtkPolyData): Centerline in geometry.
+        region_of_interest (str): Method for setting the region of interest ['manuall' | 'commandline' | 'first_line']
+        region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint.
+
+    Returns:
+        line_to_change (vtkPolyData): Part of centerline.
+    """
+    if region_of_interest == "first_line":
+        tol = get_tolerance(centerline)
+        line2 = extract_single_line(centerline, 0)
+        numberOfPoints2 = line2.GetNumberOfPoints()
+
+        # Iterate through lines and find diverging point
+        n = 2
+        pointIDs = []
+        for j in range(1, n):
+            line1 = extract_single_line(centerline, j)
+            numberOfPoints1 = line1.GetNumberOfPoints()
+
+            N = min(numberOfPoints1, numberOfPoints2)
+            for i in range(N):
+                point1 = line1.GetPoints().GetPoint(i)
+                point2 = line2.GetPoints().GetPoint(i)
+                if distance(point1, point2) > tol:
+                    pointID = i
+                    break
+            pointIDs.append(pointID)
+
+        startID = 0
+        endID = min(pointIDs)
+        cl_id = 0
+
+        region_points = []
+
+    elif region_of_interest == "commandline" or region_of_interest == "manuall":
+        # Get points from the user
+        if region_of_interest == "manuall":
+            stenosis_point_id = vtk.vtkIdList()
+            first = True
+            while stenosis_point_id.GetNumberOfIds() != 2 or \
+                   (stenosis_point_id.GetNumberOfIds() != 1 and method == "stenosis"):
+                if not first:
+                    print("Please provide only one or two points, try again")
+
+                # Select point on surface
+                seed_selector = vmtkPickPointSeedSelector()
+                seed_selector.SetSurface(surface)
+                if method == "variation" or method == "area":
+                    seed_selector.text = "Press space to select the start and endpoint of the" + \
+                                        " region of interest, 'u' to undo.\n"
+                elif method == "stenosis":
+                    seed_selector.text = "Press space to select, the center of a new" + \
+                                         " stenosis (one point),\nOR place two points on each side" + \
+                                         " of an existing stenosis to remove it, \'u\' to undo."
+                elif method == "bend":
+                    seed_selector.text = "Press space to select the start and end of the" + \
+                                         " bend that you want to manipulate, 'u' to undo.\n"
+                seed_selector.Execute()
+                stenosis_point_id = seed_selector.GetTargetSeedIds()
+                first = True
+            region_points = []
+            for i in range(stenosis_point_id.GetNumberOfIds()):
+                region_points += surface.GetPoint(stenosis_point_id.GetId(i))
+
+        # Get locator
+        locator = get_locator(centerline)
+
+        if len(region_points) == 3:
+            # Project point onto centerline
+            region_points = centerline.GetPoint(locator.FindClosestPoint(region_points))
+            point1 = region_points
+
+            # Get relevant line
+            tol = get_tolerance(centerline)
+            cl_id = -1
+            dist = 1e10
+            while dist > tol / 10:
+                cl_id += 1
+                line = extract_single_line(centerline, cl_id)
+                tmp_loc = get_locator(line)
+                tmp_id = tmp_loc.FindClosestPoint(point1)
+                dist = distance(point1, line.GetPoint(tmp_id))
+
+            # Get length of stenosis
+            misr = get_array(radiusArrayName, line)
+            length = stenosis_length * misr[tmp_loc.FindClosestPoint(point1)]
+
+            # Get ids of start and stop
+            centerline_length = get_curvilinear_coordinate(line)
+            center = centerline_length[tmp_id]
+            region_of_interest_id = (center - length <= centerline_length) \
+                                 * (centerline_length <= center + length)
+            startID = np.argmax(region_of_interest_id)
+            endID = region_of_interest_id.shape[0] - 1 - np.argmax(region_of_interest_id[::-1])
+
+        else:
+            point1 = region_points[:3]
+            point2 = region_points[3:]
+            point1 = centerline.GetPoint(locator.FindClosestPoint(point1))
+            point2 = centerline.GetPoint(locator.FindClosestPoint(point2))
+            region_points[:3] = point1
+            region_points[3:] = point2
+
+            distance1 = []
+            distance2 = []
+            ids1 = []
+            ids2 = []
+            for i in range(centerline.GetNumberOfLines()):
+                line = extract_single_line(centerline, i)
+                tmp_loc = get_locator(line)
+                ids1.append(tmp_loc.FindClosestPoint(point1))
+                ids2.append(tmp_loc.FindClosestPoint(point2))
+                cl_point1 = line.GetPoint(ids1[-1])
+                cl_point2 = line.GetPoint(ids2[-1])
+                distance1.append(distance(point1, cl_point1))
+                distance2.append(distance(point2, cl_point2))
+
+            tol = get_tolerance(centerline) / 10
+            total_distance = (np.array(distance1) < tol) * (np.array(distance2) < tol)
+            cl_id = np.argmax(total_distance)
+
+            if total_distance[cl_id] == 0:
+                raise RuntimeError("The two points provided have to be on the same " + \
+                                   " line (from inlet to outlet), and not at two different" + \
+                                   " outlets")
+            startID = min(ids1[cl_id], ids2[cl_id])
+            endID = max(ids1[cl_id], ids2[cl_id])
+
+    # Extract and spline a single line
+    line_to_change = extract_single_line(centerline, cl_id, startID=startID, endID=endID)
+    line_to_change = spline_centerline(line_to_change, nknots=25, isline=True)
+
+    return line_to_change, region_points
+
+
+def find_region_of_interest_and_diverging_centerlines(centerlines_complete, clipping_points):
+    centerlines = []
+    diverging_centerlines = []
+    p1 = clipping_points[0]
+    p2 = clipping_points[1]
+
+    # Search for divering centerlines
+    tol = get_tolerance(centerlines_complete) * 4
+    for i in range(centerlines_complete.GetNumberOfLines()):
+        line = extract_single_line(centerlines_complete, i)
+        locator = get_locator(line)
+        id1 = locator.FindClosestPoint(p1)
+        id2 = locator.FindClosestPoint(p2)
+        p1_tmp = line.GetPoint(id1)
+        p2_tmp = line.GetPoint(id2)
+        if distance(p1, p1_tmp) < tol and distance(p2, p2_tmp) < tol:
+            centerlines.append(line)
+        else:
+            diverging_centerlines.append(line)
+
+    # Sort and set clipping points to vtk object
+    centerline = centerlines[0]
+    locator = get_locator(centerline)
+    id1 = locator.FindClosestPoint(clipping_points[0])
+    id2 = locator.FindClosestPoint(clipping_points[1])
+    if id1 > id2:
+        clipping_points = clipping_points[::-1]
+        id1, id2 = id2, id1
+
+    clipping_points_vtk = vtk.vtkPoints()
+    for point in np.asarray(clipping_points):
+        clipping_points_vtk.InsertNextPoint(point)
+
+    # Find diverging point(s)
+    diverging_ids = []
+    for line in diverging_centerlines:
+        id_end = min([line.GetNumberOfPoints(), centerline.GetNumberOfPoints()])
+        for i in np.arange(id1, id_end):
+            p_div = np.asarray(line.GetPoint(i))
+            p_cl = np.asarray(centerline.GetPoint(i))
+            if distance(p_div, p_cl) > tol:
+                diverging_ids.append(i)
+                break
+
+    centerlines = merge_data(centerlines)
+    diverging_centerlines = merge_data(diverging_centerlines) if len(diverging_centerlines) > 0 else None
+
+    return centerlines, diverging_centerlines, clipping_points, clipping_points_vtk, diverging_ids
+
+
+def move_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_centerlines, direction):
+    if diverging_id is not None:
+        patch_cl = merge_data([patch_cl, diverging_centerlines])
+
+    numberOfPoints = patch_cl.GetNumberOfPoints()
+    numberOfCells = patch_cl.GetNumberOfCells()
+
+    centerline = vtk.vtkPolyData()
+    centerlinePoints = vtk.vtkPoints()
+    centerlineCellArray = vtk.vtkCellArray()
+    radiusArray = get_vtk_array(radiusArrayName, 1, numberOfPoints)
+
+    count = 0
+    for i in range(numberOfCells):
+        line = extract_single_line(patch_cl, i)
+        centerlineCellArray.InsertNextCell(line.GetNumberOfPoints())
+
+        getData = line.GetPointData().GetArray(radiusArrayName).GetTuple1
+
+        locator = get_locator(line)
+        id1 = locator.FindClosestPoint(p1)
+        if diverging_id is not None and i == (numberOfCells - 1):
+            id2 = diverging_id
+        else:
+            id2 = locator.FindClosestPoint(p2)
+        idmid = int((id1 + id2) * 0.5)
+
+        for p in range(line.GetNumberOfPoints()):
+            point = line.GetPoint(p)
+            cl_id = locator.FindClosestPoint(point)
+
+            if direction == "horizont":
+                if cl_id < id1:
+                    dist = dx
+                elif id1 <= cl_id < idmid:
+                    dist = dx * (idmid ** 2 - cl_id ** 2) / (idmid ** 2 - id1 ** 2)
+                elif idmid <= cl_id < (id2 - 1):
+                    dist = -dx * (cl_id - idmid) ** (0.5) / (id2 - idmid) ** (0.5)
+                else:
+                    if diverging_id is not None and i == (numberOfCells - 1):
+                        line_non_diverging = extract_single_line(patch_cl, 0)
+                        locator = get_locator(line_non_diverging)
+                        pp = line_non_diverging.GetPoint(cl_id)
+                        id_main = locator.FindClosestPoint(pp)
+                        dist = -dx * (id_main - idmid) ** (0.5) / (id_main - idmid) ** (0.5)
+                    else:
+                        dist = -dx
+
+            elif direction == "vertical":
+                if id1 <= cl_id <= id2:
+                    dist = 4 * dx * (cl_id - id1) * (id2 - cl_id) / (id2 - id1) ** 2
+                elif diverging_id is not None and i == (numberOfCells - 1) and cl_id > id2:
+                    cl_id = diverging_id - id1 + int((id2 - (diverging_id - id1)) * 0.4)
+                    dist = 4 * dx * (cl_id - id1) * (id2 - cl_id) / (id2 - id1) ** 2
+                else:
+                    dist = 0
+
+            point = np.asarray(point)
+            centerlinePoints.InsertNextPoint(point + dist)
+            radiusArray.SetTuple1(count, getData(p))
+            centerlineCellArray.InsertCellPoint(count)
+            count += 1
+
+    centerline.SetPoints(centerlinePoints)
+    centerline.SetLines(centerlineCellArray)
+    centerline.GetPointData().AddArray(radiusArray)
+
+    return centerline
+
+
 ### The following code is adapted from:
 ### https://github.com/vmtk/vmtk/tree/master/vmtkApps/CerebralAneurysms/ParentVesselReconstruction
 ### Written by Marina Piccinelli, and distrubuted within vmtk.
-
 def MaskVoronoiDiagram(voronoi, centerlines):
     numberOfCenterlinesPatches = centerlines.GetNumberOfCells()
     numberOfVoronoiPoints = voronoi.GetNumberOfPoints()
@@ -3660,123 +3924,3 @@ def get_start_ids(points, line):
         return 1, 2
     else:
         return 2, 1
-
-
-def find_region_of_interest_and_diverging_centerlines(centerlines_complete, clipping_points):
-    centerlines = []
-    diverging_centerlines = []
-    p1 = clipping_points[0]
-    p2 = clipping_points[1]
-
-    # Search for divering centerlines
-    tol = get_tolerance(centerlines_complete) * 4
-    for i in range(centerlines_complete.GetNumberOfLines()):
-        line = extract_single_line(centerlines_complete, i)
-        locator = get_locator(line)
-        id1 = locator.FindClosestPoint(p1)
-        id2 = locator.FindClosestPoint(p2)
-        p1_tmp = line.GetPoint(id1)
-        p2_tmp = line.GetPoint(id2)
-        if distance(p1, p1_tmp) < tol and distance(p2, p2_tmp) < tol:
-            centerlines.append(line)
-        else:
-            diverging_centerlines.append(line)
-
-    # Sort and set clipping points to vtk object
-    centerline = centerlines[0]
-    locator = get_locator(centerline)
-    id1 = locator.FindClosestPoint(clipping_points[0])
-    id2 = locator.FindClosestPoint(clipping_points[1])
-    if id1 > id2:
-        clipping_points = clipping_points[::-1]
-        id1, id2 = id2, id1
-
-    clipping_points_vtk = vtk.vtkPoints()
-    for point in np.asarray(clipping_points):
-        clipping_points_vtk.InsertNextPoint(point)
-
-    # Find diverging point(s)
-    diverging_ids = []
-    for line in diverging_centerlines:
-        id_end = min([line.GetNumberOfPoints(), centerline.GetNumberOfPoints()])
-        for i in np.arange(id1, id_end):
-            p_div = np.asarray(line.GetPoint(i))
-            p_cl = np.asarray(centerline.GetPoint(i))
-            if distance(p_div, p_cl) > tol:
-                diverging_ids.append(i)
-                break
-
-    centerlines = merge_data(centerlines)
-    diverging_centerlines = merge_data(diverging_centerlines) if len(diverging_centerlines) > 0 else None
-
-    return centerlines, diverging_centerlines, clipping_points, clipping_points_vtk, diverging_ids
-
-
-def move_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_centerlines, direction):
-    if diverging_id is not None:
-        patch_cl = merge_data([patch_cl, diverging_centerlines])
-
-    numberOfPoints = patch_cl.GetNumberOfPoints()
-    numberOfCells = patch_cl.GetNumberOfCells()
-
-    centerline = vtk.vtkPolyData()
-    centerlinePoints = vtk.vtkPoints()
-    centerlineCellArray = vtk.vtkCellArray()
-    radiusArray = get_vtk_array(radiusArrayName, 1, numberOfPoints)
-
-    count = 0
-    for i in range(numberOfCells):
-        line = extract_single_line(patch_cl, i)
-        centerlineCellArray.InsertNextCell(line.GetNumberOfPoints())
-
-        getData = line.GetPointData().GetArray(radiusArrayName).GetTuple1
-
-        locator = get_locator(line)
-        id1 = locator.FindClosestPoint(p1)
-        if diverging_id is not None and i == (numberOfCells - 1):
-            id2 = diverging_id
-        else:
-            id2 = locator.FindClosestPoint(p2)
-        idmid = int((id1 + id2) * 0.5)
-
-        for p in range(line.GetNumberOfPoints()):
-            point = line.GetPoint(p)
-            cl_id = locator.FindClosestPoint(point)
-
-            if direction == "horizont":
-                if cl_id < id1:
-                    dist = dx
-                elif id1 <= cl_id < idmid:
-                    dist = dx * (idmid ** 2 - cl_id ** 2) / (idmid ** 2 - id1 ** 2)
-                elif idmid <= cl_id < (id2 - 1):
-                    dist = -dx * (cl_id - idmid) ** (0.5) / (id2 - idmid) ** (0.5)
-                else:
-                    if diverging_id is not None and i == (numberOfCells - 1):
-                        line_non_diverging = extract_single_line(patch_cl, 0)
-                        locator = get_locator(line_non_diverging)
-                        pp = line_non_diverging.GetPoint(cl_id)
-                        id_main = locator.FindClosestPoint(pp)
-                        dist = -dx * (id_main - idmid) ** (0.5) / (id_main - idmid) ** (0.5)
-                    else:
-                        dist = -dx
-
-            elif direction == "vertical":
-                if id1 <= cl_id <= id2:
-                    dist = 4 * dx * (cl_id - id1) * (id2 - cl_id) / (id2 - id1) ** 2
-                elif diverging_id is not None and i == (numberOfCells - 1) and cl_id > id2:
-                    cl_id = diverging_id - id1 + int((id2 - (diverging_id - id1)) * 0.4)
-                    dist = 4 * dx * (cl_id - id1) * (id2 - cl_id) / (id2 - id1) ** 2
-                else:
-                    dist = 0
-
-            point = np.asarray(point)
-            centerlinePoints.InsertNextPoint(point + dist)
-            radiusArray.SetTuple1(count, getData(p))
-            centerlineCellArray.InsertCellPoint(count)
-            count += 1
-
-    centerline.SetPoints(centerlinePoints)
-    centerline.SetLines(centerlineCellArray)
-    centerline.GetPointData().AddArray(radiusArray)
-
-    return centerline

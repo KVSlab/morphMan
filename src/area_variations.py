@@ -84,143 +84,6 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
     write_polydata(new_surface, output_filepath)
 
 
-def get_line_to_change(surface, centerline, region_of_interest, method, region_points,
-                       stenosis_length):
-    """
-    Extract and spline part of centerline
-    within the geometry where
-    area variations will be performed.
-
-    Args:
-        centerline (vtkPolyData): Centerline in geometry.
-        region_of_interest (str): Method for setting the region of interest ['manuall' | 'commandline' | 'first_line']
-        region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint.
-
-    Returns:
-        line_to_change (vtkPolyData): Part of centerline.
-    """
-    if region_of_interest == "first_line":
-        tol = get_tolerance(centerline)
-        line2 = extract_single_line(centerline, 0)
-        numberOfPoints2 = line2.GetNumberOfPoints()
-
-        # Iterate through lines and find diverging point
-        n = 2
-        pointIDs = []
-        for j in range(1, n):
-            line1 = extract_single_line(centerline, j)
-            numberOfPoints1 = line1.GetNumberOfPoints()
-
-            N = min(numberOfPoints1, numberOfPoints2)
-            for i in range(N):
-                point1 = line1.GetPoints().GetPoint(i)
-                point2 = line2.GetPoints().GetPoint(i)
-                if distance(point1, point2) > tol:
-                    pointID = i
-                    break
-            pointIDs.append(pointID)
-
-        startID = 0
-        endID = min(pointIDs)
-        cl_id = 0
-
-        region_points = []
-
-    elif region_of_interest == "commandline" or region_of_interest == "manuall":
-        # Get points from the user
-        if region_of_interest == "manuall":
-            stenosis_point_id = vtk.vtkIdList()
-            first = True
-            while stenosis_point_id.GetNumberOfIds() not in [1, 2]:
-                if not first:
-                    print("Please provide only one or two points, try again")
-
-                # Select point on surface
-                seed_selector = vmtkPickPointSeedSelector()
-                seed_selector.SetSurface(surface)
-                if method == "variation" or method == "area":
-                    seed_selector.text = "Press space to select the start and endpoint of the" + \
-                                        " region of interest, 'u' to undo.\n"
-                elif method == "stenosis":
-                    seed_selector.text = "Press space to select, the center of a new" + \
-                                         " stenosis (one point),\nOR place two points on each side" + \
-                                         " of an existing stenosis to remove it, \'u\' to undo."
-                seed_selector.Execute()
-                stenosis_point_id = seed_selector.GetTargetSeedIds()
-                first = True
-            region_points = []
-            for i in range(stenosis_point_id.GetNumberOfIds()):
-                region_points += surface.GetPoint(stenosis_point_id.GetId(i))
-
-        # Get locator
-        locator = get_locator(centerline)
-
-        if len(region_points) == 3:
-            # Project point onto centerline
-            point1 = region_points
-            point1 = centerline.GetPoint(locator.FindClosestPoint(point1))
-
-            # Get relevant line
-            tol = get_tolerance(centerline)
-            cl_id = -1
-            dist = 1e10
-            while dist > tol / 10:
-                cl_id += 1
-                line = extract_single_line(centerline, cl_id)
-                tmp_loc = get_locator(line)
-                tmp_id = tmp_loc.FindClosestPoint(point1)
-                dist = distance(point1, line.GetPoint(tmp_id))
-
-            # Get length of stenosis
-            misr = get_array(radiusArrayName, line)
-            length = stenosis_length * misr[tmp_loc.FindClosestPoint(point1)]
-
-            # Get ids of start and stop
-            centerline_length = get_curvilinear_coordinate(line)
-            center = centerline_length[tmp_id]
-            region_of_interest_id = (center - length <= centerline_length) \
-                                 * (centerline_length <= center + length)
-            startID = np.argmax(region_of_interest_id)
-            endID = region_of_interest_id.shape[0] - 1 - np.argmax(region_of_interest_id[::-1])
-
-        else:
-            point1 = region_points[:3]
-            point2 = region_points[3:]
-            point1 = centerline.GetPoint(locator.FindClosestPoint(point1))
-            point2 = centerline.GetPoint(locator.FindClosestPoint(point2))
-
-            distance1 = []
-            distance2 = []
-            ids1 = []
-            ids2 = []
-            for i in range(centerline.GetNumberOfLines()):
-                line = extract_single_line(centerline, i)
-                tmp_loc = get_locator(line)
-                ids1.append(tmp_loc.FindClosestPoint(point1))
-                ids2.append(tmp_loc.FindClosestPoint(point2))
-                cl_point1 = line.GetPoint(ids1[-1])
-                cl_point2 = line.GetPoint(ids[-1])
-                distance1.append(distance(point1, cl_point1))
-                distance2.append(distance(point2, cl_point2))
-
-            tol = get_tolerance(centerlines) / 10
-            total_distance = (np.array(distance1) < tol) * (np.array(distnace2) < tol)
-            cl_id = np.argmax(total_distance)
-
-            if total_distance[cl_id] == 0:
-                raise RuntimeError("The two points provided have to be on the same " + \
-                                   " line (from inlet to outlet), and not at two different" + \
-                                   " outlets")
-            startID = ids1[cl_id]
-            endID = ids2[cl_id]
-
-    # Extract and spline a single line
-    line_to_change = extract_single_line(centerline, cl_id, startID=startID, endID=endID)
-    line_to_change = spline_centerline(line_to_change, nknots=25, isline=True)
-
-    return line_to_change, region_points
-
-
 def get_factor(line_to_change, method, beta, ratio, percentage, region_of_interest,
                region_points, stenosis_length, surface):
     """
@@ -252,15 +115,23 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
         area = gaussian_filter(area, 5)
     mean = np.mean(area)
 
-    # Exclude first and last 5 % for some combinations of method an region_of_interest
+    # Linear transition first and last 10 % for some combinations of method an region_of_interest
     if region_of_interest in ["manuall", "commandline"] and method in ["area", "variation"]:
-        k = int(round(factor_.shape[0] * 0.05, 0))
+        k = int(round(area.shape[0] * 0.10, 0))
         l = area.shape[0] - k*2
     else:
         k = 0
         l = area.shape[0]
+
+    # Transition
     trans = np.asarray(np.linspace(1, 0, k).tolist() + np.zeros(l).tolist() +
                         np.linspace(0, 1, k).tolist())
+
+    # Only smooth end with first_line
+    if region_of_interest == "first_line":
+        k = int(round(area.shape[0] * 0.10, 0))
+        l = area.shape[0] - k
+        trans = np.asarray(np.zeros(l).tolist() + np.linspace(0, 1, k).tolist())
 
     # Get factor
     if method == "variation":
@@ -474,6 +345,8 @@ def read_command_line():
                              " size should be adjusted. For quick proto typing we" + \
                              " recommend ~100 in all directions, but >250 for a final " + \
                              " surface.", metavar="size")
+
+    # Set region of interest
     parser.add_argument("-r", "--region-of-interest", type=str, default="manuall",
                         choices=["manuall", "commandline", "first_line"],
                         help="The method for defining the region to be changed. There are" + \
@@ -492,8 +365,8 @@ def read_command_line():
                              " which defines the start and end of the region of interest. If" + \
                              " 'method' is set to stenosis, then one point can be provided as well," + \
                              " which is assumbed to be the center of a new stenosis." + \
-                             " Example providing the points (1, 5, 1) and (2, 4, 3):" + \
-                             " --stenosis-points 1 5 1 2 4 3")
+                             " Example providing the points (1, 5, -1) and (2, -4, 3):" + \
+                             " --stenosis-points 1 5 -1 2 -4 3")
 
     # "Variation" argments
     parser.add_argument('--beta', type=float, default=0.5,

@@ -4,8 +4,8 @@ from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from common import *
 
 
-def move_vessel(input_filepath, smooth, smooth_factor, alpha, beta, output_filepath, poly_ball_size, no_smooth,
-                no_smooth_point):
+def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_of_interest, region_points,
+                alpha, beta, poly_ball_size, no_smooth, no_smooth_point):
     """
     Primary script for moving a selected part of any blood vessel.
     Relies on an input centerline, a surface geometry of a 3D blood vessel network,
@@ -22,12 +22,14 @@ def move_vessel(input_filepath, smooth, smooth_factor, alpha, beta, output_filep
     Continuation in the move_vessel_vertically-method for vertical movement.
 
     Args:
-        input_filepath (str): Location of case model.
-        smooth (bool): Adjusts smoothing of the voronoi diagram.
-        smooth_factor (float): Smoothing factor used for voronoi diagram smoothing.
+        input_filepath (str): Path to input surface.
+        output_filepath (str): Path to output the manipulated surface.
+        smooth (bool): Smooth the Voronoi diagram.
+        smooth_factor (float): Smoothing factor used for Voronoi diagram smoothing.
+        region_of_interest (str): Method for setting the region of interest ['manuall' | 'commandline' | 'landmarking']
+        region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint
         alpha (float): Extension / Compression factor in vertical direction.
         beta (float): Extension / Compression factor in horizontal direction.
-        output_filepath (str): Path to output file.
         poly_ball_size (list): Resolution of polyballs used to create surface.
         no_smooth (bool): True of part of the model is not to be smoothed.
         no_smooth_point (ndarray): Point which is untouched by smoothing.
@@ -35,10 +37,6 @@ def move_vessel(input_filepath, smooth, smooth_factor, alpha, beta, output_filep
 
     # Input filenames
     base_path = get_path_names(input_filepath)
-
-    # Output names
-    surface_new_surface = output_filepath if output_filepath is not None \
-        else base_path + "_alpha_%s_beta_%s.vtp" % (alpha, beta)
 
     # Centerlines
     centerline_clipped_path = base_path + "_centerline_clipped.vtp"
@@ -53,15 +51,6 @@ def move_vessel(input_filepath, smooth, smooth_factor, alpha, beta, output_filep
 
     # Surface information
     point_path = base_path + "_carotid_siphon_points.particles"  # Hard coded for consistency
-
-    # Extract Clipping points
-    if not path.exists(point_path):
-        RuntimeError("The given .particles file: %s does not exist!" % point_path)
-    clipping_points = np.loadtxt(point_path)
-
-    # Read and check model
-    if not path.exists(input_filepath):
-        RuntimeError("The given directory: %s did not contain the file: model.vtp" % input_filepath)
 
     # Clean and capp / uncapp surface
     surface, capped_surface = prepare_surface(base_path, input_filepath)
@@ -78,26 +67,38 @@ def move_vessel(input_filepath, smooth, smooth_factor, alpha, beta, output_filep
                                           smooth, smooth_factor, no_smooth,
                                           no_smooth_point, voronoi, pole_ids)
 
+    # Get region of interest
+    if region_of_interest == "landmarking":
+        if not path.exists(point_path):
+            RuntimeError(("The given .particles file: %s does not exist. Please run" + \
+                          " landmarking with automated_geometric_quantities.py first.") % point_path)
+        region_points = np.loadtxt(point_path)
+    else:
+        _, region_points = get_line_to_change(capped_surface, centerlines,
+                                              region_of_interest, "bend", region_points, 0)
+        region_points = [[region_points[3*i], region_points[3*i+1], region_points[3*i+2]]
+                         for i in range(len(region_points) // 3)]
+
     # Set and get clipping points, centerlines and diverging centerlines
-    centerlines, diverging_centerlines, clipping_points, clipping_points_vtk, diverging_ids = \
-        find_region_of_interest_and_diverging_centerlines(centerlines, clipping_points)
+    centerlines, diverging_centerlines, region_points, region_points_vtk, diverging_ids = \
+        find_region_of_interest_and_diverging_centerlines(centerlines, region_points)
     diverging_centerline_ispresent = diverging_centerlines is not None
     diverging_id = None if len(diverging_ids) == 0 else diverging_ids[0]
 
     # Handle diverging centerlines within region of interest
     if diverging_centerline_ispresent:
         print("Clipping opthamlic artery")
-        patch_eye = clip_eyeline(extract_single_line(diverging_centerlines, 0), clipping_points[0], diverging_id)
+        patch_eye = clip_eyeline(extract_single_line(diverging_centerlines, 0), region_points[0], diverging_id)
 
     # Clip centerline
     print("Clipping centerlines.")
     locator = get_locator(extract_single_line(centerlines, 0))
-    id1 = locator.FindClosestPoint(clipping_points[0])
-    id2 = locator.FindClosestPoint(clipping_points[1])
+    id1 = locator.FindClosestPoint(region_points[0])
+    id2 = locator.FindClosestPoint(region_points[1])
     p1 = centerlines.GetPoint(id1)
     p2 = centerlines.GetPoint(id2)
     centerline_remaining = CreateParentArteryPatches(centerlines,
-                                                     clipping_points_vtk, siphon=True)
+                                                     region_points_vtk, siphon=True)
     centerline_siphon = extract_single_line(centerlines, 0, startID=id1, endID=id2)
 
     if diverging_centerline_ispresent:
@@ -127,7 +128,7 @@ def move_vessel(input_filepath, smooth, smooth_factor, alpha, beta, output_filep
     # Extract translation vectors
     print("Computing translation directions.")
     direction = "horizont"
-    middle_points, middle_ids = get_spline_points(centerlines, beta, direction, clipping_points_vtk)
+    middle_points, middle_ids = get_spline_points(centerlines, beta, direction, region_points_vtk)
     dx_p1 = middle_points[0] - p1
 
     # Move centerline manually for updating inlet
@@ -169,18 +170,18 @@ def move_vessel(input_filepath, smooth, smooth_factor, alpha, beta, output_filep
         print("Moving geometry vertically")
         new_surface, new_centerlines = move_vessel_vertically(alpha, voronoi_remaining,
                                                               voronoi_siphon,
-                                                              new_centerlines, clipping_points, poly_ball_size)
+                                                              new_centerlines, region_points, poly_ball_size)
 
     print("Smoothing, clean, and check surface")
     new_surface = prepare_surface_output(new_surface, surface,
                                          new_centerlines,
-                                         surface_new_surface, test_merge=True)
+                                         output_filepath, test_merge=True)
     write_polydata(new_centerlines, new_centerlines_path)
-    write_polydata(new_surface, surface_new_surface)
+    write_polydata(new_surface, output_filepath)
 
 
 def move_vessel_vertically(alpha, voronoi_remaining,
-                           voronoi_siphon, centerlines, clipping_points, poly_ball_size):
+                           voronoi_siphon, centerlines, region_points, poly_ball_size):
     """
     Secondary script used for vertical displacement of
     the blood vessel. Moves the input voronoi diagram and
@@ -191,7 +192,7 @@ def move_vessel_vertically(alpha, voronoi_remaining,
         alpha (float): Extension / Compression factor in vertical direction.
         voronoi_remaining (vtkPolyData): Voronoi diagram excluding siphon.
         voronoi_siphon (vtkPolyData): Voronoi diagram representing siphon.
-        clipping_points (list): Points defining the siphon to be manipulated.
+        region_points (list): Points defining the siphon to be manipulated.
         poly_ball_size (list): Resulution of surface model.
 
     Returns:
@@ -201,21 +202,20 @@ def move_vessel_vertically(alpha, voronoi_remaining,
     """
 
     # Set and get clipping points, centerlines and diverging centerlines
-    centerlines, diverging_centerlines, clipping_points, clipping_points_vtk, diverging_ids = \
-        find_region_of_interest_and_diverging_centerlines(centerlines, clipping_points)
+    centerlines, diverging_centerlines, region_points, region_points_vtk, diverging_ids = \
+        find_region_of_interest_and_diverging_centerlines(centerlines, region_points)
     diverging_centerline_ispresent = diverging_centerlines is not None
     diverging_id = None if len(diverging_ids) == 0 else diverging_ids[0]
 
     # Special cases including the ophthalmic artery
     if diverging_centerline_ispresent:
-        print("Clipping opthamlic artery")
-        patch_eye = clip_eyeline(extract_single_line(diverging_centerlines, 0), clipping_points[0], diverging_id)
+        patch_eye = clip_eyeline(extract_single_line(diverging_centerlines, 0), region_points[0], diverging_id)
 
     # Get clipped curve
     print("Clipping centerlines.")
     locator = get_locator(extract_single_line(centerlines, 0))
-    id1 = locator.FindClosestPoint(clipping_points[0])
-    id2 = locator.FindClosestPoint(clipping_points[1])
+    id1 = locator.FindClosestPoint(region_points[0])
+    id2 = locator.FindClosestPoint(region_points[1])
     p1 = centerlines.GetPoint(id1)
     p2 = centerlines.GetPoint(id2)
     centerline_siphon = extract_single_line(centerlines, 0, startID=id1, endID=id2)
@@ -228,7 +228,7 @@ def move_vessel_vertically(alpha, voronoi_remaining,
     print("Finding points to spline through.")
     direction = "vertical"
     middle_points, middle_ids, dx = get_spline_points(extract_single_line(centerlines, 0), alpha, direction,
-                                                      clipping_points_vtk)
+                                                      region_points_vtk)
 
     # Iterate over points P from Voronoi diagram and manipulate
     print("Adjust voronoi diagram")
@@ -406,38 +406,8 @@ def move_voronoi_vertically(voronoi_clipped, centerline_clipped, id1_0, clip_id,
     newDataSet.SetPoints(points)
     newDataSet.SetVerts(verts)
     newDataSet.GetPointData().AddArray(voronoi_clipped.GetPointData().GetArray(radiusArrayName))
+
     return newDataSet
-
-
-def read_command_line():
-    """
-    Read arguments from commandline
-    """
-    parser = ArgumentParser()
-
-    parser.add_argument('-d', '--dir_path', type=str, default=".",
-                        help="Path to the folder with all the cases")
-    parser.add_argument('--case', '-c', type=str, default=None,
-                        help="Choose case")
-    parser.add_argument('-s', '--smooth', type=bool, default=True,
-                        help="If the original voronoi diagram " +
-                             "(surface) should be" +
-                             "smoothed before it is manipulated", metavar="smooth")
-    parser.add_argument("-a", "--alpha", type=float, default=0.0,
-                        help="Compression factor in vertical direction, " +
-                             "ranging from -1.0 to 1.0")
-    parser.add_argument("-b", "--beta", type=float, default=0.0,
-                        help="Compression factor in horizontal direction, " +
-                             "ranging from -1.0 to 1.0")
-    parser.add_argument('-sf', '--smooth_factor', type=float, default=0.25,
-                        help="If smooth is True then each voronoi point" +
-                             " that has a radius less then MISR*(1-sf) at" +
-                             " the closest centerline point is removes",
-                        metavar="smoothening_factor")
-
-    args = parser.parse_args()
-
-    return args.smooth, args.dir_path, args.case, args.alpha, args.beta, args.smooth_factor
 
 
 def read_command_line():
@@ -456,6 +426,12 @@ def read_command_line():
     # Required arguments
     required.add_argument('-i', '--ifile', type=str, default=None,
                           help="Path to the surface model", required=True)
+    parser.add_argument("-o", "--ofile", type=str, default=None, required=True,
+                        help="Relative path to the output surface. The default folder is" +
+                             " the same as the input file, and a name with a combination of the" +
+                             " parameters.")
+
+    # Optional arguments
     parser.add_argument('-s', '--smooth', type=bool, default=True,
                         help="Smooth the voronoi diagram, default is True")
     parser.add_argument('-f', '--smooth_factor', type=float, default=0.25,
@@ -479,6 +455,27 @@ def read_command_line():
                              " structures are very close compared to the bounds, the poly ball" +
                              " size should be adjusted", metavar="size")
 
+    # Set region of interest:
+    parser.add_argument("-r", "--region-of-interest", type=str, default="manuall",
+                        choices=["manuall", "commandline", "first_line"],
+                        help="The method for defining the region to be changed. There are" + \
+                             " three options: 'manuall', 'commandline', 'landmarking'. In" + \
+                             " 'manuall' the user will be provided with a visualization of the" + \
+                             " input surface, and asked to provide an end and start point of the" + \
+                             " region of interest. Note that not all algorithms are robust over" + \
+                             " bifurcations. If 'commandline' is provided, then '--region-points'" + \
+                             " is expected to be provided. Finally, if 'landmarking' is" + \
+                             " given, it will look for the output from running" + \
+                             " automated_geometric_quantities.py.")
+    parser.add_argument("--region-points", nargs="+", type=float, default=None, metavar="points",
+                        help="If -r or --region-of-interest is 'commandline' then this" + \
+                             " argument have to be given. The method expects two points" + \
+                             " which defines the start and end of the region of interest. If" + \
+                             " 'method' is set to stenosis, then one point can be provided as well," + \
+                             " which is assumbed to be the center of a new stenosis." + \
+                             " Example providing the points (1, 5, -1) and (2, -4, 3):" + \
+                             " --stenosis-points 1 5 -1 2 -4 3")
+
     # "Variation" argments
     parser.add_argument("--alpha", type=float, default=0.0,
                         help="Compression factor in vertical direction, " +
@@ -488,12 +485,6 @@ def read_command_line():
                         help="Compression factor in verti cal direction,  " +
                              "ranging from -1.0 to 1.0, defining the magnitude " +
                              "of streching or compression of the tubular structure.")
-
-    # Output filename
-    parser.add_argument("-o", "--ofile", type=str, default=None,
-                        help="Relative path to the output surface. The default folder is" +
-                             " the same as the input file, and a name with a combination of the" +
-                             " parameters.")
 
     # Outputfile argument
     args = parser.parse_args()
@@ -505,7 +496,8 @@ def read_command_line():
     return dict(input_filepath=args.ifile, smooth=args.smooth,
                 smooth_factor=args.smooth_factor, alpha=args.alpha, beta=args.beta,
                 output_filepath=args.ofile, poly_ball_size=args.poly_ball_size,
-                no_smooth=args.no_smooth, no_smooth_point=args.no_smooth_point)
+                no_smooth=args.no_smooth, no_smooth_point=args.no_smooth_point,
+                region_of_interest=args.region_of_interest, region_points=args.region_points)
 
 
 if __name__ == "__main__":

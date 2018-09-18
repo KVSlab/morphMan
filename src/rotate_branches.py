@@ -7,58 +7,256 @@ from copy import deepcopy
 from common import *
 
 
-def read_command_line():
+def rotate_branches(input_filepath, smooth, smooth_factor, angle, l1, l2, bif, lower,
+                    cylinder_factor, aneurysm, anu_num, resampling_step, version):
     """
-    Read arguments from commandline
+    Objective rotation of daughter branches, by rotating
+    centerlines and Voronoi diagram about the bifuraction center.
+    The implementation is an extension of the original method
+    presented by Ford et al. (2009), for aneurysm removal,
+    which introduces the possibility to rotate the
+    daughter branches a given angle.
+    Includes the option to rotate only one of the daughter branches.
+
+    Args:
+        surface_path (str): Path to input surface.
+        smooth (bool): Determine if the voronoi diagram should be smoothed.
+        smooth_factor (float): Smoothing factor used for voronoi diagram smoothing.
+        angle (float): Angle which daughter branches are moved, in radians.
+        l1 (bool): Leaves first branch untouched if True.
+        l2 (bool): Leaves second branch untouched if True.
+        bif (bool): Interpolates bifurcation is True.
+        lower (bool): Interpolates a lowered line through the bifurcation if True.
+        cylinder_factor(float): Factor for choosing the smaller cylinder during Voronoi interpolation.
+        aneurysm (bool): Determines if aneurysm is present.
+        anu_num (int): Number of aneurysms.
+        resampling_step (float): Resampling step used to resample centerlines.
+        version (bool): Determines bifurcation interpolation method.
     """
-    parser = ArgumentParser()
+    # Filenames
+    base_path = get_path_names(input_filepath)
 
-    parser.add_argument('-i', '--ifile', type=str, default=None,
-                        help="Path to input surface")
-    parser.add_argument('-s', '--smooth', type=bool, default=False,
-                        help="If the original voronoi diagram (surface) should be" +
-                             "smoothed before it is manipulated", metavar="smooth")
-    parser.add_argument('-a', '--angle', type=float, default=10,
-                        help="Each daughter branch is rotated an angle a in the" +
-                             " bifurcation plane. a should be expressed in radians as" +
-                             " any math expression from the" +
-                             " math module in python", metavar="rotation_angle")
-    parser.add_argument('--smooth_factor', type=float, default=0.25,
-                        help="If smooth option is true then each voronoi point" +
-                             " that has a radius less then MISR*(1-smooth_factor) at" +
-                             " the closest centerline point is removes",
-                        metavar="smoothening_factor")
-    parser.add_argument("--leave1", type=bool, default=False,
-                        help="Leave one branch untuched")
-    parser.add_argument("--leave2", type=bool, default=False,
-                        help="Leave one branch untuched")
-    parser.add_argument("--bif", type=bool, default=False,
-                        help="interpolate bif as well")
-    parser.add_argument("--lower", type=bool, default=False,
-                        help="Make a fourth line to interpolate along that" +
-                             " is lower than the other bif line.")
-    parser.add_argument("--cylinder_factor", type=float, default=7.0,
-                        help="Factor for choosing the smaller cylinder")
-    parser.add_argument("--version", type=bool, default=True, help="Type of" +
-                                                                   "interpolation")
-    parser.add_argument("--aneurysm", type=bool, default=False,
-                        help="Determines if there is an aneurysm or not")
-    parser.add_argument("--anu_num", type=int, default=0,
-                        help="If multiple aneurysms, choise one")
-    parser.add_argument("-o", "--ofile", type=str, default=None,
-                        help="Relative path to the output surface. The default folder is" +
-                             "the same as the input file, and a name with a combination of the" +
-                             "parameters.")
+    # Output filepaths
+    # Surface
+    surface_smoothed_path = base_path + "_smooth.vtp"
+    surface_capped_path = base_path + "_capped.vtp"
 
-    parser.add_argument("--step", type=float, default=0.1,
-                        help="Resampling step used to resample centerlines")
+    # Centerliens
+    centerline_par_path = base_path + "_centerline_par.vtp"
+    centerline_aneurysm_path = base_path + "_centerline_aneurysm.vtp"
+    centerline_bif_path = base_path + "_centerline_bif.vtp"
+    centerline_complete_path = base_path + "_centerline_complete.vtp"
+    centerline_clipped_path = base_path + "_centerline_clipped_ang.vtp"
+    centerline_clipped_bif_path = base_path + "_centerline_clipped_bif_ang.vtp"
+    centerline_bif_clipped_path = base_path + "centerline_clipped_bif_ang.vtp"
+    centerline_dau_clipped_path = base_path + "centerline_clipped_dau_ang.vtp"
+    centerline_new_path = base_path + "_centerline_interpolated_ang.vtp"
+    centerline_new_bif_path = base_path + "_centerline_interpolated_bif_ang.vtp"
+    centerline_new_bif_lower_path = base_path + "_centerline_interpolated_bif_lower_ang.vtp"
+    centerline_relevant_outlets_path = base_path + "_centerline_relevant_outlets.vtp"
+    centerline_rotated_path = base_path + "centerline_rotated_ang.vtp"
+    centerline_rotated_bif_path = base_path + "centerline_rotated_bif_ang.vtp"
+    centerline_rotated_dau_path = base_path + "centerline_rotated_dau_ang.vtp"
 
-    args = parser.parse_args()
-    ang_ = 0 if args.a == 0 else math.pi / args.a
+    # Voronoi diagrams
+    voronoi_path = base_path + "_voronoi.vtp"
+    voronoi_smoothed_path = base_path + "_voronoi_smoothed.vtp"
+    voronoi_clipped_path = base_path + "_voronoi_clipped_ang.vtp"
+    voronoi_ang_path = base_path + "_voronoi_ang.vtp"
+    voronoi_rotated_path = base_path + "voronoi_rotated_ang.vtp"
 
-    return args.s, ang_, args.smooth_factor, args.leave1, args.leave2, \
-           args.bif, args.ifile, args.lower, \
-           args.cylinder_factor, args.version, args.aneurysm, args.anu_num, args.step
+    # Points
+    points_clipp_path = base_path + "_clippingpoints.vtp"
+    points_div_path = base_path + "_divergingpoints.vtp"
+
+    # Naming based on different options
+    if output_filepath is not None:
+        s = "_pi%s" % angle if angle == 0 else "_pi%s" % (math.pi / angle)
+        s += "" if not l1 else "_l1"
+        s += "" if not l2 else "_l2"
+        s += "" if not bif else "_bif"
+        s += "" if not smooth else "_smooth"
+        s += "" if not lower else "_lower"
+        s += "" if cylinder_factor == 7.0 else "_cyl%s" % cylinder_factor
+        output_filepath = base_path + ("_angle" + s + ".vtp")
+
+    # Get aneurysm type
+    parameters = get_parameters(base_path)
+    if "aneurysm_type" in parameters.keys():
+        aneurysm_type = parameters["aneurysm_type"]
+        print("Aneurysm type read from info.txt file: %s" % aneurysm_type)
+
+    # Clean and capp / uncapp surface
+    surface, capped_surface = prepare_surface(surface_path, surface_capped_path, parameters)
+
+    # Get aneurysm "end point"
+    if aneurysm:
+        aneurysm_point = get_aneurysm_dome(capped_surface, base_path, anu_num)
+    else:
+        aneurysm_point = []
+
+    # Get inlet and outlets
+    outlet1, outlet2 = get_relevant_outlets(capped_surface, base_dir)
+    inlet, outlets = get_centers(surface, base_path)
+
+    # Sort outlets
+    outlets, outlet1, outlet2 = sort_outlets(outlets, outlet1, outlet2, base_path)
+
+    # Compute parent artery and aneurysm centerline
+    centerline_par = compute_centerlines(inlet, outlets,
+                                         centerline_par_path,
+                                         capped_surface, resampling=resampling_step)
+    centerlines_complete = compute_centerlines(inlet, outlets + aneurysm_point,
+                                               centerline_complete_path,
+                                               capped_surface, resampling=resampling_step)
+
+    # Additional centerline for bifurcation
+    centerline_relevant_outlets = compute_centerlines(inlet, outlet1 + outlet2,
+                                                      centerline_relevant_outlets_path,
+                                                      capped_surface,
+                                                      resampling=resampling_step)
+    centerline_bif = compute_centerlines(outlet1, outlet2,
+                                         centerline_bif_path,
+                                         capped_surface, resampling=resampling_step)
+
+    # Create a tolerance for diverging
+    tolerance = get_tolerance(centerline_par)
+
+    # Get data from centerlines and rotation matrix
+    data = get_data(centerline_relevant_outlets, centerline_bif, tolerance)
+    R, m = rotation_matrix(data, angle, l1, l2)
+    write_parameters(data, base_dir)
+
+    # Compute and smooth voornoi diagram (not aneurysm)
+    print("Compute voronoi diagram")
+    voronoi = make_voronoi_diagram(surface, voronoi_path)
+    if not path.exists(voronoi_smoothed_path) and smooth:
+        parameters = get_parameters(base_dir)
+        number_of_aneurysms = len([a for a in parameters.keys() if "aneurysm_" in a])
+        if number_of_aneurysms == 1:
+            voronoi_smoothed = SmoothClippedVoronoiDiagram(voronoi, centerline_par, smooth_factor)
+        else:
+            aneu_centerline = extract_single_line(centerline_complete,
+                                                  centerline_complete.GetNumberOfCells() - 1)
+            div_aneu_id = []
+            for i in range(centerline_complete.GetNumberOfCells() - 1):
+                div_aneu_id.append(centerline_div(aneu_centerline,
+                                                  extract_single_line(centerline_complete, i)))
+            div_aneu_id = max(div_aneu_id)
+            aneu_centerline = extract_single_line(aneu_centerline, start=div_aneu_id)
+            voronoi_smoothed = SmoothClippedVoronoiDiagram(voronoi,
+                                                           centerline_par, smooth_factor,
+                                                           no_smooth=aneu_centerline)
+
+        voronoi_smoothed = remove_extreme_points(voronoi_smoothed, voronoi)
+        write_polydata(voronoi_smoothed, voronoi_smoothed_path)
+
+        surface_smoothed = create_new_surface(voronoi_smoothed)
+        write_polydata(surface_smoothed, surface_smoothed_path)
+
+    voronoi = voronoi if not smooth else read_polydata(voronoi_smoothed_path)
+
+    # Locate divpoints and endpoints, for bif or lower, rotated or not
+    key = "div_point"
+    div_points = get_points(data, key, R, m, rotated=False, bif=False)
+    div_points_rotated = get_points(data, key, R, m, rotated=True, bif=False)
+    div_points_rotated_bif = get_points(data, key, R, m, rotated=True, bif=True)
+
+    key = "end_point"
+    end_points = get_points(data, key, R, m, rotated=False, bif=False)
+    end_points_rotated = get_points(data, key, R, m, rotated=True, bif=False)
+    end_points_bif = get_points(data, key, R, m, rotated=False, bif=True)
+    end_points_rotated_bif = get_points(data, key, R, m, rotated=True, bif=True)
+
+    write_points(div_points[0], points_div_path)
+    write_points(end_points[0], points_clipp_path)
+
+    # Clip centerlines
+    print("Clipping centerlines and voronoi diagram.")
+    patch_cl = CreateParentArteryPatches(centerline_par, end_points[0])
+    write_polydata(patch_cl, centerline_clipped_path)
+
+    if lower or bif:
+        patch_bif_cl = CreateParentArteryPatches(centerline_bif, end_points_bif[0])
+        write_polydata(patch_bif_cl, centerline_clipped_bif_path)
+
+    # Clip the voronoi diagram
+    print("Clipping the Voronoi diagram")
+    if path.exists(voronoi_clipped_path):
+        voronoi_clipped = read_polydata(voronoi_clipped_path)
+    else:
+        masked_voronoi = MaskVoronoiDiagram(voronoi, patch_cl)
+        voronoi_clipped = ExtractMaskedVoronoiPoints(voronoi, masked_voronoi)
+        write_polydata(voronoi_clipped, voronoi_clipped_path)
+
+    # Rotate branches (Centerline and Voronoi diagram)
+    print("Rotate centerlines and voronoi diagram.")
+    rotated_cl = rotate_cl(patch_cl, end_points[1], m, R)
+    write_polydata(rotated_cl, centerline_rotated_path)
+
+    if lower or bif:
+        rotated_bif_cl = rotate_cl(patch_bif_cl, end_points_bif[1], m, R)
+        write_polydata(rotated_bif_cl, centerline_rotated_bif_path)
+
+    rotated_voronoi = rotate_voronoi(voronoi_clipped, patch_cl, end_points[1], m, R)
+    write_polydata(rotated_voronoi, voronoi_rotated_path)
+
+    # Interpolate the centerline
+    print("Interpolate centerlines and voronoi diagram.")
+    interpolated_cl = InterpolatePatchCenterlines(rotated_cl, centerline_par,
+                                                  div_points_rotated[0].GetPoint(0),
+                                                  None, False)
+    write_polydata(interpolated_cl, centerline_new_path.replace(".vtp", "1.vtp"))
+
+    if bif:
+        print("Start interpolate bif")
+        interpolated_bif = InterpolatePatchCenterlines(rotated_bif_cl, centerline_bif,
+                                                       None, "bif", True)
+        write_polydata(interpolated_bif, centerline_new_bif_path)
+
+    if lower:
+        print("Start interpolate lower")
+        center = ((1 / 9.) * div_points[1][0] + (4 / 9.) * div_points[1][1] + \
+                  (4 / 9.) * div_points[1][2]).tolist()
+        div_points_rotated_bif[0].SetPoint(0, center[0], center[1], center[2])
+        interpolated_bif_lower = InterpolatePatchCenterlines(rotated_bif_cl, centerline_bif,
+                                                             div_points_rotated_bif[0].GetPoint(0),
+                                                             "lower", True)
+        write_polydata(interpolated_bif_lower, centerline_new_bif_lower_path)
+
+    print("Start merge")
+    interpolated_cl = merge_cl(interpolated_cl, div_points_rotated[1],
+                               end_points_rotated[1])
+    write_polydata(interpolated_cl, centerline_new_path)
+
+    bif_ = []
+    if lower and bif:
+        bif_ = [interpolated_bif, interpolated_bif_lower, rotated_bif_cl]
+    elif bif:
+        bif_ = [interpolated_bif, rotated_bif_cl]
+    elif lower:
+        bif_ = [interpolated_bif_lower, rotated_bif_cl]
+
+    # Interpolate voronoi diagram
+    print("Start interpolate voronoi diagram")
+    interpolated_voronoi = interpolate_voronoi_diagram(interpolated_cl, rotated_cl,
+                                                       rotated_voronoi,
+                                                       end_points_rotated,
+                                                       bif_, lower, cylinder_factor)
+
+    write_polydata(interpolated_voronoi, voronoi_ang_path.replace(".vtp", "_remove.vtp"))
+    interpolated_voronoi = remove_distant_points(interpolated_voronoi, interpolated_cl)
+    write_polydata(interpolated_voronoi, voronoi_ang_path)
+
+    # Write a new surface from the new voronoi diagram
+    print("Create new surface")
+    new_surface = create_new_surface(interpolated_voronoi)
+
+    print("Surface saved in: {}".format(output_filepath.split("/")[-1]))
+    # TODO: Add Automated clipping of newmodel
+    new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100)
+    write_polydata(new_surface, output_filepath)
+
 
 
 def get_points(data, key, R, m, rotated=True, bif=False):
@@ -454,263 +652,96 @@ def sort_outlets(outlets, outlet1, outlet2, dirpath):
     return outlets, outlet1, outlet2
 
 
-def rotate_branches(input_filepath, smooth, smooth_factor, angle, l1, l2, bif, lower,
-                    cylinder_factor, aneurysm, anu_num, resampling_step, version):
+def read_command_line():
     """
-    Objective rotation of daughter branches, by rotating
-    centerlines and Voronoi diagram about the bifuraction center.
-    The implementation is an extension of the original method
-    presented by Ford et al. (2009), for aneurysm removal,
-    which introduces the possibility to rotate the
-    daughter branches a given angle.
-    Includes the option to rotate only one of the daughter branches.
-
-    Args:
-        surface_path (str): Path to input surface.
-        smooth (bool): Determine if the voronoi diagram should be smoothed.
-        smooth_factor (float): Smoothing factor used for voronoi diagram smoothing.
-        angle (float): Angle which daughter branches are moved, in radians.
-        l1 (bool): Leaves first branch untouched if True.
-        l2 (bool): Leaves second branch untouched if True.
-        bif (bool): Interpolates bifurcation is True.
-        lower (bool): Interpolates a lowered line through the bifurcation if True.
-        cylinder_factor(float): Factor for choosing the smaller cylinder during Voronoi interpolation.
-        aneurysm (bool): Determines if aneurysm is present.
-        anu_num (int): Number of aneurysms.
-        resampling_step (float): Resampling step used to resample centerlines.
-        version (bool): Determines bifurcation interpolation method.
+    Read arguments from commandline
     """
-    # Filenames
-    base_path = get_path_names(input_filepath)
+    parser = ArgumentParser()
 
-    # Output filepaths
-    # Surface
-    surface_smoothed_path = base_path + "_smooth.vtp"
-    surface_capped_path = base_path + "_capped.vtp"
+    parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
+    required = parser.add_argument_group('required named arguments')
 
-    # Centerliens
-    centerline_par_path = base_path + "_centerline_par.vtp"
-    centerline_aneurysm_path = base_path + "_centerline_aneurysm.vtp"
-    centerline_bif_path = base_path + "_centerline_bif.vtp"
-    centerline_complete_path = base_path + "_centerline_complete.vtp"
-    centerline_clipped_path = base_path + "_centerline_clipped_ang.vtp"
-    centerline_clipped_bif_path = base_path + "_centerline_clipped_bif_ang.vtp"
-    centerline_bif_clipped_path = base_path + "centerline_clipped_bif_ang.vtp"
-    centerline_dau_clipped_path = base_path + "centerline_clipped_dau_ang.vtp"
-    centerline_new_path = base_path + "_centerline_interpolated_ang.vtp"
-    centerline_new_bif_path = base_path + "_centerline_interpolated_bif_ang.vtp"
-    centerline_new_bif_lower_path = base_path + "_centerline_interpolated_bif_lower_ang.vtp"
-    centerline_relevant_outlets_path = base_path + "_centerline_relevant_outlets.vtp"
-    centerline_rotated_path = base_path + "centerline_rotated_ang.vtp"
-    centerline_rotated_bif_path = base_path + "centerline_rotated_bif_ang.vtp"
-    centerline_rotated_dau_path = base_path + "centerline_rotated_dau_ang.vtp"
+    # Required arguments
+    required.add_argument('-i', '--ifile', type=str, default=None, required=True,
+                          help="Path to the input surface.")
+    required.add_argument("-o", "--ofile", type=str, default=None, required=True,
+                          help="Path to the manipulated surface.")
 
-    # Voronoi diagrams
-    voronoi_path = base_path + "_voronoi.vtp"
-    voronoi_smoothed_path = base_path + "_voronoi_smoothed.vtp"
-    voronoi_clipped_path = base_path + "_voronoi_clipped_ang.vtp"
-    voronoi_ang_path = base_path + "_voronoi_ang.vtp"
-    voronoi_rotated_path = base_path + "voronoi_rotated_ang.vtp"
+    # General arguments
+    parser.add_argument("-m", "--method", type=str, default="variation",
+                        choices=["variation", "stenosis", "area"],
+                        help="Methods for manipulating the area in the region of interest:" + \
+                             "\n1) 'variation' will increase or decrease the changes in area" + \
+                             " along the centerline of the region of interest." + \
+                             "\n2) 'stenosis' will create or remove a local narrowing of the" + \
+                             " surface. If two points is provided, the area between these" + \
+                             " two points will be linearly interpolated to remove the narrowing." + \
+                             " If only one point is provided it is assumed to be the center of" + \
+                             " the stenosis. The new stenosis will have a sin shape, however, any" + \
+                             " other shape may be easly implemented." + \
+                             "\n3) 'area' will inflate or deflate the area in the region of" + \
+                             " interest.")
+    parser.add_argument('-s', '--smooth', type=str2bool, default=True,
+                        help="Smooth the voronoi diagram, default is False")
+    parser.add_argument('-f', '--smooth_factor', type=float, default=0.25,
+                        help="If smooth option is true then each voronoi point" + \
+                             " that has a radius less then MISR*(1-smooth_factor) at" + \
+                             " the closest centerline point is removed.")
+    parser.add_argument("-n", "--no_smooth", type=bool, default=False,
+                        help="If true and smooth is true the user, if no_smooth_point is" + \
+                             " not given, the user can provide points where the surface not will" + \
+                             " be smoothed.")
+    parser.add_argument("--no_smooth_point", nargs="+", type=float, default=None,
+                        help="If model is smoothed the user can manually select points on" + \
+                             " the surface that will not be smoothed. A centerline will be" + \
+                             " created to the extra point, and the section were the centerline" + \
+                             " differ from the other centerlines will be keept un-smoothed. This" + \
+                             " can be practicle for instance when manipulating geometries" + \
+                             " with aneurysms")
+    parser.add_argument("-b", "--poly-ball-size", nargs=3, type=int, default=[120, 120, 120],
+                        help="The size of the poly balls that will envelope the new" + \
+                             " surface. The default value is 120, 120, 120. If two tubular" + \
+                             " structures are very close compared to the bounds, the poly ball" + \
+                             " size should be adjusted. For quick proto typing we" + \
+                             " recommend ~100 in all directions, but >250 for a final " + \
+                             " surface.", metavar="size")
 
-    # Points
-    points_clipp_path = base_path + "_clippingpoints.vtp"
-    points_div_path = base_path + "_divergingpoints.vtp"
+    parser.add_argument('-a', '--angle', type=float, default=10,
+                        help="Each daughter branch is rotated an angle a in the" +
+                             " bifurcation plane. a should be expressed in radians as" +
+                             " any math expression from the" +
+                             " math module in python", metavar="rotation_angle")
+    parser.add_argument("--leave1", type=bool, default=False,
+                        help="Leave one branch untuched")
+    parser.add_argument("--leave2", type=bool, default=False,
+                        help="Leave one branch untuched")
+    parser.add_argument("--bif", type=bool, default=False,
+                        help="interpolate bif as well")
+    parser.add_argument("--lower", type=bool, default=False,
+                        help="Make a fourth line to interpolate along that" +
+                             " is lower than the other bif line.")
+    parser.add_argument("--cylinder_factor", type=float, default=7.0,
+                        help="Factor for choosing the smaller cylinder")
+    parser.add_argument("--version", type=bool, default=True, help="Type of" +
+                                                                   "interpolation")
+    parser.add_argument("--aneurysm", type=bool, default=False,
+                        help="Determines if there is an aneurysm or not")
+    parser.add_argument("--anu_num", type=int, default=0,
+                        help="If multiple aneurysms, choise one")
 
-    # Naming based on different options
-    if output_filepath is not None:
-        s = "_pi%s" % angle if angle == 0 else "_pi%s" % (math.pi / angle)
-        s += "" if not l1 else "_l1"
-        s += "" if not l2 else "_l2"
-        s += "" if not bif else "_bif"
-        s += "" if not smooth else "_smooth"
-        s += "" if not lower else "_lower"
-        s += "" if cylinder_factor == 7.0 else "_cyl%s" % cylinder_factor
-        output_filepath = base_path + ("_angle" + s + ".vtp")
+    parser.add_argument("--resampling-step", type=float, default=0.1,
+                        help="Resampling step used to resample centerlines")
 
-    # Get aneurysm type
-    parameters = get_parameters(base_path)
-    if "aneurysm_type" in parameters.keys():
-        aneurysm_type = parameters["aneurysm_type"]
-        print("Aneurysm type read from info.txt file: %s" % aneurysm_type)
+    args = parser.parse_args()
+    ang_ = 0 if args.a == 0 else math.pi / args.a # Convert from deg to rad
 
-    # Clean and capp / uncapp surface
-    surface, capped_surface = prepare_surface(surface_path, surface_capped_path, parameters)
-
-    # Get aneurysm "end point"
-    if aneurysm:
-        aneurysm_point = get_aneurysm_dome(capped_surface, base_path, anu_num)
-    else:
-        aneurysm_point = []
-
-    # Get inlet and outlets
-    outlet1, outlet2 = get_relevant_outlets(capped_surface, base_dir)
-    inlet, outlets = get_centers(surface, base_path)
-
-    # Sort outlets
-    outlets, outlet1, outlet2 = sort_outlets(outlets, outlet1, outlet2, base_path)
-
-    # Compute parent artery and aneurysm centerline
-    centerline_par = compute_centerlines(inlet, outlets,
-                                         centerline_par_path,
-                                         capped_surface, resampling=resampling_step)
-    centerlines_complete = compute_centerlines(inlet, outlets + aneurysm_point,
-                                               centerline_complete_path,
-                                               capped_surface, resampling=resampling_step)
-
-    # Additional centerline for bifurcation
-    centerline_relevant_outlets = compute_centerlines(inlet, outlet1 + outlet2,
-                                                      centerline_relevant_outlets_path,
-                                                      capped_surface,
-                                                      resampling=resampling_step)
-    centerline_bif = compute_centerlines(outlet1, outlet2,
-                                         centerline_bif_path,
-                                         capped_surface, resampling=resampling_step)
-
-    # Create a tolerance for diverging
-    tolerance = get_tolerance(centerline_par)
-
-    # Get data from centerlines and rotation matrix
-    data = get_data(centerline_relevant_outlets, centerline_bif, tolerance)
-    R, m = rotation_matrix(data, angle, l1, l2)
-    write_parameters(data, base_dir)
-
-    # Compute and smooth voornoi diagram (not aneurysm)
-    print("Compute voronoi diagram")
-    voronoi = make_voronoi_diagram(surface, voronoi_path)
-    if not path.exists(voronoi_smoothed_path) and smooth:
-        parameters = get_parameters(base_dir)
-        number_of_aneurysms = len([a for a in parameters.keys() if "aneurysm_" in a])
-        if number_of_aneurysms == 1:
-            voronoi_smoothed = SmoothClippedVoronoiDiagram(voronoi, centerline_par, smooth_factor)
-        else:
-            aneu_centerline = extract_single_line(centerline_complete,
-                                                  centerline_complete.GetNumberOfCells() - 1)
-            div_aneu_id = []
-            for i in range(centerline_complete.GetNumberOfCells() - 1):
-                div_aneu_id.append(centerline_div(aneu_centerline,
-                                                  extract_single_line(centerline_complete, i)))
-            div_aneu_id = max(div_aneu_id)
-            aneu_centerline = extract_single_line(aneu_centerline, start=div_aneu_id)
-            voronoi_smoothed = SmoothClippedVoronoiDiagram(voronoi,
-                                                           centerline_par, smooth_factor,
-                                                           no_smooth=aneu_centerline)
-
-        voronoi_smoothed = remove_extreme_points(voronoi_smoothed, voronoi)
-        write_polydata(voronoi_smoothed, voronoi_smoothed_path)
-
-        surface_smoothed = create_new_surface(voronoi_smoothed)
-        write_polydata(surface_smoothed, surface_smoothed_path)
-
-    voronoi = voronoi if not smooth else read_polydata(voronoi_smoothed_path)
-
-    # Locate divpoints and endpoints, for bif or lower, rotated or not
-    key = "div_point"
-    div_points = get_points(data, key, R, m, rotated=False, bif=False)
-    div_points_rotated = get_points(data, key, R, m, rotated=True, bif=False)
-    div_points_rotated_bif = get_points(data, key, R, m, rotated=True, bif=True)
-
-    key = "end_point"
-    end_points = get_points(data, key, R, m, rotated=False, bif=False)
-    end_points_rotated = get_points(data, key, R, m, rotated=True, bif=False)
-    end_points_bif = get_points(data, key, R, m, rotated=False, bif=True)
-    end_points_rotated_bif = get_points(data, key, R, m, rotated=True, bif=True)
-
-    write_points(div_points[0], points_div_path)
-    write_points(end_points[0], points_clipp_path)
-
-    # Clip centerlines
-    print("Clipping centerlines and voronoi diagram.")
-    patch_cl = CreateParentArteryPatches(centerline_par, end_points[0])
-    write_polydata(patch_cl, centerline_clipped_path)
-
-    if lower or bif:
-        patch_bif_cl = CreateParentArteryPatches(centerline_bif, end_points_bif[0])
-        write_polydata(patch_bif_cl, centerline_clipped_bif_path)
-
-    # Clip the voronoi diagram
-    print("Clipping the Voronoi diagram")
-    if path.exists(voronoi_clipped_path):
-        voronoi_clipped = read_polydata(voronoi_clipped_path)
-    else:
-        masked_voronoi = MaskVoronoiDiagram(voronoi, patch_cl)
-        voronoi_clipped = ExtractMaskedVoronoiPoints(voronoi, masked_voronoi)
-        write_polydata(voronoi_clipped, voronoi_clipped_path)
-
-    # Rotate branches (Centerline and Voronoi diagram)
-    print("Rotate centerlines and voronoi diagram.")
-    rotated_cl = rotate_cl(patch_cl, end_points[1], m, R)
-    write_polydata(rotated_cl, centerline_rotated_path)
-
-    if lower or bif:
-        rotated_bif_cl = rotate_cl(patch_bif_cl, end_points_bif[1], m, R)
-        write_polydata(rotated_bif_cl, centerline_rotated_bif_path)
-
-    rotated_voronoi = rotate_voronoi(voronoi_clipped, patch_cl, end_points[1], m, R)
-    write_polydata(rotated_voronoi, voronoi_rotated_path)
-
-    # Interpolate the centerline
-    print("Interpolate centerlines and voronoi diagram.")
-    interpolated_cl = InterpolatePatchCenterlines(rotated_cl, centerline_par,
-                                                  div_points_rotated[0].GetPoint(0),
-                                                  None, False)
-    write_polydata(interpolated_cl, centerline_new_path.replace(".vtp", "1.vtp"))
-
-    if bif:
-        print("Start interpolate bif")
-        interpolated_bif = InterpolatePatchCenterlines(rotated_bif_cl, centerline_bif,
-                                                       None, "bif", True)
-        write_polydata(interpolated_bif, centerline_new_bif_path)
-
-    if lower:
-        print("Start interpolate lower")
-        center = ((1 / 9.) * div_points[1][0] + (4 / 9.) * div_points[1][1] + \
-                  (4 / 9.) * div_points[1][2]).tolist()
-        div_points_rotated_bif[0].SetPoint(0, center[0], center[1], center[2])
-        interpolated_bif_lower = InterpolatePatchCenterlines(rotated_bif_cl, centerline_bif,
-                                                             div_points_rotated_bif[0].GetPoint(0),
-                                                             "lower", True)
-        write_polydata(interpolated_bif_lower, centerline_new_bif_lower_path)
-
-    print("Start merge")
-    interpolated_cl = merge_cl(interpolated_cl, div_points_rotated[1],
-                               end_points_rotated[1])
-    write_polydata(interpolated_cl, centerline_new_path)
-
-    bif_ = []
-    if lower and bif:
-        bif_ = [interpolated_bif, interpolated_bif_lower, rotated_bif_cl]
-    elif bif:
-        bif_ = [interpolated_bif, rotated_bif_cl]
-    elif lower:
-        bif_ = [interpolated_bif_lower, rotated_bif_cl]
-
-    # Interpolate voronoi diagram
-    print("Start interpolate voronoi diagram")
-    interpolated_voronoi = interpolate_voronoi_diagram(interpolated_cl, rotated_cl,
-                                                       rotated_voronoi,
-                                                       end_points_rotated,
-                                                       bif_, lower, cylinder_factor)
-
-    write_polydata(interpolated_voronoi, voronoi_ang_path.replace(".vtp", "_remove.vtp"))
-    interpolated_voronoi = remove_distant_points(interpolated_voronoi, interpolated_cl)
-    write_polydata(interpolated_voronoi, voronoi_ang_path)
-
-    # Write a new surface from the new voronoi diagram
-    print("Create new surface")
-    new_surface = create_new_surface(interpolated_voronoi)
-
-    print("Surface saved in: {}".format(output_filepath.split("/")[-1]))
-    # TODO: Add Automated clipping of newmodel
-    new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100)
-    write_polydata(new_surface, output_filepath)
+    return dict(input_filepath=args.ifile, smooth=args.smooth,
+                smooth_factor=args.smooth_factor, angle=args.angle,
+                keep_fixed_1=args.keep_fixed_1, keep_fixed_2=args.keep_fixed_2,
+                bif=args.bif, lower=args.lower, cylinder_factor=args.cylinder_factor,
+                aneurysm=args.aneurysm, anu_num=args.anu_num,
+                resampling_step=args.resampling_step, version=args.version)
 
 
 if __name__ == "__main__":
-    smooth, angle, smooth_factor, l1, l2, bif, surface_path, lower, \
-    cylinder_factor, version, aneurysm, anu_num, resampling_step, output_filepath = read_command_line()
-    rotate_branches(surface_path, smooth, smooth_factor, angle, l1,
-                    l2, bif, lower, cylinder_factor, aneurysm, anu_num, resampling_step,
-                    version, output_filepath)
-    new_surface = check_if_surface_is_merged(new_surface, None,
-                                             model_new_surface_clean, None)
-    write_polydata(new_surface, model_new_surface)
+    rotate_branches(**read_command_line())
