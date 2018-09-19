@@ -76,7 +76,7 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
     else:
         _, region_points = get_line_to_change(capped_surface, centerlines,
                                               region_of_interest, "bend", region_points, 0)
-        region_points = [[region_points[3*i], region_points[3*i+1], region_points[3*i+2]]
+        region_points = [[region_points[3 * i], region_points[3 * i + 1], region_points[3 * i + 2]]
                          for i in range(len(region_points) // 3)]
 
     # Set and get clipping points, centerlines and diverging centerlines
@@ -88,7 +88,8 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
     # Handle diverging centerlines within region of interest
     if diverging_centerline_ispresent:
         print("Clipping opthamlic artery")
-        patch_eye = clip_eyeline(extract_single_line(diverging_centerlines, 0), region_points[0], diverging_id)
+        patch_diverging_line = clip_diverging_line(extract_single_line(diverging_centerlines, 0), region_points[0],
+                                                   diverging_id)
 
     # Clip centerline
     print("Clipping centerlines.")
@@ -102,7 +103,7 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
     centerline_siphon = extract_single_line(centerlines, 0, startID=id1, endID=id2)
 
     if diverging_centerline_ispresent:
-        eyeline_end = extract_single_line(patch_eye, 1)
+        eyeline_end = extract_single_line(patch_diverging_line, 1)
         centerline_siphon = merge_data([centerline_siphon, eyeline_end])
 
     write_polydata(centerline_remaining, centerline_clipped_path)
@@ -174,7 +175,7 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
                                          new_centerlines, output_filepath,
                                          test_merge=True, changed=True,
                                          old_centerline=merge_data([centerlines,
-                                                                   diverging_centerlines]))
+                                                                    diverging_centerlines]))
     write_polydata(new_centerlines, new_centerlines_path)
     write_polydata(new_surface, output_filepath)
 
@@ -208,7 +209,8 @@ def move_vessel_vertically(alpha, voronoi_remaining,
 
     # Special cases including the ophthalmic artery
     if diverging_centerline_ispresent:
-        patch_eye = clip_eyeline(extract_single_line(diverging_centerlines, 0), region_points[0], diverging_id)
+        patch_diverging_line = clip_diverging_line(extract_single_line(diverging_centerlines, 0), region_points[0],
+                                                   diverging_id)
 
     # Get clipped curve
     print("Clipping centerlines.")
@@ -220,7 +222,7 @@ def move_vessel_vertically(alpha, voronoi_remaining,
     centerline_siphon = extract_single_line(centerlines, 0, startID=id1, endID=id2)
 
     if diverging_centerline_ispresent:
-        eyeline_end = extract_single_line(patch_eye, 1)
+        eyeline_end = extract_single_line(patch_diverging_line, 1)
         centerline_siphon = merge_data([centerline_siphon, eyeline_end])
 
     # Find ID of middle pooint:
@@ -236,7 +238,6 @@ def move_vessel_vertically(alpha, voronoi_remaining,
     new_voronoi = merge_data([voronoi_remaining, voronoi_siphon])
 
     # Move centerline manually for postprocessing
-    #print("Adjusting line manually")
     new_centerlines = move_centerlines(centerlines, dx, p1, p2, diverging_id, diverging_centerlines, direction)
 
     # Write a new surface from the new voronoi diagram
@@ -425,11 +426,10 @@ def read_command_line():
     # Required arguments
     required.add_argument('-i', '--ifile', type=str, default=None,
                           help="Path to the surface model", required=True)
-    parser.add_argument("-o", "--ofile", type=str, default=None, required=True,
-                        help="Relative path to the output surface. The default folder is" +
-                             " the same as the input file, and a name with a combination of the" +
-                             " parameters.")
-
+    required.add_argument("-o", "--ofile", type=str, default=None, required=True,
+                          help="Relative path to the output surface. The default folder is" +
+                               " the same as the input file, and a name with a combination of the" +
+                               " parameters.")
     # Optional arguments
     parser.add_argument('-s', '--smooth', type=bool, default=True,
                         help="Smooth the voronoi diagram, default is True")
@@ -457,24 +457,23 @@ def read_command_line():
     # Set region of interest:
     parser.add_argument("-r", "--region-of-interest", type=str, default="manuall",
                         choices=["manuall", "commandline", "landmarking"],
-                        help="The method for defining the region to be changed. There are" + \
-                             " three options: 'manuall', 'commandline', 'landmarking'. In" + \
-                             " 'manuall' the user will be provided with a visualization of the" + \
-                             " input surface, and asked to provide an end and start point of the" + \
-                             " region of interest. Note that not all algorithms are robust over" + \
-                             " bifurcations. If 'commandline' is provided, then '--region-points'" + \
-                             " is expected to be provided. Finally, if 'landmarking' is" + \
-                             " given, it will look for the output from running" + \
+                        help="The method for defining the region to be changed. There are" +
+                             " three options: 'manuall', 'commandline', 'landmarking'. In" +
+                             " 'manuall' the user will be provided with a visualization of the" +
+                             " input surface, and asked to provide an end and start point of the" +
+                             " region of interest. Note that not all algorithms are robust over" +
+                             " bifurcations. If 'commandline' is provided, then '--region-points'" +
+                             " is expected to be provided. Finally, if 'landmarking' is" +
+                             " given, it will look for the output from running" +
                              " automated_geometric_quantities.py.")
     parser.add_argument("--region-points", nargs="+", type=float, default=None, metavar="points",
-                        help="If -r or --region-of-interest is 'commandline' then this" + \
-                             " argument have to be given. The method expects two points" + \
-                             " which defines the start and end of the region of interest. If" + \
-                             " 'method' is set to stenosis, then one point can be provided as well," + \
-                             " which is assumbed to be the center of a new stenosis." + \
-                             " Example providing the points (1, 5, -1) and (2, -4, 3):" + \
+                        help="If -r or --region-of-interest is 'commandline' then this" +
+                             " argument have to be given. The method expects two points" +
+                             " which defines the start and end of the region of interest. If" +
+                             " 'method' is set to stenosis, then one point can be provided as well," +
+                             " which is assumbed to be the center of a new stenosis." +
+                             " Example providing the points (1, 5, -1) and (2, -4, 3):" +
                              " --stenosis-points 1 5 -1 2 -4 3")
-
     # "Variation" argments
     parser.add_argument("--alpha", type=float, default=0.0,
                         help="Compression factor in vertical direction, " +
@@ -484,7 +483,6 @@ def read_command_line():
                         help="Compression factor in verti cal direction,  " +
                              "ranging from -1.0 to 1.0, defining the magnitude " +
                              "of streching or compression of the tubular structure.")
-
     # Outputfile argument
     args = parser.parse_args()
 

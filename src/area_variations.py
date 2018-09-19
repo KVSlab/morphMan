@@ -1,10 +1,9 @@
 from scipy.ndimage.filters import gaussian_filter
-from scipy.signal import argrelextrema
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
-from os import path, listdir
 
 # Local import
 from common import *
+
 
 def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
                     no_smooth_point, region_of_interest, region_points, beta, ratio,
@@ -22,13 +21,15 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
         smooth (bool): Determines Voronoi smoothing or not.
         smooth_factor (float): Smoothing factor used for voronoi diagram smoothing.
         no_smooth (bool): If True, define a region where the Voronoi diagram should not be smoothed.
-        no_smooth_pooint (list): A flattend list to the 'end' points of the regions not to smooth.
+        no_smooth_point (list): A flattend list to the 'end' points of the regions not to smooth.
         beta (float): Factor determining how much the geometry will differ.
         ratio (float): Target ratio, A_max / A_min. Beta is ignored (and estimated) if given.
         percentage (float): Percentage the area of the geometry / stenosis is increase/decreased.
         stenosis_length (float): Length of affected stenosis area. Default is MISR x 2.0 of selected point.
         region_of_interest (str): Method for setting the region of interest ['manuall' | 'commandline' | 'first_line']
         region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint
+        poly_ball_size (list): Resolution of polyballs used to create surface.
+        output_filepath (str): Path to output the manipulated surface.
     """
     base_path = get_path_names(input_filepath)
 
@@ -62,7 +63,7 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
                                                            region_points, stenosis_length)
     write_polydata(centerline_splined, centerline_spline_path)
     centerline_area, centerline_area_sections = vmtk_compute_centerline_sections(surface,
-                                                                                    centerline_splined)
+                                                                                 centerline_splined)
     write_polydata(centerline_area, centerline_area_spline_path)
     write_polydata(centerline_area_sections, centerline_area_spline_sections_path)
 
@@ -118,14 +119,14 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
     # Linear transition first and last 10 % for some combinations of method an region_of_interest
     if region_of_interest in ["manuall", "commandline"] and method in ["area", "variation"]:
         k = int(round(area.shape[0] * 0.10, 0))
-        l = area.shape[0] - k*2
+        l = area.shape[0] - k * 2
     else:
         k = 0
         l = area.shape[0]
 
     # Transition
     trans = np.asarray(np.linspace(1, 0, k).tolist() + np.zeros(l).tolist() +
-                        np.linspace(0, 1, k).tolist())
+                       np.linspace(0, 1, k).tolist())
 
     # Only smooth end with first_line
     if region_of_interest == "first_line":
@@ -150,10 +151,10 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
 
             # Estimate beta with bisection method
             while abs(R - ratio) >= 0.001 and iter < max_iter:
-                factor_ = (area / mean)**(beta-1)
-                factor = factor_[:, 0]*(1-trans) + trans
+                factor_ = (area / mean) ** (beta - 1)
+                factor = factor_[:, 0] * (1 - trans) + trans
 
-                area_new = (np.sqrt(area[:, 0]/math.pi)*factor)**2 * math.pi
+                area_new = (np.sqrt(area[:, 0] / math.pi) * factor) ** 2 * math.pi
                 R = area_new.max() / area_new.min()
 
                 if R < ratio:
@@ -168,7 +169,7 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
             beta = beta - 1
 
         else:
-            factor_ = ((area / mean)**beta)[:, 0]
+            factor_ = ((area / mean) ** beta)[:, 0]
             factor = factor_ * (1 - trans) + trans
 
     elif method == "stenosis":
@@ -180,11 +181,11 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
         elif len(region_points) == 6:
             length = get_curvilinear_coordinate(line_to_change)
             factor = area[0] + (area[-1] - area[0]) * (length / length.max())
-            factor = factor * (1- trans) + trans
+            factor = factor * (1 - trans) + trans
 
     # Increase or deacrease overall area by a percentage
     elif method == "area":
-        factor_ = np.ones(len(trans)) * (1 + percentage*0.01)
+        factor_ = np.ones(len(trans)) * (1 + percentage * 0.01)
         factor = factor_ * (1 - trans) + trans
 
     return factor
@@ -216,7 +217,7 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
     # non-circular, please multiply MISR by a factor of, e.g. ~1.7. For arteries that are
     # very close, there is an oposite problem, and one can include points from the Voronoi
     # diagram belonging to other arteries. For robustness, the factor is now 1.05.
-    MISR = get_array(radiusArrayName, line_to_change)*1.05
+    MISR = get_array(radiusArrayName, line_to_change) * 1.05
     for i in range(MISR.shape[0]):
         arrayForTube.SetTuple1(i, MISR[i])
     line_to_change.GetPointData().AddArray(arrayForTube)
@@ -269,7 +270,7 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
             point = (np.asarray(point) + v2).tolist()
 
             # Change radius
-            pointRadius = pointRadius*factor[tmp_ID]
+            pointRadius = pointRadius * factor[tmp_ID]
 
         voronoiPoints.InsertNextPoint(point)
         radiusArray.SetTuple1(i, pointRadius)
@@ -305,7 +306,6 @@ def read_command_line():
                           help="Relative path to the output surface. The default folder is" + \
                                " the same as the input file, and a name with a combination of the" + \
                                " parameters.")
-
 
     # General arguments
     parser.add_argument("-m", "--method", type=str, default="variation",
@@ -411,7 +411,6 @@ def read_command_line():
             raise ValueError("ERROR: Please provide the no smooth point(s) as a multiple" + \
                              " of 3.")
 
-
     return dict(input_filepath=args.ifile, method=args.method, smooth=args.smooth,
                 smooth_factor=args.smooth_factor, beta=args.beta,
                 region_of_interest=args.region_of_interest,
@@ -420,6 +419,7 @@ def read_command_line():
                 percentage=args.percentage, output_filepath=args.ofile,
                 poly_ball_size=args.poly_ball_size, no_smooth=args.no_smooth,
                 no_smooth_point=args.no_smooth_point)
+
 
 if __name__ == '__main__':
     area_variations(**read_command_line())

@@ -258,7 +258,6 @@ def rotate_branches(input_filepath, smooth, smooth_factor, angle, l1, l2, bif, l
     write_polydata(new_surface, output_filepath)
 
 
-
 def get_points(data, key, R, m, rotated=True, bif=False):
     """
     Finds spesific points around the bifurcation, based on the
@@ -615,48 +614,10 @@ def merge_cl(centerline, end_point, div_point):
     return merge
 
 
-def sort_outlets(outlets, outlet1, outlet2, dirpath):
-    """
-    Sort all outlets of the geometry given the two relevant outlets
-
-    Args:
-        outlets (list): List of outlet center points.
-        outlet1 (list): Point representing first relevant oultet.
-        outlet2 (list): Point representing second relevant oultet.
-        dirpath (str): Location of info file.
-
-    Returns:
-        outlets (list): List of sorted outlet center points.
-    Returns:
-        outlet1 (list): Point representing first relevant oultet.
-    Returns:
-        outlet2 (list): Point representing second relevant oultet.
-    """
-    tmp_outlets = np.array(outlets).reshape(len(outlets) // 3, 3)
-    outlet1_index = np.argsort(np.sum((tmp_outlets - outlet1) ** 2, axis=1))[0]
-    outlet2_index = np.argsort(np.sum((tmp_outlets - outlet2) ** 2, axis=1))[0]
-    tmp_outlets = tmp_outlets.tolist()
-    if max(outlet1_index, outlet2_index) == outlet1_index:
-        outlet1 = tmp_outlets.pop(outlet1_index)
-        outlet2 = tmp_outlets.pop(outlet2_index)
-    else:
-        outlet2 = tmp_outlets.pop(outlet2_index)
-        outlet1 = tmp_outlets.pop(outlet1_index)
-    outlet_rest = (np.array(tmp_outlets).flatten()).tolist()
-    outlets = outlet1 + outlet2 + outlet_rest
-    data = {}
-    for i in range(len(outlets) // 3):
-        data["outlet" + str(i)] = outlets[3 * i:3 * (i + 1)]
-    write_parameters(data, dirpath)
-
-    return outlets, outlet1, outlet2
-
-
 def read_command_line():
     """
     Read arguments from commandline
     """
-    parser = ArgumentParser()
 
     parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
     required = parser.add_argument_group('required named arguments')
@@ -733,7 +694,7 @@ def read_command_line():
                         help="Resampling step used to resample centerlines")
 
     args = parser.parse_args()
-    ang_ = 0 if args.a == 0 else math.pi / args.a # Convert from deg to rad
+    ang_ = 0 if args.a == 0 else math.pi / args.a  # Convert from deg to rad
 
     return dict(input_filepath=args.ifile, smooth=args.smooth,
                 smooth_factor=args.smooth_factor, angle=args.angle,

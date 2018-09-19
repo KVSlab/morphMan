@@ -2,7 +2,8 @@ import vtk
 import numpy as np
 import numpy.linalg as la
 import math
-import operator
+from os import path
+import sys
 
 from vmtk import vtkvmtk, vmtkscripts
 from vtk.util import numpy_support
@@ -34,13 +35,12 @@ phiValues = [float(i) for i in range(2, 43, 2)]
 thetaStep = 2.0
 
 
-def read_polydata(filename, type=None):
+def read_polydata(filename):
     """
     Load the given file, and return a vtkPolyData object for it.
 
     Args:
         filename (str): Path to input file.
-        type (str): Additional argument for vtkIDlists.
 
     Returns:
         polyData (vtkSTL/vtkPolyData/vtkXMLStructured/
@@ -81,7 +81,6 @@ def read_polydata(filename, type=None):
         # id_list.SetArray(copy.copy(result), int(result.shape[0]))
         for i in range(result.shape[0]):
             id_list.SetId(i, result[i])
-        # del result
         return
     else:
         raise RuntimeError('Unknown file type %s' % fileType)
@@ -788,7 +787,7 @@ def threshold(surface, name, lower=0, upper=1, type="between", source=1):
     elif type == "upper":
         threshold.ThresholdByUpper(upper)
     else:
-        print((("%s is not a threshold type. Pleace chose from: upper, lower" +
+        print((("%s is not a threshold type. Pleace chose from: upper, lower" + \
                 ", or between") % type))
         sys.exit(0)
 
@@ -803,7 +802,9 @@ def threshold(surface, name, lower=0, upper=1, type="between", source=1):
 
 
 def compute_area(surface):
-    "Compute area of polydata"
+    """
+    Compute area of polydata
+    """
     mass = vtk.vtkMassProperties()
     mass.SetInputData(surface)
 
@@ -1469,18 +1470,77 @@ def vmtk_surface_smoother(surface, method, iterations=800, passband=1.0, relaxat
     return surface
 
 
-def extract_carotid_siphon(folder):
-    centerline_path = path.join(folder, "surface", "model_usr_centerline.vtp")
-    centerline_bif_path = path.join(folder, "surface", "model_usr_centerline_bif.vtp")
-    centerline_bif = read_polydata(centerline_bif_path)
-    centerline = read_polydata(centerline_path)
+def extract_ica_centerline(base_path, resampling_step):
+    centerlines_path = base_path + "_centerline.vtp"
+    input_filepath = base_path + ".vtp"
+    ica_centerline_path = base_path + "_ica.vtp"
+    centerline_relevant_outlets_path = base_path + "_centerline_relevant_outlets.vtp"
+    centerline_bif_path = base_path + "_centerline_bif.vtp"
+    if path.exists(ica_centerline_path):
+        return read_polydata(ica_centerline_path)
 
-    centerlineSpacing = np.sqrt(distance(centerline.GetPoint(2), centerline.GetPoint(3)))
-    data = get_data(centerline, centerline_bif, centerlineSpacing)
-    line = extract_single_line(centerline, 0, startID=0, endID=data["bif"]["ID_div"])
-    write_polydata(line, path.join(folder, "surface", "carotid_siphon.vtp"))
+    # Prepare surface and identify in/outlets
+    surface, capped_surface = prepare_surface(base_path, input_filepath)
+    inlet, outlets = get_centers(surface, base_path)
+    outlet1, outlet2 = get_relevant_outlets(capped_surface, base_path)
+    outlets, outlet1, outlet2 = sort_outlets(outlets, outlet1, outlet2, base_path)
 
+    # Compute / import centerlines
+    centerlines, _, _ = compute_centerlines(inlet, outlets, centerlines_path,
+                                            capped_surface, resampling=resampling_step,
+                                            smooth=False, base_path=base_path)
+
+    # Get relevant centerlines
+    centerline_relevant_outlets = compute_centerlines(inlet, outlet1 + outlet2,
+                                                      centerline_relevant_outlets_path,
+                                                      capped_surface,
+                                                      resampling=resampling_step)
+    centerline_bif = compute_centerlines(outlet1, outlet2,
+                                         centerline_bif_path,
+                                         capped_surface, resampling=resampling_step)
+    # Extract ICA centerline
+    tolerance = get_tolerance(centerline_relevant_outlets)
+    data = get_data(centerline_relevant_outlets, centerline_bif, tolerance)
+    line = extract_single_line(centerlines, 0, startID=0, endID=data["bif"]["ID_div"])
+    write_polydata(line, ica_centerline_path)
     return line
+
+
+def sort_outlets(outlets, outlet1, outlet2, dirpath):
+    """
+    Sort all outlets of the geometry given the two relevant outlets
+
+    Args:
+        outlets (list): List of outlet center points.
+        outlet1 (list): Point representing first relevant oultet.
+        outlet2 (list): Point representing second relevant oultet.
+        dirpath (str): Location of info file.
+
+    Returns:
+        outlets (list): List of sorted outlet center points.
+    Returns:
+        outlet1 (list): Point representing first relevant oultet.
+    Returns:
+        outlet2 (list): Point representing second relevant oultet.
+    """
+    tmp_outlets = np.array(outlets).reshape(len(outlets) // 3, 3)
+    outlet1_index = np.argsort(np.sum((tmp_outlets - outlet1) ** 2, axis=1))[0]
+    outlet2_index = np.argsort(np.sum((tmp_outlets - outlet2) ** 2, axis=1))[0]
+    tmp_outlets = tmp_outlets.tolist()
+    if max(outlet1_index, outlet2_index) == outlet1_index:
+        outlet1 = tmp_outlets.pop(outlet1_index)
+        outlet2 = tmp_outlets.pop(outlet2_index)
+    else:
+        outlet2 = tmp_outlets.pop(outlet2_index)
+        outlet1 = tmp_outlets.pop(outlet1_index)
+    outlet_rest = (np.array(tmp_outlets).flatten()).tolist()
+    outlets = outlet1 + outlet2 + outlet_rest
+    data = {}
+    for i in range(len(outlets) // 3):
+        data["outlet" + str(i)] = outlets[3 * i:3 * (i + 1)]
+    write_parameters(data, dirpath)
+
+    return outlets, outlet1, outlet2
 
 
 def vmtk_centerline_resampling(line, length):
@@ -2065,7 +2125,7 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
         flipped = True if 90 < angle < 270 else False
         normal = -normal if 90 < angle < 270 else normal
 
-        # Mapp the old center and normals to the altered model 
+        # Mapp the old center and normals to the altered model
         if changed and old_centerline is not None:
             new_line = extract_single_line(new_centerline, line_id)
 
@@ -2115,7 +2175,6 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
 
     # Capped surface
     capped_surface = capp_surface(surface)
-
     if test_merge:
         surface = check_if_surface_is_merged(capped_surface, new_centerline,
                                              output_filepath)
@@ -2133,6 +2192,8 @@ def check_if_surface_is_merged(surface, centerlines, output_filepath):
     """
     # Check if the manipulated centerline and the centerline from the new surface
     # significantly differ, if so it is likely that part of the surface is now merged
+    from IPython import embed
+    embed()
     centerlines = vmtk_centerline_resampling(centerlines, length=0.1)
     inlet = centerlines.GetPoint(0)
     outlets = []
@@ -2517,26 +2578,26 @@ def find_diverging_centerlines(centerlines, end_point):
     return div_ids, div_points, centerlines, div_lines
 
 
-def clip_eyeline(eyeline, clip_start_point, clip_end_ID):
+def clip_diverging_line(centerline, clip_start_point, clip_end_id):
     """
     Clip the opthamlic artery if present.
 
     Args:
-        eyeline (vtkPolyData): Line representing the opthalmic artery centerline.
+        centerline (vtkPolyData): Line representing the opthalmic artery centerline.
         clip_start_point (tuple): Point at entrance of opthalmic artery.
-        clip_end_ID (int): ID of point at end of opthalmic artery.
+        clip_end_id (int): ID of point at end of opthalmic artery.
 
     Returns:
         patch_eye (vtkPolyData): Voronoi diagram representing opthalmic artery.
     """
-    points = [clip_start_point, eyeline.GetPoint(clip_end_ID)]
-    eye_points = vtk.vtkPoints()
+    points = [clip_start_point, centerline.GetPoint(clip_end_id)]
+    div_points = vtk.vtkPoints()
     for p in points:
-        eye_points.InsertNextPoint(p)
+        div_points.InsertNextPoint(p)
 
-    patch_eye = CreateParentArteryPatches(eyeline, eye_points, siphon=True)
+    patch_cl = CreateParentArteryPatches(centerline, div_points, siphon=True)
 
-    return patch_eye
+    return patch_cl
 
 
 def find_ophthalmic_artery(centerlines, clip_pts):
@@ -2687,7 +2748,7 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
             stenosis_point_id = vtk.vtkIdList()
             first = True
             while stenosis_point_id.GetNumberOfIds() != 2 or \
-                   (stenosis_point_id.GetNumberOfIds() != 1 and method == "stenosis"):
+                    (stenosis_point_id.GetNumberOfIds() != 1 and method == "stenosis"):
                 if not first:
                     print("Please provide only one or two points, try again")
 
@@ -2696,7 +2757,7 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
                 seed_selector.SetSurface(surface)
                 if method == "variation" or method == "area":
                     seed_selector.text = "Press space to select the start and endpoint of the" + \
-                                        " region of interest, 'u' to undo.\n"
+                                         " region of interest, 'u' to undo.\n"
                 elif method == "stenosis":
                     seed_selector.text = "Press space to select, the center of a new" + \
                                          " stenosis (one point),\nOR place two points on each side" + \
@@ -2739,7 +2800,7 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
             centerline_length = get_curvilinear_coordinate(line)
             center = centerline_length[tmp_id]
             region_of_interest_id = (center - length <= centerline_length) \
-                                 * (centerline_length <= center + length)
+                                    * (centerline_length <= center + length)
             startID = np.argmax(region_of_interest_id)
             endID = region_of_interest_id.shape[0] - 1 - np.argmax(region_of_interest_id[::-1])
 
@@ -2876,8 +2937,8 @@ def move_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_centerlines, 
                     dist = -dx * (cl_id - idmid) ** 0.5 / (id2 - idmid) ** 0.5
                 else:
                     if diverging_id is not None and i == (numberOfCells - 1):
-                        #pp = line_non_diverging.GetPoint(cl_id)
-                        #id_main = locator.FindClosestPoint(pp)
+                        # pp = line_non_diverging.GetPoint(cl_id)
+                        # id_main = locator.FindClosestPoint(pp)
                         id_main = diverging_id
                         dist = -dx * (diverging_id - idmid) ** 0.5 / (diverging_id - idmid) ** 0.5
                     else:
@@ -2887,7 +2948,7 @@ def move_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_centerlines, 
                 if id1 <= cl_id <= id2:
                     dist = 4 * dx * (cl_id - id1) * (id2 - cl_id) / (id2 - id1) ** 2
                 elif diverging_id is not None and i == (numberOfCells - 1) and cl_id > id2:
-                    #cl_id = diverging_id - id1 + int((id2 - (diverging_id - id1)) * 0.4)
+                    # cl_id = diverging_id - id1 + int((id2 - (diverging_id - id1)) * 0.4)
                     cl_id = diverging_id
                     dist = 4 * dx * (cl_id - id1) * (id2 - cl_id) / (id2 - id1) ** 2
                 else:
