@@ -180,8 +180,9 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
 
         elif len(region_points) == 6:
             length = get_curvilinear_coordinate(line_to_change)
-            factor = (area[0] + (area[-1] - area[0]) * (length / length.max())) / area[: ,0]
-            factor = factor * (1- trans) + trans
+            factor = (area[0] + (area[-1] - area[0]) * (length / length.max())) / area[:, 0]
+            factor = np.sqrt(factor)
+            factor = factor * (1 - trans) + trans
 
     # Increase or deacrease overall area by a percentage
     elif method == "area":

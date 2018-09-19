@@ -42,15 +42,15 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
     centerline_clipped_path = base_path + "_centerline_clipped.vtp"
     centerline_clipped_part_path = base_path + "_centerline_clipped_part.vtp"
     new_centerlines_path = base_path + "_centerlines_alpha_%s_beta_%s.vtp" % (alpha, beta)
-    new_centerlines_path_tmp = base_path + "new_centerlines_alpha_%s_beta_%s_tmp.vtp" % (alpha, beta)
+    new_centerlines_path_tmp = base_path + "_new_centerlines_alpha_%s_beta_%s_tmp.vtp" % (alpha, beta)
     centerlines_path = base_path + "_centerline.vtp"
 
     # Voronoi diagrams
     voronoi_remaining_path = base_path + "_voronoi_remaining.vtp"
-    voronoi_siphon_path = base_path + "_voronoi_siphon.vtp"
+    voronoi_bend_path = base_path + "_voronoi_bend.vtp"
 
     # Surface information
-    point_path = base_path + "_carotid_siphon_points.particles"  # Hard coded for consistency
+    point_path = base_path + "_carotid_bend_points.particles"  # Hard coded for consistency
 
     # Clean and capp / uncapp surface
     surface, capped_surface = prepare_surface(base_path, input_filepath)
@@ -88,8 +88,8 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
     # Handle diverging centerlines within region of interest
     if diverging_centerline_ispresent:
         print("Clipping opthamlic artery")
-        patch_diverging_line = clip_diverging_line(extract_single_line(diverging_centerlines, 0), region_points[0],
-                                                   diverging_id)
+        patch_diverging_line = clip_diverging_line(extract_single_line(diverging_centerlines, 0),
+                                                   region_points[0], diverging_id)
 
     # Clip centerline
     print("Clipping centerlines.")
@@ -100,30 +100,26 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
     p2 = centerlines.GetPoint(id2)
     centerline_remaining = CreateParentArteryPatches(centerlines,
                                                      region_points_vtk, siphon=True)
-    centerline_siphon = extract_single_line(centerlines, 0, startID=id1, endID=id2)
+    centerline_bend = extract_single_line(centerlines, 0, startID=id1, endID=id2)
 
     if diverging_centerline_ispresent:
         eyeline_end = extract_single_line(patch_diverging_line, 1)
-        centerline_siphon = merge_data([centerline_siphon, eyeline_end])
+        centerline_bend = merge_data([centerline_bend, eyeline_end])
 
     write_polydata(centerline_remaining, centerline_clipped_path)
-    write_polydata(centerline_siphon, centerline_clipped_part_path)
+    write_polydata(centerline_bend, centerline_clipped_part_path)
 
     # Clip Voronoi diagram into
-    # siphon and remaining part of geometry
+    # bend and remaining part of geometry
     print("Clipping Voronoi diagrams")
-    if not path.exists(voronoi_siphon_path):
-        masked_voronoi_clip = MaskVoronoiDiagram(voronoi, centerline_siphon)
-        voronoi_siphon = ExtractMaskedVoronoiPoints(voronoi, masked_voronoi_clip)
-        write_polydata(voronoi_siphon, voronoi_siphon_path)
-    else:
-        voronoi_siphon = read_polydata(voronoi_siphon_path)
-
-    if not path.exists(voronoi_remaining_path):
-        masked_voronoi = MaskVoronoiDiagram(voronoi, centerline_remaining)
-        voronoi_remaining = ExtractMaskedVoronoiPoints(voronoi, masked_voronoi)
+    if not path.exists(voronoi_bend_path) or not path.exists(voronoi_remaining_path):
+        voronoi_bend, voronoi_remaining = split_voronoi_with_centerlines(voronoi,
+                                                                           centerline_bend,
+                                                                           centerline_remaining)
+        write_polydata(voronoi_bend, voronoi_bend_path)
         write_polydata(voronoi_remaining, voronoi_remaining_path)
     else:
+        voronoi_bend = read_polydata(voronoi_bend_path)
         voronoi_remaining = read_polydata(voronoi_remaining_path)
 
     # Extract translation vectors
@@ -145,8 +141,8 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
         voronoi_remaining = move_voronoi_horizontally(dx_p1, voronoi_remaining,
                                                       centerline_remaining, id1, id2,
                                                       diverging_id, clip=False)
-        voronoi_siphon = move_voronoi_horizontally(dx_p1, voronoi_siphon,
-                                                   centerline_siphon, id1, id2,
+        voronoi_bend = move_voronoi_horizontally(dx_p1, voronoi_bend,
+                                                   centerline_bend, id1, id2,
                                                    diverging_id, clip=True,
                                                    diverging_centerline_ispresent=diverging_centerline_ispresent)
     else:
@@ -159,14 +155,14 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
         write_polydata(new_centerlines, new_centerlines_path_tmp)
 
     if alpha == 0.0 and beta != 0.0:
-        new_voronoi = merge_data([voronoi_remaining, voronoi_siphon])
+        new_voronoi = merge_data([voronoi_remaining, voronoi_bend])
         new_surface = create_new_surface(new_voronoi, poly_ball_size=poly_ball_size)
 
     elif alpha != 0.0:
         # Vertical movement
         print("Moving geometry vertically")
         new_surface, new_centerlines = move_vessel_vertically(alpha, voronoi_remaining,
-                                                              voronoi_siphon,
+                                                              voronoi_bend,
                                                               new_centerlines, region_points, poly_ball_size)
 
     print("Smoothing, clean, and check surface")
@@ -181,7 +177,7 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
 
 
 def move_vessel_vertically(alpha, voronoi_remaining,
-                           voronoi_siphon, centerlines, region_points, poly_ball_size):
+                           voronoi_bend, centerlines, region_points, poly_ball_size):
     """
     Secondary script used for vertical displacement of
     the blood vessel. Moves the input voronoi diagram and
@@ -190,9 +186,9 @@ def move_vessel_vertically(alpha, voronoi_remaining,
     Args:
         centerlines (vtkPolyData): Centerline through the geometry.
         alpha (float): Extension / Compression factor in vertical direction.
-        voronoi_remaining (vtkPolyData): Voronoi diagram excluding siphon.
-        voronoi_siphon (vtkPolyData): Voronoi diagram representing siphon.
-        region_points (list): Points defining the siphon to be manipulated.
+        voronoi_remaining (vtkPolyData): Voronoi diagram excluding bend.
+        voronoi_bend (vtkPolyData): Voronoi diagram representing bend.
+        region_points (list): Points defining the bend to be manipulated.
         poly_ball_size (list): Resulution of surface model.
 
     Returns:
@@ -219,11 +215,11 @@ def move_vessel_vertically(alpha, voronoi_remaining,
     id2 = locator.FindClosestPoint(region_points[1])
     p1 = centerlines.GetPoint(id1)
     p2 = centerlines.GetPoint(id2)
-    centerline_siphon = extract_single_line(centerlines, 0, startID=id1, endID=id2)
+    centerline_bend = extract_single_line(centerlines, 0, startID=id1, endID=id2)
 
     if diverging_centerline_ispresent:
         eyeline_end = extract_single_line(patch_diverging_line, 1)
-        centerline_siphon = merge_data([centerline_siphon, eyeline_end])
+        centerline_bend = merge_data([centerline_bend, eyeline_end])
 
     # Find ID of middle pooint:
     print("Finding points to spline through.")
@@ -233,9 +229,9 @@ def move_vessel_vertically(alpha, voronoi_remaining,
 
     # Iterate over points P from Voronoi diagram and manipulate
     print("Adjust voronoi diagram")
-    voronoi_siphon = move_voronoi_vertically(voronoi_siphon, centerline_siphon, id1,
+    voronoi_bend = move_voronoi_vertically(voronoi_bend, centerline_bend, id1,
                                              diverging_id, dx, diverging_centerline_ispresent)
-    new_voronoi = merge_data([voronoi_remaining, voronoi_siphon])
+    new_voronoi = merge_data([voronoi_remaining, voronoi_bend])
 
     # Move centerline manually for postprocessing
     new_centerlines = move_centerlines(centerlines, dx, p1, p2, diverging_id, diverging_centerlines, direction)
@@ -260,7 +256,7 @@ def move_voronoi_horizontally(dx_p1, voronoi_clipped, centerline_clipped, id1, i
         id1 (int): Index of first clipping point.
         id2 (int): Index of second clipping point.
         clip_id (int): Index where opthamlic artery is located (if present)
-        clip (bool): Determines which part of geometry is being moved, True if siphon.
+        clip (bool): Determines which part of geometry is being moved, True if bend.
         diverging_centerline_ispresent (bool): Determines presence of opthamlic artery.
 
     Returns:
@@ -324,7 +320,7 @@ def move_voronoi_horizontally(dx_p1, voronoi_clipped, centerline_clipped, id1, i
 
     else:
         # Move reamining part of the voronoi diagram
-        # representing the geometry excluding the siphon to be moved
+        # representing the geometry excluding the bend to be moved
         for p in range(voronoi_clipped.GetNumberOfPoints()):
             cl_id = centerline_loc.FindClosestPoint(voronoi_clipped.GetPoint(p))
 

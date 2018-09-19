@@ -2,7 +2,7 @@ import vtk
 import numpy as np
 import numpy.linalg as la
 import math
-from os import path
+from os import path, makedirs
 import sys
 
 from vmtk import vtkvmtk, vmtkscripts
@@ -35,7 +35,7 @@ phiValues = [float(i) for i in range(2, 43, 2)]
 thetaStep = 2.0
 
 
-def read_polydata(filename):
+def read_polydata(filename, type=None):
     """
     Load the given file, and return a vtkPolyData object for it.
 
@@ -73,15 +73,13 @@ def read_polydata(filename):
         reader = vtk.vtkXMLUnstructuredGridReader()
     elif fileType == "vti":
         reader = vtk.vtkXMLImageDataReader()
-    elif fileType == "np":
+    elif fileType == "np" and type == "vtkIdList":
         result = np.load(filename).astype(np.int)
         id_list = vtk.vtkIdList()
         id_list.SetNumberOfIds(result.shape[0])
-        # SetArray produces memory error
-        # id_list.SetArray(copy.copy(result), int(result.shape[0]))
         for i in range(result.shape[0]):
             id_list.SetId(i, result[i])
-        return
+        return id_list
     else:
         raise RuntimeError('Unknown file type %s' % fileType)
 
@@ -1970,6 +1968,9 @@ def prepare_voronoi_diagram(capped_surface, centerlines, base_path,
     else:
         no_smooth_cl = None
 
+    if voronoi is None:
+        voronoi = make_voronoi_diagram(capped_surface, base_path + "_voronoi.vtp")
+
     # Smooth voronoi
     voronoi_smoothed_path = base_path + "_voronoi_smoothed.vtp"
     surface_smoothed_path = base_path + "_smoothed.vtp"
@@ -1984,21 +1985,6 @@ def prepare_voronoi_diagram(capped_surface, centerlines, base_path,
         voronoi = read_polydata(voronoi_smoothed_path)
 
     return voronoi
-
-
-def vtk_box(bounds):
-    """Returns a vtk box object based on the bounds
-
-    Args:
-        bounds (list): Bounds x1, x2, y1, y2, z1, z2
-
-    Returns:
-        box (vtkBox): A vtk box
-    """
-    box = vtk.vtkBox()
-    box.SetBounds(bounds)
-
-    return box
 
 
 def vtk_plane(origin, normal):
@@ -2068,6 +2054,10 @@ def attach_clipped_regions(surface, clipped, center):
 
 def prepare_surface_output(surface, original_surface, new_centerline, output_filepath,
                            test_merge=False, changed=False, old_centerline=None):
+    # Check if the folder for the output exits
+    if not path.exists(path.dirname(output_filepath)):
+        makedirs(path.dirname(output_filepath))
+
     # Get planes if outlets of the original surface
     boundary_edges = get_feature_edges(original_surface)
     boundary_connectivity = get_connectivity(boundary_edges)
@@ -2151,8 +2141,6 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
             tmp_normal = normal
             normal = [0, 0, 0]
             translation.TransformNormal(tmp_normal, normal)
-            if inlet:
-                print(tmp_normal, normal)
 
         # Set plane
         plane = vtk_plane(center, normal)
@@ -2170,7 +2158,6 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
     # Clean surface
     surface = clean_surface(surface)
     surface = triangulate_surface(surface)
-    write_polydata(surface, "test_clipped.vtp")
 
     # Capped surface
     capped_surface = capp_surface(surface)
@@ -2191,8 +2178,6 @@ def check_if_surface_is_merged(surface, centerlines, output_filepath):
     """
     # Check if the manipulated centerline and the centerline from the new surface
     # significantly differ, if so it is likely that part of the surface is now merged
-    from IPython import embed
-    embed()
     centerlines = vmtk_centerline_resampling(centerlines, length=0.1)
     inlet = centerlines.GetPoint(0)
     outlets = []
@@ -2962,6 +2947,55 @@ def move_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_centerlines, 
     centerline.GetPointData().AddArray(radiusArray)
 
     return centerline
+
+
+def split_voronoi_with_centerlines(voronoi, centerline1, centerline2):
+    voronoi1 = vtk.vtkPolyData()
+    points1 = vtk.vtkPoints()
+    cell_array1 = vtk.vtkCellArray()
+    radius1 = np.zeros(voronoi.GetNumberOfPoints())
+    loc1 = get_locator(centerline1)
+
+    voronoi2 = vtk.vtkPolyData()
+    points2 = vtk.vtkPoints()
+    cell_array2 = vtk.vtkCellArray()
+    radius2 = np.zeros(voronoi.GetNumberOfPoints())
+    loc2 = get_locator(centerline2)
+
+    get_radius = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1
+
+    count1 = 0
+    count2 = 0
+    for i in range(voronoi.GetNumberOfPoints()):
+        point = voronoi.GetPoint(i)
+        radius = get_radius(i)
+        dist1 = distance(centerline1.GetPoint(loc1.FindClosestPoint(point)), point)
+        dist2 = distance(centerline2.GetPoint(loc2.FindClosestPoint(point)), point)
+
+        if dist1 < dist2:
+            points1.InsertNextPoint(point)
+            radius1[count1] = radius
+            cell_array1.InsertNextCell(1)
+            cell_array1.InsertCellPoint(count1)
+            count1 += 1
+        else:
+            points2.InsertNextPoint(point)
+            radius2[count2] = radius
+            cell_array2.InsertNextCell(1)
+            cell_array2.InsertCellPoint(count2)
+            count2 += 1
+
+    voronoi1.SetPoints(points1)
+    voronoi1.SetVerts(cell_array1)
+    radius1 = create_vtk_array(radius1[radius1 > 0], radiusArrayName)
+    voronoi1.GetPointData().AddArray(radius1)
+
+    voronoi2.SetPoints(points2)
+    voronoi2.SetVerts(cell_array2)
+    radius2 = create_vtk_array(radius2[radius2 > 0], radiusArrayName)
+    voronoi2.GetPointData().AddArray(radius2)
+
+    return voronoi1, voronoi2
 
 
 ### The following code is adapted from:
