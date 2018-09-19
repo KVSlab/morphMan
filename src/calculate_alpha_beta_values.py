@@ -1,33 +1,44 @@
-from argparse import ArgumentParser
-from os import listdir, path
-from scipy.interpolate import griddata
+from argparse import RawDescriptionHelpFormatter, ArgumentParser
 from scipy import interpolate
 
 import numpy as np
 import numpy.linalg as la
+from common import get_path_names
 
 
 def read_command_line():
     """
     Read arguments from commandline
     """
-    parser = ArgumentParser()
-    parser.add_argument('-d', '--dir_path', type=str, default=".",
-                        help="Path to the folder with alpha-beta_vales")
-    parser.add_argument("-p", "--param", type=str, default="curvature",
-                        help="Parameter to compute.")
+    description = "Algorithm used to compute the recommended value for " + \
+                  "alpha and beta based on surface interpolation and a " + \
+                  "given limit, depening on the quantity to be computed. " + \
+                  "Primarly implemented for computing angle and curvature values."
+
+    parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
+    required = parser.add_argument_group('required named arguments')
+
+    # Required arguments
+    required.add_argument('-i', '--ifile', type=str, default=None,
+                          help="Path to the surface model", required=True)
+    required.add_argument("-q", "--quantity", type=str, default="curvature",
+                          help="Parameter to compute. Choose between 'curvature' and 'angle'", required=True)
+    # Optional arguments
     parser.add_argument('-r', '--radius', type=float, default=0.15,
                         help="Radius of bounding circle, limiting the choice of alpha and beta")
-    parser.add_argument('-b', '--bounds', nargs='+', default=None,
-                        help='Bounds of grid, as a list: [alpha_min, alpha_max, beta_min, beta_max]',
-                        required=True)
+    parser.add_argument('-b', '--boundary', nargs='+', default=[-0.2, 1, -0.2, 1],
+                        help='Bounds of grid, as a list: [alpha_min, alpha_max, beta_min, beta_max]')
+    parser.add_argument('-l', '--limit', type=float, default=0.4,
+                        help='Desired change in curvature / bend angle to achieve. Algorithm computes' +
+                             'recommended values of alpha and beta for both plus and minus this change.')
 
     args = parser.parse_args()
 
-    return args.dir_path, args.param, args.boundary, args.radius
+    return dict(input_filepath=args.ifile, quantity_to_compute=args.quantity,
+                radius=args.radius, boundary=args.boundary, limit=args.limit)
 
 
-def get_alpha_beta(dirpath, i, files, param, boundary):
+def get_alpha_beta(base_path, quantity_to_compute, boundary, radius, limit):
     """
     Imports a matrix of parameter values corresponding
     to a (alpha,beta) point and perform spline interpolation
@@ -37,24 +48,23 @@ def get_alpha_beta(dirpath, i, files, param, boundary):
     Three criterias to find suggested alpha-beta value from intersection.
 
     Args:
-        dirpath (str): Location where parameter value data is stored.
-        i (int): Index of case iteration
-        files (str): Filename of parameter value data file.
-        param (str): Parameter name.
+        base_path (str): Location where parameter value data is stored.
+        quantity_to_compute(str): Parameter name.
+        boundary (list): Boundary of searching grid.
+        radius (float): Minimum radius of circle to search outside of.
+        limit (float): Desired change in curvature / bend angle to achieve
     """
-
-    files = path.join(dirpath, files)
-    case = files[-9:-4]
-    print("Working on case %s" % case)
-
     # Get boundaries
     amin, amax, bmin, bmax = float(boundary[0]), float(boundary[1]), float(boundary[2]), float(boundary[3])
 
+    # Get grid values
+    grid_filepath = base_path + "_grid_values.txt"
+
     # Set standard deviations used to find intersetcion
-    if param == "curvature":
-        sd_curv = 0.045
-    elif param == "angle":
-        sd_angle = 19.1
+    if quantity_to_compute == "curvature":
+        sd_curv = limit
+    elif quantity_to_compute == "angle":
+        sd_angle = limit
 
     # Defined SD planes for curvature
     # Tolerance added for adjusting SD
@@ -78,11 +88,10 @@ def get_alpha_beta(dirpath, i, files, param, boundary):
         return angle0
 
     # Extract values
-    with open(files) as file:
+    with open(grid_filepath) as file:
         data = [[float(digit) for digit in line.split()] for line in file]
 
     N = len(data)
-    edge = [amin, amax, bmin, bmax]
     alpha = np.linspace(amin, amax, N)
     beta = np.linspace(bmin, bmax, N)
     alpha_long = np.linspace(amin, amax, 300)
@@ -95,31 +104,25 @@ def get_alpha_beta(dirpath, i, files, param, boundary):
 
     # Spline interpolation
     f = interpolate.interp2d(beta, alpha, data, kind='cubic')
-    if param == "curvature":
+    if quantity_to_compute == "curvature":
         curv0 = f(0, 0)
-    elif param == "angle":
+    elif quantity_to_compute == "angle":
         angle0 = f(0, 0)
-    zz = f(beta, alpha)
-
-    Z = []
-    if param == "curvature":
+    methods = []
+    if quantity_to_compute == "curvature":
         methods = [cpsd, cmsd, curv_init]
-    elif param == "angle":
+    elif quantity_to_compute == "angle":
         methods = [apsd, amsd, angle_init]
 
     # Find intersecting points
     # Reduces SD if no points are found
     for plane in methods:
-        print("Method: %s" % (plane.__name__))
-
         zeros = alpha_beta_intersection(plane, f, alpha_long, beta_long)
-        if len(zeros) > 10:
-            dx = int(len(zeros) / 10.)
-        elif len(zeros) > 0:
-            dx = 1
+        if len(zeros) > 0:
+            continue
         else:
             empty = True
-            tol = 0.005 if param == "curvature" else 0.1
+            tol = 0.005 if quantity_to_compute == "curvature" else 0.1
             maxiter = 50
             iterations = 0
 
@@ -130,15 +133,10 @@ def get_alpha_beta(dirpath, i, files, param, boundary):
                 if len(zeros) > 0:
                     empty = False
                 iterations += 1
-                if param == "curvature":
+                if quantity_to_compute == "curvature":
                     tol += 0.001
-                elif param == "angle":
+                elif quantity_to_compute == "angle":
                     tol += 0.2
-
-            if len(zeros) > 10:
-                dx = int(len(zeros) / 10.)
-            elif len(zeros) > 0:
-                dx = 1
 
         # Check points and apply criterias
         # to find suggested values for alpha and beta
@@ -153,34 +151,32 @@ def get_alpha_beta(dirpath, i, files, param, boundary):
                         points.append(p)
 
             if plane.__name__ not in ["curv_init", "angle_init"]:
-                P = points[0]
-                min_rad = 0.15
+                suggested_point = points[0]
                 dist = 10
                 for p in points[1:]:
                     dist_tmp = la.norm(np.array(p))
-                    if dist_tmp < dist and dist_tmp > min_rad:
+                    if radius < dist_tmp < dist:
                         dist = dist_tmp
-                        P = p
-                Z.append(P)
+                        suggested_point = p
 
                 # Write points to file
-                write_alpha_beta_point(case, P, plane.__name__)
+                write_alpha_beta_point(base_path, suggested_point, plane.__name__)
 
 
-def write_alpha_beta_point(case, P, method):
+def write_alpha_beta_point(base_path, suggested_point, method):
     """
     Write suggested choice of (alpha, beta) to file.
 
     Args:
-        case (str): Name of case.
-        P (ndarray): Array containing alpha and beta value
+        base_path (str): Path to file directory.
+        suggested_point (ndarray): Array containing alpha and beta value
         method (str): Info about parameter, and increase / decrease of parameter.
     """
-    dirpath = path.join("alphabeta_values.txt")
-    alpha = P[0]
-    beta = P[1]
-    with open(dirpath, "a") as f:
-        f.write("%s %s alpha=%s beta=%s\n" % (case, method, alpha, beta))
+    save_path = base_path + "_alphabeta_values.txt"
+    alpha = suggested_point[0]
+    beta = suggested_point[1]
+    with open(save_path, "a") as f:
+        f.write("%s alpha=%s beta=%s\n" % (method, alpha, beta))
 
 
 def alpha_beta_intersection(method, f, alphas, betas, tol=0.0):
@@ -212,32 +208,22 @@ def alpha_beta_intersection(method, f, alphas, betas, tol=0.0):
     return zeros
 
 
-def main(dirpath, param, boundary, radius):
+def calculate_alpha_beta_values(input_filepath, quantity_to_compute, boundary, radius, limit):
     """
     Get files containing parameter values
     and find suggested choice for alpha and beta,
     the compression / extension factors.
 
     Args:
-        dirpath (str): Location of parameter text.
-        param (str): Parameter to calculate.
+        input_filepath (str): Location of parameter text.
+        quantity_to_compute (str): Parameter to calculate.
         boundary (list): Boundary of alpha-beta grid.
         radius (float): Radius of bounding circle, limiting the choice of alpha and beta.
     """
-    if boundary is None:
-        boundary = [-0.2, 1, -0.2, 1]
 
-    files = listdir(dirpath)
-    if param == "curvature":
-        files_curv = sorted([f for f in listdir(dirpath) if f[4:8] in ["curv"]])
-        for i in range(len(files_curv)):
-            get_alpha_beta(dirpath, i, files_curv[i], param, boundary, radius)
-    elif param == "angle":
-        files_angle = sorted([f for f in listdir(dirpath) if f[4:9] in ["angle"]])
-        for i in range(len(files_angle)):
-            get_alpha_beta(dirpath, i, files_angle[i], param, boundary, radius)
+    base_path = get_path_names(input_filepath)
+    get_alpha_beta(base_path, quantity_to_compute, boundary, radius, limit)
 
 
 if __name__ == "__main__":
-    dirpath,  param, boundary, radius = read_command_line()
-    main(dirpath, param, boundary, radius)
+    calculate_alpha_beta_values(**read_command_line())

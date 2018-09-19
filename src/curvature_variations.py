@@ -1,125 +1,111 @@
-from argparse import ArgumentParser
-from os import path, listdir
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 # Local import
 from common import *
 
 
-def curvature_variations(input_filename, smooth, smoothingfactor, iterations, smoothmode,
-                         smooth_factor_voro, output_filename):
+def curvature_variations(input_filepath, smooth, smooth_factor_voro, smooth_factor_line, iterations,
+                         smooth_line, output_filepath, poly_ball_size, region_of_interest,
+                         region_points, resampling_step, no_smooth, no_smooth_point):
     """
     Create a sharper or smoother version of the input geometry,
     determined by a smoothed version of the siphon centerline.
 
     Args:
-        dirpath (str): Directory where case is located.
-        name (str): Directory where surface models are located.
-        smooth (bool): Adjusts smoothing of the voronoi diagram.
-        smoothingfactor (float): Smoothingfactor for centerline smoothing.
-        iterations (int): Number of smoothing iterations.
-        smoothmode (bool): Determines if models is sharpened or smoothed.
+        input_filepath (str): Path to input surface.
+        output_filepath (str): Path to output the manipulated surface.
+        smooth (bool): Smooth the Voronoi diagram.
+        smooth_line (bool): Smooth centerline if True, anti-smooth if False.
+        smooth_factor_voro (float): Smoothing factor used for Voronoi diagram smoothing.
+        smooth_factor_line (float): Smoothing factor used for centerline smoothing.
+        iterations (float): Smoothing iterations of centerline.
+        region_of_interest (str): Method for setting the region of interest ['manuall' | 'commandline' | 'first_line']
+        region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint
+        poly_ball_size (list): Resolution of polyballs used to create surface.
+        resampling_step (float): Resampling length for centerline resampling.
+        no_smooth (bool): True of part of the model is not to be smoothed.
+        no_smooth_point (ndarray): Point which is untouched by smoothing.
     """
-    # it = iterations
-    # sf = smoothingfactor
-
     # Input filenames
-    model_path = path.join(dirpath, name, "model.vtp")
-
-    # Output names
-    model_smoothed_path = path.join(dirpath, name, "model_smoothed.vtp")
-    method = "smoothed" if smoothmode else "extended"
-    model_new_surface = path.join(dirpath, name, "model_%s_fac_%s_it_%s.vtp" % (method, sf, it))
-    model_new_surface_clean = path.join(dirpath, name, "model_%s_fac_%s_it_%s_clean.vtp" % (method, sf, it))
+    base_path = get_path_names(input_filepath)
 
     # Centerlines
-    centerline_complete_path = path.join(dirpath, name, "centerline_complete.vtp")
-    centerline_clipped_path = path.join(dirpath, name, "centerline_clipped.vtp")
-    centerline_clipped_part_path = path.join(dirpath, name, "centerline_clipped_part.vtp")
-    centerline_clipped_part1_path = path.join(dirpath, name, "centerline_clipped_end_part.vtp")
-    centerline_new_path = path.join(dirpath, name, "centerline_interpolated.vtp")
-    carotid_siphon_path = path.join(dirpath, name, "carotid_siphon.vtp")
-    centerline_smooth_path = path.join(dirpath, name, "smooth_carotid_siphon.vtp")
-
-    # Voronoi diagrams
-    voronoi_path = path.join(dirpath, name, "model_voronoi.vtp")
-    voronoi_smoothed_path = path.join(dirpath, name, "model_voronoi_smoothed.vtp")
-    voronoi_clipped_path = path.join(dirpath, name, "model_voronoi_clipped.vtp")
-    voronoi_clipped_part_path = path.join(dirpath, name, "model_voronoi_clipped_part.vtp")
-
-    # Read and check model
-    if not path.exists(model_path):
-        RuntimeError("The given directory: %s did not contain the file: model.vtp" % dirpath)
+    centerlines_path = base_path + "_centerline.vtp"
+    centerline_smooth_path = base_path + "_centerline_smoothed.vtp"
+    new_centerlines_path = base_path + "_centerline_new.vtp"
 
     # Clean and capp / uncapp surface
-    parameters = get_parameters(dirpath)
-    open_surface, capped_surface = preare_surface(model_path, parameters)
-    surface = open_surface
+    surface, capped_surface = prepare_surface(base_path, input_filepath)
 
-    # Get inlet and outlets
-    inlet, outlets = get_centers(open_surface, dirpath)
+    # Compute centerlines
+    inlet, outlets = get_centers(surface, base_path)
 
-    # Compute all centerlines
-    centerlines_complete = compute_centerlines(inlet, outlets,
-                                               centerline_complete_path,
-                                               capped_surface, resampling=0.1)
-    centerlines_in_order = sort_centerlines(centerlines_complete)
+    print("Compute centerlines and Voronoi diagram")
+    centerlines, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path,
+                                                         capped_surface, resampling=resampling_step,
+                                                         smooth=False, base_path=base_path)
+    if smooth:
+        voronoi = prepare_voronoi_diagram(capped_surface, centerlines, base_path,
+                                          smooth, smooth_factor_voro, no_smooth,
+                                          no_smooth_point, voronoi, pole_ids)
+    # Get region of interest
+    _, region_points = get_line_to_change(capped_surface, centerlines,
+                                          region_of_interest, "variation", region_points, 0)
+    region_points = [[region_points[3 * i], region_points[3 * i + 1], region_points[3 * i + 2]]
+                     for i in range(len(region_points) // 3)]
 
-    print("Compute voronoi diagram")
-    voronoi = prepare_voronoi_diagram(surface, model_smoothed_path, voronoi_path, voronoi_smoothed_path,
-                                      smooth, smooth_factor_voro, centerlines_complete)
+    # Set and get clipping points, centerlines and diverging centerlines
+    centerlines, diverging_centerlines, region_points, region_points_vtk, diverging_ids = \
+        find_region_of_interest_and_diverging_centerlines(centerlines, region_points)
+    diverging_centerline_ispresent = diverging_centerlines is not None
 
-    # Get Carotid Siphon
-    if path.exists(carotid_siphon_path):
-        carotid_siphon = read_polydata(carotid_siphon_path)
-    else:
-        carotid_siphon = extract_carotid_siphon(dirpath)
+    # Set region and extract relevant centerline
+    locator = get_locator(extract_single_line(centerlines, 0))
+    id1 = locator.FindClosestPoint(region_points[0])
+    id2 = locator.FindClosestPoint(region_points[1])
+    p1 = centerlines.GetPoint(id1)
+    p2 = centerlines.GetPoint(id2)
+    centerline = extract_single_line(centerlines, 0, startID=id1, endID=id2)
 
-    # Search for diverging clipping points along the siphon
-    siphon_end_point = carotid_siphon.GetPoint(carotid_siphon.GetNumberOfPoints() - 1)
-    div_ids, div_points, centerlines_in_order, div_lines = find_diverging_centerlines(centerlines_in_order,
-                                                                                      siphon_end_point)
-
-    if div_ids != []:
+    if diverging_centerline_ispresent:
         print("Clipping diverging centerlines")
         div_patch_cl = []
-        for i, divline in enumerate(div_lines):
-            clip_id = int((divline.GetNumberOfPoints() - div_ids[i]) * 0.2 + div_ids[i])
-            patch_eye = clip_eyeline(divline, carotid_siphon.GetPoint(0), clip_id)
-            div_patch_cl.append(extract_single_line(patch_eye, 1))
+        for i, divline in enumerate(diverging_centerlines):
+            clip_id = int((divline.GetNumberOfPoints() - diverging_ids[i]) * 0.2 + diverging_ids[i])
+            patch_cl = clip_diverging_line(divline, centerlines.GetPoint(0), clip_id)
+            div_patch_cl.append(extract_single_line(patch_cl, 1))
 
     # Clipp Voronoi diagram
     print("Clipping voronoi diagram")
-    masked_voronoi = MaskVoronoiDiagram(voronoi, carotid_siphon)
+    masked_voronoi = MaskVoronoiDiagram(voronoi, centerline)
     clipped_voronoi = ExtractMaskedVoronoiPoints(voronoi, masked_voronoi)
 
     # Extract voronoi diagram of diverging lines
     clipped_voronoi_div = []
-    for div_line_ends in div_patch_cl:
-        masked_voronoi_div = MaskVoronoiDiagram(voronoi, div_line_ends)
-        clipped_voronoi_div.append(ExtractMaskedVoronoiPoints(voronoi, masked_voronoi_div))
+    if diverging_centerline_ispresent:
+        for div_line_ends in div_patch_cl:
+            masked_voronoi_div = MaskVoronoiDiagram(voronoi, div_line_ends)
+            clipped_voronoi_div.append(ExtractMaskedVoronoiPoints(voronoi, masked_voronoi_div))
 
-    # Smooth Carotid siphon
-    smooth_carotid_siphon = vmtk_centerline_geometry(carotid_siphon, True, True, factor=sf, iterations=it)
+    # Smooth relevant centerline
+    smooth_carotid_siphon = vmtk_centerline_geometry(centerline, True, True,
+                                                     factor=smooth_factor_line, iterations=iterations)
     write_polydata(smooth_carotid_siphon, centerline_smooth_path)
 
     # Get rest of artery
-    locator = get_locator(carotid_siphon)
-    pStart = carotid_siphon.GetPoint(0)
-    pEnd = carotid_siphon.GetPoint(carotid_siphon.GetNumberOfPoints() - 1)
-    clipping_points = [pStart, pEnd]
-    div_points = np.asarray(clipping_points)
-    points = vtk.vtkPoints()
-    for point in div_points:
-        points.InsertNextPoint(point)
-    clip_points = points
+    p_start = centerline.GetPoint(0)
+    p_end = centerline.GetPoint(centerline.GetNumberOfPoints() - 1)
+    region = [p_start, p_end]
+    region = np.asarray(region)
+    region_vtk = vtk.vtkPoints()
+    for point in region:
+        region_vtk.InsertNextPoint(point)
 
-    IDbif = locator.FindClosestPoint(pEnd)
-
-    patch_cl = CreateParentArteryPatches(centerlines_in_order, clip_points, siphon=True)
+    patch_cl = CreateParentArteryPatches(centerlines, region_vtk, siphon=True)
     end_lines = []
     for i in range(patch_cl.GetNumberOfCells()):
         tmp_line = extract_single_line(patch_cl, i)
-        if tmp_line.GetNumberOfPoints() > 50:
+        if tmp_line.GetNumberOfPoints() > 40:
             end_lines.append(tmp_line)
 
     centerlines_end = merge_data(end_lines)
@@ -128,31 +114,34 @@ def curvature_variations(input_filename, smooth, smoothingfactor, iterations, sm
 
     # Update clipped Voronoi diagram
     print("Smooth / sharpen voronoi diagram")
-    moved_clipped_voronoi = make_voronoi_smooth(clipped_voronoi, carotid_siphon, smooth_carotid_siphon, smoothmode)
+    moved_clipped_voronoi = make_voronoi_smooth(clipped_voronoi, centerline, smooth_carotid_siphon, smooth_line)
 
     # Move diverging centerlines
     moved_clipped_voronoi_div = []
     for i, clipped_voronoi_div_i in enumerate(clipped_voronoi_div):
         moved_clipped_voronoi_div.append(make_voronoi_smooth(clipped_voronoi_div_i,
-                                                             carotid_siphon,
+                                                             centerline,
                                                              smooth_carotid_siphon,
-                                                             smoothmode, div=True,
-                                                             div_point=div_points[i]))
+                                                             smooth_line, div=True,
+                                                             div_point=region[i]))
 
     moved_clipped_voronoi_div.append(moved_clipped_voronoi)
     moved_clipped_voronoi_div.append(clipped_voronoi_end)
 
     # Combine Voronoi diagram
-    newVoronoi = merge_data(moved_clipped_voronoi_div)
+    new_voronoi = merge_data(moved_clipped_voronoi_div)
 
     # Create new surface
     print("Create new surface")
-    new_surface = create_new_surface(newVoronoi)
-    # TODO: Add Automated clipping of newmodel
-    new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100)
-    new_surface = check_if_surface_is_merged(new_surface, None,
-                                             model_new_surface_clean, None)
-    write_polydata(new_surface, model_new_surface)
+    new_surface = create_new_surface(new_voronoi, poly_ball_size=poly_ball_size)
+    new_centerlines = old_centerlines = merge_data([centerlines, diverging_centerlines])
+    new_surface = prepare_surface_output(new_surface, surface,
+                                         new_centerlines, output_filepath,
+                                         test_merge=False, changed=True,
+                                         old_centerline=old_centerlines)
+
+    write_polydata(new_centerlines, new_centerlines_path)
+    write_polydata(new_surface, output_filepath)
 
 
 def make_voronoi_smooth(voronoi, old_cl, new_cl, smoothmode, div=False, div_point=None):
@@ -216,43 +205,80 @@ def make_voronoi_smooth(voronoi, old_cl, new_cl, smoothmode, div=False, div_poin
 
 
 def read_command_line():
-    """Read arguments from commandline"""
-    parser = ArgumentParser()
+    """
+    Read arguments from commandline
+    """
+    # Description of the script
+    description = "Manipulates a selected part of a tubular geometry" + \
+                  "by creaing a sharper or smoother version of the input geometry, " + \
+                  "determined by a smoothed version of the centerline representing the selected part."
 
-    parser.add_argument('-d', '--dir_path', type=str, default=".",
-                        help="Path to the folder with all the cases")
-    parser.add_argument('-case', type=str, default=None, help="Choose case")
-    parser.add_argument('-s', '--smooth', type=bool, default=False,
-                        help="If the original voronoi diagram (surface) should be" + \
-                             "smoothed before it is manipulated", metavar="smooth")
-    parser.add_argument("-sf", "--smoothingfactor", type=float, default=1.0,
+    parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
+    required = parser.add_argument_group('required named arguments')
+
+    # Required arguments
+    required.add_argument('-i', '--ifile', type=str, default=None,
+                          help="Path to the surface model", required=True)
+    required.add_argument("-o", "--ofile", type=str, default=None, required=True,
+                          help="Relative path to the output surface. The default folder is" +
+                               " the same as the input file, and a name with a combination of the" +
+                               " parameters.")
+    # Set region of interest:
+    parser.add_argument("-r", "--region-of-interest", type=str, default="manuall",
+                        choices=["manuall", "commandline", "first_line"],
+                        help="The method for defining the region to be changed. There are" +
+                             " three options: 'manuall', 'commandline', 'first_line'. In" +
+                             " 'manuall' the user will be provided with a visualization of the" +
+                             " input surface, and asked to provide an end and start point of the" +
+                             " region of interest. Note that not all algorithms are robust over" +
+                             " bifurcations. If 'commandline' is provided, then '--region-points'" +
+                             " is expected to be provided. Finally, if 'first_line' is" +
+                             " given, the method will chose the first line of the geometry.")
+    parser.add_argument("--region-points", nargs="+", type=float, default=None, metavar="points",
+                        help="If -r or --region-of-interest is 'commandline' then this" +
+                             " argument have to be given. The method expects two points" +
+                             " which defines the start and end of the region of interest. ")
+    # Optional arguments
+
+    parser.add_argument("-n", "--no_smooth", type=bool, default=False,
+                        help="If true and smooth is true the user, if no_smooth_point is" +
+                             " not given, the user can provide points where the surface not will" +
+                             " be smoothed.")
+    parser.add_argument("--no_smooth_point", nargs="+", type=float, default=None,
+                        help="If model is smoothed the user can manually select points on" +
+                             " the surface that will not be smoothed. A centerline will be" +
+                             " created to the extra point, and the section were the centerline" +
+                             " differ from the other centerlines will be keept un-smoothed. This" +
+                             " can be practicle for instance when manipulating geometries" +
+                             " with aneurysms")
+    parser.add_argument("-b", "--poly-ball-size", nargs=3, type=int, default=[120, 120, 120],
+                        help="The size of the poly balls that will envelope the new" +
+                             " surface. The default value is 120, 120, 120. If two tubular" +
+                             " structures are very close compared to the bounds, the poly ball" +
+                             " size should be adjusted", metavar="size")
+    parser.add_argument('-s', '--smooth', type=bool, default=True,
+                        help="Smooth the voronoi diagram, default is True")
+    parser.add_argument('-f', '--smooth_factor', type=float, default=0.25,
+                        help="If smooth option is true then each voronoi point" +
+                             " that has a radius less then MISR*(1-smooth_factor) at" +
+                             " the closest centerline point is removed.")
+    parser.add_argument("-fl", "--smooth_factor_line", type=float, default=1.0,
                         help="Smoothing factor of centerline curve.")
-    parser.add_argument("-sf_voro", "--smoothingfactor_voro", type=float, default=0.25,
-                        help="If smooth option is true then each voronoi point" + \
-                             " that has a radius less then MISR*(1-smooth_factor) at" + \
-                             " the closest centerline point is removes"
-    metavar = "smoothening_factor")
-    parser.add_argument("-sm", "--smoothmode", type=str2bool, default=True,
-                        help="Smoothes centerline if True, anti-smoothes if False", metavar="smoothmode")
     parser.add_argument("-it", "--iterations", type=int, default=100,
                         help="Smoothing iterations of centerline curve.")
-
+    parser.add_argument("-sl", "--smooth_line", type=bool, default=True,
+                        help="Smoothes centerline if True, anti-smoothes if False")
+    parser.add_argument("-rs", "--resampling-step", type=float, default=0.1,
+                        help="Resampling step for centerline resampling.")
     args = parser.parse_args()
 
-    smoothingfactor, iterations, smoothmode, smooth_factor_voro, output_filename
+    return dict(input_filepath=args.ifile, smooth=args.smooth,
+                smooth_factor_voro=args.smooth_factor, smooth_factor_line=args.smooth_factor_line,
+                iterations=args.iterations, smooth_line=args.smooth_line, output_filepath=args.ofile,
+                poly_ball_size=args.poly_ball_size, region_of_interest=args.region_of_interest,
+                region_points=args.region_points, resampling_step=args.resampling_step,
+                no_smooth=args.no_smooth, no_smooth_point=args.no_smooth_point)
 
-
-return dict(input_filepath=args.ifile, smooth=args.smooth,
-            smooth_factor_voro=args.smootheningfactor_voro,
-            smoothmode=args.smoothmode, iterations=args.iterations,
-            output_filename=args.ofile)
 
 if __name__ == "__main__":
-    # smooth, basedir, case, smoothmode, smoothingfactor, iterations, smooth_factor_voro = read_command_line()
     curvature_variations(**read_command_line())
-    # name = "surface"
-    # folders = listdir(basedir) if case is None else [case]
-    # for folder in folders:
-    #    print("==== Working on case %s ====" % folder)
-    #    dirpath = path.join(basedir, folder)
-    #    change_curvature(dirpath, name, smooth, smoothingfactor, iterations, smoothmode, smooth_factor_voro)

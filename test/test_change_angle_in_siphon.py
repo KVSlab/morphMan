@@ -1,48 +1,46 @@
 import pytest
 import sys
 from os import path
+
 rel_path = path.dirname(path.abspath(__file__))
 sys.path.insert(0, path.join(rel_path, '..', 'src'))
 from manipulate_bend import *
 from automated_geometric_quantities import compute_angle
 
+
 @pytest.fixture(scope='module')
 def init_data():
     # Global parameters
-    basedir = "testdata"
-    case = "P0134/surface/model.vtp"
-    point_path = "carotid_siphon_points.particles"
-    dirpath = path.join(basedir, case)
-    name = "surface"
+    base_path = "../testdata/P0134/surface/model.vtp"
+    smooth = True
     smooth_factor = 0.25
-    dic = dict(point_path=point_path, dirpath=dirpath, name=name, smooth=True, smooth_factor=smooth_factor)
-    return dic
+    output_filepath = "../testdata/P0134/surface/model_output.vtp"
+    poly_ball_size = [120, 120, 120]
+    no_smooth = False
+    no_smooth_point = None
+    init_data_dict = dict(base_path=base_path, smooth_factor=smooth_factor, smooth=smooth,
+                          output_filepath=output_filepath, poly_ball_size=poly_ball_size,
+                          no_smooth_point=no_smooth_point, no_smooth=no_smooth)
+    return init_data_dict
 
 
 def test_increase_siphon_angle(init_data):
-    name = init_data['name']
     smooth = init_data['smooth']
-    input_filepath = init_data['dirpath']
-    point_path = init_data['point_path']
+    input_filepath = init_data['base_path']
     smooth_factor = init_data['smooth_factor']
-    no_smooth = False
-    no_smooth_point = None
-    output_filepath = None
+    no_smooth = init_data['no_smooth']
+    no_smooth_point = init_data['no_smooth_point']
+    output_filepath = init_data['output_filepath']
     alpha = 0.0
     beta = 0.4
-    poly_ball_size = [120, 120, 120]
-    method = "plane"
+    poly_ball_size = init_data['poly_ball_size']
 
     move_vessel(input_filepath, smooth, smooth_factor, alpha, beta, output_filepath, poly_ball_size, no_smooth,
                 no_smooth_point)
-    """
-    new_centerlines_path = path.join(input_filepath, name, "new_centerlines_alpha_%s_beta_%s.vtp"
-                                     % (alpha, beta))
 
+    method = "plane"
+    new_centerlines_path = input_filepath[:-4] + "_centerlines_alpha_%s_beta_%s.vtp" % (alpha, beta)
     new_cl = read_polydata(new_centerlines_path)
-    angle_new, angle_original = compute_angle(input_filepath, point_path, name, alpha,
+    angle_new, angle_original = compute_angle(input_filepath, alpha,
                                               beta, method, new_centerline=new_cl)
-    """
-    assert 1 < 2
-    #assert angle_original < angle_new
-
+    assert angle_original < angle_new

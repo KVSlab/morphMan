@@ -1,50 +1,57 @@
-import sys
-import math
-import numpy as np
-from argparse import ArgumentParser
-from os import path, listdir
-from scipy.interpolate import splrep, splev
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from scipy.ndimage.filters import gaussian_filter
+from scipy.signal import argrelextrema
 
 # Local import
 from common import *
+
 
 def read_command_line():
     """
     Read arguments from commandline
     """
+    description = "Perform landmarking of an input centerline to" + \
+                  "identify different segments along the vessel." + \
+                  "Landmarking algorithm based on Bogunevic et al. (2012)."
+
+    parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
+    required = parser.add_argument_group('required named arguments')
+
     parser = ArgumentParser()
+    # Required arguments
+    required.add_argument('-i', '--ifile', type=str, default=None,
+                          help="Path to the surface model", required=True)
 
-    parser.add_argument('-d', '--dir_path', type=str, default=".",
-                        help="Path to the folder with all the cases")
-    parser.add_argument('-c', '--case', type=str, default=None, help="Choose case")
-    parser.add_argument('-cm', '--curv_method', type=str, default="spline",
-            help="Choose which method used for computing curvature: spline (default) | vmtk | disc |")
-
+    # Optinal arguments
+    parser.add_argument('-m', '--curv_method', type=str, default="spline",
+                        help="Choose which method used for computing curvature: spline (default) " +
+                             "| vmtk | disc |")
     parser.add_argument('-a', '--algorithm', type=str, default="bogunovic",
-            help="Choose which landmarking algorithm to use: bogunovic or piccinelli")
-    parser.add_argument('-r', '--resamp_step', type=float, default=None,
-                        help="Choose if the centerline should be resampled with this resampling step")
-    parser.add_argument('-nk', '--nknots', type=int, default=11,
+                        help="Choose which landmarking algorithm to use: " +
+                             "'bogunovic' or 'piccinelli'. Default is 'bogunovic'.")
+    parser.add_argument('-r', '--resampling_length', type=float, default=None,
+                        help="Choose the resampling step when resampling the centerline.")
+    parser.add_argument('-n', '--nknots', type=int, default=11,
                         help="Number of knots used in B-splines.")
-    parser.add_argument('-s', '--smooth', type=bool, default=False,
-                        help="If the original centerline should be smoothed " + \
-                        "when computing the centerline attribiutes", metavar="smooth")
-    parser.add_argument('-facc', '--factor_curvature', type=float, default=1.0,
+    parser.add_argument('-s', '--smooth_line', type=bool, default=False,
+                        help="If the original centerline should be smoothed " +
+                             "when computing the centerline attribiutes", metavar="smooth_line")
+    parser.add_argument('-facc', '--smoothing_factor_curvature', type=float, default=1.0,
                         help="Smoothing factor for computing curvature.")
-    parser.add_argument('-fact', '--factor_torsion', type=float, default=1.0,
+    parser.add_argument('-fact', '--smoothing_factor_torsion', type=float, default=1.0,
                         help="Smoothing factor for computing torsion.")
     parser.add_argument('-it', '--iterations', type=int, default=100,
                         help="Smoothing iterations.")
     args = parser.parse_args()
 
-    return args.dir_path, args.case, args.curv_method, args.resamp_step, args.smooth, \
-           args.algorithm, args.nknots, args.factor_curvature, args.factor_torsion, \
-           args.iterations
+    return dict(input_filepath=args.ifile, curv_method=args.curv_method, resampling_step=args.resampling_step,
+                algorithm=args.algorithm, nknots=args.nknots, smooth_line=args.smooth_line,
+                smoothing_factor_curv=args.smoothing_factor_curvature,
+                smoothing_factor_torsion=args.smoothing_factor_torsion, iterations=args.iterations)
 
 
-def landmarking_bogunovic(centerline, folder, curv_method, algorithm,
-        resamp_step, smooth=False, nknots=25, smoothingfactor=1.0, iterations=100):
+def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
+                          resampling_step, smooth_line, nknots, smoothing_factor, iterations):
     """
     Perform landmarking of an input centerline to
     identify different segments along the vessel.
@@ -54,22 +61,22 @@ def landmarking_bogunovic(centerline, folder, curv_method, algorithm,
 
     Args:
         centerline (vtkPolyData): Centerline data points.
-        folder (str): Location of case to landmark.
+        base_path (str): Location of case to landmark.
         curv_method (str): Method used for computing curvature.
         algorithm (str): Name of landmarking algorithm.
-        resamp_step (float): Resampling step. Is None if no resampling.
+        resampling_step (float): Resampling step. Is None if no resampling.
         smooth (bool): Smoothes centerline with VMTK if True.
         nknots (int): Number of knots for B-splines.
-        smoothingfactor (float): Smoothing factor used in VMTK
+        smoothing_factor (float): Smoothing factor used in VMTK
         iterations (int): Number of smoothing iterations.
     """
 
-    if resamp_step is not None:
-        centerline = vmtk_centerline_resampling(centerline, length=resamp_step)
+    if resampling_step is not None:
+        centerline = vmtk_centerline_resampling(centerline, length=resampling_step)
 
     elif curv_method == "vmtk":
         line = vmtk_centerline_attributes(centerline)
-        line = vmtk_centerline_geometry(line, smooth, factor=smoothingfactor, iterations=iterations)
+        line = vmtk_centerline_geometry(line, smooth_line, factor=smoothing_factor, iterations=iterations)
         curvature_ = get_array("Curvature", line)
         curvature__ = gaussian_filter(curvature_, 5)
         curvature = []
@@ -80,7 +87,7 @@ def landmarking_bogunovic(centerline, folder, curv_method, algorithm,
     elif curv_method == "disc":
         neigh = 20
         line = vmtk_centerline_attributes(centerline)
-        line = vmtk_centerline_geometry(line, smooth, factor=smoothingfactor, iterations=iterations)
+        line = vmtk_centerline_geometry(line, smooth_line, factor=smoothing_factor, iterations=iterations)
         line, curvature__ = discrete_geometry(line, neigh=neigh)
         curvature = []
         for c in curvature__:
@@ -88,7 +95,7 @@ def landmarking_bogunovic(centerline, folder, curv_method, algorithm,
         curvature = np.array(curvature)
 
     elif curv_method == "spline":
-        line, max_point_ids, min_point_ids = spline_and_geometry(centerline, smooth, nknots)
+        line, max_point_ids, min_point_ids = spline_and_geometry(centerline, smooth_line, nknots)
         curvature = get_array("Curvature", line)
 
     if curv_method != "spline":
@@ -153,29 +160,27 @@ def landmarking_bogunovic(centerline, folder, curv_method, algorithm,
         if sucess:
             start = max_point_ids[i]
             stop = max_point_ids[i + 1]
-            b = min_point_ids[i + 1]
             index = ((min_point_ids > start) * (min_point_ids < stop)).nonzero()[0]
             min_point = (min_point_ids[index])
             interfaces[part] = min_point
 
         elif not sucess and part == "sup_ant":
-            print("Where not able to identify the interface between the" + \
+            print("Where not able to identify the interface between the" +
                   "anterior and superior bend. Chekc the coronal coordinates")
             return None
 
         elif not sucess and part != "inf_end":
-            print("The geometry is to short to be classified with superior" + \
-                    ", anterior, posterior and inferior.")
+            print("The geometry is to short to be classified with superior" +
+                  ", anterior, posterior and inferior.")
             return None
 
         elif not sucess and part == "inf_end":
             interfaces["inf_end"] = np.array([0])
             i = 0
-            print("End of inferior is at the end of the geometry, this might" + \
+            print("End of inferior is at the end of the geometry, this might" +
                   "affect the geometry stats")
         else:
             print("Something happend, idea: some bend ended at the last point")
-            print(part, min_point)
             return None
 
         return i
@@ -190,16 +195,13 @@ def landmarking_bogunovic(centerline, folder, curv_method, algorithm,
     start = find_interface(start, -1, tol_post_inf, "post_inf")
     if start is None:
         return None
-    start = find_interface(start, -1, tol_inf_end, "inf_end")
+    find_interface(start, -1, tol_inf_end, "inf_end")
     start = find_interface(index + 1, 1, tol_sup_ant, "sup_ant")
     if start is None:
         return None
 
     # Find a "center" of each bend
     bends = ["inferior", "posterior", "anterior", "superior"]
-    values = [interfaces["inf_end"], interfaces["post_inf"],
-              interfaces["ant_post"], interfaces["sup_ant"],
-              np.array([curvature.shape[0]])]
 
     max_landmarks = {}
     for i in range(len(bends)):
@@ -211,15 +213,15 @@ def landmarking_bogunovic(centerline, folder, curv_method, algorithm,
             landmarks[k] = line.GetPoints().GetPoint(int(v))
 
     # Save landmarks
-    print("Case %s was successfully landmarked." % (folder[-5:]))
+    print("Case %s was successfully landmarked." % (base_path[-5:]))
     if landmarks is not None:
-        write_parameters(landmarks, folder)
-        create_particles(folder, algorithm, curv_method)
+        write_parameters(landmarks, base_path)
+        create_particles(base_path, algorithm, curv_method)
 
 
-def landmarking_piccinelli(centerline, folder, curv_method, algorithm, resamp_step=None,
-                           smooth=False, nknots=None, factor_curv=None, factor_tor=None,
-                           iterations=100):
+def landmarking_piccinelli(centerline, base_path, curv_method, algorithm, resampling_step,
+                           smooth_line, nknots, smoothing_factor_curv, smoothing_factor_torsion,
+                           iterations):
     """
     Perform landmarking of an input centerline to
     identify different segments along the vessel.
@@ -233,23 +235,23 @@ def landmarking_piccinelli(centerline, folder, curv_method, algorithm, resamp_st
 
     Args:
         centerline (vtkPolyData): Centerline data points.
-        folder (str): Location of case to landmark.
+        base_path (str): Location of case to landmark.
         curv_method (str): Method used for computing curvature.
         algorithm (str): Name of landmarking algorithm.
-        resamp_step (float): Resampling step. Is None if no resampling.
-        smooth (bool): Smoothes centerline with VMTK if True.
+        resampling_step (float): Resampling step. Is None if no resampling.
+        smooth_line (bool): Smoothes centerline with VMTK if True.
         nknots (int): Number of knots for B-splines.
-        factor_curv (float): Smoothing factor for computing curvature.
-        factor_torsion (float): Smoothing factor for computing torsion.
+        smoothing_factor_curv (float): Smoothing factor for computing curvature.
+        smoothing_factor_torsion (float): Smoothing factor for computing torsion.
         iterations (int): Number of smoothing iterations.
     """
-    print("Case: %s" % folder.split("/")[-1])
+    print("Case: %s" % base_path.split("/")[-1])
 
-    if resamp_step is not None:
-        centerline = CenterlineResampling(centerline, step)
+    if resampling_step is not None:
+        centerline = vmtk_centerline_resampling(centerline, resampling_step)
 
     if curv_method == "spline":
-        line, max_point_ids, min_point_ids = spline_and_geometry(centerline, smooth, nknots)
+        line, max_point_ids, min_point_ids = spline_and_geometry(centerline, smooth_line, nknots)
 
         # Get curvature and torsion, find peaks
         curvature = get_array("Curvature", line)
@@ -259,10 +261,9 @@ def landmarking_piccinelli(centerline, folder, curv_method, algorithm, resamp_st
 
     elif curv_method == "vmtk":
         line = vmtk_centerline_geometry(centerline, True, outputsmoothed=0,
-                                        factor=factor_curv, iterations=iterations)
+                                        factor=smoothing_factor_curv, iterations=iterations)
         line_tor = vmtk_centerline_geometry(centerline, True, outputsmoothed=0,
-                                            factor=factor_tor, iterations=iterations)
-
+                                            factor=smoothing_factor_torsion, iterations=iterations)
         # Get curvature and torsion, find peaks
         curvature = get_array("Curvature", line)
         torsion = get_array("Torsion", line_tor)
@@ -340,8 +341,8 @@ def landmarking_piccinelli(centerline, folder, curv_method, algorithm, resamp_st
 
     # Save landmarks
     if landmarks is not None:
-        write_parameters(landmarks, folder)
-        create_particles(folder, algorithm, curv_method)
+        write_parameters(landmarks, base_path)
+        create_particles(base_path, algorithm, curv_method)
 
 
 def spline_and_geometry(line, smooth, nknots):
@@ -390,7 +391,6 @@ def spline_and_geometry(line, smooth, nknots):
     # Let vmtk compute curve attributes
     line = vmtk_centerline_attributes(line)
     line = vmtk_centerline_geometry(line, smooth)
-    length = get_curvilinear_coordinate(line)
 
     # Compute curvature from the 'exact' spline to get a robust way of
     # finding max / min points on the centerline
@@ -407,7 +407,7 @@ def spline_and_geometry(line, smooth, nknots):
     C1xC2_3 = ddlsfy * dlsfx - ddlsfx * dlsfy
 
     curvature_ = np.sqrt(C1xC2_1 ** 2 + C1xC2_2 ** 2 + C1xC2_3 ** 2) / \
-                        (dlsfx ** 2 + dlsfy ** 2 + dlsfz ** 2) ** 1.5
+                 (dlsfx ** 2 + dlsfy ** 2 + dlsfz ** 2) ** 1.5
 
     max_point_ids = list(argrelextrema(curvature_, np.greater)[0])
     min_point_ids = list(argrelextrema(curvature_, np.less)[0])
@@ -426,19 +426,18 @@ def spline_and_geometry(line, smooth, nknots):
     curvature = get_array("Curvature", line)
     line = get_k1k2_basis(curvature, line)
 
-    temp_tor = get_array("Torsion", line)
     length = get_curvilinear_coordinate(line)
     dddlsfx = splev(length, fx, der=3)
     dddlsfy = splev(length, fy, der=3)
     dddlsfz = splev(length, fz, der=3)
 
     torsion_spline = (dddlsfx * C1xC2_1 + dddlsfy * C1xC2_2 + dddlsfz * C1xC2_3) / \
-                        (C1xC2_1 ** 2 + C1xC2_2 ** 2 + C1xC2_3 ** 2)
+                     (C1xC2_1 ** 2 + C1xC2_2 ** 2 + C1xC2_3 ** 2)
     torsion_array = create_vtk_array(torsion_spline, "Torsion")
     line.GetPointData().AddArray(torsion_array)
 
     curvature_ = np.sqrt(C1xC2_1 ** 2 + C1xC2_2 ** 2 + C1xC2_3 ** 2) / \
-                        (dlsfx ** 2 + dlsfy ** 2 + dlsfz ** 2) ** 1.5
+                 (dlsfx ** 2 + dlsfy ** 2 + dlsfz ** 2) ** 1.5
     curvature_[0] = curvature[0]
     curvature_[-1] = curvature[-1]
 
@@ -448,24 +447,24 @@ def spline_and_geometry(line, smooth, nknots):
     return line, max_point_ids, min_point_ids
 
 
-def create_particles(folder, algorithm, method):
+def create_particles(base_path, algorithm, method):
     """
     Create a file with points where bends are located and
     remove points from manifest
 
     Args:
-        folder (str): Case location.
+        base_path (str): Case location.
         algorithm (str): Name of landmarking algorithm.
         method (str): Method used for computing curvature.
     """
 
-    manifest = path.join(folder, "info.txt")
-    filename_all = path.join(folder, "landmark_%s_%s.particles" % (algorithm, method))
-    filename_siphon = path.join(folder + "anterior_bend_%s_%s.particles" % (algorithm, method))
+    info_filepath = base_path + "_info.txt"
+    filename_all_landmarks = base_path + "_landmark_%s_%s.particles" % (algorithm, method)
+    filename_bend_landmarks = base_path + "_anterior_bend.particles" % (algorithm, method)
 
-    output_all = open(filename_all, "w")
-    output_siphon = open(filename_siphon, "w")
-    mani = open(manifest, "r")
+    output_all = open(filename_all_landmarks, "w")
+    output_siphon = open(filename_bend_landmarks, "w")
+    mani = open(info_filepath, "r")
     lines = mani.readlines()
     mani.close()
 
@@ -488,39 +487,37 @@ def create_particles(folder, algorithm, method):
     output_siphon.close()
 
 
-def landmark(folder, curv_method, algorithm, resamp_step, nknots, smooth, factor_curv,
-         factor_torsion, iterations):
+def automated_landmarking(input_filepath, curv_method, resampling_step, algorithm, nknots, smooth_line,
+                          smoothing_factor_curv, smoothing_factor_torsion, iterations):
     """
     Compute carotid siphon and perform landmarking.
 
     Args:
-        folder (str): Location of case to landmark.
+        input_filepath (str): Location of case to landmark.
         curv_method (str): Method used for computing curvature.
+        resampling_step (float): Resampling step. Is None if no resampling.
         algorithm (str): Name of landmarking algorithm.
-        resamp_step (float): Resampling step. Is None if no resampling.
         nknots (int): Number of knots for B-splines.
-        smooth (bool): Smoothes centerline with VMTK if True.
-        factor_curv (float): Smoothing factor used in VMTK for curvature
-        factor_torsion (float): Smoothing factor used in VMTK for torsion
+        smooth_line (bool): Smoothes centerline with VMTK if True.
+        smoothing_factor_curv (float): Smoothing factor used in VMTK for curvature
+        smoothing_factor_torsion (float): Smoothing factor used in VMTK for torsion
         iterations (int): Number of smoothing iterations.
     """
-    case = folder.split("/")[-1]
+    base_path = get_path_names(input_filepath)
 
     # Extract carotid siphon
-    line = extract_carotid_siphon(folder)
+    ica_centerline = extract_ica_centerline(base_path, resampling_step)
 
     # Landmark
     if algorithm == "bogunovic":
-        landmarking_bogunovic(line, folder, curv_method, algorithm, resamp_step, smooth,
-                              nknots, factor_curv, iterations)
+        landmarking_bogunovic(ica_centerline, base_path, curv_method, algorithm, resampling_step, smooth_line,
+                              nknots, smoothing_factor_curv, iterations)
     elif algorithm == "piccinelli":
-        landmarking_piccinelli(line, folder, curv_method, algorithm, resamp_step, smooth,
-                               nknots, factor_curv, factor_torsion, iterations)
+        landmarking_piccinelli(ica_centerline, base_path, curv_method, algorithm, resampling_step, smooth_line,
+                               nknots, smoothing_factor_curv, smoothing_factor_torsion, iterations)
     else:
         print("Algorithm is not valid. Select between 'bogunovic' and 'piccinelli'.")
 
 
 if __name__ == '__main__':
-    basedir, case, curv_method, resamp_step, smooth, algorithm, nknots, factor_curv, factor_torsion, iterations = read_command_line()
-    landmark(dirpath, curv_method, algorithm, resamp_step, nknots, smooth,
-             factor_curv, factor_torsion, iterations)
+    automated_landmarking(**read_command_line())

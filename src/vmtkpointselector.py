@@ -1,7 +1,4 @@
 import vtk
-import sys
-from os import path
-from vmtk.vmtkscripts import vmtkRenderer
 from vmtk import vmtkrenderer
 
 # Modified from ...
