@@ -159,6 +159,11 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
         new_surface = create_new_surface(new_voronoi, poly_ball_size=poly_ball_size)
 
     elif alpha != 0.0:
+        # Update the region points
+        locator = get_locator(new_centerlines)
+        region_points[0] = new_centerlines.GetPoint(locator.FindClosestPoint(region_points[0]))
+        region_points[1] = new_centerlines.GetPoint(locator.FindClosestPoint(region_points[1]))
+
         # Vertical movement
         print("Moving geometry vertically")
         new_surface, new_centerlines = move_vessel_vertically(alpha, voronoi_remaining,
