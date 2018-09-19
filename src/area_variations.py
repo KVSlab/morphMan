@@ -80,8 +80,6 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
     print("Cleaning surface for output")
     new_surface = prepare_surface_output(new_surface, surface, centerlines,
                                          output_filepath, test_merge=True)
-
-    print("Write surface to: {}".format(output_filepath))
     write_polydata(new_surface, output_filepath)
 
 
@@ -139,35 +137,9 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
         if ratio is not None:
             # Inital guess
             R_old = area.max() / area.min()
-            beta = 0.5 * math.log(ratio / R_old) / math.log(ratio) + 1
-
-            # Parameters for algorithm
-            R = 1e10
-            a = 0
-            b = 2
-            sign = 0 if ratio > R_old else 1
-            max_iter = 30
-            iter = 0
-
-            # Estimate beta with bisection method
-            while abs(R - ratio) >= 0.001 and iter < max_iter:
-                factor_ = (area / mean) ** (beta - 1)
-                factor = factor_[:, 0] * (1 - trans) + trans
-
-                area_new = (np.sqrt(area[:, 0] / math.pi) * factor) ** 2 * math.pi
-                R = area_new.max() / area_new.min()
-
-                if R < ratio:
-                    a = beta
-                    beta = a + (b - a) / 2.
-                else:
-                    b = beta
-                    beta = a + (b - a) / 2.
-
-                iter += 1
-
-            beta = beta - 1
-
+            beta = (1. / 2) * math.log(ratio) / math.log(R_old) - 0.5
+            factor_ = (area / mean) ** (beta)
+            factor = factor_[:, 0] * (1 - trans) + trans
         else:
             factor_ = ((area / mean) ** beta)[:, 0]
             factor = factor_ * (1 - trans) + trans
@@ -359,8 +331,8 @@ def read_command_line():
     parser.add_argument('--beta', type=float, default=0.5,
                         help="For method=variation: The new voronoi diagram is computed as" + \
                              " (A/A_mean)**beta*r_old, over the respective area. If beta <" + \
-                             " -1 the geometry will have less area variation, and" + \
-                             " if beta > 1, the variations in area will increase")
+                             " 0 the geometry will have less area variation, and" + \
+                             " if beta > 0, the variations in area will increase")
     parser.add_argument("--ratio", type=float, default=None,
                         help="For method=variation: " + \
                              " Target ratio of A_max/A_min, when this is given beta will be ignored" + \
