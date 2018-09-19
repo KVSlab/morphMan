@@ -838,7 +838,7 @@ def clipp_capped_surface(surface, centerlines, clipspheres=0):
     return surface
 
 
-def uncapp_surface(surface):
+def uncapp_surface(surface, gradients_limit=0.15, area_limit=0.3, circleness_limit=3):
     # Add-hoc method for removing capps on surfaces
     # This could proboly be highly improved, but is sufficient for now.
 
@@ -861,8 +861,8 @@ def uncapp_surface(surface):
     gradients_array = get_array_cell("Gradients", gradients, k=9)
     gradients_magnitude = np.sqrt(np.sum(gradients_array ** 2, axis=1))
 
-    # Mark all cells with a gradient magnitude less then 0.1
-    end_capp_array = gradients_magnitude < 0.08
+    # Mark all cells with a gradient magnitude less then gradient_limit
+    end_capp_array = gradients_magnitude < gradients_limit
     end_capp_vtk = get_vtk_array("Gradients_mag", 1, end_capp_array.shape[0])
     for i, p in enumerate(end_capp_array):
         end_capp_vtk.SetTuple(i, [p])
@@ -890,9 +890,9 @@ def uncapp_surface(surface):
         centers_edge.append(center)
         area.append(compute_area(regions[-1]))
 
-    # Only keep outlets with circleness < 3 and area > 0.3 mm^2
-    circleness_IDs = np.where(np.array(circleness) < 3)
-    region_IDs = np.where(np.array(area) > 0.3)
+    # Only keep outlets with circleness < circleness_limit and area > area_limit
+    circleness_IDs = np.where(np.array(circleness) < circleness_limit)
+    region_IDs = np.where(np.array(area) > area_limit)
     regions = [regions[i] for i in region_IDs[0] if i in circleness_IDs[0]]
     centers_edge = [centers_edge[i] for i in region_IDs[0] if i in circleness_IDs[0]]
 
@@ -954,14 +954,14 @@ def capp_surface(surface):
 
 
 def check_if_surface_is_capped(surface):
-    # Get cells which are open
+    # Get boundary cells
     cells = get_feature_edges(surface)
-
-    # Check is the model is closed
     if cells.GetNumberOfCells() == 0:
         return True, 0
     else:
-        return False, cells.GetNumberOfCells()
+        outlets = get_connectivity(cells, mode="All")
+        number = get_array("RegionId", outlets).max()
+        return number == 0, int(number)
 
 
 def get_connectivity(surface, mode="All", closestPoint=None):
@@ -1001,7 +1001,7 @@ def compute_circleness(surface):
     # Compute ratio between max inscribed sphere, and min inscribed "area"
     point_radius = np.sqrt(np.sum((points - center) ** 2, axis=1))
     argsort = np.argsort(point_radius)
-    if point_radius[argsort[1]] / point_radius[argsort[0]] > 15:
+    if point_radius[argsort[1]] / point_radius[argsort[0]] > 5:
         radius_min = point_radius[argsort[1]]
     else:
         radius_min = point_radius.min()
@@ -1825,8 +1825,8 @@ def prepare_surface(base_path, surface_path):
         cap_bool, num_out = check_if_surface_is_capped(open_surface)
         print(("WARNING: Tried to automagically uncapp the input surface. Uncapped {}" +
                " inlet/outlets in total. If this number if incorrect please provide an" +
-               " uncapped surface as input, or use the clipped_capped_surface" +
-               " method or vmtksurfaceendclipper.").format(num_out))
+               " uncapped surface as input, use the clipp_capped_surface" +
+               " method, or vmtksurfaceendclipper.").format(num_out))
         capped_surface = surface
         write_polydata(capped_surface, surface_capped_path)
         write_polydata(open_surface, surface_path)
@@ -2007,7 +2007,7 @@ def attach_clipped_regions(surface, clipped, center):
 
 
 def prepare_surface_output(surface, original_surface, new_centerline, output_filepath,
-                           test_merge=False, changed=True, old_centerline=None):
+                           test_merge=False, changed=False, old_centerline=None):
     # Get planes if outlets of the original surface
     boundary_edges = get_feature_edges(original_surface)
     boundary_connectivity = get_connectivity(boundary_edges)
@@ -2102,7 +2102,6 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
 
         # Reattach data which should not have been clipped
         surface = attach_clipped_regions(surface, clipped, center)
-        write_polydata(surface, "test_clipped_%d.vtp" % i)
         inlet = False
 
     # Perform a 'light' smoothing to obtain a nicer surface
@@ -2117,8 +2116,8 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
     capped_surface = capp_surface(surface)
 
     if test_merge:
-        surface = check_if_surface_is_merged(capped_surface, new_centerline,
-                                             output_filepath)
+        check_if_surface_is_merged(capped_surface, new_centerline, output_filepath)
+
     return surface
 
 
@@ -2161,7 +2160,6 @@ def check_if_surface_is_merged(surface, centerlines, output_filepath):
                                     " Please check the surface model {} and provide other" +
                                     " parameters for the manipulation or" +
                                     " poly_ball_size.").format(tmp_path))
-    return surface
 
 
 def move_perp(n, P, Z, alpha):
@@ -2685,8 +2683,7 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
         if region_of_interest == "manuall":
             stenosis_point_id = vtk.vtkIdList()
             first = True
-            while stenosis_point_id.GetNumberOfIds() != 2 or \
-                   (stenosis_point_id.GetNumberOfIds() != 1 and method == "stenosis"):
+            while stenosis_point_id.GetNumberOfIds() not in [1, 2]:
                 if not first:
                     print("Please provide only one or two points, try again")
 

@@ -437,11 +437,11 @@ def read_command_line():
                         help="If smooth option is true then each voronoi point" +
                              " that has a radius less then MISR*(1-smooth_factor) at" +
                              " the closest centerline point is removed.")
-    parser.add_argument("-n", "--no_smooth", type=bool, default=False,
+    parser.add_argument("-n", "--no-smooth", type=bool, default=False,
                         help="If true and smooth is true the user, if no_smooth_point is" +
                              " not given, the user can provide points where the surface not will" +
                              " be smoothed.")
-    parser.add_argument("--no_smooth_point", nargs="+", type=float, default=None,
+    parser.add_argument("--no-smooth-point", nargs="+", type=float, default=None,
                         help="If model is smoothed the user can manually select points on" +
                              " the surface that will not be smoothed. A centerline will be" +
                              " created to the extra point, and the section were the centerline" +

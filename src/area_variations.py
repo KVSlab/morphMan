@@ -179,7 +179,7 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
 
         elif len(region_points) == 6:
             length = get_curvilinear_coordinate(line_to_change)
-            factor = area[0] + (area[-1] - area[0]) * (length / length.max())
+            factor = (area[0] + (area[-1] - area[0]) * (length / length.max())) / area[: ,0]
             factor = factor * (1- trans) + trans
 
     # Increase or deacrease overall area by a percentage
@@ -225,16 +225,6 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
     tubeFunction.SetInput(line_to_change)
     tubeFunction.SetPolyBallRadiusArrayName("TubeRadius")
 
-    # Make a sphere at the end of the line
-    pointID = line_to_change.GetNumberOfPoints()
-    c1 = line_to_change.GetPoints().GetPoint(pointID - 1)
-    c2 = line_to_change.GetPoints().GetPoint(pointID - 2)
-    r = get_array(radiusArrayName, line_to_change)[-1]
-    t = [c1[i] - c2[i] for i in range(len(c1))]
-    lastSphere = vtk.vtkSphere()
-    lastSphere.SetRadius(r * 1.5)
-    lastSphere.SetCenter(c1)
-
     # Get factor
     factor = get_factor(line_to_change, method, beta, ratio, percentage,
                         region_of_interest, region_points, stenosis_length, surface)
@@ -258,12 +248,9 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
         pointRadius = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
 
         tubeValue = tubeFunction.EvaluateFunction(point)
-        sphereValue = lastSphere.EvaluateFunction(point)
-        voronoiVector = [point[j] - c1[j] for j in range(3)]
-        vectorValue = vtk.vtkMath.Dot(voronoiVector, t)
-
-        if (tubeValue <= 0.0) and not ((sphereValue < 0.0) and (vectorValue < 0.0)):
+        if (tubeValue <= 0.0):
             tmp_ID = locator.FindClosestPoint(point)
+
             v1 = np.asarray(line_to_change.GetPoint(tmp_ID)) - np.asarray(point)
             v2 = v1 * (1 - factor[tmp_ID])
             point = (np.asarray(point) + v2).tolist()
@@ -300,7 +287,6 @@ def read_command_line():
     # Required arguments
     required.add_argument('-i', '--ifile', type=str, default=None, required=True,
                           help="Path to the surface model")
-    # Output filename
     required.add_argument("-o", "--ofile", type=str, default=None, required=True,
                           help="Relative path to the output surface. The default folder is" + \
                                " the same as the input file, and a name with a combination of the" + \
@@ -327,11 +313,11 @@ def read_command_line():
                         help="If smooth option is true then each voronoi point" + \
                              " that has a radius less then MISR*(1-smooth_factor) at" + \
                              " the closest centerline point is removed.")
-    parser.add_argument("-n", "--no_smooth", type=bool, default=False,
-                        help="If true and smooth is true the user, if no_smooth_point is" + \
+    parser.add_argument("-n", "--no-smooth", type=bool, default=False,
+                        help="If true and smooth is true the user, if no-smooth-point is" + \
                              " not given, the user can provide points where the surface not will" + \
                              " be smoothed.")
-    parser.add_argument("--no_smooth_point", nargs="+", type=float, default=None,
+    parser.add_argument("--no-smooth-point", nargs="+", type=float, default=None,
                         help="If model is smoothed the user can manually select points on" + \
                              " the surface that will not be smoothed. A centerline will be" + \
                              " created to the extra point, and the section were the centerline" + \
