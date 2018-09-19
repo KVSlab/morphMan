@@ -266,11 +266,11 @@ def smooth_voronoi_diagram(voronoi, centerlines, smoothing_factor,
         end += end_
 
         # Point buffer start
-        end_id = np.argmin(np.abs(-(length-length.max()) - threshold[end]))
+        end_id = end_ - np.argmin(np.abs(-(length-length.max()) - threshold[end]))
         start_id = np.argmin(np.abs(length - threshold[start]))
 
-        threshold[start:start + end_id] = -1
-        threshold[end - start_id:end] = -1
+        threshold[start:start + start_id] = -1
+        threshold[end - end_id:end] = -1
         start += end_ + 1
         end += 1
 
@@ -1863,12 +1863,12 @@ def prepare_voronoi_diagram(capped_surface, centerlines, base_path,
     """
     # Check if a region should not be smoothed
     if smooth and no_smooth:
-        no_smooth_path = base_path + "centerline_no_smooth.vtp"
+        no_smooth_path = base_path + "_centerline_no_smooth.vtp"
         if not path.exists(no_smooth_path):
             # Get inlet and outlets
             tol = get_tolerance(centerlines)
             inlet = extract_single_line(centerlines, 0)
-            inlet = inlet.GetPoint(inlet.GetNumberOfPoints() - 1)
+            inlet = inlet.GetPoint(0) #inlet.GetNumberOfPoints() - 1)
             outlets = []
             if no_smooth_point is None:
                 seed_selector = vmtkPickPointSeedSelector()
@@ -1900,9 +1900,9 @@ def prepare_voronoi_diagram(capped_surface, centerlines, base_path,
                 for j in range(centerlines.GetNumberOfLines()):
                     div_ids.append(centerline_div(tmp_line, extract_single_line(centerlines, j), tol))
                 div_id = max(div_ids)
-                no_smooth_segments.append(extract_single_line(tmp_line, div_id))
+                no_smooth_segments.append(extract_single_line(tmp_line, 0, startID=div_id))
 
-                no_smooth_cl = merge_data(no_smooth_segments)
+            no_smooth_cl = merge_data(no_smooth_segments)
             write_polydata(no_smooth_cl, no_smooth_path)
         else:
             no_smooth_cl = read_polydata(no_smooth_path)
@@ -2705,7 +2705,8 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
                                          " bend that you want to manipulate, 'u' to undo.\n"
                 seed_selector.Execute()
                 stenosis_point_id = seed_selector.GetTargetSeedIds()
-                first = True
+                first = False
+
             region_points = []
             for i in range(stenosis_point_id.GetNumberOfIds()):
                 region_points += surface.GetPoint(stenosis_point_id.GetId(i))
