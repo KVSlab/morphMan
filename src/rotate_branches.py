@@ -7,7 +7,7 @@ from copy import deepcopy
 from common import *
 
 
-def rotate_branches(input_filepath, smooth, smooth_factor, angle, l1, l2, bif, lower,
+def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angle, l1, l2, bif, lower,
                     cylinder_factor, aneurysm, anu_num, resampling_step, version):
     """
     Objective rotation of daughter branches, by rotating
@@ -43,20 +43,15 @@ def rotate_branches(input_filepath, smooth, smooth_factor, angle, l1, l2, bif, l
 
     # Centerliens
     centerline_par_path = base_path + "_centerline_par.vtp"
-    centerline_aneurysm_path = base_path + "_centerline_aneurysm.vtp"
     centerline_bif_path = base_path + "_centerline_bif.vtp"
-    centerline_complete_path = base_path + "_centerline_complete.vtp"
     centerline_clipped_path = base_path + "_centerline_clipped_ang.vtp"
     centerline_clipped_bif_path = base_path + "_centerline_clipped_bif_ang.vtp"
-    centerline_bif_clipped_path = base_path + "centerline_clipped_bif_ang.vtp"
-    centerline_dau_clipped_path = base_path + "centerline_clipped_dau_ang.vtp"
     centerline_new_path = base_path + "_centerline_interpolated_ang.vtp"
     centerline_new_bif_path = base_path + "_centerline_interpolated_bif_ang.vtp"
     centerline_new_bif_lower_path = base_path + "_centerline_interpolated_bif_lower_ang.vtp"
     centerline_relevant_outlets_path = base_path + "_centerline_relevant_outlets.vtp"
     centerline_rotated_path = base_path + "centerline_rotated_ang.vtp"
     centerline_rotated_bif_path = base_path + "centerline_rotated_bif_ang.vtp"
-    centerline_rotated_dau_path = base_path + "centerline_rotated_dau_ang.vtp"
 
     # Voronoi diagrams
     voronoi_path = base_path + "_voronoi.vtp"
@@ -69,29 +64,13 @@ def rotate_branches(input_filepath, smooth, smooth_factor, angle, l1, l2, bif, l
     points_clipp_path = base_path + "_clippingpoints.vtp"
     points_div_path = base_path + "_divergingpoints.vtp"
 
-    # Naming based on different options
-    if output_filepath is not None:
-        s = "_pi%s" % angle if angle == 0 else "_pi%s" % (math.pi / angle)
-        s += "" if not l1 else "_l1"
-        s += "" if not l2 else "_l2"
-        s += "" if not bif else "_bif"
-        s += "" if not smooth else "_smooth"
-        s += "" if not lower else "_lower"
-        s += "" if cylinder_factor == 7.0 else "_cyl%s" % cylinder_factor
-        output_filepath = base_path + ("_angle" + s + ".vtp")
-
-    # Get aneurysm type
-    parameters = get_parameters(base_path)
-    if "aneurysm_type" in parameters.keys():
-        aneurysm_type = parameters["aneurysm_type"]
-        print("Aneurysm type read from info.txt file: %s" % aneurysm_type)
-
     # Clean and capp / uncapp surface
+    parameters = get_parameters(base_path)
     surface, capped_surface = prepare_surface(surface_path, surface_capped_path, parameters)
 
     # Get aneurysm "end point"
     if aneurysm:
-        aneurysm_point = get_aneurysm_dome(capped_surface, base_path, anu_num)
+        aneurysm_point = get_aneurysm_dome(capped_surface, base_path)
     else:
         aneurysm_point = []
 
@@ -103,21 +82,22 @@ def rotate_branches(input_filepath, smooth, smooth_factor, angle, l1, l2, bif, l
     outlets, outlet1, outlet2 = sort_outlets(outlets, outlet1, outlet2, base_path)
 
     # Compute parent artery and aneurysm centerline
-    centerline_par = compute_centerlines(inlet, outlets,
-                                         centerline_par_path,
-                                         capped_surface, resampling=resampling_step)
-    centerlines_complete = compute_centerlines(inlet, outlets + aneurysm_point,
-                                               centerline_complete_path,
-                                               capped_surface, resampling=resampling_step)
+    centerline_par, voronoi, pole_ids = compute_centerlines(inlet, outlets,
+                                                            centerline_par_path,
+                                                            capped_surface,
+                                                            resampling=resampling_step,
+                                                            base_path=base_path)
 
     # Additional centerline for bifurcation
-    centerline_relevant_outlets = compute_centerlines(inlet, outlet1 + outlet2,
-                                                      centerline_relevant_outlets_path,
-                                                      capped_surface,
-                                                      resampling=resampling_step)
-    centerline_bif = compute_centerlines(outlet1, outlet2,
-                                         centerline_bif_path,
-                                         capped_surface, resampling=resampling_step)
+    centerline_relevant_outlets, _, _ = compute_centerlines(inlet, outlet1 + outlet2,
+                                                            centerline_relevant_outlets_path,
+                                                            capped_surface,
+                                                            resampling=resampling_step,
+                                                            voronoi=voronoi, pole_ids,
+                                                            base_path=base_path)
+    centerline_bif, _, _ = compute_centerlines(outlet1, outlet2, centerline_bif_path,
+                                               capped_surface, resampling=resampling_step,
+                                               voronoi=voronoi, pole_ids_=pole_ids)
 
     # Create a tolerance for diverging
     tolerance = get_tolerance(centerline_par)
@@ -129,32 +109,10 @@ def rotate_branches(input_filepath, smooth, smooth_factor, angle, l1, l2, bif, l
 
     # Compute and smooth voornoi diagram (not aneurysm)
     print("Compute voronoi diagram")
-    voronoi = make_voronoi_diagram(surface, voronoi_path)
-    if not path.exists(voronoi_smoothed_path) and smooth:
-        parameters = get_parameters(base_dir)
-        number_of_aneurysms = len([a for a in parameters.keys() if "aneurysm_" in a])
-        if number_of_aneurysms == 1:
-            voronoi_smoothed = SmoothClippedVoronoiDiagram(voronoi, centerline_par, smooth_factor)
-        else:
-            aneu_centerline = extract_single_line(centerline_complete,
-                                                  centerline_complete.GetNumberOfCells() - 1)
-            div_aneu_id = []
-            for i in range(centerline_complete.GetNumberOfCells() - 1):
-                div_aneu_id.append(centerline_div(aneu_centerline,
-                                                  extract_single_line(centerline_complete, i)))
-            div_aneu_id = max(div_aneu_id)
-            aneu_centerline = extract_single_line(aneu_centerline, start=div_aneu_id)
-            voronoi_smoothed = SmoothClippedVoronoiDiagram(voronoi,
-                                                           centerline_par, smooth_factor,
-                                                           no_smooth=aneu_centerline)
-
-        voronoi_smoothed = remove_extreme_points(voronoi_smoothed, voronoi)
-        write_polydata(voronoi_smoothed, voronoi_smoothed_path)
-
-        surface_smoothed = create_new_surface(voronoi_smoothed)
-        write_polydata(surface_smoothed, surface_smoothed_path)
-
-    voronoi = voronoi if not smooth else read_polydata(voronoi_smoothed_path)
+    if smooth:
+        voronoi = prepare_voronoi_diagram(capped_surface, centerlines, base_path, smooth,
+                                          smooth_factor, no_smooth, no_smooth_point,
+                                          voronoi, pole_ids)
 
     # Locate divpoints and endpoints, for bif or lower, rotated or not
     key = "div_point"
@@ -244,7 +202,7 @@ def rotate_branches(input_filepath, smooth, smooth_factor, angle, l1, l2, bif, l
                                                        end_points_rotated,
                                                        bif_, lower, cylinder_factor)
 
-    write_polydata(interpolated_voronoi, voronoi_ang_path.replace(".vtp", "_remove.vtp"))
+    # Note: This function is slow, and can be commented, but at the cost of robustness.
     interpolated_voronoi = remove_distant_points(interpolated_voronoi, interpolated_cl)
     write_polydata(interpolated_voronoi, voronoi_ang_path)
 
@@ -252,9 +210,10 @@ def rotate_branches(input_filepath, smooth, smooth_factor, angle, l1, l2, bif, l
     print("Create new surface")
     new_surface = create_new_surface(interpolated_voronoi)
 
-    print("Surface saved in: {}".format(output_filepath.split("/")[-1]))
-    # TODO: Add Automated clipping of newmodel
-    new_surface = vmtk_surface_smoother(new_surface, method="laplace", iterations=100)
+    print("Preparing surface for output")
+    new_surface = prepare_surface_output(new_surface, surface, interpolated_cl,
+                                         output_filepath, test_merge=True, changed=True,
+                                         old_centerline=centerline_par)
     write_polydata(new_surface, output_filepath)
 
 
@@ -687,8 +646,6 @@ def read_command_line():
                                                                    "interpolation")
     parser.add_argument("--aneurysm", type=bool, default=False,
                         help="Determines if there is an aneurysm or not")
-    parser.add_argument("--anu_num", type=int, default=0,
-                        help="If multiple aneurysms, choise one")
 
     parser.add_argument("--resampling-step", type=float, default=0.1,
                         help="Resampling step used to resample centerlines")
@@ -700,8 +657,8 @@ def read_command_line():
                 smooth_factor=args.smooth_factor, angle=args.angle,
                 keep_fixed_1=args.keep_fixed_1, keep_fixed_2=args.keep_fixed_2,
                 bif=args.bif, lower=args.lower, cylinder_factor=args.cylinder_factor,
-                aneurysm=args.aneurysm, anu_num=args.anu_num,
-                resampling_step=args.resampling_step, version=args.version)
+                aneurysm=args.aneurysm, resampling_step=args.resampling_step,
+                version=args.version)
 
 
 if __name__ == "__main__":
