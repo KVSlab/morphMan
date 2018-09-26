@@ -2645,14 +2645,14 @@ def find_ophthalmic_artery(centerlines, clip_pts):
         return eye, None, centerlines, None
 
 
-def get_vtk_clipping_points(line, clipping_points):
+def get_vtk_region_points(line, region_points):
     """
     Store clipping points as VTK objects.
     Extract points as tuples and corresponding IDs.
 
     Args:
         line (vtkPolyData): Line representing longest single centerline.
-        clipping_points (ndarray): Array containing two clpping points.
+        region_points (ndarray): Array containing two clpping points.
 
     Returns:
         p1 (tuple): First clipping point.
@@ -2660,17 +2660,17 @@ def get_vtk_clipping_points(line, clipping_points):
         ID1 (long): ID of first clipping point.
         ID2 (long): ID of second clipping point.
         clip_points (vtkPoints): VTK objects containing the clipping points.
-        clipping_points (ndarray): Array containing two clipping points.
+        region_points (ndarray): Array containing two clipping points.
     """
     locator = get_locator(line)
-    ID1 = locator.FindClosestPoint(clipping_points[0])
-    ID2 = locator.FindClosestPoint(clipping_points[1])
+    ID1 = locator.FindClosestPoint(region_points[0])
+    ID2 = locator.FindClosestPoint(region_points[1])
     if ID1 > ID2:
-        clipping_points = clipping_points[::-1]
+        region_points = region_points[::-1]
         ID1, ID2 = ID2, ID1
 
     # Set clipping points
-    div_points = np.asarray(clipping_points)
+    div_points = np.asarray(region_points)
     points = vtk.vtkPoints()
     for point in div_points:
         points.InsertNextPoint(point)
@@ -2679,7 +2679,7 @@ def get_vtk_clipping_points(line, clipping_points):
     p1 = clip_points.GetPoint(0)
     p2 = clip_points.GetPoint(1)
 
-    return p1, p2, ID1, ID2, clip_points, clipping_points
+    return p1, p2, ID1, ID2, clip_points, region_points
 
 
 def get_line_to_change(surface, centerline, region_of_interest, method, region_points,
@@ -2690,9 +2690,12 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
     area variations will be performed.
 
     Args:
+        surface (vtkPolyData): Surface model.
         centerline (vtkPolyData): Centerline in geometry.
         region_of_interest (str): Method for setting the region of interest ['manuall' | 'commandline' | 'first_line']
+        method (str): Determines which kind of manipulation is performed.
         region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint.
+        stenosis_length (float): Multiplier used to determine the length of the stenosis-affected area.
 
     Returns:
         line_to_change (vtkPolyData): Part of centerline.
@@ -2727,7 +2730,7 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
     elif region_of_interest == "commandline" or region_of_interest == "manuall":
         # Get points from the user
         if region_of_interest == "manuall":
-            print("Please select region of interest the render window.")
+            print("\nPlease select region of interest in the render window.")
             stenosis_point_id = vtk.vtkIdList()
             first = True
             while stenosis_point_id.GetNumberOfIds() not in [1, 2]:
@@ -2826,11 +2829,24 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
     return line_to_change, region_points
 
 
-def find_region_of_interest_and_diverging_centerlines(centerlines_complete, clipping_points):
+def find_region_of_interest_and_diverging_centerlines(centerlines_complete, region_points):
+    """
+
+    Args:
+        centerlines_complete (vktPolyData): Complete set of centerlines in geometry.
+        region_points (ndarray): Two points determining the region of interest.
+
+    Returns:
+        centerlines (vtkPolyData): Centerlines excluding divering lines.
+        diverging_centerlines (vtkPolyData): Centerlines diverging from the region of interest.
+        region_points (ndarray): Sorted region points.
+        region_points_vtk (vtkPoints): Sorted region points as vtkData.
+        diverging_ids (list): List of indices where a diverging centerline starts.
+    """
     centerlines = []
     diverging_centerlines = []
-    p1 = clipping_points[0]
-    p2 = clipping_points[1]
+    p1 = region_points[0]
+    p2 = region_points[1]
 
     # Search for divering centerlines
     tol = get_tolerance(centerlines_complete) * 4
@@ -2849,15 +2865,15 @@ def find_region_of_interest_and_diverging_centerlines(centerlines_complete, clip
     # Sort and set clipping points to vtk object
     centerline = centerlines[0]
     locator = get_locator(centerline)
-    id1 = locator.FindClosestPoint(clipping_points[0])
-    id2 = locator.FindClosestPoint(clipping_points[1])
+    id1 = locator.FindClosestPoint(region_points[0])
+    id2 = locator.FindClosestPoint(region_points[1])
     if id1 > id2:
-        clipping_points = clipping_points[::-1]
+        region_points = region_points[::-1]
         id1, id2 = id2, id1
 
-    clipping_points_vtk = vtk.vtkPoints()
-    for point in np.asarray(clipping_points):
-        clipping_points_vtk.InsertNextPoint(point)
+    region_points_vtk = vtk.vtkPoints()
+    for point in np.asarray(region_points):
+        region_points_vtk.InsertNextPoint(point)
 
     # Find diverging point(s)
     diverging_ids = []
@@ -2872,11 +2888,24 @@ def find_region_of_interest_and_diverging_centerlines(centerlines_complete, clip
 
     centerlines = merge_data(centerlines)
     diverging_centerlines = merge_data(diverging_centerlines) if len(diverging_centerlines) > 0 else None
-
-    return centerlines, diverging_centerlines, clipping_points, clipping_points_vtk, diverging_ids
+    return centerlines, diverging_centerlines, region_points, region_points_vtk, diverging_ids
 
 
 def move_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_centerlines, direction):
+    """
+
+    Args:
+        patch_cl (vtkPolyData): Centerlines excluding diverging centerlines.
+        dx (ndarray): Direction to move geometry.
+        p1 (vtkPolyData): First region point.
+        p2: (vtkPolyData): Second region point.
+        diverging_id (list): List of index where centerlines diverge from region of interest.
+        diverging_centerlines (vtkPolyData): Centerlines which diverge from region of interest.
+        direction (str): Manipulation direction parameter.
+
+    Returns:
+        centerline (vtkPolyData): Manipulated centerline.
+    """
     if diverging_id is not None:
         patch_cl = merge_data([patch_cl, diverging_centerlines])
 
@@ -2919,9 +2948,6 @@ def move_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_centerlines, 
                     dist = -dx * (cl_id - idmid) ** 0.5 / (id2 - idmid) ** 0.5
                 else:
                     if diverging_id is not None and i == (numberOfCells - 1):
-                        # pp = line_non_diverging.GetPoint(cl_id)
-                        # id_main = locator.FindClosestPoint(pp)
-                        id_main = diverging_id
                         dist = -dx * (diverging_id - idmid) ** 0.5 / (diverging_id - idmid) ** 0.5
                     else:
                         dist = -dx
@@ -2930,7 +2956,6 @@ def move_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_centerlines, 
                 if id1 <= cl_id <= id2:
                     dist = 4 * dx * (cl_id - id1) * (id2 - cl_id) / (id2 - id1) ** 2
                 elif diverging_id is not None and i == (numberOfCells - 1) and cl_id > id2:
-                    # cl_id = diverging_id - id1 + int((id2 - (diverging_id - id1)) * 0.4)
                     cl_id = diverging_id
                     dist = 4 * dx * (cl_id - id1) * (id2 - cl_id) / (id2 - id1) ** 2
                 else:

@@ -6,39 +6,9 @@ import numpy.linalg as la
 from common import get_path_names
 
 
-def read_command_line():
-    """
-    Read arguments from commandline
-    """
-    description = "Algorithm used to compute the recommended value for " + \
-                  "alpha and beta based on surface interpolation and a " + \
-                  "given limit, depening on the quantity to be computed. " + \
-                  "Primarly implemented for computing angle and curvature values."
-
-    parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
-    required = parser.add_argument_group('required named arguments')
-
-    # Required arguments
-    required.add_argument('-i', '--ifile', type=str, default=None,
-                          help="Path to the surface model", required=True)
-    required.add_argument("-q", "--quantity", type=str, default="curvature",
-                          help="Parameter to compute. Choose between 'curvature' and 'angle'", required=True)
-    # Optional arguments
-    parser.add_argument('-r', '--radius', type=float, default=0.15,
-                        help="Radius of bounding circle, limiting the choice of alpha and beta")
-    parser.add_argument('-b', '--boundary', nargs='+', default=[-0.2, 1, -0.2, 1],
-                        help='Bounds of grid, as a list: [alpha_min, alpha_max, beta_min, beta_max]')
-    parser.add_argument('-l', '--limit', type=float, default=0.4,
-                        help='Desired change in curvature / bend angle to achieve. Algorithm computes' +
-                             'recommended values of alpha and beta for both plus and minus this change.')
-
-    args = parser.parse_args()
-
-    return dict(input_filepath=args.ifile, quantity_to_compute=args.quantity,
-                radius=args.radius, boundary=args.boundary, limit=args.limit)
 
 
-def get_alpha_beta(base_path, quantity_to_compute, boundary, radius, limit):
+def get_alpha_beta(input_filepath, quantity_to_compute, boundary, radius, limit):
     """
     Imports a matrix of parameter values corresponding
     to a (alpha,beta) point and perform spline interpolation
@@ -48,17 +18,17 @@ def get_alpha_beta(base_path, quantity_to_compute, boundary, radius, limit):
     Three criterias to find suggested alpha-beta value from intersection.
 
     Args:
-        base_path (str): Location where parameter value data is stored.
+        input_filepath (str): Surface model filename and location where data is stored.
         quantity_to_compute(str): Parameter name.
         boundary (list): Boundary of searching grid.
         radius (float): Minimum radius of circle to search outside of.
         limit (float): Desired change in curvature / bend angle to achieve
     """
-    # Get boundaries
-    amin, amax, bmin, bmax = float(boundary[0]), float(boundary[1]), float(boundary[2]), float(boundary[3])
 
     # Get grid values
+    base_path = get_path_names(input_filepath)
     grid_filepath = base_path + "_grid_values.txt"
+    amin, amax, bmin, bmax = float(boundary[0]), float(boundary[1]), float(boundary[2]), float(boundary[3])
 
     # Set standard deviations used to find intersetcion
     if quantity_to_compute == "curvature":
@@ -208,22 +178,38 @@ def alpha_beta_intersection(method, f, alphas, betas, tol=0.0):
     return zeros
 
 
-def calculate_alpha_beta_values(input_filepath, quantity_to_compute, boundary, radius, limit):
-    """
-    Get files containing parameter values
-    and find suggested choice for alpha and beta,
-    the compression / extension factors.
 
-    Args:
-        input_filepath (str): Location of parameter text.
-        quantity_to_compute (str): Parameter to calculate.
-        boundary (list): Boundary of alpha-beta grid.
-        radius (float): Radius of bounding circle, limiting the choice of alpha and beta.
+def read_command_line():
     """
+    Read arguments from commandline
+    """
+    description = "Algorithm used to compute the recommended value for " + \
+                  "alpha and beta based on surface interpolation and a " + \
+                  "given limit, depening on the quantity to be computed. " + \
+                  "Primarly implemented for computing angle and curvature values."
 
-    base_path = get_path_names(input_filepath)
-    get_alpha_beta(base_path, quantity_to_compute, boundary, radius, limit)
+    parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
+    required = parser.add_argument_group('required named arguments')
+
+    # Required arguments
+    required.add_argument('-i', '--ifile', type=str, default=None,
+                          help="Path to the surface model", required=True)
+    required.add_argument("-q", "--quantity", type=str, default="curvature",
+                          help="Parameter to compute. Choose between 'curvature' and 'angle'", required=True)
+    # Optional arguments
+    parser.add_argument('-r', '--radius', type=float, default=0.15,
+                        help="Radius of bounding circle, limiting the choice of alpha and beta")
+    parser.add_argument('-b', '--boundary', nargs='+', default=[-0.2, 1, -0.2, 1],
+                        help='Bounds of grid, as a list: [alpha_min, alpha_max, beta_min, beta_max]')
+    parser.add_argument('-l', '--limit', type=float, default=0.4,
+                        help='Desired change in curvature / bend angle to achieve. Algorithm computes' +
+                             'recommended values of alpha and beta for both plus and minus this change.')
+
+    args = parser.parse_args()
+
+    return dict(input_filepath=args.ifile, quantity_to_compute=args.quantity,
+                radius=args.radius, boundary=args.boundary, limit=args.limit)
 
 
 if __name__ == "__main__":
-    calculate_alpha_beta_values(**read_command_line())
+    get_alpha_beta(**read_command_line())

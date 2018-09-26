@@ -16,7 +16,6 @@ def read_command_line():
     # Required arguments
     required.add_argument('-i', '--ifile', type=str, required=True,
                           help="Path to the folder with all the cases")
-
     # Optional arguments
     parser.add_argument('-c', '--case', type=str, default=None, help="Choose case")
     parser.add_argument('-k', '--curvature', type=bool, default=False,

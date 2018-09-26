@@ -6,48 +6,36 @@ from scipy.signal import argrelextrema
 from common import *
 
 
-def read_command_line():
+def automated_landmarking(input_filepath, curv_method, resampling_step, algorithm, nknots, smooth_line,
+                          smoothing_factor_curv, smoothing_factor_torsion, iterations):
     """
-    Read arguments from commandline
+    Compute carotid siphon and perform landmarking.
+
+    Args:
+        input_filepath (str): Location of case to landmark.
+        curv_method (str): Method used for computing curvature.
+        resampling_step (float): Resampling step. Is None if no resampling.
+        algorithm (str): Name of landmarking algorithm.
+        nknots (int): Number of knots for B-splines.
+        smooth_line (bool): Smoothes centerline with VMTK if True.
+        smoothing_factor_curv (float): Smoothing factor used in VMTK for curvature
+        smoothing_factor_torsion (float): Smoothing factor used in VMTK for torsion
+        iterations (int): Number of smoothing iterations.
     """
-    description = "Perform landmarking of an input centerline to" + \
-                  "identify different segments along the vessel." + \
-                  "Landmarking algorithm based on Bogunevic et al. (2012)."
+    base_path = get_path_names(input_filepath)
 
-    parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
-    required = parser.add_argument_group('required named arguments')
+    # Extract carotid siphon
+    ica_centerline = extract_ica_centerline(base_path, resampling_step)
 
-    parser = ArgumentParser()
-    # Required arguments
-    required.add_argument('-i', '--ifile', type=str, default=None,
-                          help="Path to the surface model", required=True)
-
-    # Optinal arguments
-    parser.add_argument('-m', '--curv_method', type=str, default="spline",
-                        help="Choose which method used for computing curvature: spline (default) " +
-                             "| vmtk | disc |")
-    parser.add_argument('-a', '--algorithm', type=str, default="bogunovic",
-                        help="Choose which landmarking algorithm to use: " +
-                             "'bogunovic' or 'piccinelli'. Default is 'bogunovic'.")
-    parser.add_argument('-r', '--resampling_length', type=float, default=None,
-                        help="Choose the resampling step when resampling the centerline.")
-    parser.add_argument('-n', '--nknots', type=int, default=11,
-                        help="Number of knots used in B-splines.")
-    parser.add_argument('-s', '--smooth_line', type=bool, default=False,
-                        help="If the original centerline should be smoothed " +
-                             "when computing the centerline attribiutes", metavar="smooth_line")
-    parser.add_argument('-facc', '--smoothing_factor_curvature', type=float, default=1.0,
-                        help="Smoothing factor for computing curvature.")
-    parser.add_argument('-fact', '--smoothing_factor_torsion', type=float, default=1.0,
-                        help="Smoothing factor for computing torsion.")
-    parser.add_argument('-it', '--iterations', type=int, default=100,
-                        help="Smoothing iterations.")
-    args = parser.parse_args()
-
-    return dict(input_filepath=args.ifile, curv_method=args.curv_method, resampling_step=args.resampling_step,
-                algorithm=args.algorithm, nknots=args.nknots, smooth_line=args.smooth_line,
-                smoothing_factor_curv=args.smoothing_factor_curvature,
-                smoothing_factor_torsion=args.smoothing_factor_torsion, iterations=args.iterations)
+    # Landmark
+    if algorithm == "bogunovic":
+        landmarking_bogunovic(ica_centerline, base_path, curv_method, algorithm, resampling_step, smooth_line,
+                              nknots, smoothing_factor_curv, iterations)
+    elif algorithm == "piccinelli":
+        landmarking_piccinelli(ica_centerline, base_path, curv_method, algorithm, resampling_step, smooth_line,
+                               nknots, smoothing_factor_curv, smoothing_factor_torsion, iterations)
+    else:
+        print("Algorithm is not valid. Select between 'bogunovic' and 'piccinelli'.")
 
 
 def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
@@ -65,7 +53,7 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
         curv_method (str): Method used for computing curvature.
         algorithm (str): Name of landmarking algorithm.
         resampling_step (float): Resampling step. Is None if no resampling.
-        smooth (bool): Smoothes centerline with VMTK if True.
+        smooth_line (bool): Smoothes centerline with VMTK if True.
         nknots (int): Number of knots for B-splines.
         smoothing_factor (float): Smoothing factor used in VMTK
         iterations (int): Number of smoothing iterations.
@@ -363,11 +351,10 @@ def spline_and_geometry(line, smooth, nknots):
         min_point_ids (ndarray): Array of min curvature values
     """
     data = np.zeros((line.GetNumberOfPoints(), 3))
+    curv_coor = get_curvilinear_coordinate(line)
 
     # Collect data from centerline
     for i in range(data.shape[0]):
-        curv_coor = get_curvilinear_coordinate(line)
-
         data[i, :] = line.GetPoints().GetPoint(i)
 
     t = np.linspace(curv_coor[0], curv_coor[-1], nknots + 2)[1:-1]
@@ -460,7 +447,7 @@ def create_particles(base_path, algorithm, method):
 
     info_filepath = base_path + "_info.txt"
     filename_all_landmarks = base_path + "_landmark_%s_%s.particles" % (algorithm, method)
-    filename_bend_landmarks = base_path + "_anterior_bend.particles" % (algorithm, method)
+    filename_bend_landmarks = base_path + "_anterior_bend.particles"
 
     output_all = open(filename_all_landmarks, "w")
     output_siphon = open(filename_bend_landmarks, "w")
@@ -487,36 +474,48 @@ def create_particles(base_path, algorithm, method):
     output_siphon.close()
 
 
-def automated_landmarking(input_filepath, curv_method, resampling_step, algorithm, nknots, smooth_line,
-                          smoothing_factor_curv, smoothing_factor_torsion, iterations):
+def read_command_line():
     """
-    Compute carotid siphon and perform landmarking.
-
-    Args:
-        input_filepath (str): Location of case to landmark.
-        curv_method (str): Method used for computing curvature.
-        resampling_step (float): Resampling step. Is None if no resampling.
-        algorithm (str): Name of landmarking algorithm.
-        nknots (int): Number of knots for B-splines.
-        smooth_line (bool): Smoothes centerline with VMTK if True.
-        smoothing_factor_curv (float): Smoothing factor used in VMTK for curvature
-        smoothing_factor_torsion (float): Smoothing factor used in VMTK for torsion
-        iterations (int): Number of smoothing iterations.
+    Read arguments from commandline
     """
-    base_path = get_path_names(input_filepath)
+    description = "Perform landmarking of an input centerline to" + \
+                  "identify different segments along the vessel." + \
+                  "Landmarking algorithm based on Bogunevic et al. (2012)."
 
-    # Extract carotid siphon
-    ica_centerline = extract_ica_centerline(base_path, resampling_step)
+    parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
+    required = parser.add_argument_group('required named arguments')
 
-    # Landmark
-    if algorithm == "bogunovic":
-        landmarking_bogunovic(ica_centerline, base_path, curv_method, algorithm, resampling_step, smooth_line,
-                              nknots, smoothing_factor_curv, iterations)
-    elif algorithm == "piccinelli":
-        landmarking_piccinelli(ica_centerline, base_path, curv_method, algorithm, resampling_step, smooth_line,
-                               nknots, smoothing_factor_curv, smoothing_factor_torsion, iterations)
-    else:
-        print("Algorithm is not valid. Select between 'bogunovic' and 'piccinelli'.")
+    parser = ArgumentParser()
+    # Required arguments
+    required.add_argument('-i', '--ifile', type=str, default=None,
+                          help="Path to the surface model", required=True)
+
+    # Optinal arguments
+    parser.add_argument('-m', '--curv_method', type=str, default="spline",
+                        help="Choose which method used for computing curvature: spline (default) " +
+                             "| vmtk | disc |")
+    parser.add_argument('-a', '--algorithm', type=str, default="bogunovic",
+                        help="Choose which landmarking algorithm to use: " +
+                             "'bogunovic' or 'piccinelli'. Default is 'bogunovic'.")
+    parser.add_argument('-r', '--resampling_length', type=float, default=None,
+                        help="Choose the resampling step when resampling the centerline.")
+    parser.add_argument('-n', '--nknots', type=int, default=11,
+                        help="Number of knots used in B-splines.")
+    parser.add_argument('-s', '--smooth_line', type=bool, default=False,
+                        help="If the original centerline should be smoothed " +
+                             "when computing the centerline attribiutes", metavar="smooth_line")
+    parser.add_argument('-facc', '--smoothing_factor_curvature', type=float, default=1.0,
+                        help="Smoothing factor for computing curvature.")
+    parser.add_argument('-fact', '--smoothing_factor_torsion', type=float, default=1.0,
+                        help="Smoothing factor for computing torsion.")
+    parser.add_argument('-it', '--iterations', type=int, default=100,
+                        help="Smoothing iterations.")
+    args = parser.parse_args()
+
+    return dict(input_filepath=args.ifile, curv_method=args.curv_method, resampling_step=args.resampling_step,
+                algorithm=args.algorithm, nknots=args.nknots, smooth_line=args.smooth_line,
+                smoothing_factor_curv=args.smoothing_factor_curvature,
+                smoothing_factor_torsion=args.smoothing_factor_torsion, iterations=args.iterations)
 
 
 if __name__ == '__main__':

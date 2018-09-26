@@ -5,7 +5,7 @@ from common import *
 
 
 def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_of_interest, region_points,
-                alpha, beta, poly_ball_size, no_smooth, no_smooth_point):
+                alpha, beta, poly_ball_size, no_smooth, no_smooth_point, resampling_step):
     """
     Primary script for moving a selected part of any blood vessel.
     Relies on an input centerline, a surface geometry of a 3D blood vessel network,
@@ -33,19 +33,20 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
         poly_ball_size (list): Resolution of polyballs used to create surface.
         no_smooth (bool): True of part of the model is not to be smoothed.
         no_smooth_point (ndarray): Point which is untouched by smoothing.
+        resampling_step (float): Resampling length when resampling centerline.
     """
 
     # Input filenames
     base_path = get_path_names(input_filepath)
 
-    # Centerlines
+    # Centerlines filenames
     centerline_clipped_path = base_path + "_centerline_clipped.vtp"
     centerline_clipped_part_path = base_path + "_centerline_clipped_part.vtp"
     new_centerlines_path = base_path + "_centerlines_alpha_%s_beta_%s.vtp" % (alpha, beta)
     new_centerlines_path_tmp = base_path + "_new_centerlines_alpha_%s_beta_%s_tmp.vtp" % (alpha, beta)
     centerlines_path = base_path + "_centerline.vtp"
 
-    # Voronoi diagrams
+    # Voronoi diagrams filenames
     voronoi_remaining_path = base_path + "_voronoi_remaining.vtp"
     voronoi_bend_path = base_path + "_voronoi_bend.vtp"
 
@@ -60,7 +61,7 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
 
     print("Compute centerlines and Voronoi diagram")
     centerlines, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path,
-                                                         capped_surface, resampling=0.1,
+                                                         capped_surface, resampling=resampling_step,
                                                          smooth=False, base_path=base_path)
     if smooth:
         voronoi = prepare_voronoi_diagram(capped_surface, centerlines, base_path,
@@ -434,6 +435,8 @@ def read_command_line():
     # Optional arguments
     parser.add_argument('-s', '--smooth', type=bool, default=True,
                         help="Smooth the voronoi diagram, default is True")
+    parser.add_argument("-rs", "--resampling-step", type=float, default=0.1,
+                        help="Resampling step for centerline resampling.")
     parser.add_argument('-f', '--smooth_factor', type=float, default=0.25,
                         help="If smooth option is true then each voronoi point" +
                              " that has a radius less then MISR*(1-smooth_factor) at" +
@@ -495,7 +498,8 @@ def read_command_line():
                 smooth_factor=args.smooth_factor, alpha=args.alpha, beta=args.beta,
                 output_filepath=args.ofile, poly_ball_size=args.poly_ball_size,
                 no_smooth=args.no_smooth, no_smooth_point=args.no_smooth_point,
-                region_of_interest=args.region_of_interest, region_points=args.region_points)
+                region_of_interest=args.region_of_interest, region_points=args.region_points,
+                resampling_step=args.resampling_step)
 
 
 if __name__ == "__main__":
