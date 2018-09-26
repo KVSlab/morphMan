@@ -1,80 +1,99 @@
-import sys; sys.path.insert(0, '../src/')
+import pytest
+from manipulate_bend import *
+from automated_geometric_quantities import compute_curvature
 
-from move_siphon import *
-from automated_geometric_quantities import compute_angle
-from IPython import embed
-
-# Global parameters
-smooth = True
-basedir = "testdata"
-case = "P0134"
-name = "surface"
-point_path = "carotid_siphon_points.particles"
-dirpath = path.join(basedir, case)
-clipping_points = get_clipping_points(dirpath, point_path)
-smooth_factor = 0.25
-
-# Old centerline
-old_centerlines_path = path.join(dirpath, name, "centerline_complete.vtp")
-old_cl = read_polydata(old_centerlines_path)
-old_longest = extract_single_line(sort_centerlines(old_cl),0)
-old_longest = vmtk_centerline_resampling(old_longest, 0.1)
-_, old_curv = discrete_geometry(old_longest, neigh=20)
-old_locator = get_locator(old_longest)
-ID1, ID2 = old_locator.FindClosestPoint(clipping_points[0]), old_locator.FindClosestPoint(clipping_points[1])
-if ID1 > ID2: ID1, ID2 = ID2, ID1
-curvature_original = max(old_curv[ID1:ID2])
+relative_path = path.dirname(path.abspath(__file__))
+sys.path.insert(0, path.join(relative_path, '..', 'src'))
 
 
-def test_increase_curvature():
-    alpha = 0.4
-    beta = -0.1
-    move_vessel(dirpath, smooth, name, point_path, alpha, beta)
+@pytest.fixture(scope='module')
+def init_data():
+    # Global parameters
+    input_filepath = "./testdata/P0134/surface/model.vtp"
+    ofile = "./testdata/P0134/surface/model_output.vtp"
+    region_of_interest = "landmarking"
+    region_points = None
+    resampling_step = 0.1
+    smooth = True
+    smooth_factor = 0.25
+    poly_ball_size = [120, 120, 120]
+    no_smooth = False
+    no_smooth_point = None
+    return dict(input_filepath=input_filepath, smooth=smooth,
+                smooth_factor=smooth_factor,
+                output_filepath=ofile, poly_ball_size=poly_ball_size,
+                no_smooth=no_smooth, no_smooth_point=no_smooth_point,
+                region_of_interest=region_of_interest, region_points=region_points,
+                resampling_step=resampling_step)
 
-    # Import centerlines
-    new_centerlines_path = path.join(dirpath, name, "new_centerlines_alpha_%s_beta_%s.vtp"
-                                     % (alpha, beta))
-    new_cl = read_polydata(new_centerlines_path)
-    new_longest = extract_single_line(sort_centerlines(new_cl),0)
-    new_longest = vmtk_centerline_resampling(new_longest, 0.1)
+
+def test_decrease_siphon_curvature_alpha(init_data):
+    alpha, beta = -0.1, 0.0
+    init_data["alpha"] = alpha
+    init_data["beta"] = beta
+    input_filepath = init_data["input_filepath"]
+
+    # Perform manipulation
+    move_vessel(**init_data)
 
     # Compute curvature
-    _, new_curv = discrete_geometry(new_longest, neigh=20)
+    method = "disc"
+    new_centerlines_path = input_filepath[:-4] + "_centerlines_alpha_%s_beta_%s.vtp" % (alpha, beta)
+    new_centerlines = read_polydata(new_centerlines_path)
 
-    # Select area based on clipping points
-    new_locator = get_locator(new_longest)
-
-    IDA, IDB = new_locator.FindClosestPoint(clipping_points[0]), new_locator.FindClosestPoint(clipping_points[1])
-    if IDA > IDB: IDA, IDB = IDB, IDA
-
-    # Compare
-    curvature_new = max(new_curv[IDA:IDB])
-    assert curvature_original < curvature_new
+    old_maxcurv, new_maxcurv = compute_curvature(input_filepath, alpha, beta, method, new_centerlines=new_centerlines)
+    assert old_maxcurv < new_maxcurv
 
 
-def test_decrease_curvature():
-    alpha = -0.1
-    beta = 0.4
-    move_vessel(dirpath, smooth, name, point_path, alpha, beta)
+def test_increase_siphon_curvature_alpha(init_data):
+    alpha, beta = 0.4, 0.0
+    init_data["alpha"] = alpha
+    init_data["beta"] = beta
+    input_filepath = init_data["input_filepath"]
 
-    # Import centerlines
-    new_centerlines_path = path.join(dirpath, name, "new_centerlines_alpha_%s_beta_%s.vtp"
-                                     % (alpha, beta))
-    new_cl = read_polydata(new_centerlines_path)
-    new_longest = extract_single_line(sort_centerlines(new_cl),0)
-    new_longest = vmtk_centerline_resampling(new_longest, 0.1)
+    # Perform manipulation
+    move_vessel(**init_data)
 
     # Compute curvature
-    _, new_curv = discrete_geometry(new_longest, neigh=20)
+    method = "disc"
+    new_centerlines_path = input_filepath[:-4] + "_centerlines_alpha_%s_beta_%s.vtp" % (alpha, beta)
+    new_centerlines = read_polydata(new_centerlines_path)
 
-    # Select area based on clipping points
-    clipping_points = get_clipping_points(dirpath, point_path)
-    new_locator = get_locator(new_longest)
+    old_maxcurv, new_maxcurv = compute_curvature(input_filepath, alpha, beta, method, new_centerlines=new_centerlines)
+    assert old_maxcurv < new_maxcurv
 
-    IDA, IDB = new_locator.FindClosestPoint(clipping_points[0]), new_locator.FindClosestPoint(clipping_points[1])
-    if IDA > IDB: IDA, IDB = IDB, IDA
 
-    # Compare
-    curvature_new = max(new_curv[IDA:IDB])
-    assert curvature_original > curvature_new
+def test_increase_siphon_curvature_beta(init_data):
+    alpha, beta = 0.0, - 0.15
+    init_data["alpha"] = alpha
+    init_data["beta"] = beta
+    input_filepath = init_data["input_filepath"]
 
+    # Perform manipulation
+    move_vessel(**init_data)
+
+    # Compute curvature
+    method = "disc"
+    new_centerlines_path = input_filepath[:-4] + "_centerlines_alpha_%s_beta_%s.vtp" % (alpha, beta)
+    new_centerlines = read_polydata(new_centerlines_path)
+
+    old_maxcurv, new_maxcurv = compute_curvature(input_filepath, alpha, beta, method, new_centerlines=new_centerlines)
+    assert old_maxcurv < new_maxcurv
+
+
+def test_decrease_siphon_curvature_beta(init_data):
+    alpha, beta = 0.0, 0.4
+    init_data["alpha"] = alpha
+    init_data["beta"] = beta
+    input_filepath = init_data["input_filepath"]
+
+    # Perform manipulation
+    move_vessel(**init_data)
+
+    # Compute curvature
+    method = "disc"
+    new_centerlines_path = input_filepath[:-4] + "_centerlines_alpha_%s_beta_%s.vtp" % (alpha, beta)
+    new_centerlines = read_polydata(new_centerlines_path)
+
+    old_maxcurv, new_maxcurv = compute_curvature(input_filepath, alpha, beta, method, new_centerlines=new_centerlines)
+    assert old_maxcurv > new_maxcurv

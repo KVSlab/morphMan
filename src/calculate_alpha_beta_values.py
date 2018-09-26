@@ -6,8 +6,6 @@ import numpy.linalg as la
 from common import get_path_names
 
 
-
-
 def get_alpha_beta(input_filepath, quantity_to_compute, boundary, radius, limit):
     """
     Imports a matrix of parameter values corresponding
@@ -61,14 +59,14 @@ def get_alpha_beta(input_filepath, quantity_to_compute, boundary, radius, limit)
     with open(grid_filepath) as file:
         data = [[float(digit) for digit in line.split()] for line in file]
 
-    N = len(data)
-    alpha = np.linspace(amin, amax, N)
-    beta = np.linspace(bmin, bmax, N)
+    n = len(data)
+    alpha = np.linspace(amin, amax, n)
+    beta = np.linspace(bmin, bmax, n)
     alpha_long = np.linspace(amin, amax, 300)
     beta_long = np.linspace(bmin, bmax, 300)
     yy, xx = np.meshgrid(beta, alpha)
 
-    points = np.zeros((N, 2))
+    points = np.zeros((n, 2))
     for i in range(len(xx)):
         points[i] = [alpha[i], beta[i]]
 
@@ -176,7 +174,6 @@ def alpha_beta_intersection(method, f, alphas, betas, tol=0.0):
                 if diff < 0.05:
                     zeros.append([i, j])
     return zeros
-
 
 
 def read_command_line():

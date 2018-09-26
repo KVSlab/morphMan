@@ -1,44 +1,9 @@
-from argparse import ArgumentParser
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from scipy.signal import argrelextrema
 from scipy.ndimage.filters import gaussian_filter as gauss
 import operator
 # Local import
 from common import *
-
-
-def read_command_line():
-    """
-    Read arguments from commandline
-    """
-    parser = ArgumentParser(description="Foo")
-    required = parser.add_argument_group('required named arguments')
-
-    # Required arguments
-    required.add_argument('-i', '--ifile', type=str, required=True,
-                          help="Path to the folder with all the cases")
-    # Optional arguments
-    parser.add_argument('-c', '--case', type=str, default=None, help="Choose case")
-    parser.add_argument('-k', '--curvature', type=bool, default=False,
-                        help="Compute curvature variation", metavar="curvature")
-    parser.add_argument('-t', '--angle', type=bool, default=False,
-                        help="Compute angle variation", metavar="angle")
-    parser.add_argument("-a", "--alpha", type=float, default=None,
-                        help="Compression factor in vertical direction, ranging from -1.0 to 1.0")
-    parser.add_argument("-b", "--beta", type=float, default=None,
-                        help="Compression factor in horizontal direction, ranging from -1.0 to 1.0")
-    parser.add_argument('-mc', '--method_curv', type=str, default="disc",
-                        help="Method for computing curv. Available methods: disc " +
-                             "| vmtkfactor | vmtkit | spline")
-    parser.add_argument('-ma', '--method_angle', type=str, default="plane",
-                        help="Method for computing siphon angle. Available methods: plane | " +
-                             "itplane | itplane_clip | maxcurv | smooth | discrete | frac | odrline | MISR ")
-    parser.add_argument('-bd', '--boundary', nargs='+', default=None,
-                        help='Boundary of grid, as a list: [alpha_min, alpha_max, beta_min, beta_max]')
-
-    args = parser.parse_args()
-
-    return args.dir_path, args.case, args.curvature, args.angle, args.alpha, args.beta, \
-           args.method_curv, args.method_angle
 
 
 def compute_angle(input_filepath, alpha, beta, method, new_centerlines, proj=False):
@@ -52,6 +17,7 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines, proj=Fal
     Args:
         input_filepath (str): Path to case folder.
         alpha (float): Extension / Compression factor in vertical direction.
+        beta (float): Extension / Compression factor in horizontal direction.
         method (str): Method used to compute angle.
         proj (bool): True / False for computing 2D / 3D angle.
         new_centerlines (vtkPolyData): New centerline.
@@ -60,13 +26,15 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines, proj=Fal
         newdeg (float): New angle of a vessel bend from a manipulated centerline.
     """
     # Case name
+
+    print("Computing angle")
     base_path = get_path_names(input_filepath)
 
     # Find endID from landmarking
     centerline_path = base_path + "_centerline.vtp"
 
     # Extract Clipping points
-    point_path = base_path + "_carotid_siphon_points.particles"
+    point_path = base_path + "_carotid_bend_points.particles"
     if not path.exists(point_path):
         RuntimeError("The given .particles file: %s does not exist!" % point_path)
     region_points = np.loadtxt(point_path)
@@ -80,13 +48,13 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines, proj=Fal
 
     if new_centerlines is None:
         print("Maniuplating centerline manually")
-        new_centerlines = get_new_centerliens(centerlines, region_points, alpha, beta, p1, p2)
+        centerlines, new_centerlines = get_new_centerliens(centerlines, region_points, alpha, beta, p1, p2)
 
     # Get new siphon and prepare
     id1, id2, moved_id1, moved_id2, moved_p1, moved_p2 = get_moved_siphon(new_centerlines, centerlines, p1, p2)
 
     # Get anterior bend only
-    siphon = extract_single_line(centerlines, 0, startID=id1, endID=id2)
+    siphon = extract_single_line(centerlines, 1, startID=id1, endID=id2)
     moved_siphon = extract_single_line(new_centerlines, 0, startID=moved_id1, endID=moved_id2)
     id1, id2 = 0, siphon.GetNumberOfPoints() - 1
     moved_id1, moved_id2 = 0, moved_siphon.GetNumberOfPoints() - 1
@@ -111,25 +79,24 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines, proj=Fal
         newcutcurv_d = newcurv_d[moved_id1:moved_id2]
 
     if method == "MISR":
-        # TODO Check if siphon/moved_siphon have MISR
         # Map MISR values to old and new splined anterior bend
         anterior_bend = extract_single_line(centerlines, 0, startID=id1, endID=id2)
-        M = anterior_bend.GetNumberOfPoints()
-        M1 = moved_siphon.GetNumberOfPoints()
-        misrArray = get_vtk_array(radiusArrayName, 1, M)
-        newmisrArray = get_vtk_array(radiusArrayName, 1, M1)
-        MISR = []
-        for i in range(M):
+        m = anterior_bend.GetNumberOfPoints()
+        m1 = moved_siphon.GetNumberOfPoints()
+        misr_array = get_vtk_array(radiusArrayName, 1, m)
+        newmisr_array = get_vtk_array(radiusArrayName, 1, m1)
+        misr_list = []
+        for i in range(m):
             misr = anterior_bend.GetPointData().GetArray(radiusArrayName).GetTuple(i)
-            MISR.append(misr[0])
-            misrArray.SetTuple(i, misr)
+            misr_list.append(misr[0])
+            misr_array.SetTuple(i, misr)
 
-        MISR = resample(MISR, M1)
-        for i in range(M1):
-            newmisrArray.SetTuple(i, (MISR[i],))
+        misr_list = resample(misr_list, m1)
+        for i in range(m1):
+            newmisr_array.SetTuple(i, (misr_list[i],))
 
-        siphon.GetPointData().AddArray(misrArray)
-        moved_siphon.GetPointData().AddArray(newmisrArray)
+        siphon.GetPointData().AddArray(misr_array)
+        moved_siphon.GetPointData().AddArray(newmisr_array)
 
     if proj:
         print("Computing 2D Angles")
@@ -141,7 +108,8 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines, proj=Fal
     clipping_points_vtk = vtk.vtkPoints()
     for point in np.asarray(region_points):
         clipping_points_vtk.InsertNextPoint(point)
-    middle_points, middle_ids, dx = get_spline_points(centerlines, alpha, direction, clipping_points_vtk)
+    middle_points, middle_ids, dx = get_spline_points(extract_single_line(centerlines, 0), 0.1, direction,
+                                                      clipping_points_vtk)
 
     # Find adjusted clipping points (and tracing points)
     if method == "plane":
@@ -165,14 +133,14 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines, proj=Fal
                                            moved_siphon.GetNumberOfPoints(), moved_p1,
                                            moved_siphon)
 
-        N1 = get_array("FrenetBinormal", siphon, k=3)[p1_id]
-        N2 = get_array("FrenetBinormal", moved_siphon, k=3)[np1_id]
+        n1 = get_array("FrenetBinormal", siphon, k=3)[p1_id]
+        n2 = get_array("FrenetBinormal", moved_siphon, k=3)[np1_id]
 
-        dP = p1_1 - p2_2
-        dnewP = newp1 - newp2
+        dp = p1_1 - p2_2
+        dnewp = newp1 - newp2
 
-        normal = np.cross(dP, N1)
-        newnormal = np.cross(dnewP, N2)
+        normal = np.cross(dp, n1)
+        newnormal = np.cross(dnewp, n2)
 
         max_p, max_id = find_furthest_points(normal, siphon)
         newmax_p, newmax_id = find_furthest_points(newnormal, moved_siphon)
@@ -337,6 +305,8 @@ def compute_curvature(input_filepath, alpha, beta, method, new_centerlines):
 
     Args:
         input_filepath (str): Path to case folder.
+        alpha (float): Extension / Compression factor in vertical direction.
+        beta (float): Extension / Compression factor in horizontal direction.
         method (str): Method used to compute angle.
         new_centerlines (vtkPolyData): New centerline.
 
@@ -350,7 +320,8 @@ def compute_curvature(input_filepath, alpha, beta, method, new_centerlines):
     centerline_path = base_path + "_centerline.vtp"
 
     # Extract Clipping points
-    point_path = base_path + "_carotid_siphon_points.particles"
+    point_path = base_path + "_carotid_bend_points.particles"
+
     if not path.exists(point_path):
         RuntimeError("The given .particles file: %s does not exist!" % point_path)
     region_points = np.loadtxt(point_path)
@@ -364,54 +335,70 @@ def compute_curvature(input_filepath, alpha, beta, method, new_centerlines):
 
     if new_centerlines is None:
         print("Maniuplating centerline manually")
-        new_centerlines = get_new_centerliens(centerlines, region_points, alpha, beta, p1, p2)
-
-    maxcurv = None
+        centerlines, new_centerlines = get_new_centerliens(centerlines, region_points, alpha, beta, p1, p2)
 
     # Compute new centerline using VMTK
     new_centerline = extract_single_line(new_centerlines, 0)
-    locator = get_locator(new_centerline)
-    id1_new = locator.FindClosestPoint(p1)
-    id2_new = locator.FindClosestPoint(p2)
-    if "vmtk" in method:
-        # 1) VMTK - Factor variance
-        if method == "vmtkfactor":
-            factor = 0.5
-            line_fac = vmtk_centerline_geometry(new_centerline, smooth=True, iterations=100, factor=factor)
-            curv_fac = get_array("Curvature", line_fac)
-            curv_fac = gauss(curv_fac, 5)
-            maxcurv = max(curv_fac[id1_new + 10:id2_new - 10])[0]
+    centerline = extract_single_line(centerlines, 0)
+    new_locator = get_locator(new_centerline)
+    old_locator = get_locator(centerline)
+    id1 = old_locator.FindClosestPoint(p1)
+    id2 = old_locator.FindClosestPoint(p2)
+    id1_new = new_locator.FindClosestPoint(p1)
+    id2_new = new_locator.FindClosestPoint(p2)
 
-        # 2) VMTK - Iteration variance
-        elif method == "vmtkit":
-            it = 150
-            line_it = vmtk_centerline_geometry(new_centerline, smooth=True, iterations=it, factor=1.0)
-            curv_it = get_array("Curvature", line_it)
-            curv_it = gauss(curv_it, 5)
-            maxcurv = max(curv_it[id1_new + 10:id2_new - 10])[0]
+    # 1) VMTK - Factor variance
+    if method == "vmtkfactor":
+        factor = 0.5
+        line_fac = vmtk_centerline_geometry(new_centerline, smooth=True, iterations=100, factor=factor)
+        curv_fac = get_array("Curvature", line_fac)
+        new_curvature = gauss(curv_fac, 5)
 
-    else:
-        # 3) Discrete derivatives
-        if method == "disc":
-            neigh = 20
-            line_di, curv_di = discrete_geometry(new_centerline, neigh=neigh)
-            filtercurv = gauss(curv_di, 5)
-            maxcurv = max(filtercurv[id1_new + 10:id2_new - 10])
+        line_fac = vmtk_centerline_geometry(centerlines, smooth=True, iterations=100, factor=factor)
+        curv_fac = get_array("Curvature", line_fac)
+        curvature = gauss(curv_fac, 5)
 
-        # 4) Splines
-        if method == "spline":
-            nknots = 50
-            siphon_splined, siphon_curv = spline_centerline(new_centerline, get_curv=True,
-                                                            isline=True, nknots=nknots)
-            siphon_curv = gauss(siphon_curv, 5)
-            maxcurv = max(siphon_curv[id1_new + 10:id2_new - 10])
+    # 2) VMTK - Iteration variance
+    elif method == "vmtkit":
+        it = 150
+        line_it = vmtk_centerline_geometry(new_centerline, smooth=True, iterations=it, factor=1.0)
+        curv_it = get_array("Curvature", line_it)
+        new_curvature = gauss(curv_it, 5)
 
-    return maxcurv
+        line_it = vmtk_centerline_geometry(centerlines, smooth=True, iterations=it, factor=1.0)
+        curv_it = get_array("Curvature", line_it)
+        curvature = gauss(curv_it, 5)
+
+    # 3) Splines
+    elif method == "spline":
+        nknots = 50
+        siphon_splined, siphon_curv = spline_centerline(new_centerline, get_curv=True,
+                                                        isline=True, nknots=nknots)
+        new_curvature = gauss(siphon_curv, 5)
+
+        siphon_splined, siphon_curv = spline_centerline(centerlines, get_curv=True,
+                                                        isline=True, nknots=nknots)
+        curvature = gauss(siphon_curv, 5)
+
+    # 4) Default: Discrete derivatives
+    elif method == "disc":
+        neigh = 20
+        line_di, curv_di = discrete_geometry(new_centerline, neigh=neigh)
+        new_curvature = gauss(curv_di, 5)
+
+        line_di, curv_di = discrete_geometry(centerlines, neigh=neigh)
+        curvature = gauss(curv_di, 5)
+
+    old_maxcurv = max(curvature[id1 + 10:id2 - 10])
+    new_maxcurv = max(new_curvature[id1_new + 10:id2_new - 10])
+
+    return old_maxcurv, new_maxcurv
 
 
 def get_new_centerliens(centerlines, region_points, alpha, beta, p1, p2):
-    new_centerlines, diverging_centerlines, region_points, region_points_vtk, diverging_ids = \
+    centerlines, diverging_centerlines, region_points, region_points_vtk, diverging_ids = \
         find_region_of_interest_and_diverging_centerlines(centerlines, region_points)
+    new_centerlines = centerlines
     diverging_id = None if len(diverging_ids) == 0 else diverging_ids[0]
     if beta != 0.0:
         direction = "horizont"
@@ -424,8 +411,7 @@ def get_new_centerliens(centerlines, region_points, alpha, beta, p1, p2):
         middle_points, middle_ids, dx = get_spline_points(new_centerlines, alpha, direction,
                                                           region_points_vtk)
         new_centerlines = move_centerlines(new_centerlines, dx, p1, p2, diverging_id, diverging_centerlines, direction)
-
-    return new_centerlines
+    return centerlines, new_centerlines
 
 
 def odr_line(id1, id2, line, curvature, limit):
@@ -474,10 +460,10 @@ def odr_line(id1, id2, line, curvature, limit):
         mean1 = sum(curvature[id1_down:id1_up + 1]) / 11.
         mean2 = sum(curvature[id2_up:id2_down + 1]) / 11.
 
-        SD1 = np.sqrt(sum((curvature[id1_down:id1_up + 1] - mean1) ** 2) / 10)
-        SD2 = np.sqrt(sum((curvature[id2_up:id1_down + 1] - mean2) ** 2) / 10)
-        tol1 = mean1 + SD1 * 1.96
-        tol2 = mean2 + SD2 * 1.96
+        sd_1 = np.sqrt(sum((curvature[id1_down:id1_up + 1] - mean1) ** 2) / 10)
+        sd_2 = np.sqrt(sum((curvature[id2_up:id1_down + 1] - mean2) ** 2) / 10)
+        tol1 = mean1 + sd_1 * 1.96
+        tol2 = mean2 + sd_2 * 1.96
 
         while curvature[id1_up] < tol1 and id1_up < lim:
             id1_up += 1
@@ -497,23 +483,23 @@ def odr_line(id1, id2, line, curvature, limit):
         p2s.append(line.GetPoint(i))
 
     # Arrange points in matrix
-    X1 = np.array([list(p) for p in p1s])
-    X2 = np.array([list(p) for p in p2s])
+    x_1 = np.array([list(p) for p in p1s])
+    x_2 = np.array([list(p) for p in p2s])
 
     # Find mean of points
-    avg1 = np.array([np.mean(X1[:, 0]), np.mean(X1[:, 1]), np.mean(X1[:, 2])])
-    avg2 = np.array([np.mean(X2[:, 0]), np.mean(X2[:, 1]), np.mean(X2[:, 2])])
+    avg1 = np.array([np.mean(x_1[:, 0]), np.mean(x_1[:, 1]), np.mean(x_1[:, 2])])
+    avg2 = np.array([np.mean(x_2[:, 0]), np.mean(x_2[:, 1]), np.mean(x_2[:, 2])])
 
     # Subtract the mean from all points
-    dX1 = X1 - np.array([avg1 for i in range(len(X1))])
-    dX2 = X2 - np.array([avg2 for i in range(len(X2))])
+    dx_1 = x_1 - np.array([avg1] * len(x_1))
+    dx_2 = x_2 - np.array([avg2] * len(x_2))
 
     # Find SVD
-    U, S, V1 = la.svd(dX1)
-    U, S, V2 = la.svd(dX2)
+    _, _, v_1 = la.svd(dx_1)
+    _, _, v_2 = la.svd(dx_2)
     # Find direction vector
-    d1 = V1[0]
-    d2 = V2[0]
+    d1 = v_1[0]
+    d2 = v_2[0]
 
     # Parametric equation P = p0 + t*d
     # Make lines with curv
@@ -536,16 +522,16 @@ def odr_line(id1, id2, line, curvature, limit):
         line_.SetPoints(pts)
         line_.SetLines(lines)
 
-        M = line_.GetNumberOfPoints()
-        curvArray = get_vtk_array("Curvature", 1, M)
+        m = line_.GetNumberOfPoints()
+        curv_array = get_vtk_array("Curvature", 1, m)
         if k == 0:
             for i in range(id1_up + 1 - id1_down):
-                curvArray.SetTuple(i, [curvature[id1_down + i]])
+                curv_array.SetTuple(i, [curvature[id1_down + i]])
         else:
             for i in range(id2_down + 1 - id2_up):
-                curvArray.SetTuple(i, [curvature[id2_up + i]])
+                curv_array.SetTuple(i, [curvature[id2_up + i]])
 
-        line_.GetPointData().AddArray(curvArray)
+        line_.GetPointData().AddArray(curv_array)
 
         curv_lines_split.append(line_)
 
@@ -579,8 +565,8 @@ def get_moved_siphon(new_centerlines, centerlines, p1, p2):
         moved_siphon_curv (ndarray): Curvature array along siphon.
     """
     # Extract new siphon and prepare
-    new_locator = get_locator(new_centerlines)
-    old_locator = get_locator(centerlines)
+    new_locator = get_locator(extract_single_line(new_centerlines, 0))
+    old_locator = get_locator(extract_single_line(centerlines, 0))
     id1 = old_locator.FindClosestPoint(p1)
     id2 = old_locator.FindClosestPoint(p2)
 
@@ -637,20 +623,20 @@ def find_angle(pA, pB, p1, p2, proj):
 
     Returns:
         deg (float): Angle between vectors.
-        P1A (ndarray): First vector.
-        P2B (ndarraty): Second vector.
+        vector_a (ndarray): First vector.
+        vector_b (ndarraty): Second vector.
     """
     if not proj:
-        P1A = np.array([pA[0] - p1[0], pA[1] - p1[1], pA[2] - p1[2]])
-        P2B = np.array([pB[0] - p2[0], pB[1] - p2[1], pB[2] - p2[2]])
+        vector_a = np.array([pA[0] - p1[0], pA[1] - p1[1], pA[2] - p1[2]])
+        vector_b = np.array([pB[0] - p2[0], pB[1] - p2[1], pB[2] - p2[2]])
     else:
-        P1A = np.array([0, pA[1] - p1[1], pA[2] - p1[2]])
-        P2B = np.array([0, pB[1] - p2[1], pB[2] - p2[2]])
-    costheta = (P1A.dot(P2B)) / (la.norm(P1A) * la.norm(P2B))
+        vector_a = np.array([0, pA[1] - p1[1], pA[2] - p1[2]])
+        vector_b = np.array([0, pB[1] - p2[1], pB[2] - p2[2]])
+    costheta = (vector_a.dot(vector_b)) / (la.norm(vector_a) * la.norm(vector_b))
     angle = np.arccos(costheta)
     deg = (angle * 180 / np.pi)
 
-    return deg, P1A, P2B
+    return deg, vector_a, vector_b
 
 
 def find_angle_odr(d1, d2, proj):
@@ -690,38 +676,41 @@ def save_angle_or_curvature(values, param):
         param (str): Name of parameter stored.
     """
     mat = np.matrix(values)
-    with open('new_%s_%s.txt' % (param), 'wb') as f:
+    with open('new_%s_%s.txt' % param, 'wb') as f:
         for line in mat:
             np.savetxt(f, line, fmt='%.3f')
 
 
 def initialize(input_filepath, kappa, theta, alpha, beta, boundary,
-               method_curv, method_angle, new_centerlines=None, n=50, proj=False):
+               method_curv, method_angle, grid_size=50, proj=False):
     """
     Initilization for computing curvature and angle.
     Values are either printed to terminal or stored in a (n x n) matrix.
 
     Args:
-        basedir (str): Location of case folders.
-        case (str): Name of case.
+        input_filepath (str): Location of surface model.
         kappa (bool): True to compute curvature.
         theta (bool): True to compute angle.
         alpha (float): Extension / Compression factor in vertical direction.
         beta (float): Extension / Compression factor in horizontal direction.
+        boundary (list): Bounds of grid for computing quantities.
         method_curv (str): Method used to compute curvature.
         method_angle (str): Method used to compute angle.
-        n (int): Determines matrix size when computing multiple values.
+        grid_size (int): Determines matrix size when computing multiple values.
+        proj (bool): Projects angle into 2d plane if True.
     """
+    # New centerlines
+    new_centerlines_path = input_filepath[:-4] + "_centerlines_alpha_%s_beta_%s.vtp" % (alpha, beta)
+    new_centerlines = read_polydata(new_centerlines_path)
+
     # Movement in one or multiple directions
     if alpha is not None:
         alphas = [alpha]
         betas = [beta]
     else:
+        n = grid_size
         max_curv_values = np.zeros((n, n))
         angle_values = np.zeros((n, n))
-
-    # Iterate through cases and compute quantities
-    if alpha is None:
         amin, amax, bmin, bmax = boundary[0], boundary[1], boundary[2], boundary[3]
         alphas = np.linspace(amin, amax, n)
         betas = np.linspace(bmin, bmax, n)
@@ -733,7 +722,7 @@ def initialize(input_filepath, kappa, theta, alpha, beta, boundary,
                 maxcurv = compute_curvature(input_filepath, alpha, beta, method_curv, new_centerlines)
 
             if theta:
-                angle = compute_angle(input_filepath, alpha, beta, method_angle, new_centerlines, proj)
+                angle, oldangle = compute_angle(input_filepath, alpha, beta, method_angle, new_centerlines, proj)
 
             if len(alphas) > 1:
                 if kappa:
@@ -748,9 +737,51 @@ def initialize(input_filepath, kappa, theta, alpha, beta, boundary,
 
     if len(alphas) > 1:
         if kappa:
-            save_angle_or_curvature(max_curv_values, input_filepath, "curvature")
+            save_angle_or_curvature(max_curv_values, "curvature")
         if theta:
-            save_angle_or_curvature(angle_values, input_filepath, "angle")
+            save_angle_or_curvature(angle_values, "angle")
+
+
+def read_command_line():
+    """
+    Read arguments from commandline
+    """
+    description = "Computes selected quantities: anterior bend angle or maximum " + \
+                  "anterior bend curvature for a given geometry, using the centerline " + \
+                  "as a proxy. Possibility for computing several discrete values if "
+
+    parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
+    required = parser.add_argument_group('required named arguments')
+
+    # Required arguments
+    required.add_argument('-i', '--ifile', type=str, required=True,
+                          help="Path to the folder with all the cases")
+    # Optional arguments
+    parser.add_argument('-k', '--curvature', type=bool, default=False,
+                        help="Compute curvature variation", metavar="curvature")
+    parser.add_argument('-t', '--angle', type=bool, default=False,
+                        help="Compute angle variation", metavar="angle")
+    parser.add_argument("-a", "--alpha", type=float, default=None,
+                        help="Compression factor in vertical direction, ranging from -1.0 to 1.0")
+    parser.add_argument("-b", "--beta", type=float, default=None,
+                        help="Compression factor in horizontal direction, ranging from -1.0 to 1.0")
+    parser.add_argument('-mc', '--method_curv', type=str, default="disc",
+                        help="Method for computing curv. Available methods: disc " +
+                             "| vmtkfactor | vmtkit | spline")
+    parser.add_argument('-ma', '--method_angle', type=str, default="plane",
+                        help="Method for computing siphon angle. Available methods: plane | " +
+                             "itplane | itplane_clip | maxcurv | smooth | discrete | frac | odrline | MISR ")
+    parser.add_argument('-bd', '--boundary', nargs='+', default=None,
+                        help='Boundary of grid, as a list: [alpha_min, alpha_max, beta_min, beta_max]')
+
+    parser.add_argument("-g", "--grid-size", type=int, default=50,
+                        help="Size of n x n matrix used for computing a set of discrete values")
+
+    args = parser.parse_args()
+
+    return dict(input_filepath=args.ifile, kappa=args.curvature, theta=args.angle,
+                alpha=args.alpha, beta=args.beta, boundary=args.boundary, grid_size=args.grid_size,
+                method_curv=args.method_curv, method_angle=args.method_angle, proj=args.proj)
 
 
 if __name__ == "__main__":

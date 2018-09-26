@@ -71,7 +71,7 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
     # Get region of interest
     if region_of_interest == "landmarking":
         if not path.exists(point_path):
-            RuntimeError(("The given .particles file: %s does not exist. Please run" + \
+            RuntimeError(("The given .particles file: %s does not exist. Please run" +
                           " landmarking with automated_geometric_quantities.py first.") % point_path)
         region_points = np.loadtxt(point_path)
     else:
@@ -104,8 +104,8 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
     centerline_bend = extract_single_line(centerlines, 0, startID=id1, endID=id2)
 
     if diverging_centerline_ispresent:
-        eyeline_end = extract_single_line(patch_diverging_line, 1)
-        centerline_bend = merge_data([centerline_bend, eyeline_end])
+        diverging_centerline_end = extract_single_line(patch_diverging_line, 1)
+        centerline_bend = merge_data([centerline_bend, diverging_centerline_end])
 
     write_polydata(centerline_remaining, centerline_clipped_path)
     write_polydata(centerline_bend, centerline_clipped_part_path)
@@ -115,8 +115,8 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
     print("Clipping Voronoi diagrams")
     if not path.exists(voronoi_bend_path) or not path.exists(voronoi_remaining_path):
         voronoi_bend, voronoi_remaining = split_voronoi_with_centerlines(voronoi,
-                                                                           centerline_bend,
-                                                                           centerline_remaining)
+                                                                         centerline_bend,
+                                                                         centerline_remaining)
         write_polydata(voronoi_bend, voronoi_bend_path)
         write_polydata(voronoi_remaining, voronoi_remaining_path)
     else:
@@ -143,9 +143,9 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
                                                       centerline_remaining, id1, id2,
                                                       diverging_id, clip=False)
         voronoi_bend = move_voronoi_horizontally(dx_p1, voronoi_bend,
-                                                   centerline_bend, id1, id2,
-                                                   diverging_id, clip=True,
-                                                   diverging_centerline_ispresent=diverging_centerline_ispresent)
+                                                 centerline_bend, id1, id2,
+                                                 diverging_id, clip=True,
+                                                 diverging_centerline_ispresent=diverging_centerline_ispresent)
     else:
         if diverging_centerline_ispresent:
             new_centerlines = merge_data([centerlines, extract_single_line(diverging_centerlines, 0)])
@@ -172,7 +172,6 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
                                                               new_centerlines, region_points, poly_ball_size)
 
     print("Smoothing, clean, and check surface")
-    write_polydata(new_centerlines, "test_new_cl_alpha_{}_beta_{}.vtp".format(alpha, beta))
     new_surface = prepare_surface_output(new_surface, surface,
                                          new_centerlines, output_filepath,
                                          test_merge=True, changed=True,
@@ -224,8 +223,8 @@ def move_vessel_vertically(alpha, voronoi_remaining,
     centerline_bend = extract_single_line(centerlines, 0, startID=id1, endID=id2)
 
     if diverging_centerline_ispresent:
-        eyeline_end = extract_single_line(patch_diverging_line, 1)
-        centerline_bend = merge_data([centerline_bend, eyeline_end])
+        diverging_centerline_end = extract_single_line(patch_diverging_line, 1)
+        centerline_bend = merge_data([centerline_bend, diverging_centerline_end])
 
     # Find ID of middle pooint:
     print("Finding points to spline through.")
@@ -236,7 +235,7 @@ def move_vessel_vertically(alpha, voronoi_remaining,
     # Iterate over points P from Voronoi diagram and manipulate
     print("Adjust voronoi diagram")
     voronoi_bend = move_voronoi_vertically(voronoi_bend, centerline_bend, id1,
-                                             diverging_id, dx, diverging_centerline_ispresent)
+                                           diverging_id, dx, diverging_centerline_ispresent)
     new_voronoi = merge_data([voronoi_remaining, voronoi_bend])
 
     # Move centerline manually for postprocessing
@@ -266,11 +265,11 @@ def move_voronoi_horizontally(dx_p1, voronoi_clipped, centerline_clipped, id1, i
         diverging_centerline_ispresent (bool): Determines presence of opthamlic artery.
 
     Returns:
-        newDataSet (vtkPolyData): Manipulated Voronoi diagram.
+        new_dataset (vtkPolyData): Manipulated Voronoi diagram.
     """
 
     centerline_loc = get_locator(centerline_clipped)
-    newDataSet = vtk.vtkPolyData()
+    new_dataset = vtk.vtkPolyData()
     points = vtk.vtkPoints()
     verts = vtk.vtkCellArray()
 
@@ -340,11 +339,11 @@ def move_voronoi_horizontally(dx_p1, voronoi_clipped, centerline_clipped, id1, i
             verts.InsertCellPoint(p)
 
     # Insert points and create new voronoi diagram
-    newDataSet.SetPoints(points)
-    newDataSet.SetVerts(verts)
-    newDataSet.GetPointData().AddArray(voronoi_clipped.GetPointData().GetArray(radiusArrayName))
+    new_dataset.SetPoints(points)
+    new_dataset.SetVerts(verts)
+    new_dataset.GetPointData().AddArray(voronoi_clipped.GetPointData().GetArray(radiusArrayName))
 
-    return newDataSet
+    return new_dataset
 
 
 def move_voronoi_vertically(voronoi_clipped, centerline_clipped, id1_0, clip_id,
@@ -363,26 +362,25 @@ def move_voronoi_vertically(voronoi_clipped, centerline_clipped, id1_0, clip_id,
         diverging_centerline_ispresent (bool): Determines presence of opthamlic artery.
 
     Returns:
-        newDataSet (vtkPolyData): Manipulated Voronoi diagram.
+        new_dataset (vtkPolyData): Manipulated Voronoi diagram.
     """
 
     centerline_loc = get_locator(centerline_clipped)
-    newDataSet = vtk.vtkPolyData()
+    new_dataset = vtk.vtkPolyData()
     points = vtk.vtkPoints()
     verts = vtk.vtkCellArray()
 
     # Manpipulation of voronoi diagram..
     if diverging_centerline_ispresent:
-        # ..with opthalmic artery
-        id1 = I1 = 0
+        # ..with diverging centerline
         l1 = extract_single_line(centerline_clipped, 0)
-        id2 = len(get_curvilinear_coordinate(l1))
-        I2 = id2 - 1
+        id1 = 0
+        id2 = len(get_curvilinear_coordinate(l1)) - 1
         for p in range(voronoi_clipped.GetNumberOfPoints()):
             cl_id = centerline_loc.FindClosestPoint(voronoi_clipped.GetPoint(p))
 
-            if cl_id <= I2:
-                dist = 4 * dx * (cl_id - I1) * (I2 - cl_id) / (I2 - I1) ** 2
+            if cl_id <= id2:
+                dist = 4 * dx * (cl_id - id1) * (id2 - cl_id) / (id2 - id1) ** 2
             else:
                 cl_id = clip_id - id1_0
                 dist = 4 * dx * (cl_id - id1) * (id2 - cl_id) / (id2 - id1) ** 2
@@ -392,7 +390,7 @@ def move_voronoi_vertically(voronoi_clipped, centerline_clipped, id1_0, clip_id,
             verts.InsertCellPoint(p)
 
     else:
-        # ..witout opthalmic artery
+        # ..witout diverging centerline
         id1 = 0
         id2 = len(get_curvilinear_coordinate(centerline_clipped)) - 1
         for p in range(voronoi_clipped.GetNumberOfPoints()):
@@ -405,11 +403,11 @@ def move_voronoi_vertically(voronoi_clipped, centerline_clipped, id1_0, clip_id,
             verts.InsertCellPoint(p)
 
     # Insert points and create new voronoi diagram
-    newDataSet.SetPoints(points)
-    newDataSet.SetVerts(verts)
-    newDataSet.GetPointData().AddArray(voronoi_clipped.GetPointData().GetArray(radiusArrayName))
+    new_dataset.SetPoints(points)
+    new_dataset.SetVerts(verts)
+    new_dataset.GetPointData().AddArray(voronoi_clipped.GetPointData().GetArray(radiusArrayName))
 
-    return newDataSet
+    return new_dataset
 
 
 def read_command_line():

@@ -263,7 +263,7 @@ def smooth_voronoi_diagram(voronoi, centerlines, smoothing_factor,
         end += end_
 
         # Point buffer start
-        end_id = end_ - np.argmin(np.abs(-(length-length.max()) - threshold[end]))
+        end_id = end_ - np.argmin(np.abs(-(length - length.max()) - threshold[end]))
         start_id = np.argmin(np.abs(length - threshold[start]))
 
         threshold[start:start + start_id] = -1
@@ -1926,13 +1926,13 @@ def prepare_voronoi_diagram(capped_surface, centerlines, base_path,
             # Get inlet and outlets
             tol = get_tolerance(centerlines)
             inlet = extract_single_line(centerlines, 0)
-            inlet = inlet.GetPoint(0) #inlet.GetNumberOfPoints() - 1)
+            inlet = inlet.GetPoint(0)  # inlet.GetNumberOfPoints() - 1)
             outlets = []
             if no_smooth_point is None:
                 seed_selector = vmtkPickPointSeedSelector()
                 seed_selector.SetSurface(capped_surface)
                 seed_selector.text = "Please place a point on the segments you do not want" + \
-                                    " to smooth, e.g. an aneurysm, \'u\' to undo\n"
+                                     " to smooth, e.g. an aneurysm, \'u\' to undo\n"
                 seed_selector.Execute()
                 point_ids = seed_selector.GetTargetSeedIds()
                 for i in range(point_ids.GetNumberOfIds()):
@@ -1947,7 +1947,7 @@ def prepare_voronoi_diagram(capped_surface, centerlines, base_path,
             no_smooth_centerlines, _, _ = compute_centerlines(inlet, outlets,
                                                               None, capped_surface,
                                                               resampling=0.1,
-                                                              smooth=False,voronoi=voronoi,
+                                                              smooth=False, voronoi=voronoi,
                                                               pole_ids=pole_ids)
 
             # Extract the centerline region which diverges from the existing centerlines
@@ -2232,26 +2232,25 @@ def move_perp(n, P, Z, alpha):
         d = la.norm(np.cross((z - p1), (z - p2))) / la.norm(p2 - p1)
         dist.append(d)
 
-    D_id = dist.index(max(dist))
-    D = max(dist)
-    z_m = Z[D_id]
+    d_id = dist.index(max(dist))
+    max_dist = max(dist)
+    z_m = Z[d_id]
 
     # Vector from line to Z_max and projection onto plane
     v = (z_m - p2) - (z_m - p2).dot(p2 - p1) * (p2 - p1) / la.norm(p2 - p1) ** 2
-    PV = v - v.dot(n) * n
+    dv = v - v.dot(n) * n
 
     # Find distances
-    P1 = (z_m - p1).dot(p2 - p1) * (p2 - p1) / la.norm(p2 - p1) ** 2
-    P1 = p1 + P1
-    PV1 = P1 + PV
+    dp = p1 + (z_m - p1).dot(p2 - p1) * (p2 - p1) / la.norm(p2 - p1) ** 2
+    dpv = dp + dv
 
     # Move points
     dZ = []
     for i in range(len(Z)):
-        dz = np.array(PV) * dist[i] / D * alpha
+        dz = np.array(dv) * dist[i] / max_dist * alpha
         dZ.append(Z[i] + dz)
 
-    dx = (PV1 - P1) * alpha
+    dx = (dpv - dp) * alpha
 
     return dZ, dx
 

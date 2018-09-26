@@ -37,6 +37,11 @@ def curvature_variations(input_filepath, smooth, smooth_factor_voro, smooth_fact
     # Clean and capp / uncapp surface
     surface, capped_surface = prepare_surface(base_path, input_filepath)
 
+    # Voronoi diagrams filenames
+    voronoi_remaining_path = base_path + "_voronoi_remaining.vtp"
+    voronoi_region_path = base_path + "_voronoi_region.vtp"
+    voronoi_diverging_path = base_path + "_voronoi_diverging.vtp"
+
     # Compute centerlines
     inlet, outlets = get_centers(surface, base_path)
 
@@ -58,87 +63,86 @@ def curvature_variations(input_filepath, smooth, smooth_factor_voro, smooth_fact
     centerlines, diverging_centerlines, region_points, region_points_vtk, diverging_ids = \
         find_region_of_interest_and_diverging_centerlines(centerlines, region_points)
     diverging_centerline_ispresent = diverging_centerlines is not None
+    diverging_id = None if len(diverging_ids) == 0 else diverging_ids[0]
 
-    # Set region and extract relevant centerline
+    # Handle diverging centerlines within region of interest
+    diverging_centerlines_patch = []
+    if diverging_centerline_ispresent:
+        print("Clipping opthamlic artery")
+        for i in range(diverging_centerlines.GetNumberOfCells()):
+            diverging_centerline = extract_single_line(diverging_centerlines, i)
+            patch_diverging_centerline = clip_diverging_line(diverging_centerline,
+                                                             region_points[0], diverging_id)
+            diverging_centerlines_patch.append(extract_single_line(patch_diverging_centerline, 1))
+        diverging_centerlines_patch = merge_data(diverging_centerlines_patch)
+
+    # Clip centerline
+    print("Clipping centerlines.")
     locator = get_locator(extract_single_line(centerlines, 0))
     id1 = locator.FindClosestPoint(region_points[0])
     id2 = locator.FindClosestPoint(region_points[1])
-    p1 = centerlines.GetPoint(id1)
-    p2 = centerlines.GetPoint(id2)
-    centerline = extract_single_line(centerlines, 0, startID=id1, endID=id2)
+    centerline_remaining = CreateParentArteryPatches(centerlines,
+                                                     region_points_vtk, siphon=True)
+    centerline_region = extract_single_line(centerlines, 0, startID=id1, endID=id2)
 
     if diverging_centerline_ispresent:
-        print("Clipping diverging centerlines")
-        div_patch_cl = []
-        for i, divline in enumerate(diverging_centerlines):
-            clip_id = int((divline.GetNumberOfPoints() - diverging_ids[i]) * 0.2 + diverging_ids[i])
-            patch_cl = clip_diverging_line(divline, centerlines.GetPoint(0), clip_id)
-            div_patch_cl.append(extract_single_line(patch_cl, 1))
+        centerline_region = merge_data([centerline_region, diverging_centerlines_patch])
 
-    # Clipp Voronoi diagram
-    print("Clipping voronoi diagram")
-    masked_voronoi = MaskVoronoiDiagram(voronoi, centerline)
-    clipped_voronoi = ExtractMaskedVoronoiPoints(voronoi, masked_voronoi)
+    write_polydata(centerline_remaining, "remaning.vtp")
+    write_polydata(centerline_region, "region.vtp")
 
-    # Extract voronoi diagram of diverging lines
-    clipped_voronoi_div = []
-    if diverging_centerline_ispresent:
-        for div_line_ends in div_patch_cl:
-            masked_voronoi_div = MaskVoronoiDiagram(voronoi, div_line_ends)
-            clipped_voronoi_div.append(ExtractMaskedVoronoiPoints(voronoi, masked_voronoi_div))
+    # Clip Voronoi diagram into
+    # bend and remaining part of geometry
+    print("Clipping Voronoi diagrams")
+    if not path.exists(voronoi_region_path) and not path.exists(voronoi_remaining_path):
+        voronoi_region, voronoi_remaining = split_voronoi_with_centerlines(voronoi,
+                                                                           centerline_region,
+                                                                           centerline_remaining)
+        # Spearate diverging parts and main region
+        if diverging_centerline_ispresent and not path.exists(voronoi_diverging_path):
+            voronoi_region, voronoi_diverging = split_voronoi_with_centerlines(voronoi_region,
+                                                                               extract_single_line(centerlines, 0,
+                                                                                                   startID=id1,
+                                                                                                   endID=id2),
+                                                                               diverging_centerlines_patch)
+            write_polydata(voronoi_diverging, voronoi_diverging_path)
 
-    # Smooth relevant centerline
-    smooth_carotid_siphon = vmtk_centerline_geometry(centerline, True, True,
-                                                     factor=smooth_factor_line, iterations=iterations)
-    write_polydata(smooth_carotid_siphon, centerline_smooth_path)
+        write_polydata(voronoi_region, voronoi_region_path)
+        write_polydata(voronoi_remaining, voronoi_remaining_path)
+    else:
+        voronoi_region = read_polydata(voronoi_region_path)
+        voronoi_remaining = read_polydata(voronoi_remaining_path)
+        if diverging_centerline_ispresent:
+            voronoi_diverging = read_polydata(voronoi_diverging_path)
 
-    # Get rest of artery
-    p_start = centerline.GetPoint(0)
-    p_end = centerline.GetPoint(centerline.GetNumberOfPoints() - 1)
-    region = [p_start, p_end]
-    region = np.asarray(region)
-    region_vtk = vtk.vtkPoints()
-    for point in region:
-        region_vtk.InsertNextPoint(point)
+    print("Smooth / sharpen centerline")
+    smoothed_centerline_region = vmtk_centerline_geometry(centerline_region, True, True,
+                                                          factor=smooth_factor_line, iterations=iterations)
+    write_polydata(smoothed_centerline_region, centerline_smooth_path)
 
-    patch_cl = CreateParentArteryPatches(centerlines, region_vtk, siphon=True)
-    end_lines = []
-    for i in range(patch_cl.GetNumberOfCells()):
-        tmp_line = extract_single_line(patch_cl, i)
-        if tmp_line.GetNumberOfPoints() > 40:
-            end_lines.append(tmp_line)
-
-    centerlines_end = merge_data(end_lines)
-    masked_voronoi_end = MaskVoronoiDiagram(voronoi, centerlines_end)
-    clipped_voronoi_end = ExtractMaskedVoronoiPoints(voronoi, masked_voronoi_end)
-
-    # Update clipped Voronoi diagram
     print("Smooth / sharpen voronoi diagram")
-    moved_clipped_voronoi = make_voronoi_smooth(clipped_voronoi, centerline, smooth_carotid_siphon, smooth_line)
-
-    # Move diverging centerlines
-    moved_clipped_voronoi_div = []
-    for i, clipped_voronoi_div_i in enumerate(clipped_voronoi_div):
-        moved_clipped_voronoi_div.append(make_voronoi_smooth(clipped_voronoi_div_i,
-                                                             centerline,
-                                                             smooth_carotid_siphon,
-                                                             smooth_line, div=True,
-                                                             div_point=region[i]))
-
-    moved_clipped_voronoi_div.append(moved_clipped_voronoi)
-    moved_clipped_voronoi_div.append(clipped_voronoi_end)
-
-    # Combine Voronoi diagram
-    new_voronoi = merge_data(moved_clipped_voronoi_div)
+    moved_voronoi_region = make_voronoi_smooth(voronoi_region, centerline_region, smoothed_centerline_region,
+                                               smooth_line)
+    # Move diverging centerlines and combine all diagrams
+    if diverging_centerline_ispresent:
+        moved_voronoi_diverging = make_voronoi_smooth(voronoi_diverging, centerline_region,
+                                                      smoothed_centerline_region, smooth_line, div=True,
+                                                      div_point=diverging_centerlines.GetPoint(diverging_id))
+        new_voronoi = merge_data([moved_voronoi_region, moved_voronoi_diverging, voronoi_remaining])
+    else:
+        new_voronoi = merge_data([moved_voronoi_region, voronoi_remaining])
 
     # Create new surface
     print("Create new surface")
     new_surface = create_new_surface(new_voronoi, poly_ball_size=poly_ball_size)
+    new_centerlines = merge_data([centerline_remaining, diverging_centerlines_patch, smoothed_centerline_region])
+    """
     new_centerlines = old_centerlines = merge_data([centerlines, diverging_centerlines])
     new_surface = prepare_surface_output(new_surface, surface,
                                          new_centerlines, output_filepath,
                                          test_merge=False, changed=True,
                                          old_centerline=old_centerlines)
+    """
 
     write_polydata(new_centerlines, new_centerlines_path)
     write_polydata(new_surface, output_filepath)
@@ -158,21 +162,21 @@ def make_voronoi_smooth(voronoi, old_cl, new_cl, smoothmode, div=False, div_poin
         div_point (ndarray): Diverging point along siphon.
 
     Returns:
-        newDataSet (vtkPolyData): Manipulated voronoi diagram.
+        new_dataset (vtkPolyData): Manipulated voronoi diagram.
     """
     locator = get_locator(old_cl)
-    N = voronoi.GetNumberOfPoints()
-    newDataSet = vtk.vtkPolyData()
+    n = voronoi.GetNumberOfPoints()
+    new_dataset = vtk.vtkPolyData()
     points = vtk.vtkPoints()
     verts = vtk.vtkCellArray()
 
     # Define segments for transitioning
-    IDend = old_cl.GetNumberOfPoints() - 1
-    IDmidend = int(IDend * 0.9)
-    IDstartmid = int(IDend * 0.1)
-    IDmid = int(IDend * 0.2)
+    id_end = old_cl.GetNumberOfPoints() - 1
+    id_midend = int(id_end * 0.9)
+    id_startmid = int(id_end * 0.1)
+    id_mid = int(id_end * 0.2)
     # Iterate through voronoi points
-    for i in range(N):
+    for i in range(n):
         if div:
             cl_id = locator.FindClosestPoint(div_point)
         else:
@@ -185,23 +189,22 @@ def make_voronoi_smooth(voronoi, old_cl, new_cl, smoothmode, div=False, div_poin
             dx = -(p1 - p0)
 
         # Smooth transition at inlet and at end of siphon
-        if cl_id < IDstartmid:
+        if cl_id < id_startmid:
             dx = 0
-        elif IDstartmid <= cl_id < IDmid:
-            dx = dx * (cl_id - IDstartmid) / float(IDmid - IDstartmid)
-        elif cl_id > IDmidend:
-            dx = dx * (IDend - cl_id) / float(IDend - IDmidend)
+        elif id_startmid <= cl_id < id_mid:
+            dx = dx * (cl_id - id_startmid) / float(id_mid - id_startmid)
+        elif cl_id > id_midend:
+            dx = dx * (id_end - cl_id) / float(id_end - id_midend)
 
-        dist = dx
-        points.InsertNextPoint(np.asarray(voronoi.GetPoint(i)) + dist)
+        points.InsertNextPoint(np.asarray(voronoi.GetPoint(i)) + dx)
         verts.InsertNextCell(1)
         verts.InsertCellPoint(i)
 
-    newDataSet.SetPoints(points)
-    newDataSet.SetVerts(verts)
-    newDataSet.GetPointData().AddArray(voronoi.GetPointData().GetArray(radiusArrayName))
+    new_dataset.SetPoints(points)
+    new_dataset.SetVerts(verts)
+    new_dataset.GetPointData().AddArray(voronoi.GetPointData().GetArray(radiusArrayName))
 
-    return newDataSet
+    return new_dataset
 
 
 def read_command_line():

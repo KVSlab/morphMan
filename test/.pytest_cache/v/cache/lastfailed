@@ -1,7 +1,0 @@
-{
-  "test_area_variation.py": true,
-  "test_change_angle_in_siphon.py::test_increase_siphon_angle": true,
-  "test_change_curvature_in_siphon.py": true,
-  "test_curvature_variations.py": true,
-  "test_move_branches.py": true
-}
