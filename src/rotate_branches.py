@@ -1,14 +1,14 @@
-from argparse import ArgumentParser
-from os import path, listdir
-from time import time
-from copy import deepcopy
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
+from os import path
 
 # Local import
 from common import *
 
 
-def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angle, l1, l2, bif, lower,
-                    cylinder_factor, aneurysm, anu_num, resampling_step, version):
+def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angle,
+                    keep_fixed_1, keep_fixed_2, bif, lower, no_smooth, no_smooth_point,
+                    poly_ball_size, cylinder_factor, resampling_step,
+                    version, region_of_interest, region_points):
     """
     Objective rotation of daughter branches, by rotating
     centerlines and Voronoi diagram about the bifuraction center.
@@ -19,17 +19,15 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
     Includes the option to rotate only one of the daughter branches.
 
     Args:
-        surface_path (str): Path to input surface.
+        input_filepath (str): Path to input surface.
         smooth (bool): Determine if the voronoi diagram should be smoothed.
         smooth_factor (float): Smoothing factor used for voronoi diagram smoothing.
         angle (float): Angle which daughter branches are moved, in radians.
-        l1 (bool): Leaves first branch untouched if True.
-        l2 (bool): Leaves second branch untouched if True.
+        keep_fixed_1 (bool): Leaves first branch untouched if True.
+        keep_fixed_2 (bool): Leaves second branch untouched if True.
         bif (bool): Interpolates bifurcation is True.
         lower (bool): Interpolates a lowered line through the bifurcation if True.
         cylinder_factor(float): Factor for choosing the smaller cylinder during Voronoi interpolation.
-        aneurysm (bool): Determines if aneurysm is present.
-        anu_num (int): Number of aneurysms.
         resampling_step (float): Resampling step used to resample centerlines.
         version (bool): Determines bifurcation interpolation method.
     """
@@ -37,10 +35,6 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
     base_path = get_path_names(input_filepath)
 
     # Output filepaths
-    # Surface
-    surface_smoothed_path = base_path + "_smooth.vtp"
-    surface_capped_path = base_path + "_capped.vtp"
-
     # Centerliens
     centerline_par_path = base_path + "_centerline_par.vtp"
     centerline_bif_path = base_path + "_centerline_bif.vtp"
@@ -54,8 +48,6 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
     centerline_rotated_bif_path = base_path + "centerline_rotated_bif_ang.vtp"
 
     # Voronoi diagrams
-    voronoi_path = base_path + "_voronoi.vtp"
-    voronoi_smoothed_path = base_path + "_voronoi_smoothed.vtp"
     voronoi_clipped_path = base_path + "_voronoi_clipped_ang.vtp"
     voronoi_ang_path = base_path + "_voronoi_ang.vtp"
     voronoi_rotated_path = base_path + "voronoi_rotated_ang.vtp"
@@ -65,18 +57,14 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
     points_div_path = base_path + "_divergingpoints.vtp"
 
     # Clean and capp / uncapp surface
-    parameters = get_parameters(base_path)
-    surface, capped_surface = prepare_surface(surface_path, surface_capped_path, parameters)
-
-    # Get aneurysm "end point"
-    if aneurysm:
-        aneurysm_point = get_aneurysm_dome(capped_surface, base_path)
-    else:
-        aneurysm_point = []
+    surface, capped_surface = prepare_surface(base_path, input_filepath)
 
     # Get inlet and outlets
-    outlet1, outlet2 = get_relevant_outlets(capped_surface, base_dir)
     inlet, outlets = get_centers(surface, base_path)
+    if region_of_interest == "manuall":
+        outlet1, outlet2 = get_relevant_outlets(capped_surface, base_path)
+    else:
+        outlet1, outlet2 = region_points[:3], region_points[3:]
 
     # Sort outlets
     outlets, outlet1, outlet2 = sort_outlets(outlets, outlet1, outlet2, base_path)
@@ -93,24 +81,25 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
                                                             centerline_relevant_outlets_path,
                                                             capped_surface,
                                                             resampling=resampling_step,
-                                                            voronoi=voronoi, pole_ids,
+                                                            voronoi=voronoi,
+                                                            pole_ids=pole_ids,
                                                             base_path=base_path)
     centerline_bif, _, _ = compute_centerlines(outlet1, outlet2, centerline_bif_path,
                                                capped_surface, resampling=resampling_step,
-                                               voronoi=voronoi, pole_ids_=pole_ids)
+                                               voronoi=voronoi, pole_ids=pole_ids)
 
     # Create a tolerance for diverging
     tolerance = get_tolerance(centerline_par)
 
     # Get data from centerlines and rotation matrix
     data = get_data(centerline_relevant_outlets, centerline_bif, tolerance)
-    R, m = rotation_matrix(data, angle, l1, l2)
-    write_parameters(data, base_dir)
+    R, m = rotation_matrix(data, angle, keep_fixed_1, keep_fixed_2)
+    write_parameters(data, base_path)
 
     # Compute and smooth voornoi diagram (not aneurysm)
-    print("Compute voronoi diagram")
+    print("-- Compute voronoi diagram.")
     if smooth:
-        voronoi = prepare_voronoi_diagram(capped_surface, centerlines, base_path, smooth,
+        voronoi = prepare_voronoi_diagram(capped_surface, centerline_par, base_path, smooth,
                                           smooth_factor, no_smooth, no_smooth_point,
                                           voronoi, pole_ids)
 
@@ -130,7 +119,7 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
     write_points(end_points[0], points_clipp_path)
 
     # Clip centerlines
-    print("Clipping centerlines and voronoi diagram.")
+    print("-- Clipping centerlines and voronoi diagram.")
     patch_cl = CreateParentArteryPatches(centerline_par, end_points[0])
     write_polydata(patch_cl, centerline_clipped_path)
 
@@ -139,7 +128,7 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
         write_polydata(patch_bif_cl, centerline_clipped_bif_path)
 
     # Clip the voronoi diagram
-    print("Clipping the Voronoi diagram")
+    print("-- Clipping the Voronoi diagram")
     if path.exists(voronoi_clipped_path):
         voronoi_clipped = read_polydata(voronoi_clipped_path)
     else:
@@ -148,7 +137,7 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
         write_polydata(voronoi_clipped, voronoi_clipped_path)
 
     # Rotate branches (Centerline and Voronoi diagram)
-    print("Rotate centerlines and voronoi diagram.")
+    print("-- Rotate centerlines and voronoi diagram.")
     rotated_cl = rotate_cl(patch_cl, end_points[1], m, R)
     write_polydata(rotated_cl, centerline_rotated_path)
 
@@ -160,20 +149,18 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
     write_polydata(rotated_voronoi, voronoi_rotated_path)
 
     # Interpolate the centerline
-    print("Interpolate centerlines and voronoi diagram.")
+    print("-- Interpolate centerlines.")
     interpolated_cl = InterpolatePatchCenterlines(rotated_cl, centerline_par,
                                                   div_points_rotated[0].GetPoint(0),
                                                   None, False)
     write_polydata(interpolated_cl, centerline_new_path.replace(".vtp", "1.vtp"))
 
     if bif:
-        print("Start interpolate bif")
         interpolated_bif = InterpolatePatchCenterlines(rotated_bif_cl, centerline_bif,
                                                        None, "bif", True)
         write_polydata(interpolated_bif, centerline_new_bif_path)
 
     if lower:
-        print("Start interpolate lower")
         center = ((1 / 9.) * div_points[1][0] + (4 / 9.) * div_points[1][1] + \
                   (4 / 9.) * div_points[1][2]).tolist()
         div_points_rotated_bif[0].SetPoint(0, center[0], center[1], center[2])
@@ -182,7 +169,6 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
                                                              "lower", True)
         write_polydata(interpolated_bif_lower, centerline_new_bif_lower_path)
 
-    print("Start merge")
     interpolated_cl = merge_cl(interpolated_cl, div_points_rotated[1],
                                end_points_rotated[1])
     write_polydata(interpolated_cl, centerline_new_path)
@@ -196,24 +182,26 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
         bif_ = [interpolated_bif_lower, rotated_bif_cl]
 
     # Interpolate voronoi diagram
-    print("Start interpolate voronoi diagram")
+    print("-- Interpolate voronoi diagram.")
     interpolated_voronoi = interpolate_voronoi_diagram(interpolated_cl, rotated_cl,
                                                        rotated_voronoi,
                                                        end_points_rotated,
-                                                       bif_, lower, cylinder_factor)
+                                                       bif_, cylinder_factor)
 
     # Note: This function is slow, and can be commented, but at the cost of robustness.
     interpolated_voronoi = remove_distant_points(interpolated_voronoi, interpolated_cl)
     write_polydata(interpolated_voronoi, voronoi_ang_path)
 
     # Write a new surface from the new voronoi diagram
-    print("Create new surface")
-    new_surface = create_new_surface(interpolated_voronoi)
+    print("-- Create new surface.")
+    new_surface = create_new_surface(interpolated_voronoi, poly_ball_size)
 
-    print("Preparing surface for output")
+    print("-- Preparing surface for output.")
     new_surface = prepare_surface_output(new_surface, surface, interpolated_cl,
                                          output_filepath, test_merge=True, changed=True,
                                          old_centerline=centerline_par)
+
+    print("-- Writing new surface to {}.".format(output_filepath))
     write_polydata(new_surface, output_filepath)
 
 
@@ -578,6 +566,8 @@ def read_command_line():
     Read arguments from commandline
     """
 
+    description = "Removes the bifurcation (possibly with an aneurysm), after which the" + \
+                  " daughter branches can be rotated."
     parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
     required = parser.add_argument_group('required named arguments')
 
@@ -625,16 +615,38 @@ def read_command_line():
                              " size should be adjusted. For quick proto typing we" + \
                              " recommend ~100 in all directions, but >250 for a final " + \
                              " surface.", metavar="size")
+        # Set region of interest:
+    parser.add_argument("-r", "--region-of-interest", type=str, default="manuall",
+                        choices=["manuall", "commandline"],
+                        help="The method for defining the region to be changed. There are" +
+                             " three options: 'manuall', 'commandline', 'landmarking'. In" +
+                             " 'manuall' the user will be provided with a visualization of the" +
+                             " input surface, and asked to provide an end and start point of the" +
+                             " region of interest. Note that not all algorithms are robust over" +
+                             " bifurcations. If 'commandline' is provided, then '--region-points'" +
+                             " is expected to be provided. Finally, if 'landmarking' is" +
+                             " given, it will look for the output from running" +
+                             " automated_geometric_quantities.py.")
+    parser.add_argument("--region-points", nargs="+", type=float, default=None, metavar="points",
+                        help="If -r or --region-of-interest is 'commandline' then this" +
+                             " argument have to be given. The method expects two points" +
+                             " which defines the start and end of the region of interest. If" +
+                             " 'method' is set to stenosis, then one point can be provided as well," +
+                             " which is assumbed to be the center of a new stenosis." +
+                             " Example providing the points (1, 5, -1) and (2, -4, 3):" +
+                             " --stenosis-points 1 5 -1 2 -4 3")
 
+    # Arguments for rotation
     parser.add_argument('-a', '--angle', type=float, default=10,
-                        help="Each daughter branch is rotated an angle a in the" +
-                             " bifurcation plane. a should be expressed in radians as" +
-                             " any math expression from the" +
-                             " math module in python", metavar="rotation_angle")
-    parser.add_argument("--leave1", type=bool, default=False,
+                        help="Each daughter branch is rotated an angle 'a' in the" +
+                             " bifurcation plane. 'a' is assumed to be in degrees," + \
+                             " and not radians", metavar="rotation_angle")
+    parser.add_argument("--keep-fixed-1", type=bool, default=False,
                         help="Leave one branch untuched")
-    parser.add_argument("--leave2", type=bool, default=False,
+    parser.add_argument("--keep-fixed-2", type=bool, default=False,
                         help="Leave one branch untuched")
+
+    # Bifurcation reconstruction arguments
     parser.add_argument("--bif", type=bool, default=False,
                         help="interpolate bif as well")
     parser.add_argument("--lower", type=bool, default=False,
@@ -644,21 +656,21 @@ def read_command_line():
                         help="Factor for choosing the smaller cylinder")
     parser.add_argument("--version", type=bool, default=True, help="Type of" +
                                                                    "interpolation")
-    parser.add_argument("--aneurysm", type=bool, default=False,
-                        help="Determines if there is an aneurysm or not")
-
+                        # TODO: Expand explanation
     parser.add_argument("--resampling-step", type=float, default=0.1,
                         help="Resampling step used to resample centerlines")
 
     args = parser.parse_args()
-    ang_ = 0 if args.a == 0 else math.pi / args.a  # Convert from deg to rad
+    ang_ = 0 if args.angle == 0 else args.angle * math.pi / 180  # Convert from deg to rad
 
-    return dict(input_filepath=args.ifile, smooth=args.smooth,
-                smooth_factor=args.smooth_factor, angle=args.angle,
+    return dict(input_filepath=args.ifile, smooth=args.smooth, output_filepath=args.ofile,
+                smooth_factor=args.smooth_factor, angle=ang_,
                 keep_fixed_1=args.keep_fixed_1, keep_fixed_2=args.keep_fixed_2,
                 bif=args.bif, lower=args.lower, cylinder_factor=args.cylinder_factor,
-                aneurysm=args.aneurysm, resampling_step=args.resampling_step,
-                version=args.version)
+                resampling_step=args.resampling_step, no_smooth=args.no_smooth,
+                no_smooth_point=args.no_smooth_point, poly_ball_size=args.poly_ball_size,
+                version=args.version, region_of_interest=args.region_of_interest,
+                region_points=args.region_points)
 
 
 if __name__ == "__main__":

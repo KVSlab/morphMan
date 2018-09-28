@@ -218,7 +218,7 @@ def get_relevant_outlets(surface, base_path):
         relevant_outlets (list): List of relevant outlet IDs.
     """
     # Check if info exists
-    if not path.isfile(base_path + "info.txt"):
+    if not path.isfile(base_path + "_info.txt"):
         provide_relevant_outlets(surface, base_path)
 
     # Open info
@@ -477,7 +477,7 @@ def get_aneurysm_dome(surface, dir_path, anu_num):
         dome[anu_num] (list): List of aneurysm dome IDs.
     """
     # Check if info exists
-    if not path.isfile(path.join(dir_path, "info.txt")):
+    if not path.isfile(path.join(dir_path + "_info.txt")):
         provide_aneurysm_points(surface, dir_path)
 
     # Open info
@@ -552,7 +552,7 @@ def provide_relevant_outlets(surface, dir_path=None):
     if dir_path is not None:
         for i in range(len(points)):
             info["relevant_outlet_%d" % i] = points[i]
-            write_parameters(info, dir_path)
+        write_parameters(info, dir_path)
 
     return points
 
@@ -725,7 +725,7 @@ def clean_surface(surface):
 
 def get_centers(surface, base_path, flowext=False):
     # Check if info exists
-    if flowext or not path.isfile(base_path + "info.txt"):
+    if flowext or not path.isfile(base_path + "_info.txt"):
         compute_centers(surface, base_path)
 
     # Open info
@@ -2056,7 +2056,8 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
                            test_merge=False, changed=False, old_centerline=None):
     # Check if the folder for the output exits
     if not path.exists(path.dirname(output_filepath)):
-        makedirs(path.dirname(output_filepath))
+        if path.dirname(output_filepath) != "":
+            makedirs(path.dirname(output_filepath))
 
     # Get planes if outlets of the original surface
     boundary_edges = get_feature_edges(original_surface)
@@ -3289,7 +3290,7 @@ def InterpolatePatchCenterlines(patchCenterlines, parentCenterlines,
             splinePoints = InterpolateTwoCells(startingCell, endingCell, \
                                                numberOfInterpolationPoints, \
                                                additionalPointIds[i],
-                                               additionalPoint, lower)
+                                               additionalPoint)
 
         interpolatedCellArray.InsertNextCell(splinePoints.GetNumberOfPoints())
         for j in range(splinePoints.GetNumberOfPoints()):
