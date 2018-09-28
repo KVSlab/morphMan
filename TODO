@@ -1,24 +1,10 @@
 Code
 - Clean up the code using in move branches
-- Consistent order of the "main" function
 - Make into a module
-- Consistent code under __init__ == "__main__"
-- Remove "operator"..?
-- ifile/ofile as parameter (mandatory)
-- sort argpars arguments
-- add initialize as an argument
 - curvature__ ?
-
-Functionality
-- Post-processing of the surface with clipping and
-  light smoothing with laplace, and testing 'merge'
-
-Testing/tutorial
-- Download data from somewhere
 
 Notes for the future
 - Replace for-loops with numpy_support in vtk
-- Set resolution, not number in polyball size using bounds of the Voronoi diagram
 - Generalize functions which wrapes vtk objects by exposing more agruments in the function
 - Restructure the code into: centerline_operations.py, voronoi_operations.py,
   surface_operations io.py, etc. There are now overlapping functionalty in the code.
