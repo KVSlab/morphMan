@@ -1,7 +1,5 @@
 Code
-- Clean up the code using in move branches
 - Make into a module
-- curvature__ ?
 
 Notes for the future
 - Replace for-loops with numpy_support in vtk
