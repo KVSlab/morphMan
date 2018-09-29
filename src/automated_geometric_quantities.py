@@ -577,37 +577,6 @@ def get_moved_siphon(new_centerlines, centerlines, p1, p2):
     return id1, id2, moved_id1, moved_id2, moved_p1, moved_p2
 
 
-def cut_centerline(line, end_id):
-    """
-    Clips the centerline at the end point
-    given by some ID.
-
-    Args:
-        line (vtkPolyData): Centerline data.
-        end_id (int): ID of point to cut.
-
-    Returns:
-        line (vtkPolyData): Clipped line.
-    """
-    # Create edges between new_centerline points
-    pts = vtk.vtkPoints()
-    for i in range(end_id):
-        pts.InsertNextPoint(line.GetPoint(i))
-
-    lines = vtk.vtkCellArray()
-    for i in range(end_id - 2):
-        newline = vtk.vtkLine()
-        newline.GetPointIds().SetId(0, i)
-        newline.GetPointIds().SetId(1, i + 1)
-        lines.InsertNextCell(newline)
-
-    line = vtk.vtkPolyData()
-    line.SetPoints(pts)
-    line.SetLines(lines)
-
-    return line
-
-
 def find_angle(pA, pB, p1, p2, proj):
     """
     Compute the angle between two vectors

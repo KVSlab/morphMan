@@ -463,37 +463,6 @@ def create_new_surface(completeVoronoiDiagram, poly_ball_size=[120, 120, 120]):
     return envelope
 
 
-def get_aneurysm_dome(surface, dir_path, anu_num):
-    """
-    Extract aneurysm dome of the
-    input surface model.
-
-    Args:
-        surface(vtkPolyData): Surface model.
-        dir_path (str): Location of info-file.
-        anu_num (int): Number of aneurysms.
-
-    Returns:
-        dome[anu_num] (list): List of aneurysm dome IDs.
-    """
-    # Check if info exists
-    if not path.isfile(path.join(dir_path + "_info.txt")):
-        provide_aneurysm_points(surface, dir_path)
-
-    # Open info
-    parameters = get_parameters(dir_path)
-    dome = []
-    for key, value in list(parameters.items()):
-        if key.startswith("aneurysm_"):
-            dome.append(value)
-
-    # Recursive call
-    if dome == []:
-        dome = provide_aneurysm_points(surface, dir_path)
-
-    return dome[anu_num]
-
-
 def centerline_div(centerline1, centerline2, tol):
     """
     Find ID of diverging point;
@@ -2496,43 +2465,6 @@ def clip_diverging_line(centerline, clip_start_point, clip_end_id):
     patch_cl = CreateParentArteryPatches(centerline, div_points, siphon=True)
 
     return patch_cl
-
-
-def get_vtk_region_points(line, region_points):
-    """
-    Store clipping points as VTK objects.
-    Extract points as tuples and corresponding IDs.
-
-    Args:
-        line (vtkPolyData): Line representing longest single centerline.
-        region_points (ndarray): Array containing two clpping points.
-
-    Returns:
-        p1 (tuple): First clipping point.
-        p2 (tuple): Second clipping point.
-        ID1 (long): ID of first clipping point.
-        ID2 (long): ID of second clipping point.
-        clip_points (vtkPoints): VTK objects containing the clipping points.
-        region_points (ndarray): Array containing two clipping points.
-    """
-    locator = get_locator(line)
-    ID1 = locator.FindClosestPoint(region_points[0])
-    ID2 = locator.FindClosestPoint(region_points[1])
-    if ID1 > ID2:
-        region_points = region_points[::-1]
-        ID1, ID2 = ID2, ID1
-
-    # Set clipping points
-    div_points = np.asarray(region_points)
-    points = vtk.vtkPoints()
-    for point in div_points:
-        points.InsertNextPoint(point)
-    clip_points = points
-
-    p1 = clip_points.GetPoint(0)
-    p2 = clip_points.GetPoint(1)
-
-    return p1, p2, ID1, ID2, clip_points, region_points
 
 
 def get_line_to_change(surface, centerline, region_of_interest, method, region_points,
