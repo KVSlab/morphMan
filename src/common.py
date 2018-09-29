@@ -612,69 +612,44 @@ def get_data(centerline, centerline_bif, tol):
     # Sort centerline to start at inlet
     cl1 = extract_single_line(centerline, 0)
     cl2 = extract_single_line(centerline, 1)
-    centerline = merge_data([cl1, cl2])
 
-    # Declear variables before loop incase values are not found
-    diverging_point_ID = -1
-    diverging_point = [0.0, 0.0, 0.0]
-    diverging_point_MISR = -1
-
-    clipping_point_ID = -1
-    clipping_point = [0.0, 0.0, 0.0]
+    # Declear dictionary to hold results
     data = {"bif": {}, 0: {}, 1: {}}
 
-    # List of points conected to ID
-    points_ids_0 = vtk.vtkIdList()
-    points_ids_1 = vtk.vtkIdList()
-
-    # One is the branch to the left and the other is the one to the right
-    centerline.GetCellPoints(0, points_ids_0)
-    centerline.GetCellPoints(1, points_ids_1)
     # Find lower clipping point
-    N = min(points_ids_0.GetNumberOfIds(), points_ids_1.GetNumberOfIds())
+    N = min(cl1.GetNumberOfPoints(), cl2.GetNumberOfPoints())
     for i in range(0, N):
-        cell_point_0 = centerline.GetPoint(points_ids_0.GetId(i))
-        cell_point_1 = centerline.GetPoint(points_ids_1.GetId(i))
-
-        distance_between_points = distance(cell_point_0, cell_point_1) ** 2
+        point_0 = cl1.GetPoint(i)
+        point_1 = cl2.GetPoint(i)
+        distance_between_points = distance(point_0, point_1)
         if distance_between_points > tol:
-            tmpI = i
-            point_ID_0 = points_ids_0.GetId(i)
-            center = centerline.GetPoint(point_ID_0)
-            r = centerline.GetPointData().GetArray(radiusArrayName).GetTuple1(point_ID_0)
+            center = cl1.GetPoint(i)
+            r = cl1.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
             break
 
-    end, r_end = move_past_sphere(centerline, center, r, point_ID_0, step=-1)
+    end, r_end, id_end = move_past_sphere(cl1, center, r, i, step=-1)
     data["bif"]["end_point"] = end
-    data["bif"]["r_end"] = r_end
     data["bif"]["div_point"] = center
-    data["bif"]["ID_div"] = point_ID_0
-    data["bif"]["i_div"] = tmpI
-    data["bif"]["r_div"] = r
 
     # Find the diverging points for the bifurcation
     # continue further downstream in each direction and stop when
     # a point is closer than tol, then move point MISR * X
     locator = get_locator(centerline_bif)
 
-    for counter, point_ids in enumerate([points_ids_0, points_ids_1]):
-        for i in range(tmpI, point_ids.GetNumberOfIds(), 1):
-            tmp_point = centerline.GetPoint(point_ids.GetId(i))
+    for counter, cl in enumerate([cl1, cl2]):
+        for i in range(i, cl.GetNumberOfPoints(), 1):
+            tmp_point = cl.GetPoint(i)
             closest_point_ID = locator.FindClosestPoint(tmp_point)
             closest_point = centerline_bif.GetPoint(closest_point_ID)
-            distance_between_points = distance(tmp_point, closest_point) ** 2
-            if distance_between_points < tol:
-                point_ID = point_ids.GetId(i)
-                center = centerline.GetPoint(point_ID)
-                r = centerline.GetPointData().GetArray(radiusArrayName).GetTuple1(point_ID)
+            distance_between_points = distance(tmp_point, closest_point)
+            if distance_between_points < tol * 4:
+                center = cl.GetPoint(i)
+                r = cl1.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
                 break
 
-        end, r_end = move_past_sphere(centerline, center, r, point_ID, step=1, stop=point_ID * 100, X=1)
+        end, r_end, id_end = move_past_sphere(cl, center, r, i, step=1,
+                                              stop=i * 100, X=1)
         data[counter]["end_point"] = end
-        data[counter]["r_end"] = r_end
-        data[counter]["r_div"] = r
-        data[counter]["ID_end"] = locator.FindClosestPoint(data[counter]["end_point"])
-        data[counter]["ID_div"] = locator.FindClosestPoint(center)
         data[counter]["div_point"] = center
 
     return data
@@ -1450,7 +1425,7 @@ def move_past_sphere(centerline, center, r, start, step=-1, stop=0, X=0.8):
 
     r = centerline.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
 
-    return tempPoint, r
+    return tempPoint, r, i
 
 
 def vmtk_surface_smoother(surface, method, iterations=800, passband=1.0, relaxation=0.01):
@@ -1469,11 +1444,9 @@ def vmtk_surface_smoother(surface, method, iterations=800, passband=1.0, relaxat
 
 
 def extract_ica_centerline(base_path, resampling_step):
-    centerlines_path = base_path + "_centerline.vtp"
     input_filepath = base_path + ".vtp"
     ica_centerline_path = base_path + "_ica.vtp"
     centerline_relevant_outlets_path = base_path + "_centerline_relevant_outlets.vtp"
-    centerline_bif_path = base_path + "_centerline_bif.vtp"
     if path.exists(ica_centerline_path):
         return read_polydata(ica_centerline_path)
 
@@ -1483,23 +1456,17 @@ def extract_ica_centerline(base_path, resampling_step):
     outlet1, outlet2 = get_relevant_outlets(capped_surface, base_path)
     outlets, outlet1, outlet2 = sort_outlets(outlets, outlet1, outlet2, base_path)
 
-    # Compute / import centerlines
-    centerlines, _, _ = compute_centerlines(inlet, outlets, centerlines_path,
-                                            capped_surface, resampling=resampling_step,
-                                            smooth=False, base_path=base_path)
-
     # Get relevant centerlines
     centerline_relevant_outlets = compute_centerlines(inlet, outlet1 + outlet2,
                                                       centerline_relevant_outlets_path,
                                                       capped_surface,
                                                       resampling=resampling_step)
-    centerline_bif = compute_centerlines(outlet1, outlet2,
-                                         centerline_bif_path,
-                                         capped_surface, resampling=resampling_step)
+
     # Extract ICA centerline
-    tolerance = get_tolerance(centerline_relevant_outlets)
-    data = get_data(centerline_relevant_outlets, centerline_bif, tolerance)
-    line = extract_single_line(centerlines, 0, startID=0, endID=data["bif"]["ID_div"])
+    tmp_line_1 = extract_single_line(centerline_relevant_outlets, 0)
+    tmp_line_2 = extract_single_line(centerline_relevant_outlets, 1)
+    line = extract_single_line(centerlines, 0, startID=0, endID=centerline_div(tmp_line_1,
+                                                                               tmp_line_2))
     write_polydata(line, ica_centerline_path)
     return line
 
@@ -2115,6 +2082,7 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
         angle = np.arccos(np.dot(in_dir, normal)) * 180 / np.pi
         flipped = True if 90 < angle < 270 else False
         normal = -normal if 90 < angle < 270 else normal
+        #print(normal)
 
         # Mapp the old center and normals to the altered model
         if changed and old_centerline is not None:
@@ -2133,15 +2101,20 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
                 translation = new_outlet - np.array(outlets[line_id])
 
             center += translation
-
+            in_dir_new = in_dir_new / np.sqrt(np.sum(in_dir_new**2))
             in_dir_normal = np.cross(in_dir_new, in_dir)
-            dir_angle = np.arccos(np.dot(in_dir, normal)) * 180 / np.pi
+            dir_angle = np.arccos(np.dot(in_dir, in_dir_new)) * 180 / np.pi
 
             translation = vtk.vtkTransform()
-            translation.RotateWXYZ(dir_angle, in_dir_normal)
+            translation.RotateWXYZ(-dir_angle, in_dir_normal)
             tmp_normal = normal
             normal = [0, 0, 0]
             translation.TransformNormal(tmp_normal, normal)
+            print(" in dir", in_dir)
+            print("new dir", in_dir_new)
+            print("Old norml", tmp_normal)
+            print("New normal", normal)
+            print("angle", dir_angle)
 
         # Set plane
         plane = vtk_plane(center, normal)
@@ -2503,64 +2476,6 @@ def get_spline_points(line, param, direction, clip_points):
         return dz, ids
 
 
-def find_diverging_centerlines(centerlines, end_point):
-    """
-    Collect centerlines diverging from the longest
-    centerline.
-
-    Args:
-        centerlines (vtkPolyData): Collection of all centerlines.
-        end_point (tuple): End point of relevant centerline.
-
-    Returns:
-        div_ids (list): ID where lines diverege.
-    Returns:
-        div_points (list): Points where lines diverge.
-    Returns:
-        centerlines (vtkPolyData): Collection of centerlines not diverging.
-    Returns:
-        div_lines (list): Collection of divering centerlines.
-    """
-    # Start with longest line
-    longest = extract_single_line(centerlines, 0)
-    longest = vmtk_centerline_resampling(longest, 0.1)
-    longest_locator = get_locator(longest)
-    longest_end_id = longest_locator.FindClosestPoint(end_point)
-
-    # Separate lines and divering lines
-    lines = [longest]
-    div_lines = []
-    div_ids = []
-    div_points = []
-    n = centerlines.GetNumberOfCells() - 1
-    tol = 0.40
-
-    # Find diverging lines
-    for i in range(n):
-        div = False
-        line_tmp = extract_single_line(centerlines, i + 1)
-        line_tmp = vmtk_centerline_resampling(line_tmp, 0.1)
-        stop_id = len(get_curvilinear_coordinate(line_tmp))
-        if longest_end_id < stop_id:
-            stop_id = longest_end_id
-        for j in np.arange(stop_id):
-            p_cl = np.asarray(longest.GetPoint(j))
-            p_tmp = np.asarray(line_tmp.GetPoint(j))
-            dist = distance(p_cl, p_tmp)
-            if dist > tol and j < (longest_end_id - 20):
-                div_lines.append(line_tmp)
-                div_ids.append(j)
-                div_points.append(p_tmp)
-                div = True
-                break
-        if not div:
-            lines.append(line_tmp)
-
-    centerlines = merge_data(lines)
-
-    return div_ids, div_points, centerlines, div_lines
-
-
 def clip_diverging_line(centerline, clip_start_point, clip_end_id):
     """
     Clip the opthamlic artery if present.
@@ -2581,68 +2496,6 @@ def clip_diverging_line(centerline, clip_start_point, clip_end_id):
     patch_cl = CreateParentArteryPatches(centerline, div_points, siphon=True)
 
     return patch_cl
-
-
-def find_ophthalmic_artery(centerlines, clip_pts):
-    """
-    Method checks if the geometry includes the opthamlic artery.
-    Extracts the opthalmic artery if present, and determines its position.
-
-    Args:
-        centerlines (vtkPolyData): Complete set of centerlines.
-        clip_pts (vtkPoints): Clipping points.
-
-    Returns:
-        eye (bool): True if opthamlic artery is present.
-        clip_ID (long): ID where opthamlic artery is located along centerline.
-        centerlines (vtkPolyData): Complete set of centerlines excluding opthamlic artery.
-        eyeline (vtkPolyData): Centerline leading to opthalmic artery.
-    """
-
-    # Extract lines:
-    lines = []
-    n = centerlines.GetNumberOfCells()
-    for i in range(n):
-        lines.append(extract_single_line(centerlines, i))
-
-    longest = lines[0]
-    tol = 0.40
-
-    # Find start and stop IDs along clipped curve
-    locator_longest = get_locator(longest)
-    p1 = clip_pts[0]
-    p2 = clip_pts[1]
-    ID1 = locator_longest.FindClosestPoint(p1)
-    ID2 = locator_longest.FindClosestPoint(p2)
-
-    eye = False
-    index = 1
-    for line in lines[1:]:
-        len_check = len(get_curvilinear_coordinate(line))
-        if len_check < ID2:
-            IDStop = len_check - 1
-        else:
-            IDStop = ID2
-
-        for i in np.arange(ID1, IDStop):
-            p_eye = np.asarray(line.GetPoint(i))
-            p_cl = np.asarray(longest.GetPoint(i))
-            dist = la.norm(p_eye - p_cl)
-            if dist > tol:
-                clip_ID = i
-                eye = True
-                eyeline = lines[index]
-                del lines[index]
-                centerlines = merge_data(lines)
-                break
-        if eye:
-            break
-        index += 1
-
-    if eye:
-        return eye, clip_ID, centerlines, eyeline
-    else:
-        return eye, None, centerlines, None
 
 
 def get_vtk_region_points(line, region_points):
@@ -3023,112 +2876,22 @@ def split_voronoi_with_centerlines(voronoi, centerline1, centerline2):
     return voronoi1, voronoi2
 
 
+def get_clipped_centerline(centerline_relevant_outlets, data):
+    line0 = extract_single_line(centerline_relevant_outlets, 0)
+    line1 = extract_single_line(centerline_relevant_outlets, 1)
+    lines = []
+    for i, line in enumerate([line0, line1]):
+        loc = get_locator(line)
+        tmp_ID_dau = loc.FindClosestPoint(data[i]["end_point"])
+        tmp_ID_bif = loc.FindClosestPoint(data["bif"]["end_point"])
+        lines.append(extract_single_line(line, 0, startID=tmp_ID_bif, endID=tmp_ID_dau))
+
+    return merge_data(lines)
+
+
 ### The following code is adapted from:
 ### https://github.com/vmtk/vmtk/tree/master/vmtkApps/CerebralAneurysms/ParentVesselReconstruction
 ### Written by Marina Piccinelli, and distrubuted within vmtk.
-def MaskVoronoiDiagram(voronoi, centerlines):
-    numberOfCenterlinesPatches = centerlines.GetNumberOfCells()
-    numberOfVoronoiPoints = voronoi.GetNumberOfPoints()
-
-    maskArray = vtk.vtkIntArray()
-    maskArray.SetNumberOfComponents(1)
-    maskArray.SetNumberOfTuples(numberOfVoronoiPoints)
-    maskArray.FillComponent(0, 0)
-
-    for i in range(numberOfCenterlinesPatches):
-        tangent, center, centerMISR = compute_patch_end_point_parameters(i, centerlines)
-        MaskWithPatch(i, tangent, center, centerMISR, maskArray, centerlines, voronoi)
-
-    return maskArray
-
-
-def compute_patch_end_point_parameters(id, centerlines):
-    tan = [0.0, 0.0, 0.0]
-    cell = vtk.vtkGenericCell()
-    centerlines.GetCell(id, cell)
-
-    if (id == 0):
-        point0 = cell.GetPoints().GetPoint(cell.GetNumberOfPoints() - 1)
-        point1 = cell.GetPoints().GetPoint(cell.GetNumberOfPoints() - 2)
-        radius0 = centerlines.GetPointData().GetArray(radiusArrayName).GetTuple1(
-            cell.GetPointId(cell.GetNumberOfPoints() - 1))
-    else:
-        point0 = cell.GetPoints().GetPoint(0)
-        point1 = cell.GetPoints().GetPoint(1)
-        radius0 = centerlines.GetPointData().GetArray(radiusArrayName).GetTuple1(cell.GetPointId(0))
-
-    tan[0] = point1[0] - point0[0]
-    tan[1] = point1[1] - point0[1]
-    tan[2] = point1[2] - point0[2]
-    vtk.vtkMath.Normalize(tan)
-    return tan, point0, radius0
-
-
-def MaskWithPatch(id, t, c, r, maskArray, centerlines, voronoi):
-    patch = extract_single_line(centerlines, id)
-
-    tubeFunction = vtkvmtk.vtkvmtkPolyBallLine()
-    tubeFunction.SetInput(patch)
-    tubeFunction.SetPolyBallRadiusArrayName(radiusArrayName)
-
-    lastSphere = vtk.vtkSphere()
-    lastSphere.SetRadius(r * 1.5)
-    lastSphere.SetCenter(c)
-
-    for i in range(voronoi.GetNumberOfPoints()):
-        point = [0.0, 0.0, 0.0]
-
-        voronoi.GetPoint(i, point)
-        voronoiVector = [point[j] - c[j] for j in range(3)]
-        voronoiVectorDot = vtk.vtkMath.Dot(voronoiVector, t)
-
-        tubevalue = tubeFunction.EvaluateFunction(point)
-        spherevalue = lastSphere.EvaluateFunction(point)
-
-        if spherevalue < 0.0 and voronoiVectorDot < 0.0:
-            continue
-        elif tubevalue <= 0.0:
-            maskArray.SetTuple1(i, 1)
-
-
-def ComputeNumberOfMaskedPoints(dataArray):
-    numberOfPoints = 0
-    for i in range(dataArray.GetNumberOfTuples()):
-        value = dataArray.GetTuple1(i)
-        if value == 1:
-            numberOfPoints += 1
-
-    return numberOfPoints
-
-
-def ExtractMaskedVoronoiPoints(voronoi, maskArray):
-    numberOfPoints = ComputeNumberOfMaskedPoints(maskArray)
-
-    maskedVoronoi = vtk.vtkPolyData()
-    maskedPoints = vtk.vtkPoints()
-    cellArray = vtk.vtkCellArray()
-    radiusArray = get_vtk_array(radiusArrayName, 1, numberOfPoints)
-
-    count = 0
-    for i in range(voronoi.GetNumberOfPoints()):
-        point = [0.0, 0.0, 0.0]
-        voronoi.GetPoint(i, point)
-        pointRadius = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
-        value = maskArray.GetTuple1(i)
-        if value == 1:
-            maskedPoints.InsertNextPoint(point)
-            radiusArray.SetTuple1(count, pointRadius)
-            cellArray.InsertNextCell(1)
-            cellArray.InsertCellPoint(count)
-            count += 1
-
-    maskedVoronoi.SetPoints(maskedPoints)
-    maskedVoronoi.SetVerts(cellArray)
-    maskedVoronoi.GetPointData().AddArray(radiusArray)
-
-    return maskedVoronoi
-
-
 def CreateParentArteryPatches(parentCenterlines, clipPoints, siphon=False, bif=False):
     numberOfDaughterPatches = parentCenterlines.GetNumberOfCells()
     if siphon:
@@ -3215,7 +2978,6 @@ def ExtractPatchesIdsSiphon(parentCl, clipPts, clipped=False):
 
 
 def ExtractPatchesIds(parentCl, clipPts):
-    distance = vtk.vtkMath.Distance2BetweenPoints
     clipIds = []
     numberOfPoints = 0
     N = clipPts.GetNumberOfPoints()
@@ -3240,8 +3002,8 @@ def ExtractPatchesIds(parentCl, clipPts):
         ID1 = locator.FindClosestPoint(pnt_1)
         ID2 = locator.FindClosestPoint(pnt_2)
 
-        distance1 = math.sqrt(distance(pnt_1, cellLine.GetPoints().GetPoint(ID1)))
-        distance2 = math.sqrt(distance(pnt_2, cellLine.GetPoints().GetPoint(ID2)))
+        distance1 = distance(pnt_1, cellLine.GetPoints().GetPoint(ID1))
+        distance2 = distance(pnt_2, cellLine.GetPoints().GetPoint(ID2))
 
         if distance1 > 1 and distance2 > 1:
             ID = 0

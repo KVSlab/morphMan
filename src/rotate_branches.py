@@ -44,13 +44,14 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
     centerline_new_bif_path = base_path + "_centerline_interpolated_bif_ang.vtp"
     centerline_new_bif_lower_path = base_path + "_centerline_interpolated_bif_lower_ang.vtp"
     centerline_relevant_outlets_path = base_path + "_centerline_relevant_outlets.vtp"
-    centerline_rotated_path = base_path + "centerline_rotated_ang.vtp"
-    centerline_rotated_bif_path = base_path + "centerline_rotated_bif_ang.vtp"
+    centerline_rotated_path = base_path + "_centerline_rotated_ang.vtp"
+    centerline_rotated_bif_path = base_path + "_centerline_rotated_bif_ang.vtp"
+    centerline_bif_clipped_path = base_path + "_centerline_clipped_out.vtp"
 
     # Voronoi diagrams
     voronoi_clipped_path = base_path + "_voronoi_clipped_ang.vtp"
     voronoi_ang_path = base_path + "_voronoi_ang.vtp"
-    voronoi_rotated_path = base_path + "voronoi_rotated_ang.vtp"
+    voronoi_rotated_path = base_path + "_voronoi_rotated_ang.vtp"
 
     # Points
     points_clipp_path = base_path + "_clippingpoints.vtp"
@@ -119,9 +120,13 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
     write_points(end_points[0], points_clipp_path)
 
     # Clip centerlines
-    print("-- Clipping centerlines and voronoi diagram.")
+    print("-- Clipping centerlines.")
     patch_cl = CreateParentArteryPatches(centerline_par, end_points[0])
     write_polydata(patch_cl, centerline_clipped_path)
+
+    # Get the centerline which was clipped away
+    clipped_centerline = get_clipped_centerline(centerline_relevant_outlets, data)
+    write_polydata(clipped_centerline, centerline_bif_clipped_path)
 
     if lower or bif:
         patch_bif_cl = CreateParentArteryPatches(centerline_bif, end_points_bif[0])
@@ -132,8 +137,7 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
     if path.exists(voronoi_clipped_path):
         voronoi_clipped = read_polydata(voronoi_clipped_path)
     else:
-        masked_voronoi = MaskVoronoiDiagram(voronoi, patch_cl)
-        voronoi_clipped = ExtractMaskedVoronoiPoints(voronoi, masked_voronoi)
+        voronoi_clipped, _ = split_voronoi_with_centerlines(voronoi, patch_cl, clipped_centerline)
         write_polydata(voronoi_clipped, voronoi_clipped_path)
 
     # Rotate branches (Centerline and Voronoi diagram)
@@ -450,10 +454,10 @@ def rotation_matrix(data, angle, leave1, leave2):
 
     # Leave one of the branches untouched
     if leave1:
-        k = 1 if data[0]["r_end"] > data[1]["r_end"] else 2
+        k = 1
         m[k] = I
     if leave2:
-        k = 1 if data[0]["r_end"] < data[1]["r_end"] else 2
+        k = 2
         m[k] = I
 
     return R, m
