@@ -5,6 +5,7 @@ import math
 from os import path, makedirs
 import sys
 
+from IPython import embed
 from vmtk import vtkvmtk, vmtkscripts
 from vtk.util import numpy_support
 from scipy.signal import resample
@@ -2510,7 +2511,7 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
         endID = min(pointIDs)
         cl_id = 0
 
-        region_points = []
+        region_points = list(centerline.GetPoint(startID)) + list(centerline.GetPoint(endID))
 
     elif region_of_interest == "commandline" or region_of_interest == "manuall":
         # Get points from the user
