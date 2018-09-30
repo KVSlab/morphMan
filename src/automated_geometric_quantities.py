@@ -48,7 +48,7 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines, proj=Fal
 
     if new_centerlines is None:
         print("Maniuplating centerline manually")
-        centerlines, new_centerlines = get_new_centerliens(centerlines, region_points, alpha, beta, p1, p2)
+        centerlines, new_centerlines = get_new_centerlines(centerlines, region_points, alpha, beta, p1, p2)
 
     # Get new siphon and prepare
     id1, id2, moved_id1, moved_id2, moved_p1, moved_p2 = get_moved_siphon(new_centerlines, centerlines, p1, p2)
@@ -335,7 +335,7 @@ def compute_curvature(input_filepath, alpha, beta, method, new_centerlines):
 
     if new_centerlines is None:
         print("Maniuplating centerline manually")
-        centerlines, new_centerlines = get_new_centerliens(centerlines, region_points, alpha, beta, p1, p2)
+        centerlines, new_centerlines = get_new_centerlines(centerlines, region_points, alpha, beta, p1, p2)
 
     # Compute new centerline using VMTK
     new_centerline = extract_single_line(new_centerlines, 0)
@@ -395,7 +395,7 @@ def compute_curvature(input_filepath, alpha, beta, method, new_centerlines):
     return old_maxcurv, new_maxcurv
 
 
-def get_new_centerliens(centerlines, region_points, alpha, beta, p1, p2):
+def get_new_centerlines(centerlines, region_points, alpha, beta, p1, p2):
     centerlines, diverging_centerlines, region_points, region_points_vtk, diverging_ids = \
         find_region_of_interest_and_diverging_centerlines(centerlines, region_points)
     new_centerlines = centerlines

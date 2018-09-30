@@ -45,7 +45,7 @@ def curvature_variations(input_filepath, smooth, smooth_factor_voro, smooth_fact
     # Compute centerlines
     inlet, outlets = get_centers(surface, base_path)
 
-    print("Compute centerlines and Voronoi diagram")
+    print("-- Compute centerlines and Voronoi diagram")
     centerlines, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path,
                                                          capped_surface, resampling=resampling_step,
                                                          smooth=False, base_path=base_path)
@@ -68,7 +68,7 @@ def curvature_variations(input_filepath, smooth, smooth_factor_voro, smooth_fact
     # Handle diverging centerlines within region of interest
     diverging_centerlines_patch = []
     if diverging_centerline_ispresent:
-        print("Clipping opthamlic artery")
+        print("-- Clipping a centerline divering in the region of interest.")
         for i in range(diverging_centerlines.GetNumberOfCells()):
             diverging_centerline = extract_single_line(diverging_centerlines, i)
             patch_diverging_centerline = clip_diverging_line(diverging_centerline,
@@ -77,23 +77,23 @@ def curvature_variations(input_filepath, smooth, smooth_factor_voro, smooth_fact
         diverging_centerlines_patch = merge_data(diverging_centerlines_patch)
 
     # Clip centerline
-    print("Clipping centerlines.")
+    print("-- Clipping centerlines.")
     locator = get_locator(extract_single_line(centerlines, 0))
     id1 = locator.FindClosestPoint(region_points[0])
     id2 = locator.FindClosestPoint(region_points[1])
-    centerline_remaining = CreateParentArteryPatches(centerlines,
+    centerline_remaining = create_parent_artery_patches(centerlines,
                                                      region_points_vtk, siphon=True)
     centerline_region = extract_single_line(centerlines, 0, startID=id1, endID=id2)
 
     if diverging_centerline_ispresent:
         centerline_region = merge_data([centerline_region, diverging_centerlines_patch])
 
-    write_polydata(centerline_remaining, "remaning.vtp")
-    write_polydata(centerline_region, "region.vtp")
+    #write_polydata(centerline_remaining, "remaning.vtp")
+    #write_polydata(centerline_region, "region.vtp")
 
     # Clip Voronoi diagram into
     # bend and remaining part of geometry
-    print("Clipping Voronoi diagrams")
+    print("-- Clipping Voronoi diagrams")
     if not path.exists(voronoi_region_path) and not path.exists(voronoi_remaining_path):
         voronoi_region, voronoi_remaining = split_voronoi_with_centerlines(voronoi,
                                                                            centerline_region,
@@ -115,12 +115,12 @@ def curvature_variations(input_filepath, smooth, smooth_factor_voro, smooth_fact
         if diverging_centerline_ispresent:
             voronoi_diverging = read_polydata(voronoi_diverging_path)
 
-    print("Smooth / sharpen centerline")
+    print("-- Smooth / sharpen centerline")
     smoothed_centerline_region = vmtk_centerline_geometry(centerline_region, True, True,
                                                           factor=smooth_factor_line, iterations=iterations)
     write_polydata(smoothed_centerline_region, centerline_smooth_path)
 
-    print("Smooth / sharpen voronoi diagram")
+    print("-- Smooth / sharpen Voronoi diagram")
     moved_voronoi_region = make_voronoi_smooth(voronoi_region, centerline_region, smoothed_centerline_region,
                                                smooth_line)
     # Move diverging centerlines and combine all diagrams
@@ -133,17 +133,17 @@ def curvature_variations(input_filepath, smooth, smooth_factor_voro, smooth_fact
         new_voronoi = merge_data([moved_voronoi_region, voronoi_remaining])
 
     # Create new surface
-    print("Create new surface")
+    print("-- Create new surface")
     new_surface = create_new_surface(new_voronoi, poly_ball_size=poly_ball_size)
     new_centerlines = merge_data([centerline_remaining, diverging_centerlines_patch, smoothed_centerline_region])
-    """
-    new_centerlines = old_centerlines = merge_data([centerlines, diverging_centerlines])
+
+    #new_centerlines = old_centerlines = merge_data([centerlines, diverging_centerlines])
     new_surface = prepare_surface_output(new_surface, surface,
                                          new_centerlines, output_filepath,
                                          test_merge=False, changed=True,
                                          old_centerline=old_centerlines)
-    """
 
+    print("-- Smoothing, clean, and check surface")
     write_polydata(new_centerlines, new_centerlines_path)
     write_polydata(new_surface, output_filepath)
 

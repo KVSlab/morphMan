@@ -121,7 +121,7 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
 
     # Clip centerlines
     print("-- Clipping centerlines.")
-    patch_cl = CreateParentArteryPatches(centerline_par, end_points[0])
+    patch_cl = create_parent_artery_patches(centerline_par, end_points[0])
     write_polydata(patch_cl, centerline_clipped_path)
 
     # Get the centerline which was clipped away
@@ -129,7 +129,7 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
     write_polydata(clipped_centerline, centerline_bif_clipped_path)
 
     if lower or bif:
-        patch_bif_cl = CreateParentArteryPatches(centerline_bif, end_points_bif[0])
+        patch_bif_cl = create_parent_artery_patches(centerline_bif, end_points_bif[0])
         write_polydata(patch_bif_cl, centerline_clipped_bif_path)
 
     # Clip the voronoi diagram
@@ -154,13 +154,13 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
 
     # Interpolate the centerline
     print("-- Interpolate centerlines.")
-    interpolated_cl = InterpolatePatchCenterlines(rotated_cl, centerline_par,
+    interpolated_cl = interpolate_patch_centerlines(rotated_cl, centerline_par,
                                                   div_points_rotated[0].GetPoint(0),
                                                   None, False)
     write_polydata(interpolated_cl, centerline_new_path.replace(".vtp", "1.vtp"))
 
     if bif:
-        interpolated_bif = InterpolatePatchCenterlines(rotated_bif_cl, centerline_bif,
+        interpolated_bif = interpolate_patch_centerlines(rotated_bif_cl, centerline_bif,
                                                        None, "bif", True)
         write_polydata(interpolated_bif, centerline_new_bif_path)
 
@@ -168,7 +168,7 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
         center = ((1 / 9.) * div_points[1][0] + (4 / 9.) * div_points[1][1] + \
                   (4 / 9.) * div_points[1][2]).tolist()
         div_points_rotated_bif[0].SetPoint(0, center[0], center[1], center[2])
-        interpolated_bif_lower = InterpolatePatchCenterlines(rotated_bif_cl, centerline_bif,
+        interpolated_bif_lower = interpolate_patch_centerlines(rotated_bif_cl, centerline_bif,
                                                              div_points_rotated_bif[0].GetPoint(0),
                                                              "lower", True)
         write_polydata(interpolated_bif_lower, centerline_new_bif_lower_path)
@@ -193,7 +193,7 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
                                                        bif_, cylinder_factor)
 
     # Note: This function is slow, and can be commented, but at the cost of robustness.
-    interpolated_voronoi = remove_distant_points(interpolated_voronoi, interpolated_cl)
+    #interpolated_voronoi = remove_distant_points(interpolated_voronoi, interpolated_cl)
     write_polydata(interpolated_voronoi, voronoi_ang_path)
 
     # Write a new surface from the new voronoi diagram

@@ -59,7 +59,7 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
     # Compute centerlines
     inlet, outlets = get_centers(surface, base_path)
 
-    print("Compute centerlines and Voronoi diagram")
+    print("-- Compute centerlines and Voronoi diagram")
     centerlines, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path,
                                                          capped_surface, resampling=resampling_step,
                                                          smooth=False, base_path=base_path)
@@ -88,18 +88,18 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
 
     # Handle diverging centerlines within region of interest
     if diverging_centerline_ispresent:
-        print("Clipping opthamlic artery")
+        print("-- Clipping a centerline divering in the region of interest.")
         patch_diverging_line = clip_diverging_line(extract_single_line(diverging_centerlines, 0),
                                                    region_points[0], diverging_id)
 
     # Clip centerline
-    print("Clipping centerlines.")
+    print("-- Clipping centerlines.")
     locator = get_locator(extract_single_line(centerlines, 0))
     id1 = locator.FindClosestPoint(region_points[0])
     id2 = locator.FindClosestPoint(region_points[1])
     p1 = centerlines.GetPoint(id1)
     p2 = centerlines.GetPoint(id2)
-    centerline_remaining = CreateParentArteryPatches(centerlines,
+    centerline_remaining = create_parent_artery_patches(centerlines,
                                                      region_points_vtk, siphon=True)
     centerline_bend = extract_single_line(centerlines, 0, startID=id1, endID=id2)
 
@@ -112,7 +112,7 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
 
     # Clip Voronoi diagram into
     # bend and remaining part of geometry
-    print("Clipping Voronoi diagrams")
+    print("-- Clipping Voronoi diagrams")
     if not path.exists(voronoi_bend_path) or not path.exists(voronoi_remaining_path):
         voronoi_bend, voronoi_remaining = split_voronoi_with_centerlines(voronoi,
                                                                          centerline_bend,
@@ -124,7 +124,7 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
         voronoi_remaining = read_polydata(voronoi_remaining_path)
 
     # Extract translation vectors
-    print("Computing translation directions.")
+    print("-- Computing translation directions.")
     direction = "horizont"
     middle_points, middle_ids = get_spline_points(centerlines, beta, direction, region_points_vtk)
     dx_p1 = middle_points[0] - p1
@@ -138,7 +138,7 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
 
         # Move anterior bend horizontally.
         # Iterate over points P from Voronoi diagram and manioulate
-        print("Adjusting Voronoi diagram")
+        print("-- Adjusting Voronoi diagram")
         voronoi_remaining = move_voronoi_horizontally(dx_p1, voronoi_remaining,
                                                       centerline_remaining, id1, id2,
                                                       diverging_id, clip=False)
@@ -166,12 +166,12 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
         region_points[1] = new_centerlines.GetPoint(locator.FindClosestPoint(region_points[1]))
 
         # Vertical movement
-        print("Moving geometry vertically")
+        print("-- Moving geometry vertically")
         new_surface, new_centerlines = move_vessel_vertically(alpha, voronoi_remaining,
                                                               voronoi_bend,
                                                               new_centerlines, region_points, poly_ball_size)
 
-    print("Smoothing, clean, and check surface")
+    print("-- Smoothing, clean, and check surface")
     new_surface = prepare_surface_output(new_surface, surface,
                                          new_centerlines, output_filepath,
                                          test_merge=True, changed=True,
@@ -214,7 +214,7 @@ def move_vessel_vertically(alpha, voronoi_remaining,
                                                    diverging_id)
 
     # Get clipped curve
-    print("Clipping centerlines.")
+    print("-- Clipping centerlines.")
     locator = get_locator(extract_single_line(centerlines, 0))
     id1 = locator.FindClosestPoint(region_points[0])
     id2 = locator.FindClosestPoint(region_points[1])
@@ -227,13 +227,13 @@ def move_vessel_vertically(alpha, voronoi_remaining,
         centerline_bend = merge_data([centerline_bend, diverging_centerline_end])
 
     # Find ID of middle pooint:
-    print("Finding points to spline through.")
+    print("-- Finding points to spline through.")
     direction = "vertical"
     middle_points, middle_ids, dx = get_spline_points(extract_single_line(centerlines, 0), alpha, direction,
                                                       region_points_vtk)
 
     # Iterate over points P from Voronoi diagram and manipulate
-    print("Adjust voronoi diagram")
+    print("-- Adjust Voronoi diagram")
     voronoi_bend = move_voronoi_vertically(voronoi_bend, centerline_bend, id1,
                                            diverging_id, dx, diverging_centerline_ispresent)
     new_voronoi = merge_data([voronoi_remaining, voronoi_bend])
