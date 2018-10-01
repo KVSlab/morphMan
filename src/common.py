@@ -3204,7 +3204,17 @@ def get_clipped_centerline(centerline_relevant_outlets, data):
 ### https://github.com/vmtk/vmtk/tree/master/vmtkApps/CerebralAneurysms/ParentVesselReconstruction
 ### Written by Marina Piccinelli, and distrubuted within vmtk.
 def create_parent_artery_patches(parentCenterlines, clipPoints, siphon=False, bif=False):
-    """
+    """Clip out a segment of the centerline, and create new centerlines with new end and
+    starting points.
+
+    Args:
+        parentCenterlines (vtkPolyData): Original centerline
+        clipPoints (vtkPoints): The points where to clip the centerline.
+        siphon (bool): On/off clipping a siphon
+        bif (bool): On/off bifurcation.
+
+    Returns:
+        centerline (vtkPolyData): New centerline without the segment.
     """
     numberOfDaughterPatches = parentCenterlines.GetNumberOfCells()
     if siphon:
@@ -3260,6 +3270,18 @@ def create_parent_artery_patches(parentCenterlines, clipPoints, siphon=False, bi
 
 
 def extract_patches_ids_siphon(parentCl, clipPts, clipped=False):
+    """For each clipping points (clipPts) extract the cooresponding ID for each line in
+    the centerline. (This is for the siphon, see extract_patches_ids as well.)
+
+    Args:
+        parentCl (vtkPolyData):
+        clipPts (vtkPoints):
+        clipped (bool):
+
+    Returns:
+        clipIds (list): A list of IDs.
+        numberOfPoints (int): Total number of points.
+    """
     clipIds = []
     numberOfPoints = 0
 
@@ -3293,6 +3315,18 @@ def extract_patches_ids_siphon(parentCl, clipPts, clipped=False):
 
 
 def extract_patches_ids(parentCl, clipPts):
+    """For each clipping points (clipPts) extract the cooresponding ID for each line in
+    the centerline.
+
+    Args:
+        parentCl (vtkPolyData):
+        clipPts (vtkPoints):
+        clipped (bool):
+
+    Returns:
+        clipIds (list): A list of IDs.
+        numberOfPoints (int): Total number of points.
+    """
     clipIds = []
     numberOfPoints = 0
     N = clipPts.GetNumberOfPoints()
@@ -3336,7 +3370,21 @@ def extract_patches_ids(parentCl, clipPts):
 
 
 def interpolate_patch_centerlines(patchCenterlines, parentCenterlines,
-                                additionalPoint, lower, version):
+                                  additionalPoint, lower, version):
+    """Interpolate new centerlines between end and starting points. Given
+    additionalPoiint, lower, and version, then number and method for interpolation varies.
+
+    Args:
+        patchCenterlines (vtkPolyData): Clipped centerline.
+        parentCenterliens (vtkPolyData): The original centerline.
+        additionalPoint (vtkPoints): Additional point to interpolate through.
+        lower (str): None / 'lower' / 'bif' to indicate how to interpolate.
+        version (bool): Method for interpolation.
+
+    Returns:
+        centerline (vtkPolyData): The new centerline, including the new interpolated
+        segment.
+    """
     if additionalPoint is not None:
         additionalPointIds = []
         for i in range(parentCenterlines.GetNumberOfCells()):
