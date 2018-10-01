@@ -3438,6 +3438,17 @@ def interpolate_patch_centerlines(patchCenterlines, parentCenterlines,
 
 
 def interpolate_spline(startCell, endCell, additionalPoint):
+    """Interpolate between two lines using splrep from scipy, potentially with an
+    additional point (additionalPoint).
+
+    Args:
+        startCell (vtkPolyData): Start line
+        endCell (tkPolyData): End line
+        additionalPoint (list): A list with the coordinates to the additional point.
+
+    Returns:
+        centerline (vtkPolyData): The new interpolated centerline.
+    """
     # If the centerline does not pass the bifurcation, return the centerline
     if startCell.GetPoints().GetPoint(0) == endCell.GetPoints().GetPoint(0):
         return endCell.GetPoints()
@@ -3497,6 +3508,19 @@ def interpolate_spline(startCell, endCell, additionalPoint):
 
 def interpolate_two_cells(startCell, endCell, numberOfSplinePoints, additionalPointId,
                         additionalPoint):
+    """Interpolate between two lines using vtkCardinalSpline from vtk, potentially with an
+    additional point (additionalPoint).
+
+    Args:
+        startCell (vtkPolyData): Start line
+        endCell (tkPolyData): End line
+        numberOfSplinePoints (int): Number of spline point.
+        additionalPointId (int): Id of the additional point.
+        additionalPoint (list): A list with the coordinates to the additional point.
+
+    Returns:
+        centerline (vtkPolyData): The new interpolated centerline.
+    """
     points = vtk.vtkPoints()
     xspline = vtk.vtkCardinalSpline()
     yspline = vtk.vtkCardinalSpline()
@@ -3534,7 +3558,21 @@ def interpolate_two_cells(startCell, endCell, numberOfSplinePoints, additionalPo
     return points
 
 
-def extract_cylindric_interpolation_voronoi_diagram(cellId, pointId, cylinderRadius, voronoi, centerlines):
+def extract_cylindric_interpolation_voronoi_diagram(cellId, pointId, cylinderRadius,
+                                                    voronoi, centerlines):
+    """Extract the voronoi diagram within a cylinder to be used for extrapolation.
+
+    Args:
+        cellId (int): LineId of the centerline.
+        pointId (int): Point Id of where to extract the cylinder.
+        cylinderRadius (float): The radius of the cylinder.
+        voronoi (vtkPolyData): The voronoi diagram to extract cylinder from.
+        centerlines (vtkPolyData): Centerline corresponding to the Voronoi diagram.
+
+    Returns:
+        interpolationDataset (vtkPolyData): The extracted cylinder from the Voronoi
+        diagram.
+    """
     if cellId == 0:
         cylinderTop = centerlines.GetPoint(pointId)
         cylinderCenter = centerlines.GetPoint(pointId - interpolationHalfSize)
@@ -3585,7 +3623,19 @@ def extract_cylindric_interpolation_voronoi_diagram(cellId, pointId, cylinderRad
 
 
 def is_point_inside_interpolation_cylinder(x, t, c, b, r):
-    halfheigth = math.sqrt(vtk.vtkMath.Distance2BetweenPoints(b, t)) / 2.0
+    """Check if a (Voronoi) point is inside a cylinder.
+
+    Args:
+        x (list): Point to check.
+        t (list): Top of the cylinder.
+        c (list): Center of the cylinder.
+        b (list): Bottom of the cylinder.
+        r (float): Radius of the cylinder.
+
+    Returns:
+        inside (bool): True if inside, False if outside.
+    """
+    halfheigth = distance(b, t) / 2
 
     xc = [x[i] - c[i] for i in range(len(x))]
     tb = [t[i] - b[i] for i in range(len(t))]
@@ -3614,6 +3664,14 @@ def is_point_inside_interpolation_cylinder(x, t, c, b, r):
 
 
 def compute_number_of_masked_points(data_array):
+    """Count number of '1' in the data array.
+
+    Args:
+        data_array (vtkIntArray): Array to check.
+
+    Returns:
+        number_of_points (int): Number of '1' in array.
+    """
     number_of_points = 0
     for i in range(data_array.GetNumberOfTuples()):
         value = data_array.GetTuple1(i)
@@ -3626,6 +3684,22 @@ def compute_number_of_masked_points(data_array):
 def voronoi_diagram_interpolation(interpolationcellid, id0, id1, voronoiDataset0,
                                 voronoiDataset1, centerlines, step,
                                 clippingPoints):
+    """Given two Voronoi datasets interpolate the data sets along the centerline.
+
+    Args:
+        interpolationcellId (int): LineID of the centerline
+        id0 (int): Start ID.
+        id1 (int): Stop ID.
+        voronoiDataset0 (vtkPolyData): First Voronoi dataset.
+        voronoiDataset1 (vtkPolyData): Second Voronoi dataset.
+        centerlines (vtkPolyData): Centerline to interpolate along.
+        step (int): Direction to interpolate
+        clippingPoints (vtkPoints): Location of clipping points.
+
+    Returns:
+        finalNewVoronoiPoints (vtkPoints): New points to the Voronoi diagram.
+        finalRadiusArray (vtkDoubelArray): Array to hold the radius for each point.
+    """
     cellLine = extract_single_line(centerlines, interpolationcellid)
 
     startPoint = clippingPoints.GetPoint(id0)
@@ -3767,6 +3841,17 @@ def voronoi_diagram_interpolation(interpolationcellid, id0, id1, voronoiDataset0
 
 
 def compute_voronoi_vector_to_centerline_angle(pointId, vector, centerline):
+    """Compute angle between the normal compontent of the centerline, and the parallel
+    transport normal.
+
+    Args:
+        pointId (int): Id along centerline of interest.
+        vector (list): Vector
+        centerline (vtkPolyData): Centerline
+
+    Returns:
+        alpha (float): Angle
+    """
     tangent = list(np.array(centerline.GetPoint(pointId + 1)) \
                  - np.array(centerline.GetPoint(pointId - 1)))
 
@@ -3777,14 +3862,32 @@ def compute_voronoi_vector_to_centerline_angle(pointId, vector, centerline):
 
 
 def normalize(vector):
-    length = np.sqrt(np.sum(np.array(vector)**2))
+    """Normalize a vector to unit length.
+
+    Args:
+        vector (list/tuple/numpy.ndarray): Array to be normalized
+
+    Return:
+        vector (numpy.ndarray): Normalized vector.
+    """
+    length = np.sqrt(np.sum(np.asarray(vector)**2))
     if length == 0:
-        return np.array(vector)
+        return np.asarray(vector)
     else:
-        return np.array(vector) / length
+        return np.asarray(vector) / length
 
 
 def compute_angle_between_vectors(normal, tangent, vector):
+    """Compute the angle between the vector and the normal component.
+
+    Args:
+        normal (list): Normal component to the centerline.
+        tangent (list): Tangent to the centerline.
+        vector (list): Vector to compute the angle of.
+
+    Returns:
+        angle (float): Angle in degrees.
+    """
     # Compute the tangent component orthogonal to normal
     normal_dot = np.dot(np.array(tangent), np.array(normal))
     otangent = np.array(tangent) - normal_dot * np.array(normal)
@@ -3806,6 +3909,14 @@ def compute_angle_between_vectors(normal, tangent, vector):
 
 
 def compute_spline(startValue, endValue, numberOfPoints):
+    """Create a vtkDoubleArray which is a spline between startValue, mean(startValue,
+    endValue), and endValue.
+
+    Args:
+        startValue (float): The start value.
+        endValue (float): The end value.
+        numberOfPoints (int): The number of points.
+    """
     averageValue = (startValue + endValue) / 2.0
     averageId = int(numberOfPoints / 2)
 
@@ -3827,6 +3938,16 @@ def compute_spline(startValue, endValue, numberOfPoints):
 
 
 def insert_new_voronoi_points(oldDataset, newPoints, newArray):
+    """Insert new points into an unconnected vtkPolyData object.
+
+    Args:
+        oldDataset (vtkPolyData): object to insert new points.
+        newPoints (vtkPoints): New points to insert into the oldDataset.
+        newArray (vtkDoubleArray): Array corresponding to the points.
+
+    Returns:
+        newDataset (vtkPolyData): the oldDataset, but with the new points.
+    """
     numberOfDatasetPoints = oldDataset.GetNumberOfPoints()
     numberOfNewPoints = newPoints.GetNumberOfPoints()
     numberOfNewVoronoiPoints = numberOfDatasetPoints + numberOfNewPoints
@@ -3866,6 +3987,22 @@ def insert_new_voronoi_points(oldDataset, newPoints, newArray):
 def interpolate_voronoi_diagram(interpolatedCenterlines, patchCenterlines,
                                 clippedVoronoi, clippingPoints, bif,
                                 cylinder_factor):
+    """Extrapolate/interpolate a the Voronoi diagram along new centerlines. This is the
+    core of the algorithm to reconstruct a bifurcation in manipulate_branches.py.
+
+    Args:
+        interpolatedCenterlines (vtkPolyData): Centerlines which has been interpolated.
+        patchCenterliens (vtkPolyData): Centerlines without the interpolated patch.
+        clippedVoronoi (vtkPolyData): Clipped Voronoi diagram.
+        clippingPoints (vtkPoints): Points at where the centerline and Voronoi diagram
+        where clipped.
+        bif (list): List of extra centerlines to extrapolate along.
+        cylinder_factor (float): Size of cylinder to extract as the basis of the
+        extrapolation of the Voronoi diagram.
+
+    Returns:
+        completeVoronoiDiagram (vtkPolyData): The modified Voronoi diagram.
+    """
     # Extract clipping points
     clippingPointsArray = clippingPoints[1]
     clippingPoints = clippingPoints[0]
@@ -3986,6 +4123,16 @@ def interpolate_voronoi_diagram(interpolatedCenterlines, patchCenterlines,
 
 
 def get_start_ids(points, line):
+    """Sort the points according the the distance from the line.
+
+    Args:
+        points (list): Nested-list with points.
+        line (vtkPolyData): Centerline of interest.
+
+    Return:
+        order1 (int): Proximal point
+        order2 (int): Distal point
+    """
     p1 = points[1]
     p2 = points[2]
     locator = get_locator(line)
