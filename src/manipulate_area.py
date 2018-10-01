@@ -68,16 +68,16 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
     write_polydata(centerline_area_sections, centerline_area_spline_sections_path)
 
     # Manipulate the voronoi diagram
-    print("Change Voronoi diagram")
+    print("-- Change Voronoi diagram")
     newvoronoi = change_area(voronoi, centerline_area, method, beta, ratio, percentage,
                              region_of_interest, region_points, stenosis_length, surface)
     write_polydata(newvoronoi, voronoi_new_path)
 
     # Make new surface
-    print("Create surface")
+    print("-- Create surface")
     new_surface = create_new_surface(newvoronoi, poly_ball_size=poly_ball_size)
 
-    print("Cleaning surface for output")
+    print("-- Smoothing, clean, and check surface.")
     new_surface = prepare_surface_output(new_surface, surface, centerlines,
                                          output_filepath, test_merge=True)
     write_polydata(new_surface, output_filepath)
@@ -89,10 +89,6 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
     Compute the factor determining
     the change in radius, used to
     manipulate the Voronoi diagram.
-    Only 80% of the geometry covered
-    by the centerline is adjusted to
-    leave the inlet, and the end of
-    the area of interest, unchanged.
 
     Args:
         line_to_change (vtkPolyData): Centerline representing area of interest.

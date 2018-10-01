@@ -669,6 +669,17 @@ def clean_surface(surface):
 
 
 def get_centers(surface, base_path, flowext=False):
+    """Get the centers of the inlet and outlets.
+
+    Args:
+        surface (vtkPolyData): An open surface.
+        base_path (str): Path to the case file.
+        flowext (bool): Turn on/off flow extension.
+
+    Returns:
+        inlet (list): A flatt list with the point of the inlet
+        outlet (list): A flatt list with the points of all the outlets.
+    """
     # Check if info exists
     if flowext or not path.isfile(base_path + "_info.txt"):
         compute_centers(surface, base_path)
@@ -696,7 +707,14 @@ def get_centers(surface, base_path, flowext=False):
 
 
 def triangulate_surface(surface):
-    """Triangulate surface"""
+    """Wrapper for vtkTriangleFilter.
+
+    Args:
+        surface (vtkPolyData): Surface to triangulate.
+
+    Returns:
+        surface (vtkPolyData): Triangulated surface.
+    """
     surfaceTriangulator = vtk.vtkTriangleFilter()
     surfaceTriangulator.SetInputData(surface)
     surfaceTriangulator.PassLinesOff()
@@ -707,16 +725,37 @@ def triangulate_surface(surface):
 
 
 def geometry_filter(unstructured_grid):
+    """Wrapper for vtkGeometryFilter, which converts an unstructured grid into a polydata.
+
+    Args:
+        unstructured_grid (vtkUnstructuredGrid): An unstructured grid.
+
+    Returns:
+        surface (vtkPolyData): A vtkPolyData object from the unstrutured grid.
+    """
     # Convert unstructured grid to polydata
-    filter = vtk.vtkGeometryFilter()
-    filter.SetInputData(unstructured_grid)
-    filter.Update()
-    polydata = filter.GetOutput()
+    filter_ = vtk.vtkGeometryFilter()
+    filter_.SetInputData(unstructured_grid)
+    filter_.Update()
+    polydata = filter_.GetOutput()
 
     return polydata
 
 
 def threshold(surface, name, lower=0, upper=1, type="between", source=1):
+    """Wrapper for vtkThreshold. Extract a section of a surface given a criteria.
+
+    Args:
+        surface (vtkPolyData): The input data to be extracted.
+        name (str): Name of scalar array.
+        lower (float): Lower bound.
+        upper (float): Upper bound.
+        type (str): Type of threshold (lower, upper, between)
+        source (int): PointData or CellData.
+
+    Returns:
+        surface (vtkPolyData): The extracted surface based on the lower and upper limit.
+    """
     # source = 1 uses cell data as input
     # source = 0 uses point data as input
 
@@ -747,6 +786,12 @@ def threshold(surface, name, lower=0, upper=1, type="between", source=1):
 def compute_area(surface):
     """
     Compute area of polydata
+
+    Args:
+        surface (vtkPolyData): Surface to compute are off
+
+    Returns:
+        area (float): Area of the input surface
     """
     mass = vtk.vtkMassProperties()
     mass.SetInputData(surface)
@@ -755,6 +800,17 @@ def compute_area(surface):
 
 
 def clipp_capped_surface(surface, centerlines, clipspheres=0):
+    """A method for clipping a capped outlets. The branches will be clipped some distance
+    from the outlets.
+
+    Args:
+        surface (vtkPolyData): Surface to clipp
+        centerlines (vtkPolyData): Centerlines to mark the in and outlets.
+        clipspheres (float): Number of end point spheres
+
+    Returns:
+        surface (vtkPolyData): Clipped surface
+    """
     extractor = vmtkscripts.vmtkEndpointExtractor()
     extractor.Centerlines = centerlines
     extractor.RadiusArrayName = radiusArrayName
@@ -783,8 +839,19 @@ def clipp_capped_surface(surface, centerlines, clipspheres=0):
 
 
 def uncapp_surface(surface, gradients_limit=0.15, area_limit=0.3, circleness_limit=3):
-    # Add-hoc method for removing capps on surfaces
-    # This could proboly be highly improved, but is sufficient for now.
+    """A rule-based method for removing endcapps on a surface. The method considers the
+    gradient of the normals, the size of the region, and how similar it is to a circle.
+
+    Args:
+        surface (vtkPolyData): Surface to be uncapped.
+        gradients_limit (float): Upper limit for gradients of normals.
+        area_limit (float): Lower limit of the area.
+        circleness_limit (float): Upper limit of the circleness.
+
+    Returns:
+        surface (vtkPolyData): The uncapped surface.
+
+    """
 
     # Get cell normals
     normal_generator = vtk.vtkPolyDataNormals()
@@ -888,6 +955,14 @@ def uncapp_surface(surface, gradients_limit=0.15, area_limit=0.3, circleness_lim
 
 
 def capp_surface(surface):
+    """Wrapper for vmtkCapPolyData
+
+    Args:
+        surface (vtkPolyData): Surface to be capped.
+
+    Returns:
+        surface (vtkPolyData): Capped surface.
+    """
     surfaceCapper = vtkvmtk.vtkvmtkCapPolyData()
     surfaceCapper.SetInputData(surface)
     surfaceCapper.SetDisplacement(0.0)
@@ -898,6 +973,15 @@ def capp_surface(surface):
 
 
 def check_if_surface_is_capped(surface):
+    """Checks if the surface is closed, and how many openings there are.
+
+    Args:
+        surface (vtkPolyData): Surface to be checked
+
+    Returns:
+        open (boolean): Open or closed surface
+        number (int): Number of integer
+    """
     # Get boundary cells
     cells = get_feature_edges(surface)
     if cells.GetNumberOfCells() == 0:
@@ -909,7 +993,12 @@ def check_if_surface_is_capped(surface):
 
 
 def get_connectivity(surface, mode="All", closestPoint=None):
-    """Compute connectivity of the cells"""
+    """Wrapper of vtkPolyDataConnectivityFilter. Compute connectivity.
+
+    Args:
+        surface (vtkPolyData): Input surface data.
+        mode (str): Type of connectivity filter.
+        closestPoint (list): Point to be used for mode='Closest'"""
     connectivity = vtk.vtkPolyDataConnectivityFilter()
     connectivity.SetInputData(surface)
 
@@ -931,6 +1020,15 @@ def get_connectivity(surface, mode="All", closestPoint=None):
 
 
 def compute_circleness(surface):
+    """Compute the area ratio betwen minimum circle and the maximum circle.
+
+    Args:
+        surface (vtkPolyData): Boundary edges of an opening
+
+    Returns:
+        circleness (float): Area ratio
+        center (list): Center of the opening.
+    """
     edges = get_feature_edges(surface)
 
     # Get points
@@ -957,7 +1055,14 @@ def compute_circleness(surface):
 
 
 def get_feature_edges(polyData):
-    """Extracts the edges of the cells that are open"""
+    """Wrapper for vtkFeatureedges. Extracts the edges of the cells that are open.
+
+    Args:
+        polyData (vtkPolyData): surface to extract the openings from.
+
+    Returns:
+        featureEdges (vtkPolyData): The boundary edges of the surface.
+    """
     featureEdges = vtk.vtkFeatureEdges()
     featureEdges.FeatureEdgesOff()
     featureEdges.BoundaryEdgesOn()
@@ -968,21 +1073,26 @@ def get_feature_edges(polyData):
     return featureEdges.GetOutput()
 
 
-def compute_centers(polyData, case_path=None, test_capped=False):
+def compute_centers(polyData, case_path=None):
+    """
+    Compute the center of all the openings in the surface. The inlet is chosen based on
+    the largest area.
+
+    Args:
+        polyData (vtkPolyData): centers of the openings
+        case_path (str): path to case directory.
+
+    Returns:
+        inlet (list): A list of points.
+        outlet (list): A flattened list with all the outlets.
+    """
     # Get cells which are open
     cells = get_feature_edges(polyData)
-
-    # Check is the model is closed
-    if test_capped:
-        if cells.GetNumberOfCells() == 0:
-            return True, 0
-        else:
-            return False, cells.GetNumberOfCells()
 
     if cells.GetNumberOfCells() == 0:
         print("WARNING: The model is capped, so it is uncapped, but the method is experimental.")
         uncapped_surface = uncapp_surface(polyData)
-        compute_centers(uncapped_surface, case_path, test_capped)
+        compute_centers(uncapped_surface, case_path)
 
     # Compute connectivity of the cells
     outputs = get_connectivity(cells)
@@ -1042,6 +1152,16 @@ def compute_centers(polyData, case_path=None, test_capped=False):
 
 
 def get_vtk_array(name, comp, num):
+    """An empty vtkDoubleArray.
+
+    Args:
+        name (str): Name of array.
+        comp (int): Number of components
+        num (int): Number of tuples.
+
+    Returns:
+        array (vtkDoubleArray): An empty vtk array.
+    """
     array = vtk.vtkDoubleArray()
     array.SetNumberOfComponents(comp)
     array.SetNumberOfTuples(num)
@@ -1053,6 +1173,14 @@ def get_vtk_array(name, comp, num):
 
 
 def get_locator_cell(surface):
+    """Wrapper for vtkCellLocator
+
+    Args:
+        surface (vtkPolyData): input surface
+
+    Returns:
+        return (vtkCellLocator): Cell locator of the input surface.
+    """
     locator = vtk.vtkCellLocator()
     locator.SetDataSet(surface)
     locator.BuildLocator()
@@ -1061,6 +1189,14 @@ def get_locator_cell(surface):
 
 
 def get_locator(centerline):
+    """Wrapper for vtkStaticPointLocator.
+
+    Args:
+        centerline (vtkPolyData): Input vtkPolyData.
+
+    Returns:
+        locator (vtkStaticPointLocator): Point locator of the input surface.
+    """
     locator = vtk.vtkStaticPointLocator()
     locator.SetDataSet(centerline)
     locator.BuildLocator()
@@ -1069,10 +1205,28 @@ def get_locator(centerline):
 
 
 def distance(point1, point2):
+    """Distance between two points.
+
+    Args:
+        point1 (list): A point
+        point2 (list): A point
+
+    Returns:
+        distance (float): Distance between point1 and point2
+    """
     return np.sqrt(np.sum((np.asarray(point1) - np.asarray(point2)) ** 2))
 
 
 def remove_distant_points(voronoi, centerline):
+    """Take a voronoi diagram and a centerline remove points that are far away.
+
+    Args:
+        voronoi (vtkPolyData): Voronoi data.
+        centerline (vtkPolyData): centerline.
+
+    Returns:
+        voronoi (vtkPolyData): Voronoi diagram without the extreme points
+    """
     N = voronoi.GetNumberOfPoints()
     newVoronoi = vtk.vtkPolyData()
     cellArray = vtk.vtkCellArray()
@@ -1114,6 +1268,16 @@ def remove_distant_points(voronoi, centerline):
 
 
 def vmtk_compute_centerline_sections(surface, centerline):
+    """Wrapper for vmtk centerline sections.
+
+    Args:
+        surface (vtkPolyData): Surface to meassure area.
+        centerline (vtkPolyData): centerline to measure are along.
+
+    Returns:
+        line (vtkPolyData): centerline with the attributes
+        centerlineSections (vtkPolyData): sections along the centerline
+    """
     centerlineSections = vtkvmtk.vtkvmtkPolyDataCenterlineSections()
     centerlineSections.SetInputData(surface)
     centerlineSections.SetCenterlines(centerline)
@@ -1124,15 +1288,39 @@ def vmtk_compute_centerline_sections(surface, centerline):
     centerlineSections.SetCenterlineSectionClosedArrayName('CenterlineSectionClosed')
     centerlineSections.Update()
 
-    CenterlineSections = centerlineSections.GetOutput()
+    centerlineSections = centerlineSections.GetOutput()
     line = centerlineSections.GetCenterlines()
 
-    return line, CenterlineSections
+    return line, centerlineSections
 
 
 def compute_centerlines(inlet, outlet, filepath, surface, resampling=1.0, smooth=False,
                         num_iter=100, smooth_factor=0.1, endPoint=1, method="pointlist",
                         recompute=False, voronoi=None, pole_ids=None, base_path=None):
+    """Wrapper for vmtkcenterlines and vmtkcenterlinesmoothing.
+
+    Args:
+        inlet (list): point of the inlet
+        outlet (list): flatt list of the outlet points
+        filepath (str): path to where to store the centerline
+        surface (vtkPolyData): surface to get the centerline from.
+        resampling (float): resampling step length.
+        smooth (bool): smooth centerline or not.
+        num_iter (int): number of iterations in smooth.
+        smooth_factor (float): smoothing factor.
+        endPoint (int): 0 or 1, include end point in centerline.
+        method (str): method for setting the inlet and outlet location
+        recompute (bool): if filepath exists, but the centerline should be computed again
+        anyway.
+        voronoi (vtkPolyData): Optional argument for setting the Voronoi diagram.
+        pole_ids (vtkIdList): A vtkIdList coupling the surface with the voronoi diagram
+        base_path (str): path to the case
+
+    Returns:
+        centerline (vtkPolyData): centerline of the surface.
+        voronoi (vtkPolyData): Voronoi data.
+        pole_ids (vtkIdList): vtkIdList coupling the surface and the voronoi diagram.
+    """
     if path.isfile(str(filepath)) and not recompute:  # Filepath might be None
         if base_path is not None and path.isfile(base_path + "_voronoi.vtp"):
             voronoi = read_polydata(base_path + "_voronoi.vtp")
@@ -1180,6 +1368,16 @@ def compute_centerlines(inlet, outlet, filepath, surface, resampling=1.0, smooth
 
 
 def create_vtk_array(values, name, k=1):
+    """Given a set of numpy values, and a name of the array create vtk array
+
+    Args:
+        values (numpy.ndarray): List of the values.
+        name (str): Name of the array.
+        k (int): Length of tuple.
+
+    Returns:
+        vtkArray (vtkPointArray): vtk point array
+    """
     vtkArray = get_vtk_array(name, k, values.shape[0])
 
     if k == 1:
@@ -1201,6 +1399,14 @@ def create_vtk_array(values, name, k=1):
 
 
 def gram_schmidt(V):
+    """Gram schmidt process of each column
+
+    Args:
+        V (numpy.array): A (n x n) matrix
+
+    Returns:
+        E (numpy.array): A (n x n) matrix where all the columns are orthogonal
+    """
     V = 1.0 * V
     U = np.copy(V)
 
@@ -1219,6 +1425,14 @@ def gram_schmidt(V):
 
 
 def get_parameters(folder):
+    """Read the parameters in the info file.
+
+    Args:
+        folder (str): Path to folder.
+
+    Returns:
+        data (dict): The data in the info file.
+    """
     # If info.txt file, return an empty dict
     if not path.isfile(folder + "_info.txt"):
         return {}
@@ -1247,6 +1461,11 @@ def get_parameters(folder):
 
 
 def write_parameters(data, folder):
+    """Get the old parameters, then write the new parameters in data.
+
+    Args:
+        data (dict): New data to write to parameters
+    """
     # Get old parameters
     parameters = get_parameters(folder)
 
@@ -1265,6 +1484,17 @@ def write_parameters(data, folder):
 
 
 def data_to_vtkPolyData(data, header, TNB=None, PT=None):
+    """Converting a range of data to a vtk array.
+
+    Args:
+        data (numpy.ndarray): Data array.
+        header (list): A list of names for each array.
+        TNB (numpy.ndarray): Data array.
+        PT (numpy.ndarray): Data array.
+
+    Returns:
+        line (vtkPolyData): Line couple with all the new data.
+    """
     line = vtk.vtkPolyData()
     cellArray = vtk.vtkCellArray()
     cellArray.InsertNextCell(data.shape[0])
@@ -1314,6 +1544,15 @@ def data_to_vtkPolyData(data, header, TNB=None, PT=None):
 
 
 def get_number_of_arrays(line):
+    """Returns the names and number of arrays for a vtkPolyData object
+
+    Args:
+        line (vtkPolyData): line to investigate the array.
+
+    Returns:
+        count (int): Number of arrays in the line.
+        names (list): A list of names of the arrays.
+    """
     count = 0
     names = []
     name = 0
@@ -1327,6 +1566,18 @@ def get_number_of_arrays(line):
 
 
 def extract_single_line(centerlines, id, startID=0, endID=None):
+    """Extract one line from multiple centerlines.
+    If startID and endID is set then only a segment of the centerline is extracted.
+
+    Args:
+        centerlines (vtkPolyData): Centerline to extract.
+        id (int): The line ID to extract.
+        startID (int):
+        endID (int):
+
+    Returns:
+        centerline (vtkPolyData): The single line extracted
+    """
     cell = vtk.vtkGenericCell()
     centerlines.GetCell(id, cell)
     N = cell.GetNumberOfPoints() if endID is None else endID + 1
@@ -1379,7 +1630,23 @@ def extract_single_line(centerlines, id, startID=0, endID=None):
 
 
 def move_past_sphere(centerline, center, r, start, step=-1, stop=0, X=0.8):
-    """Moves a point along the centerline until it as outside MIS"""
+    """Moves a point along the centerline until it as outside the a sphere with radius (r)
+    and a center (center).
+
+    Args:
+        centerline (vtkPolyData):
+        center (list): point list of the center of the sphere
+        r (float): the radius of a sphere
+        start (int): id of the point along the centerline where to start.
+        step (int): direction along the centerline.
+        stop (int): ID along centerline, for when to stop searching.
+        X (float): Scale of radius with a factor X.
+
+    Returns:
+        tempPoint (list): The first point on the centerline outside the sphere
+        r (float): minimal inscribed sphere radius at the new point.
+        i (int): the centerline ID at the new point.
+    """
     # Create the minimal inscribed sphere
     MISphere = vtk.vtkSphere()
     MISphere.SetCenter(center)
@@ -1399,6 +1666,19 @@ def move_past_sphere(centerline, center, r, start, step=-1, stop=0, X=0.8):
 
 
 def vmtk_surface_smoother(surface, method, iterations=800, passband=1.0, relaxation=0.01):
+    """Wrapper for a vmtksurfacesmoothing.
+
+    Args:
+        surface (vtkPolyData): Input surface to be smoothed.
+        method (str): Smoothing method.
+        iterations (int): Number of iterations.
+        passband (float): The passband for Taubin smoothing.
+        relaxation (float): The relaxation for laplace smoothing.
+
+    Returns:
+        surface (vtkPolyData): The smoothed surface.
+
+    """
     smoother = vmtkscripts.vmtkSurfaceSmoothing()
     smoother.Surface = surface
     smoother.NumberOfIterations = iterations
@@ -1414,6 +1694,15 @@ def vmtk_surface_smoother(surface, method, iterations=800, passband=1.0, relaxat
 
 
 def extract_ica_centerline(base_path, resampling_step):
+    """Extract a centerline from the inlet to the first branch.
+
+    Args:
+        base_path (str): Path to the case folder.
+        resampling_step (float): Resampling step length of the extracted centerline.
+
+    Returns:
+        centerline (vtkPolyData): Extracted centerline.
+    """
     input_filepath = base_path + ".vtp"
     ica_centerline_path = base_path + "_ica.vtp"
     centerline_relevant_outlets_path = base_path + "_centerline_relevant_outlets.vtp"
@@ -1453,9 +1742,7 @@ def sort_outlets(outlets, outlet1, outlet2, dirpath):
 
     Returns:
         outlets (list): List of sorted outlet center points.
-    Returns:
         outlet1 (list): Point representing first relevant oultet.
-    Returns:
         outlet2 (list): Point representing second relevant oultet.
     """
     tmp_outlets = np.array(outlets).reshape(len(outlets) // 3, 3)
@@ -1479,6 +1766,15 @@ def sort_outlets(outlets, outlet1, outlet2, dirpath):
 
 
 def vmtk_centerline_resampling(line, length):
+    """Wrapper for vmtkcenterlineresampling
+
+    Args:
+        line (vtkPolyData): line to resample.
+        length (float): resampling step.
+
+    Returns:
+        line (vtkPolyData): Resampled line.
+    """
     resampler = vmtkscripts.vmtkCenterlineResampling()
     resampler.Centerlines = line
     resampler.Length = length
@@ -1490,6 +1786,14 @@ def vmtk_centerline_resampling(line, length):
 
 
 def str2bool(boolean):
+    """Convert a string to boolean.
+
+    Args:
+        boolean (str): Input string.
+
+    Returns:
+        return (bool): Converted string.
+    """
     if boolean.lower() in ('yes', 'true', 't', 'y', '1'):
         return True
     elif boolean.lower() in ('no', 'false', 'f', 'n', '0'):
@@ -1499,6 +1803,18 @@ def str2bool(boolean):
 
 
 def vmtk_centerline_geometry(line, smooth, outputsmoothed=False, factor=1.0, iterations=100):
+    """Wrapper for vmtk centerline geometry.
+
+    Args:
+        line (vtkPolyData): Line to compute centerline geometry from.
+        smooth (bool): Turn on and off smoothing before computing the geometric features.
+        outputsmoothed (bool): Turn on and off the smoothed centerline.
+        factor (float): Smoothing factor.
+        iterations (int): Number of iterations.
+
+    Returns:
+        line (vtkPolyData): Line with geometry.
+    """
     geometry = vmtkscripts.vmtkCenterlineGeometry()
     geometry.Centerlines = line
     if smooth:
@@ -1517,6 +1833,14 @@ def vmtk_centerline_geometry(line, smooth, outputsmoothed=False, factor=1.0, ite
 
 
 def vmtk_centerline_attributes(line):
+    """ Wrapper for centerline attributes.
+
+    Args:
+        line (vtkPolyData): Line to investigate.
+
+    Returns:
+        line (vtkPolyData): Line with centerline atributes.
+    """
     attributes = vmtkscripts.vmtkCenterlineAttributes()
     attributes.Centerlines = line
     attributes.NormalsArrayName = parallelTransportNormalsArrayName
@@ -1528,6 +1852,16 @@ def vmtk_centerline_attributes(line):
 
 
 def discrete_geometry(line, neigh=10):
+    """Compute the curvature and torsion of a line using 'neigh' number of neighboring points.
+
+    Args:
+        line (vtkPolyData): Line to compute geometry from.
+        neigh (int): Number of naboring points.
+
+    Returns:
+        line (vtkPolyData): Output line with geometrical parameters.
+        curv (vtkPolyData): Output line with geometrical parameters.
+    """
     len_line = line.GetNumberOfPoints()
     N = line.GetNumberOfPoints()
 
@@ -1966,6 +2300,17 @@ def clip_polydata(surface, cutter=None, value=0):
 
 
 def attach_clipped_regions(surface, clipped, center):
+    """Check the connectivty of a clipped surface, and attach all sections which are not
+    closest to the center of the clipping plane.
+
+    Args:
+        surface (vtkPolyData):
+        clipped (vtkPolyData): The clipped segments of the surface.
+        center (list): The center of the clipping point
+
+    Returns:
+        surface (vtkPolyData): The surface where only one segment has been removed.
+    """
     connectivity = get_connectivity(clipped, mode="All")
     if connectivity.GetNumberOfPoints() == 0:
         return surface
@@ -1991,6 +2336,23 @@ def attach_clipped_regions(surface, clipped, center):
 
 def prepare_surface_output(surface, original_surface, new_centerline, output_filepath,
                            test_merge=False, changed=False, old_centerline=None):
+    """After manipulation preparing the surface for output. This method clipps the
+    outlets, slightly smooths the surface, and (potentially) tests if the surface is is
+    merged.
+
+    Args:
+        surface (vtkPolyData): The new surface after manipulation.
+        original_surface (vtkPolyData): The original surface inputed for manipulation.
+        new_centerlines (vtkPolyData): The centerline after manipulation.
+        output_filepath (str): The user-defined path to the output.
+        test_merge (bool): Turn on/off testing if the surface is merged.
+        changed (bool): If the manipulated surface has changed the location of the
+        inlet/outlet.
+        old_centerline (vtkPolyData): The old centerline for the original centerline.
+
+    Returns:
+        surface (vtkPolyData): The surface ready for output.
+    """
     # Check if the folder for the output exits
     if not path.exists(path.dirname(output_filepath)):
         if path.dirname(output_filepath) != "":
@@ -2080,11 +2442,6 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
             tmp_normal = normal
             normal = [0, 0, 0]
             translation.TransformNormal(tmp_normal, normal)
-            print(" in dir", in_dir)
-            print("new dir", in_dir_new)
-            print("Old norml", tmp_normal)
-            print("New normal", normal)
-            print("angle", dir_angle)
 
         # Set plane
         plane = vtk_plane(center, normal)
@@ -2113,7 +2470,7 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
 
 def check_if_surface_is_merged(surface, centerlines, output_filepath):
     """
-    Clean and check surface for overlapping regions.
+    Check if surface has overlapping regions.
 
     Args:
         surface (vtkPolyData): Surface model.
@@ -2463,7 +2820,7 @@ def clip_diverging_line(centerline, clip_start_point, clip_end_id):
     for p in points:
         div_points.InsertNextPoint(p)
 
-    patch_cl = CreateParentArteryPatches(centerline, div_points, siphon=True)
+    patch_cl = create_parent_artery_patches(centerline, div_points, siphon=True)
 
     return patch_cl
 
@@ -2616,7 +2973,7 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
 
 
 def find_region_of_interest_and_diverging_centerlines(centerlines_complete, region_points):
-    """
+    """Extract the centerline between the region points.
 
     Args:
         centerlines_complete (vktPolyData): Complete set of centerlines in geometry.
@@ -2678,7 +3035,8 @@ def find_region_of_interest_and_diverging_centerlines(centerlines_complete, regi
 
 
 def move_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_centerlines, direction):
-    """
+    """Given a centerline (patch_cl), move the centerline a distance (dx) between two
+    points (p1 and p2).
 
     Args:
         patch_cl (vtkPolyData): Centerlines excluding diverging centerlines.
@@ -2761,6 +3119,18 @@ def move_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_centerlines, 
 
 
 def split_voronoi_with_centerlines(voronoi, centerline1, centerline2):
+    """Given two centerlines, and a Voronoi diagram, return two Voronoi diagrams based on
+    the distance of the two centerlines.
+
+    Args:
+        voronoi (vtkPolyData): Input Voronoi diagram
+        centerline1 (vtkPolyData): Centerline 1, should not overlap with centerline 2.
+        centerline2 (vtkPolyData): Centerline 2, should not overlap with centerline 1.
+
+    Returns
+        voronoi1 (vtkPolyData): The Voronoi diagram closest to centerline 1.
+        voronoi2 (vtkPolyData): The Voronoi diagram closest to centerline 2.
+    """
     voronoi1 = vtk.vtkPolyData()
     points1 = vtk.vtkPoints()
     cell_array1 = vtk.vtkCellArray()
@@ -2810,6 +3180,15 @@ def split_voronoi_with_centerlines(voronoi, centerline1, centerline2):
 
 
 def get_clipped_centerline(centerline_relevant_outlets, data):
+    """Get the centerline between two clipping points.
+
+    Args:
+        centerline_relevant_outlets (vtkPolyData): Centerline to the two relevant outlets.
+        data (dict): A dictionary data.
+
+    Returns:
+        centerline (vtkPolyData): Return clipped centerline.
+    """
     line0 = extract_single_line(centerline_relevant_outlets, 0)
     line1 = extract_single_line(centerline_relevant_outlets, 1)
     lines = []
@@ -2825,12 +3204,26 @@ def get_clipped_centerline(centerline_relevant_outlets, data):
 ### The following code is adapted from:
 ### https://github.com/vmtk/vmtk/tree/master/vmtkApps/CerebralAneurysms/ParentVesselReconstruction
 ### Written by Marina Piccinelli, and distrubuted within vmtk.
-def CreateParentArteryPatches(parentCenterlines, clipPoints, siphon=False, bif=False):
+def create_parent_artery_patches(parentCenterlines, clipPoints, siphon=False, bif=False):
+    """Clip out a segment of the centerline, and create new centerlines with new end and
+    starting points.
+
+    Args:
+        parentCenterlines (vtkPolyData): Original centerline
+        clipPoints (vtkPoints): The points where to clip the centerline.
+        siphon (bool): On/off clipping a siphon
+        bif (bool): On/off bifurcation.
+
+    Returns:
+        centerline (vtkPolyData): New centerline without the segment.
+    """
     numberOfDaughterPatches = parentCenterlines.GetNumberOfCells()
     if siphon:
-        clipIds, numberOfPatchedCenterlinesPoints = ExtractPatchesIdsSiphon(parentCenterlines, clipPoints)
+        clipIds, numberOfPatchedCenterlinesPoints = extract_patches_ids_siphon(parentCenterlines,
+                                                                               clipPoints)
     else:
-        clipIds, numberOfPatchedCenterlinesPoints = ExtractPatchesIds(parentCenterlines, clipPoints)
+        clipIds, numberOfPatchedCenterlinesPoints = extract_patches_ids(parentCenterlines,
+                                                                        clipPoints)
 
     patchedCenterlines = vtk.vtkPolyData()
     patchedCenterlinesPoints = vtk.vtkPoints()
@@ -2877,7 +3270,19 @@ def CreateParentArteryPatches(parentCenterlines, clipPoints, siphon=False, bif=F
     return patchedCenterlines
 
 
-def ExtractPatchesIdsSiphon(parentCl, clipPts, clipped=False):
+def extract_patches_ids_siphon(parentCl, clipPts, clipped=False):
+    """For each clipping points (clipPts) extract the cooresponding ID for each line in
+    the centerline. (This is for the siphon, see extract_patches_ids as well.)
+
+    Args:
+        parentCl (vtkPolyData):
+        clipPts (vtkPoints):
+        clipped (bool):
+
+    Returns:
+        clipIds (list): A list of IDs.
+        numberOfPoints (int): Total number of points.
+    """
     clipIds = []
     numberOfPoints = 0
 
@@ -2910,7 +3315,19 @@ def ExtractPatchesIdsSiphon(parentCl, clipPts, clipped=False):
     return clipIds, numberOfPoints
 
 
-def ExtractPatchesIds(parentCl, clipPts):
+def extract_patches_ids(parentCl, clipPts):
+    """For each clipping points (clipPts) extract the cooresponding ID for each line in
+    the centerline.
+
+    Args:
+        parentCl (vtkPolyData):
+        clipPts (vtkPoints):
+        clipped (bool):
+
+    Returns:
+        clipIds (list): A list of IDs.
+        numberOfPoints (int): Total number of points.
+    """
     clipIds = []
     numberOfPoints = 0
     N = clipPts.GetNumberOfPoints()
@@ -2953,8 +3370,22 @@ def ExtractPatchesIds(parentCl, clipPts):
     return clipIds, numberOfPoints
 
 
-def InterpolatePatchCenterlines(patchCenterlines, parentCenterlines,
-                                additionalPoint, lower, version):
+def interpolate_patch_centerlines(patchCenterlines, parentCenterlines,
+                                  additionalPoint, lower, version):
+    """Interpolate new centerlines between end and starting points. Given
+    additionalPoiint, lower, and version, then number and method for interpolation varies.
+
+    Args:
+        patchCenterlines (vtkPolyData): Clipped centerline.
+        parentCenterliens (vtkPolyData): The original centerline.
+        additionalPoint (vtkPoints): Additional point to interpolate through.
+        lower (str): None / 'lower' / 'bif' to indicate how to interpolate.
+        version (bool): Method for interpolation.
+
+    Returns:
+        centerline (vtkPolyData): The new centerline, including the new interpolated
+        segment.
+    """
     if additionalPoint is not None:
         additionalPointIds = []
         for i in range(parentCenterlines.GetNumberOfCells()):
@@ -2980,9 +3411,9 @@ def InterpolatePatchCenterlines(patchCenterlines, parentCenterlines,
         patchCenterlines.GetCell(i + 1, endingCell)
 
         if version:
-            splinePoints = InterpolateSpline(startingCell, endingCell, additionalPoint)
+            splinePoints = interpolate_spline(startingCell, endingCell, additionalPoint)
         else:
-            splinePoints = InterpolateTwoCells(startingCell, endingCell, \
+            splinePoints = interpolate_two_cells(startingCell, endingCell, \
                                                numberOfInterpolationPoints, \
                                                additionalPointIds[i],
                                                additionalPoint)
@@ -3007,7 +3438,18 @@ def InterpolatePatchCenterlines(patchCenterlines, parentCenterlines,
     return attributeInterpolatedLines
 
 
-def InterpolateSpline(startCell, endCell, additionalPoint):
+def interpolate_spline(startCell, endCell, additionalPoint):
+    """Interpolate between two lines using splrep from scipy, potentially with an
+    additional point (additionalPoint).
+
+    Args:
+        startCell (vtkPolyData): Start line
+        endCell (tkPolyData): End line
+        additionalPoint (list): A list with the coordinates to the additional point.
+
+    Returns:
+        centerline (vtkPolyData): The new interpolated centerline.
+    """
     # If the centerline does not pass the bifurcation, return the centerline
     if startCell.GetPoints().GetPoint(0) == endCell.GetPoints().GetPoint(0):
         return endCell.GetPoints()
@@ -3065,8 +3507,21 @@ def InterpolateSpline(startCell, endCell, additionalPoint):
     return points
 
 
-def InterpolateTwoCells(startCell, endCell, numberOfSplinePoints, additionalPointId,
+def interpolate_two_cells(startCell, endCell, numberOfSplinePoints, additionalPointId,
                         additionalPoint):
+    """Interpolate between two lines using vtkCardinalSpline from vtk, potentially with an
+    additional point (additionalPoint).
+
+    Args:
+        startCell (vtkPolyData): Start line
+        endCell (tkPolyData): End line
+        numberOfSplinePoints (int): Number of spline point.
+        additionalPointId (int): Id of the additional point.
+        additionalPoint (list): A list with the coordinates to the additional point.
+
+    Returns:
+        centerline (vtkPolyData): The new interpolated centerline.
+    """
     points = vtk.vtkPoints()
     xspline = vtk.vtkCardinalSpline()
     yspline = vtk.vtkCardinalSpline()
@@ -3104,7 +3559,21 @@ def InterpolateTwoCells(startCell, endCell, numberOfSplinePoints, additionalPoin
     return points
 
 
-def ExtractCylindricInterpolationVoronoiDiagram(cellId, pointId, cylinderRadius, voronoi, centerlines):
+def extract_cylindric_interpolation_voronoi_diagram(cellId, pointId, cylinderRadius,
+                                                    voronoi, centerlines):
+    """Extract the voronoi diagram within a cylinder to be used for extrapolation.
+
+    Args:
+        cellId (int): LineId of the centerline.
+        pointId (int): Point Id of where to extract the cylinder.
+        cylinderRadius (float): The radius of the cylinder.
+        voronoi (vtkPolyData): The voronoi diagram to extract cylinder from.
+        centerlines (vtkPolyData): Centerline corresponding to the Voronoi diagram.
+
+    Returns:
+        interpolationDataset (vtkPolyData): The extracted cylinder from the Voronoi
+        diagram.
+    """
     if cellId == 0:
         cylinderTop = centerlines.GetPoint(pointId)
         cylinderCenter = centerlines.GetPoint(pointId - interpolationHalfSize)
@@ -3125,13 +3594,14 @@ def ExtractCylindricInterpolationVoronoiDiagram(cellId, pointId, cylinderRadius,
 
     for i in range(voronoi.GetNumberOfPoints()):
         point = voronoi.GetPoint(i)
-        isInside = IsPointInsideInterpolationCylinder(point, cylinderTop, cylinderCenter, cylinderBottom,
-                                                      cylinderRadius)
+        isInside = is_point_inside_interpolation_cylinder(point, cylinderTop,
+                                                          cylinderCenter, cylinderBottom,
+                                                          cylinderRadius)
 
         if isInside == 1:
             maskArray.SetTuple1(i, 1)
 
-    numberOfInterpolationPoints = ComputeNumberOfMaskedPoints(maskArray)
+    numberOfInterpolationPoints = compute_number_of_masked_points(maskArray)
 
     radiusArray = get_vtk_array(radiusArrayName, 1, numberOfInterpolationPoints)
 
@@ -3153,8 +3623,20 @@ def ExtractCylindricInterpolationVoronoiDiagram(cellId, pointId, cylinderRadius,
     return interpolationDataset
 
 
-def IsPointInsideInterpolationCylinder(x, t, c, b, r):
-    halfheigth = math.sqrt(vtk.vtkMath.Distance2BetweenPoints(b, t)) / 2.0
+def is_point_inside_interpolation_cylinder(x, t, c, b, r):
+    """Check if a (Voronoi) point is inside a cylinder.
+
+    Args:
+        x (list): Point to check.
+        t (list): Top of the cylinder.
+        c (list): Center of the cylinder.
+        b (list): Bottom of the cylinder.
+        r (float): Radius of the cylinder.
+
+    Returns:
+        inside (bool): True if inside, False if outside.
+    """
+    halfheigth = distance(b, t) / 2
 
     xc = [x[i] - c[i] for i in range(len(x))]
     tb = [t[i] - b[i] for i in range(len(t))]
@@ -3182,19 +3664,43 @@ def IsPointInsideInterpolationCylinder(x, t, c, b, r):
     return inside
 
 
-def ComputeNumberOfMaskedPoints(dataArray):
-    numberOfPoints = 0
-    for i in range(dataArray.GetNumberOfTuples()):
-        value = dataArray.GetTuple1(i)
+def compute_number_of_masked_points(data_array):
+    """Count number of '1' in the data array.
+
+    Args:
+        data_array (vtkIntArray): Array to check.
+
+    Returns:
+        number_of_points (int): Number of '1' in array.
+    """
+    number_of_points = 0
+    for i in range(data_array.GetNumberOfTuples()):
+        value = data_array.GetTuple1(i)
         if value == 1:
-            numberOfPoints += 1
+            number_of_points += 1
 
-    return numberOfPoints
+    return number_of_points
 
 
-def VoronoiDiagramInterpolation(interpolationcellid, id0, id1, voronoiDataset0,
+def voronoi_diagram_interpolation(interpolationcellid, id0, id1, voronoiDataset0,
                                 voronoiDataset1, centerlines, step,
                                 clippingPoints):
+    """Given two Voronoi datasets interpolate the data sets along the centerline.
+
+    Args:
+        interpolationcellId (int): LineID of the centerline
+        id0 (int): Start ID.
+        id1 (int): Stop ID.
+        voronoiDataset0 (vtkPolyData): First Voronoi dataset.
+        voronoiDataset1 (vtkPolyData): Second Voronoi dataset.
+        centerlines (vtkPolyData): Centerline to interpolate along.
+        step (int): Direction to interpolate
+        clippingPoints (vtkPoints): Location of clipping points.
+
+    Returns:
+        finalNewVoronoiPoints (vtkPoints): New points to the Voronoi diagram.
+        finalRadiusArray (vtkDoubelArray): Array to hold the radius for each point.
+    """
     cellLine = extract_single_line(centerlines, interpolationcellid)
 
     startPoint = clippingPoints.GetPoint(id0)
@@ -3231,7 +3737,7 @@ def VoronoiDiagramInterpolation(interpolationcellid, id0, id1, voronoiDataset0,
         voronoiVector[1] = voronoiPoint[1] - closestPoint[1]
         voronoiVector[2] = voronoiPoint[2] - closestPoint[2]
         voronoiVectorNorm = vtk.vtkMath.Norm(voronoiVector)
-        rotationAngle = ComputeVoronoiVectorToCenterlineAngle(closestPointId, voronoiVector, cellLine)
+        rotationAngle = compute_voronoi_vector_to_centerline_angle(closestPointId, voronoiVector, cellLine)
 
         PTPoints = vtk.vtkPoints()
 
@@ -3297,8 +3803,8 @@ def VoronoiDiagramInterpolation(interpolationcellid, id0, id1, voronoiDataset0,
         arrivalVoronoiVector[1] = arrivalVoronoiPoint[1] - arrivalCenterlineClosestPoint[1]
         arrivalVoronoiVector[2] = arrivalVoronoiPoint[2] - arrivalCenterlineClosestPoint[2]
         arrivalVoronoiVectorNorm = vtk.vtkMath.Norm(arrivalVoronoiVector)
-        radiusArray = ComputeSpline(voronoiPointRadius, arrivalVoronoiPointRadius, numberOfPTPoints)
-        vectorNormArray = ComputeSpline(voronoiVectorNorm, arrivalVoronoiVectorNorm, numberOfPTPoints)
+        radiusArray = compute_spline(voronoiPointRadius, arrivalVoronoiPointRadius, numberOfPTPoints)
+        vectorNormArray = compute_spline(voronoiVectorNorm, arrivalVoronoiVectorNorm, numberOfPTPoints)
 
         pointsToGap = (gapStartId - closestPointId) * step
 
@@ -3335,48 +3841,67 @@ def VoronoiDiagramInterpolation(interpolationcellid, id0, id1, voronoiDataset0,
     return finalNewVoronoiPoints, finalRadiusArray
 
 
-def ComputeVoronoiVectorToCenterlineAngle(pointId, vector, centerline):
-    point0 = centerline.GetPoint(pointId)
-    point1 = centerline.GetPoint(pointId + 1)
-    point2 = centerline.GetPoint(pointId - 1)
+def compute_voronoi_vector_to_centerline_angle(pointId, vector, centerline):
+    """Compute angle between the normal compontent of the centerline, and the parallel
+    transport normal.
 
-    tangent = [0.0, 0.0, 0.0]
-    for i in range(3):
-        tangent[i] += point1[i] - point0[i]
-        tangent[i] += point0[i] - point2[i]
+    Args:
+        pointId (int): Id along centerline of interest.
+        vector (list): Vector
+        centerline (vtkPolyData): Centerline
+
+    Returns:
+        alpha (float): Angle
+    """
+    tangent = list(np.array(centerline.GetPoint(pointId + 1)) \
+                 - np.array(centerline.GetPoint(pointId - 1)))
 
     ptnnormal = centerline.GetPointData().GetArray(parallelTransportNormalsArrayName).GetTuple3(pointId)
-    alpha = ComputeAngleBetweenVectors(ptnnormal, tangent, vector)
+    alpha = compute_angle_between_vectors(ptnnormal, tangent, vector)
 
     return alpha
 
 
-def ComputeAngleBetweenVectors(normal, tangent, vector):
+def normalize(vector):
+    """Normalize a vector to unit length.
+
+    Args:
+        vector (list/tuple/numpy.ndarray): Array to be normalized
+
+    Return:
+        vector (numpy.ndarray): Normalized vector.
+    """
+    length = np.sqrt(np.sum(np.asarray(vector)**2))
+    if length == 0:
+        return np.asarray(vector)
+    else:
+        return np.asarray(vector) / length
+
+
+def compute_angle_between_vectors(normal, tangent, vector):
+    """Compute the angle between the vector and the normal component.
+
+    Args:
+        normal (list): Normal component to the centerline.
+        tangent (list): Tangent to the centerline.
+        vector (list): Vector to compute the angle of.
+
+    Returns:
+        angle (float): Angle in degrees.
+    """
     # Compute the tangent component orthogonal to normal
-    otangent = [0.0, 0.0, 0.0]
-    normalDot = vtk.vtkMath.Dot(tangent, normal)
-    otangent[0] = tangent[0] - normalDot * normal[0]
-    otangent[1] = tangent[1] - normalDot * normal[1]
-    otangent[2] = tangent[2] - normalDot * normal[2]
-    vtk.vtkMath.Normalize(otangent)
+    normal_dot = np.dot(np.array(tangent), np.array(normal))
+    otangent = np.array(tangent) - normal_dot * np.array(normal)
+    otangent = normalize(otangent)
 
     # Compute the vector component orthogonal to otangent, i.e. parallel to normal
-    vtk.vtkMath.Normalize(vector)
-    ovector = [0.0, 0.0, 0.0]
-    vectorDot = vtk.vtkMath.Dot(vector, otangent)
-    ovector[0] = vector[0] - vectorDot * otangent[0]
-    ovector[1] = vector[1] - vectorDot * otangent[1]
-    ovector[2] = vector[2] - vectorDot * otangent[2]
-    vtk.vtkMath.Normalize(ovector)
+    vector_dot = np.dot(normalize(vector), otangent)
+    ovector = normalize(vector - vector_dot * otangent)
 
-    theta = vtkvmtk.vtkvmtkMath.AngleBetweenNormals(normal, ovector)
-    theta = vtk.vtkMath.DegreesFromRadians(theta)
-
-    cross = [0.0, 0.0, 0.0]
-    vtk.vtkMath.Cross(ovector, normal, cross)
-    tangentDot = vtk.vtkMath.Dot(otangent, cross)
-
-    if tangentDot < 0.0:
+    theta = np.arccos(np.dot(normalize(normal), ovector)) * np.pi / 180
+    cross = np.cross(normalize(ovector), normal)
+    tangent_dot = np.dot(otangent, cross)
+    if tangent_dot < 0.0:
         theta = -1.0 * theta
 
     angle = -theta
@@ -3384,7 +3909,15 @@ def ComputeAngleBetweenVectors(normal, tangent, vector):
     return angle
 
 
-def ComputeSpline(startValue, endValue, numberOfPoints):
+def compute_spline(startValue, endValue, numberOfPoints):
+    """Create a vtkDoubleArray which is a spline between startValue, mean(startValue,
+    endValue), and endValue.
+
+    Args:
+        startValue (float): The start value.
+        endValue (float): The end value.
+        numberOfPoints (int): The number of points.
+    """
     averageValue = (startValue + endValue) / 2.0
     averageId = int(numberOfPoints / 2)
 
@@ -3405,7 +3938,17 @@ def ComputeSpline(startValue, endValue, numberOfPoints):
     return splineArray
 
 
-def InsertNewVoronoiPoints(oldDataset, newPoints, newArray):
+def insert_new_voronoi_points(oldDataset, newPoints, newArray):
+    """Insert new points into an unconnected vtkPolyData object.
+
+    Args:
+        oldDataset (vtkPolyData): object to insert new points.
+        newPoints (vtkPoints): New points to insert into the oldDataset.
+        newArray (vtkDoubleArray): Array corresponding to the points.
+
+    Returns:
+        newDataset (vtkPolyData): the oldDataset, but with the new points.
+    """
     numberOfDatasetPoints = oldDataset.GetNumberOfPoints()
     numberOfNewPoints = newPoints.GetNumberOfPoints()
     numberOfNewVoronoiPoints = numberOfDatasetPoints + numberOfNewPoints
@@ -3445,6 +3988,22 @@ def InsertNewVoronoiPoints(oldDataset, newPoints, newArray):
 def interpolate_voronoi_diagram(interpolatedCenterlines, patchCenterlines,
                                 clippedVoronoi, clippingPoints, bif,
                                 cylinder_factor):
+    """Extrapolate/interpolate a the Voronoi diagram along new centerlines. This is the
+    core of the algorithm to reconstruct a bifurcation in manipulate_branches.py.
+
+    Args:
+        interpolatedCenterlines (vtkPolyData): Centerlines which has been interpolated.
+        patchCenterliens (vtkPolyData): Centerlines without the interpolated patch.
+        clippedVoronoi (vtkPolyData): Clipped Voronoi diagram.
+        clippingPoints (vtkPoints): Points at where the centerline and Voronoi diagram
+        where clipped.
+        bif (list): List of extra centerlines to extrapolate along.
+        cylinder_factor (float): Size of cylinder to extract as the basis of the
+        extrapolation of the Voronoi diagram.
+
+    Returns:
+        completeVoronoiDiagram (vtkPolyData): The modified Voronoi diagram.
+    """
     # Extract clipping points
     clippingPointsArray = clippingPoints[1]
     clippingPoints = clippingPoints[0]
@@ -3466,10 +4025,10 @@ def interpolate_voronoi_diagram(interpolatedCenterlines, patchCenterlines,
             .GetTuple1(startCellPointId)
         startCellPointHalfRadius = startCellPointRadius / cylinder_factor
 
-        startInterpolationDataset = ExtractCylindricInterpolationVoronoiDiagram(startId,
+        startInterpolationDataset = extract_cylindric_interpolation_voronoi_diagram(startId,
                                                                                 startCellPointId, startCellPointRadius,
                                                                                 clippedVoronoi, patchCenterlines)
-        startHalfInterpolationDataset = ExtractCylindricInterpolationVoronoiDiagram(startId,
+        startHalfInterpolationDataset = extract_cylindric_interpolation_voronoi_diagram(startId,
                                                                                     startCellPointId,
                                                                                     startCellPointHalfRadius,
                                                                                     clippedVoronoi, patchCenterlines)
@@ -3480,29 +4039,29 @@ def interpolate_voronoi_diagram(interpolatedCenterlines, patchCenterlines,
         endCellPointRadius = patchCenterlines.GetPointData().GetArray(radiusArrayName) \
             .GetTuple1(endCellPointId)
         endCellPointHalfRadius = endCellPointRadius / cylinder_factor
-        endInterpolationDataset = ExtractCylindricInterpolationVoronoiDiagram(endId, endCellPointId,
+        endInterpolationDataset = extract_cylindric_interpolation_voronoi_diagram(endId, endCellPointId,
                                                                               endCellPointRadius, clippedVoronoi,
                                                                               patchCenterlines)
-        endHalfInterpolationDataset = ExtractCylindricInterpolationVoronoiDiagram(endId,
+        endHalfInterpolationDataset = extract_cylindric_interpolation_voronoi_diagram(endId,
                                                                                   endCellPointId,
                                                                                   endCellPointHalfRadius,
                                                                                   clippedVoronoi, patchCenterlines)
 
         # Find and insert new points
-        newVoronoiPoints, newVoronoiPointsMISR = VoronoiDiagramInterpolation(interpolationCellId,
+        newVoronoiPoints, newVoronoiPointsMISR = voronoi_diagram_interpolation(interpolationCellId,
                                                                              startId, endId, startInterpolationDataset,
                                                                              endHalfInterpolationDataset,
                                                                              interpolatedCenterlines, 1,
                                                                              clippingPoints)
-        completeVoronoiDiagram = InsertNewVoronoiPoints(completeVoronoiDiagram, newVoronoiPoints,
+        completeVoronoiDiagram = insert_new_voronoi_points(completeVoronoiDiagram, newVoronoiPoints,
                                                         newVoronoiPointsMISR)
 
-        newVoronoiPoints, newVoronoiPointsMISR = VoronoiDiagramInterpolation(interpolationCellId,
+        newVoronoiPoints, newVoronoiPointsMISR = voronoi_diagram_interpolation(interpolationCellId,
                                                                              endId, startId, endInterpolationDataset,
                                                                              startHalfInterpolationDataset,
                                                                              interpolatedCenterlines, -1,
                                                                              clippingPoints)
-        completeVoronoiDiagram = InsertNewVoronoiPoints(completeVoronoiDiagram, newVoronoiPoints,
+        completeVoronoiDiagram = insert_new_voronoi_points(completeVoronoiDiagram, newVoronoiPoints,
                                                         newVoronoiPointsMISR)
 
     if bif is not []:
@@ -3531,32 +4090,32 @@ def interpolate_voronoi_diagram(interpolatedCenterlines, patchCenterlines,
 
             id1, id2 = get_start_ids(clippingPointsArray, bif_clipped)
 
-            startInterpolationDataset = ExtractCylindricInterpolationVoronoiDiagram(startId_,
+            startInterpolationDataset = extract_cylindric_interpolation_voronoi_diagram(startId_,
                                                                                     startId, startR,
                                                                                     clippedVoronoi, startCell)
-            startHalfInterpolationDataset = ExtractCylindricInterpolationVoronoiDiagram(startId_,
+            startHalfInterpolationDataset = extract_cylindric_interpolation_voronoi_diagram(startId_,
                                                                                         startId, startRHalf,
                                                                                         clippedVoronoi, startCell)
 
-            endInterpolationDataset = ExtractCylindricInterpolationVoronoiDiagram(endId_, endId,
+            endInterpolationDataset = extract_cylindric_interpolation_voronoi_diagram(endId_, endId,
                                                                                   endR, clippedVoronoi,
                                                                                   endCell)
-            endHalfInterpolationDataset = ExtractCylindricInterpolationVoronoiDiagram(endId_, endId,
+            endHalfInterpolationDataset = extract_cylindric_interpolation_voronoi_diagram(endId_, endId,
                                                                                       endRHalf, clippedVoronoi,
                                                                                       endCell)
-            newVoronoiPoints, newVoronoiPointsMISR = VoronoiDiagramInterpolation(interpolationCellId,
+            newVoronoiPoints, newVoronoiPointsMISR = voronoi_diagram_interpolation(interpolationCellId,
                                                                                  id1, id2, startInterpolationDataset,
                                                                                  endHalfInterpolationDataset,
                                                                                  bif_, 1, clippingPoints)
 
-            completeVoronoiDiagram = InsertNewVoronoiPoints(completeVoronoiDiagram, newVoronoiPoints,
+            completeVoronoiDiagram = insert_new_voronoi_points(completeVoronoiDiagram, newVoronoiPoints,
                                                             newVoronoiPointsMISR)
-            newVoronoiPoints, newVoronoiPointsMISR = VoronoiDiagramInterpolation(interpolationCellId,
+            newVoronoiPoints, newVoronoiPointsMISR = voronoi_diagram_interpolation(interpolationCellId,
                                                                                  id2, id1, endInterpolationDataset,
                                                                                  startHalfInterpolationDataset,
                                                                                  bif_, -1, clippingPoints)
 
-            completeVoronoiDiagram = InsertNewVoronoiPoints(completeVoronoiDiagram, newVoronoiPoints,
+            completeVoronoiDiagram = insert_new_voronoi_points(completeVoronoiDiagram, newVoronoiPoints,
                                                             newVoronoiPointsMISR)
 
             print("Number of points in Voronoi diagram: %i" % completeVoronoiDiagram.GetNumberOfPoints())
@@ -3565,6 +4124,16 @@ def interpolate_voronoi_diagram(interpolatedCenterlines, patchCenterlines,
 
 
 def get_start_ids(points, line):
+    """Sort the points according the the distance from the line.
+
+    Args:
+        points (list): Nested-list with points.
+        line (vtkPolyData): Centerline of interest.
+
+    Return:
+        order1 (int): Proximal point
+        order2 (int): Distal point
+    """
     p1 = points[1]
     p2 = points[2]
     locator = get_locator(line)
