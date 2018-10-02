@@ -1,82 +1,75 @@
-.. title:: Documentation for the Code
+.. title:: API documentation
 
 ====================================
 Documentation for the Python Scripts
 ====================================
 
-Initialization
-==============
 
-initialize_cases.py
--------------------
-.. automodule:: initialize_cases
-     :members:
+Manipulation of a bend
+======================
 
-Landmarking of the Carotid Siphon 
-=================================
+manipulate_bend.py
+------------------
 
-automated_landmarking.py
-------------------------
-.. automodule:: automated_landmarking
-     :members:
+.. automodule:: manipulate_bend
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
-.. todo::
+Manipulation of a the area
+==========================
 
-   Include Piccinelli
+manipulate_area.py
+------------------
 
-Manipulation of the Carotid Siphon
-==================================
-
-move_siphon.py
---------------
-
-.. automodule:: move_siphon
+.. automodule:: manipulate_area
      :members:
 
 
-calculate_alpha_beta_values.py
+Manipulation of a curvature
+===========================
+
+manipulate_curvature.py
 ------------------------------
 
-.. automodule:: calculate_alpha_beta_values
-     :members:
-
-Computing angle and curvature of the Carotid Siphon
-===================================================
-
-automated_geometric_quantities.py
----------------------------------
-
-.. automodule:: automated_geometric_quantities
+.. automodule:: manipulate_curvature
      :members:
 
 
-Manipulation of the ICA Bifurcation
-===================================
+Manipulation of a bifurcation
+=============================
 
-move_branches.py
-----------------
+manipulate_bifurcation.py
+--------------------------------
 
-.. automodule:: move_branches
+.. automodule:: manipulate_bifurcation
      :members:
+
+
 
 Miscellaneous
 =============
+Supporting functions to the main algorithms.
 
 common.py
----------
+----------------
 
 .. automodule:: common
      :members:
 
-
-moveandmanipulatetools.py
--------------------------
-
-.. automodule:: moveandmanipulatetools
+automated_landmarking.py
+-------------------------------
+.. automodule:: automated_landmarking
      :members:
 
-.. todo::
+automated_geometric_quantities.py
+----------------------------------------
 
-   Provide some text before all the docstrings?
+.. automodule:: automated_geometric_quantities
+     :members:
 
+calculate_alpha_beta_values.py
+-------------------------------------
 
+.. automodule:: calculate_alpha_beta_values
+     :members:

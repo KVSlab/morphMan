@@ -4,37 +4,27 @@
 Installation
 ============
 
-This guide summarises how to install VMTK Tools. 
+A short summary of how to install the dependencies of morphMan. 
 Currently the project is only accessable through github.
 
 
 Compatibility and Dependencies
 ==============================
 
-The general dependencies of VMTK Tools are 
+The general dependencies of morphMan are 
 
-* ITK 4.13
-* VTK 8.1
-* H5Py
-* Numpy <= 1.13
+* VTK > 8.1
+* Numpy > 1.13
 * VMTK 1.4
 
-VMTK no longer support python 2.7 on Windows builds. 
+Please note that: VMTK no longer support python 2.7 on Windows builds. 
 VMTK 1.4+ requires python 3.5+ on Windows 10. 
 Linux and MacOSX machines support python 2.7, 3.5+. 
 
 Basic Installation
 ==================
 
+Please confer with the VMTK documentation  on installation instructions. If you are on a 
 To install the Python components of VMTK Tools::
 
-  git clone https://github.com/aslakbergersen/vmtktools
-  git clone https://github.com/hkjeldsberg/automatedManipulation
-
-.. todo::
-
-  Update VMTK Tools documentation for lates release, include test examples, 
-  and provide a link to
-  documentation of stable version here.
-
-
+  git clone https://github.com/hkjeldsberg/vascularManipulationToolkit

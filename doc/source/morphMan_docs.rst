@@ -6,15 +6,13 @@
 
 
 
-.. title:: VMTK Tools
+.. title:: morpMan
 
-==========
-VMTK Tools
-==========
+========
+morphMan
+========
 
-This is experimental documentation for the `VMTK Tools
-<https://github.com/aslakbergersen/vmtktools>`_.  This version of the documentation on
-Read the Docs is under development.
+Documentation for `morphMan <https://github.com/hkjeldsberg/vascularManipulationToolkit>`_.
 
 .. toctree::
    :maxdepth: 2
@@ -22,4 +20,3 @@ Read the Docs is under development.
    installation
    getting_started
    scripts
-
