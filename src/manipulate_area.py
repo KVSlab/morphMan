@@ -5,9 +5,8 @@ from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from common import *
 
 
-def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
-                    no_smooth_point, region_of_interest, region_points, beta, ratio,
-                    stenosis_length, percentage, output_filepath, poly_ball_size):
+def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth, no_smooth_point, region_of_interest,
+                    region_points, beta, ratio, stenosis_length, percentage, output_filepath, poly_ball_size):
     """
     Objective manipulation of area variation in
     patient-specific models of blood vessels.
@@ -34,10 +33,8 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
     base_path = get_path_names(input_filepath)
 
     # Files paths
-    surface_capped_path = base_path + "_capped.vtp"
     voronoi_new_path = base_path + "_voronoi_manipulated.vtp"
     centerlines_path = base_path + "_centerline.vtp"
-    centerline_area_path = base_path + "_centerline_area.vtp"
     centerline_area_spline_path = base_path + "_centerline_area_spline.vtp"
     centerline_area_spline_sections_path = base_path + "_centerline_area_sections.vtp"
     centerline_spline_path = base_path + "_centerline_spline.vtp"
@@ -70,7 +67,7 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
     # Manipulate the voronoi diagram
     print("-- Change Voronoi diagram")
     newvoronoi = change_area(voronoi, centerline_area, method, beta, ratio, percentage,
-                             region_of_interest, region_points, stenosis_length, surface)
+                             region_of_interest, region_points)
     write_polydata(newvoronoi, voronoi_new_path)
 
     # Make new surface
@@ -84,7 +81,7 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
 
 
 def get_factor(line_to_change, method, beta, ratio, percentage, region_of_interest,
-               region_points, stenosis_length, surface):
+               region_points):
     """
     Compute the factor determining
     the change in radius, used to
@@ -92,12 +89,12 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
 
     Args:
         line_to_change (vtkPolyData): Centerline representing area of interest.
+        method (str): Type of manipulation of the centerline.
         beta (float): Factor deciding how area will change. Ignored if ratio is given.
         ratio (float): Desired ratio between min and max cross-sectional area.
         percentage (float): Desired increase/decrease in cross-sectional area.
         region_of_interest (str): Method for setting the region of interest.
-        region_points (bool): List of points for the stenosis.
-        stenosis_length (float): Length of affected stenosis area. Default is MISR x 2.0 of selected point.
+        region_points (list): List of points for the stenosis.
 
     Returns:
         factor (float): Factor determining the change in radius.
@@ -108,7 +105,7 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
     # Safety smoothing, section area does not always work perfectly
     for i in range(2):
         area = gaussian_filter(area, 5)
-    mean = np.mean(area)
+    mean_area = np.mean(area)
 
     # Linear transition first and last 10 % for some combinations of method an region_of_interest
     if region_of_interest in ["manuall", "commandline"] and method in ["area", "variation"]:
@@ -133,11 +130,11 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
         if ratio is not None:
             # Inital guess
             R_old = area.max() / area.min()
-            beta = (1. / 2) * math.log(ratio) / math.log(R_old) - 0.5
-            factor_ = (area / mean) ** (beta)
+            beta = 0.5 * (math.log(ratio) / math.log(R_old) - 1)
+            factor_ = (area / mean_area) ** beta
             factor = factor_[:, 0] * (1 - trans) + trans
         else:
-            factor_ = ((area / mean) ** beta)[:, 0]
+            factor_ = ((area / mean_area) ** beta)[:, 0]
             factor = factor_ * (1 - trans) + trans
 
     elif method == "stenosis":
@@ -161,7 +158,7 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
 
 
 def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
-                region_of_interest, region_points, stenosis_length, surface):
+                region_of_interest, region_points):
     """
     Change the cross-sectional area of an input
     voronoi diagram along the corresponding area
@@ -169,13 +166,14 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
 
     Args:
         voronoi (vtkPolyData): Voronoi diagram.
-        tol (float): Tolerance factor.
+
+        line_to_change (vtkPolyData): Centerline representing area of interest.
+        method (str): Type of manipulation of the centerline.
         beta (float): Factor deciding how area will change. Ignored if ratio is given.
         ratio (float): Desired ratio between min and max cross-sectional area.
         percentage (float): Percentage the area of the geometry / stenosis is increase/decreased.
         region_of_interest (str): Method for setting the region of interest ['manuall' | 'commandline' | 'first_line']
         region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint
-        stenosis_length (float): Length of affected stenosis area. Default is MISR x 2.0 of selected point.
 
     Returns:
         newVoronoi (vtkPolyData): Manipulated Voronoi diagram.
@@ -197,7 +195,7 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
 
     # Get factor
     factor = get_factor(line_to_change, method, beta, ratio, percentage,
-                        region_of_interest, region_points, stenosis_length, surface)
+                        region_of_interest, region_points)
 
     # Locator to find closest point on centerline
     locator = get_locator(line_to_change)
@@ -218,7 +216,7 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
         pointRadius = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
 
         tubeValue = tubeFunction.EvaluateFunction(point)
-        if (tubeValue <= 0.0):
+        if tubeValue <= 0.0:
             tmp_ID = locator.FindClosestPoint(point)
 
             v1 = np.asarray(line_to_change.GetPoint(tmp_ID)) - np.asarray(point)
@@ -258,112 +256,112 @@ def read_command_line():
     required.add_argument('-i', '--ifile', type=str, default=None, required=True,
                           help="Path to the surface model")
     required.add_argument("-o", "--ofile", type=str, default=None, required=True,
-                          help="Relative path to the output surface. The default folder is" + \
-                               " the same as the input file, and a name with a combination of the" + \
+                          help="Relative path to the output surface. The default folder is" +
+                               " the same as the input file, and a name with a combination of the" +
                                " parameters.")
 
     # General arguments
     parser.add_argument("-m", "--method", type=str, default="variation",
                         choices=["variation", "stenosis", "area"],
-                        help="Methods for manipulating the area in the region of interest:" + \
-                             "\n1) 'variation' will increase or decrease the changes in area" + \
-                             " along the centerline of the region of interest." + \
-                             "\n2) 'stenosis' will create or remove a local narrowing of the" + \
-                             " surface. If two points is provided, the area between these" + \
-                             " two points will be linearly interpolated to remove the narrowing." + \
-                             " If only one point is provided it is assumed to be the center of" + \
-                             " the stenosis. The new stenosis will have a sin shape, however, any" + \
-                             " other shape may be easly implemented." + \
-                             "\n3) 'area' will inflate or deflate the area in the region of" + \
+                        help="Methods for manipulating the area in the region of interest:" +
+                             "\n1) 'variation' will increase or decrease the changes in area" +
+                             " along the centerline of the region of interest." +
+                             "\n2) 'stenosis' will create or remove a local narrowing of the" +
+                             " surface. If two points is provided, the area between these" +
+                             " two points will be linearly interpolated to remove the narrowing." +
+                             " If only one point is provided it is assumed to be the center of" +
+                             " the stenosis. The new stenosis will have a sin shape, however, any" +
+                             " other shape may be easly implemented." +
+                             "\n3) 'area' will inflate or deflate the area in the region of" +
                              " interest.")
     parser.add_argument('-s', '--smooth', type=str2bool, default=True,
                         help="Smooth the voronoi diagram, default is False")
     parser.add_argument('-f', '--smooth_factor', type=float, default=0.25,
-                        help="If smooth option is true then each voronoi point" + \
-                             " that has a radius less then MISR*(1-smooth_factor) at" + \
+                        help="If smooth option is true then each voronoi point" +
+                             " that has a radius less then MISR*(1-smooth_factor) at" +
                              " the closest centerline point is removed.")
     parser.add_argument("-n", "--no-smooth", type=bool, default=False,
-                        help="If true and smooth is true the user, if no-smooth-point is" + \
-                             " not given, the user can provide points where the surface not will" + \
+                        help="If true and smooth is true the user, if no-smooth-point is" +
+                             " not given, the user can provide points where the surface not will" +
                              " be smoothed.")
     parser.add_argument("--no-smooth-point", nargs="+", type=float, default=None,
-                        help="If model is smoothed the user can manually select points on" + \
-                             " the surface that will not be smoothed. A centerline will be" + \
-                             " created to the extra point, and the section were the centerline" + \
-                             " differ from the other centerlines will be keept un-smoothed. This" + \
-                             " can be practicle for instance when manipulating geometries" + \
+                        help="If model is smoothed the user can manually select points on" +
+                             " the surface that will not be smoothed. A centerline will be" +
+                             " created to the extra point, and the section were the centerline" +
+                             " differ from the other centerlines will be keept un-smoothed. This" +
+                             " can be practicle for instance when manipulating geometries" +
                              " with aneurysms")
     parser.add_argument("-b", "--poly-ball-size", nargs=3, type=int, default=[120, 120, 120],
-                        help="The size of the poly balls that will envelope the new" + \
-                             " surface. The default value is 120, 120, 120. If two tubular" + \
-                             " structures are very close compared to the bounds, the poly ball" + \
-                             " size should be adjusted. For quick proto typing we" + \
-                             " recommend ~100 in all directions, but >250 for a final " + \
+                        help="The size of the poly balls that will envelope the new" +
+                             " surface. The default value is 120, 120, 120. If two tubular" +
+                             " structures are very close compared to the bounds, the poly ball" +
+                             " size should be adjusted. For quick proto typing we" +
+                             " recommend ~100 in all directions, but >250 for a final " +
                              " surface.", metavar="size")
 
     # Set region of interest
     parser.add_argument("-r", "--region-of-interest", type=str, default="manuall",
                         choices=["manuall", "commandline", "first_line"],
-                        help="The method for defining the region to be changed. There are" + \
-                             " three options: 'manuall', 'commandline', 'first_line'. In" + \
-                             " 'manuall' the user will be provided with a visualization of the" + \
-                             " input surface, and asked to provide an end and start point of the" + \
-                             " region of interest. Note that not all algorithms are robust over" + \
-                             " bifurcations. If 'commandline' is provided, then '--region-points'" + \
-                             " is expected to be provided. Finally, if 'first_line' is given, the" + \
-                             " line from the inlet (largest opening) to the first bifurcation" + \
-                             " will be altered, not that method='stenosis' can not be used" + \
+                        help="The method for defining the region to be changed. There are" +
+                             " three options: 'manuall', 'commandline', 'first_line'. In" +
+                             " 'manuall' the user will be provided with a visualization of the" +
+                             " input surface, and asked to provide an end and start point of the" +
+                             " region of interest. Note that not all algorithms are robust over" +
+                             " bifurcations. If 'commandline' is provided, then '--region-points'" +
+                             " is expected to be provided. Finally, if 'first_line' is given, the" +
+                             " line from the inlet (largest opening) to the first bifurcation" +
+                             " will be altered, not that method='stenosis' can not be used" +
                              " with 'first_line'.")
     parser.add_argument("--region-points", nargs="+", type=float, default=None, metavar="points",
-                        help="If -r or --region-of-interest is 'commandline' then this" + \
-                             " argument have to be given. The method expects two points" + \
-                             " which defines the start and end of the region of interest. If" + \
-                             " 'method' is set to stenosis, then one point can be provided as well," + \
-                             " which is assumbed to be the center of a new stenosis." + \
-                             " Example providing the points (1, 5, -1) and (2, -4, 3):" + \
+                        help="If -r or --region-of-interest is 'commandline' then this" +
+                             " argument have to be given. The method expects two points" +
+                             " which defines the start and end of the region of interest. If" +
+                             " 'method' is set to stenosis, then one point can be provided as well," +
+                             " which is assumbed to be the center of a new stenosis." +
+                             " Example providing the points (1, 5, -1) and (2, -4, 3):" +
                              " --stenosis-points 1 5 -1 2 -4 3")
 
     # "Variation" argments
     parser.add_argument('--beta', type=float, default=0.5,
-                        help="For method=variation: The new voronoi diagram is computed as" + \
-                             " (A/A_mean)**beta*r_old, over the respective area. If beta <" + \
-                             " 0 the geometry will have less area variation, and" + \
+                        help="For method=variation: The new voronoi diagram is computed as" +
+                             " (A/A_mean)**beta*r_old, over the respective area. If beta <" +
+                             " 0 the geometry will have less area variation, and" +
                              " if beta > 0, the variations in area will increase")
     parser.add_argument("--ratio", type=float, default=None,
-                        help="For method=variation: " + \
-                             " Target ratio of A_max/A_min, when this is given beta will be ignored" + \
+                        help="For method=variation: " +
+                             " Target ratio of A_max/A_min, when this is given beta will be ignored" +
                              " and instead approximated to obtain the target ratio")
 
     # "Stenosis" argument
     parser.add_argument("--stenosis-length", type=float, default=2.0, metavar="length",
-                        help="For method=stenosis: The length of the area " + \
-                             " affected by a stenosis relative to the minimal inscribed" + \
+                        help="For method=stenosis: The length of the area " +
+                             " affected by a stenosis relative to the minimal inscribed" +
                              " sphere radius of the selected point. Default is 2.0.")
 
     # "area" / "stenosis" argument
     parser.add_argument("--percentage", type=float, default=50.0,
-                        help="Percentage the" + \
-                             " area of the geometry is increase/decreased overall or only" + \
+                        help="Percentage the" +
+                             " area of the geometry is increase/decreased overall or only" +
                              " stenosis")
 
     # Outputfile argument
     args = parser.parse_args()
 
     if args.method == "stenosis" and args.region_of_interest == "first_line":
-        raise ValueError("Can not set region of interest to 'first_line' when creating or" + \
+        raise ValueError("Can not set region of interest to 'first_line' when creating or" +
                          " removing a stenosis")
 
     if args.method == "variation" and args.ratio is not None and args.beta != 0.5:
-        print("WARNING: The beta value you provided will be ignored, using ration instead.")
+        print("WARNING: The beta value you provided will be ignored, using ratio instead.")
 
     if args.region_points is not None:
         if len(args.region_points) % 3 != 0 or len(args.region_points) > 6:
-            raise ValueError("ERROR: Please provide region point(s) as a multiple of 3, and maximum" + \
+            raise ValueError("ERROR: Please provide region point(s) as a multiple of 3, and maximum" +
                              " two points.")
 
     if args.no_smooth_point is not None and len(args.no_smooth_point):
         if len(args.no_smooth_point) % 3 != 0:
-            raise ValueError("ERROR: Please provide the no smooth point(s) as a multiple" + \
+            raise ValueError("ERROR: Please provide the no smooth point(s) as a multiple" +
                              " of 3.")
 
     return dict(input_filepath=args.ifile, method=args.method, smooth=args.smooth,

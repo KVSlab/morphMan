@@ -34,7 +34,7 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines, proj=Fal
     centerline_path = base_path + "_centerline.vtp"
 
     # Extract Clipping points
-    point_path = base_path + "_carotid_bend_points.particles"
+    point_path = base_path + "_anterior_bend.particles"
     if not path.exists(point_path):
         RuntimeError("The given .particles file: %s does not exist!" % point_path)
     region_points = np.loadtxt(point_path)
@@ -320,8 +320,7 @@ def compute_curvature(input_filepath, alpha, beta, method, new_centerlines):
     centerline_path = base_path + "_centerline.vtp"
 
     # Extract Clipping points
-    point_path = base_path + "_carotid_bend_points.particles"
-
+    point_path = base_path + "_anterior_bend.particles"
     if not path.exists(point_path):
         RuntimeError("The given .particles file: %s does not exist!" % point_path)
     region_points = np.loadtxt(point_path)
