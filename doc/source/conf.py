@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# vmtktools_docs documentation build configuration file, created by
+# morphMan_docs documentation build configuration file, created by
 # sphinx-quickstart on Wed Jul  4 12:51:57 2018.
 #
 # This file is execfile()d with the current directory set to its
@@ -18,7 +18,8 @@ import os
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-#sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),"..", "..", "src"))
+print(os.path.join(os.path.dirname(os.path.abspath(__file__)),"..", "..", "src"))
 
 # -- General configuration ------------------------------------------------
 
@@ -52,10 +53,10 @@ source_suffix = '.rst'
 #source_encoding = 'utf-8-sig'
 
 # The master toctree document.
-master_doc = 'vmtktools_docs'
+master_doc = 'morphMan_docs'
 
 # General information about the project.
-project = u'VMTK TOOLS'
+project = u'morphMan'
 copyright = u'2018, Aslak Bergersen & Henrik Kjeldsberg'
 author = u'Aslak Bergersen & Henrik Kjeldsberg'
 
@@ -146,7 +147,7 @@ html_theme = 'sphinx_rtd_theme'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['static']
+#html_static_path = ['static']
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
@@ -209,7 +210,7 @@ html_static_path = ['static']
 #html_search_scorer = 'scorer.js'
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'vmtktools_docsdoc'
+htmlhelp_basename = 'morphMan_docsdoc'
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -231,7 +232,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'vmtktools_docs.tex', u'vmtktools\\_docs Documentation',
+    (master_doc, 'morphMan_docs.tex', u'morphMan\\_docs Documentation',
      u'Henrik Kjeldsberg', 'manual'),
 ]
 
@@ -261,7 +262,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'vmtktools_docs', u'vmtktools_docs Documentation',
+    (master_doc, 'morphMan_docs', u'morphMan_docs Documentation',
      [author], 1)
 ]
 
@@ -275,8 +276,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'vmtktools_docs', u'vmtktools_docs Documentation',
-     author, 'vmtktools_docs', 'One line description of project.',
+    (master_doc, 'morphMan_docs', u'morphMan_docs Documentation',
+     author, 'morphMan_docs', 'One line description of project.',
      'Miscellaneous'),
 ]
 
@@ -365,5 +366,3 @@ epub_exclude_files = ['search.html']
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
-
-
