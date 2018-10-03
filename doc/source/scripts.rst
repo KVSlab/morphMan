@@ -1,8 +1,8 @@
 .. title:: API documentation
 
-====================================
-Documentation for the Python Scripts
-====================================
+=================
+API documentation
+=================
 
 
 Manipulation of a bend

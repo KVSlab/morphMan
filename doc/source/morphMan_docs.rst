@@ -19,4 +19,9 @@ Documentation for `morphMan <https://github.com/hkjeldsberg/vascularManipulation
 
    installation
    getting_started
+   manipulate_area
+   manipulate_bend
+   manipulate_bifurcation
+   manipulate_curvature
+   Miscellaneous
    scripts
