@@ -838,7 +838,8 @@ def clipp_capped_surface(surface, centerlines, clipspheres=0):
 
 
 def uncapp_surface(surface, gradients_limit=0.15, area_limit=0.3, circleness_limit=3):
-    """A rule-based method for removing endcapps on a surface. The method considers the
+    """
+    A rule-based method for removing endcapps on a surface. The method considers the
     gradient of the normals, the size of the region, and how similar it is to a circle.
 
     Args:
@@ -1099,9 +1100,6 @@ def compute_centers(polyData, case_path=None):
     # Get connectivity array
     region_array = get_array("RegionId", outputs)
 
-    if test_capped:
-        return region_array.max() >= 1
-
     # Get points
     points = np.zeros((region_array.shape[0], 3))
     for i in range(region_array.shape[0]):
@@ -1267,7 +1265,8 @@ def remove_distant_points(voronoi, centerline):
 
 
 def vmtk_compute_centerline_sections(surface, centerline):
-    """Wrapper for vmtk centerline sections.
+    """
+    Wrapper for vmtk centerline sections.
 
     Args:
         surface (vtkPolyData): Surface to meassure area.
@@ -1275,7 +1274,7 @@ def vmtk_compute_centerline_sections(surface, centerline):
 
     Returns:
         line (vtkPolyData): centerline with the attributes
-        centerlineSections (vtkPolyData): sections along the centerline
+        centerlineSectionsArea (vtkPolyData): sections along the centerline
     """
     centerlineSections = vtkvmtk.vtkvmtkPolyDataCenterlineSections()
     centerlineSections.SetInputData(surface)
@@ -1287,10 +1286,10 @@ def vmtk_compute_centerline_sections(surface, centerline):
     centerlineSections.SetCenterlineSectionClosedArrayName('CenterlineSectionClosed')
     centerlineSections.Update()
 
-    centerlineSections = centerlineSections.GetOutput()
+    centerlinesSectionsArea = centerlineSections.GetOutput()
     line = centerlineSections.GetCenterlines()
 
-    return line, centerlineSections
+    return line, centerlinesSectionsArea
 
 
 def compute_centerlines(inlet, outlet, filepath, surface, resampling=1.0, smooth=False,
@@ -1693,7 +1692,8 @@ def vmtk_surface_smoother(surface, method, iterations=800, passband=1.0, relaxat
 
 
 def extract_ica_centerline(base_path, resampling_step):
-    """Extract a centerline from the inlet to the first branch.
+    """
+    Extract a centerline from the inlet to the first branch.
 
     Args:
         base_path (str): Path to the case folder.
@@ -1702,6 +1702,7 @@ def extract_ica_centerline(base_path, resampling_step):
     Returns:
         centerline (vtkPolyData): Extracted centerline.
     """
+    centerlines_path = base_path + "_centerline.vtp"
     input_filepath = base_path + ".vtp"
     ica_centerline_path = base_path + "_ica.vtp"
     centerline_relevant_outlets_path = base_path + "_centerline_relevant_outlets.vtp"
@@ -1713,6 +1714,11 @@ def extract_ica_centerline(base_path, resampling_step):
     inlet, outlets = get_centers(surface, base_path)
     outlet1, outlet2 = get_relevant_outlets(capped_surface, base_path)
     outlets, outlet1, outlet2 = sort_outlets(outlets, outlet1, outlet2, base_path)
+
+    # Compute / import centerlines
+    centerlines, _, _ = compute_centerlines(inlet, outlets, centerlines_path,
+                                            capped_surface, resampling=resampling_step,
+                                            smooth=False, base_path=base_path)
 
     # Get relevant centerlines
     centerline_relevant_outlets = compute_centerlines(inlet, outlet1 + outlet2,
@@ -2413,7 +2419,6 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
         angle = np.arccos(np.dot(in_dir, normal)) * 180 / np.pi
         flipped = True if 90 < angle < 270 else False
         normal = -normal if 90 < angle < 270 else normal
-        #print(normal)
 
         # Mapp the old center and normals to the altered model
         if changed and old_centerline is not None:
@@ -2867,7 +2872,7 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
         endID = min(pointIDs)
         cl_id = 0
 
-        region_points = []
+        region_points = list(centerline.GetPoint(startID)) + list(centerline.GetPoint(endID))
 
     elif region_of_interest == "commandline" or region_of_interest == "manuall":
         # Get points from the user

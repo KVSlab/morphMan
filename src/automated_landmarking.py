@@ -248,9 +248,9 @@ def landmarking_piccinelli(centerline, base_path, curv_method, algorithm, resamp
         max_point_tor_ids = list(argrelextrema(abs(torsion_smooth), np.greater)[0])
 
     elif curv_method == "vmtk":
-        line = vmtk_centerline_geometry(centerline, True, outputsmoothed=0,
+        line = vmtk_centerline_geometry(centerline, True, outputsmoothed=False,
                                         factor=smoothing_factor_curv, iterations=iterations)
-        line_tor = vmtk_centerline_geometry(centerline, True, outputsmoothed=0,
+        line_tor = vmtk_centerline_geometry(centerline, True, outputsmoothed=False,
                                             factor=smoothing_factor_torsion, iterations=iterations)
         # Get curvature and torsion, find peaks
         curvature = get_array("Curvature", line)
@@ -310,7 +310,7 @@ def landmarking_piccinelli(centerline, base_path, curv_method, algorithm, resamp
         start_id = 0
         for c in max_point_ids:
             for i in range(start_id, len(max_point_tor_ids) - 1):
-                if max_point_tor_ids[i] < c and c < max_point_tor_ids[i + 1] and not found:
+                if max_point_tor_ids[i] < c < max_point_tor_ids[i + 1] and not found:
                     interface["bend%s" % (k + 1)] = np.array([max_point_tor_ids[i]])
                     k += 1
                     interface["bend%s" % (k + 1)] = np.array([max_point_tor_ids[i + 1]])
