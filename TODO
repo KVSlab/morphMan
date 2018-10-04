@@ -1,12 +1,7 @@
 Formaleties
-- Add a README file, like the one in Oasis
-- Add tags to the repository
 - Launch the documentation on ReadTheDocs
 - Add a badge for coveralls
 - Add a badge for building on Travis CI
-- Add a licence file, and a header to each file.
-- Add the original licence header to vmtkpointselector
-- Move the repo to KVSlab
 
 Code
 - Make into a module
