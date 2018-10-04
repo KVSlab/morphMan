@@ -11,7 +11,7 @@ from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from common import *
 
 
-def curvature_variations(input_filepath, smooth, smooth_factor_voro, smooth_factor_line, iterations,
+def curvature_variations(input_filepath, smooth, smooth_factor, smooth_factor_line, iterations,
                          smooth_line, output_filepath, poly_ball_size, region_of_interest,
                          region_points, resampling_step, no_smooth, no_smooth_point):
     """
@@ -23,7 +23,7 @@ def curvature_variations(input_filepath, smooth, smooth_factor_voro, smooth_fact
         output_filepath (str): Path to output the manipulated surface.
         smooth (bool): Smooth the Voronoi diagram.
         smooth_line (bool): Smooth centerline if True, anti-smooth if False.
-        smooth_factor_voro (float): Smoothing factor used for Voronoi diagram smoothing.
+        smooth_factor (float): Smoothing factor used for Voronoi diagram smoothing.
         smooth_factor_line (float): Smoothing factor used for centerline smoothing.
         iterations (int): Smoothing iterations of centerline.
         region_of_interest (str): Method for setting the region of interest ['manuall' | 'commandline' | 'first_line']
@@ -58,7 +58,7 @@ def curvature_variations(input_filepath, smooth, smooth_factor_voro, smooth_fact
                                                          smooth=False, base_path=base_path)
     if smooth:
         voronoi = prepare_voronoi_diagram(capped_surface, centerlines, base_path,
-                                          smooth, smooth_factor_voro, no_smooth,
+                                          smooth, smooth_factor, no_smooth,
                                           no_smooth_point, voronoi, pole_ids)
     # Get region of interest
     _, region_points = get_line_to_change(capped_surface, centerlines,
@@ -355,7 +355,7 @@ def read_command_line():
     args = parser.parse_args()
 
     return dict(input_filepath=args.ifile, smooth=args.smooth,
-                smooth_factor_voro=args.smooth_factor, smooth_factor_line=args.smooth_factor_line,
+                smooth_factor=args.smooth_factor, smooth_factor_line=args.smooth_factor_line,
                 iterations=args.iterations, smooth_line=args.smooth_line, output_filepath=args.ofile,
                 poly_ball_size=args.poly_ball_size, region_of_interest=args.region_of_interest,
                 region_points=args.region_points, resampling_step=args.resampling_step,
