@@ -29,4 +29,4 @@ Then execute the following command::
 You can then activate your environment by runing ``source activate your_environment``.
 You are now all set and can clone morphMan, and start manipulating your geometries::
 
-  git clone https://github.com/hkjeldsberg/vascularManipulationToolkit
+  git clone https://github.com/KVSlab/morphMan
