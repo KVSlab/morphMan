@@ -2,6 +2,15 @@ Formaleties
 - Launch the documentation on ReadTheDocs
 - Add a badge for coveralls
 - Add a badge for building on Travis CI
+- Allow forking repo when repo is public
+- Tests for bif angle, area variation, stenosis removal
+- Test for remove aneurysm (?)
+- Test landmarking
+
+Henrik
+- Refactor README file, like the one in Oasis
+- Merge automated_quant & alpha_beta + Add region selection
+- PEP8 in main scripts (Pycharm)
 
 Code
 - Make into a module
