@@ -6,7 +6,13 @@
 Tutorial: Manipulate bend
 =========================
 
-.. note::
+The goal of ``manipulate_bend.py``, is to alter one specific bend in the vasculature, like shown in Figure 1.
+
+.. figure:: Bend_moving.png
+
+   Figure 1: Illustration of how we would like to alter a bend.
+
+..
     Can be used for a general bend, but if used in ICA...
         Manipulation is initialized by selecting a segment of the vessel, bounded by two clipping points. 
     The two clipping points can be freely chosen along the centerline, but it is highly recommended to landmark the geometry in order to objectively segment the geometry, and use the resulting landmarking points as clipping points.  
