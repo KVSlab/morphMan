@@ -1,7 +1,21 @@
+## This file is adapted from VMTK, vmtkcenterlines.
+
+## Program:   VMTK
+## Module:    $RCSfile: vmtkcenterlines.py,v $
+## Language:  Python
+## Date:      $Date: 2006/07/17 09:52:56 $
+## Version:   $Revision: 1.20 $
+
+##   Copyright (c) Luca Antiga, David Steinman. All rights reserved.
+##   See LICENSE file for details.
+
+##      This software is distributed WITHOUT ANY WARRANTY; without even 
+##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
+##      PURPOSE.  See the above copyright notices for more information.
+
 import vtk
 from vmtk import vmtkrenderer
 
-# Modified from ...
 
 class VtkText:
     def __init__(self, guiText=""):
