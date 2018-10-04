@@ -24,7 +24,7 @@ However, if you are on Linux or MaxOSX you can install all the packages through 
 First install Anaconda or Miniconda (preferably the python 3.6 version).
 Then execute the following command::
 
-       conda create -n your_environment -c vmtk python=3.6 itk vtk vmtk scipy numpy ipython
+       conda create -n your_environment -c vmtk python=3.6 itk vtk vmtk scipy numpy
 
 You can then activate your environment by runing ``source activate your_environment``.
 You are now all set and can clone morphMan, and start manipulating your geometries::
