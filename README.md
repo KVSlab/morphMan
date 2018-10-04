@@ -2,7 +2,7 @@ morphMan
 =====
 
 <p align="center">
-    <img src="https://raw.githubusercontent.com/KVSlab/vascularManipulationToolkit/master/docs/source/change_stenosis.png?token=AJKg8GZbIiq2gb9V1elUl0hqm3QrCco4ks5bv20iwA%3D%3D" width="360" height="200" alt="Create a stenois"/>
+    <img src="https://raw.githubusercontent.com/KVSlab/vascularManipulationToolkit/master/docs/source/change_stenosis.png?token=AJKg8GZbIiq2gb9V1elUl0hqm3QrCco4ks5bv20iwA%3D%3D" width="426" height="293" alt="Create a stenois"/>
 </p>
 <p align="center">
     Manipulation of the Internal Carotid Artery
