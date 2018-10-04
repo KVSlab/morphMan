@@ -1,12 +1,16 @@
 Formaleties
-- Add a README file, like the one in Oasis
 - Add tags to the repository
 - Launch the documentation on ReadTheDocs
 - Add a badge for coveralls
 - Add a badge for building on Travis CI
-- Add a licence file, and a header to each file.
 - Add the original licence header to vmtkpointselector
-- Move the repo to KVSlab
+- Allow forking repo when repo is public
+- H:
+- Refactor README file, like the one in Oasis
+- Merge automated_quant & alpha_beta + Add region selection
+- Feedback documentation
+- PEP8 in main scripts (Pycharm)
+
 
 Code
 - Make into a module
