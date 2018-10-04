@@ -42,6 +42,7 @@ def common_input():
              smooth_factor = 0.25,
              poly_ball_size = [120, 120, 120],
              smooth = True,
+             resampling_step = 0.1,
              no_smooth = False,
              no_smooth_point = None)
     return ai

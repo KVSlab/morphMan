@@ -69,7 +69,7 @@ def test_create_stenosis(common_input):
     assert (np.sqrt(old_area) / np.sqrt(new_area)).max() - 0.5 < 0.01
 
 
-@pytest.fixture(percentage=[30, -30])
+@pytest.parametrize("percentage"=[30, -30])
 def test_inflation_and_deflation_of_area(common_input, percentage):
     common_input.update(dict(method = "area",
                              region_points = None,               # Inactive
