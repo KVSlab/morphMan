@@ -1,4 +1,5 @@
 import pytest
+from fixture import common_input
 from manipulate_bend import *
 
 
@@ -17,24 +18,19 @@ def init_data():
     return dic
 
 @pytest.mark.parametrize("angle", [-20, 20])
-def test_bifurcation_angle(init_data, angle):
-    angle = 6 # pi / 6  = 30 deg
-    #TODO: Get center and end_points (before and after rotation) and measure angle
+def test_bifurcation_angle(common_input, angle):
+    common_input.update(dict(keep_fixed_1 = False,
+                             keep_fixed_2 = False,
+                             bif = False,
+                             lower = False,
+                             cylinder_factor = 7,
+                             angle = angle,
+                             region_of_interest = "commandline"
+                             region_points = [x, y, z, x, y, z]))
 
-    rotate_brances(path.join(basedir, folder), name, smooth, smooth_factor, angle, l1,
-                   l2, bif, lower, cylinder_factor, aneurysm, anu_num, resampling_step, version)
+    rotate_brances(**common_input)
 
+    # TODO: Compute new and old angles
     angle_original = 0.5
     angle_new = 0.7
     assert angle_original < angle_new
-
-def test_decrease_bifurcation_angle():
-    angle = -6 - # pi / 6  = 30 deg
-    rotate_brances(path.join(basedir, folder), name, smooth, smooth_factor, angle, l1,
-                   l2, bif, lower, cylinder_factor, aneurysm, anu_num, resampling_step, version)
-    angle_original = 0.5
-    angle_new = 0.7
-    assert angle_original > angle_new
-
-
-test_increase_curvature()
