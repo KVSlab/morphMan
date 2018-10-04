@@ -9,6 +9,7 @@ from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 # Local import
 from common import *
+from argparse_common import *
 
 
 def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angle,
@@ -578,62 +579,19 @@ def read_command_line():
     parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
     required = parser.add_argument_group('required named arguments')
 
-    # Required arguments
-    required.add_argument('-i', '--ifile', type=str, default=None, required=True,
-                          help="Path to the input surface.")
-    required.add_argument("-o", "--ofile", type=str, default=None, required=True,
-                          help="Path to the manipulated surface.")
+    # Add common arguments
+    add_common_arguments(parser)
 
-    # General arguments
-    parser.add_argument("-m", "--method", type=str, default="variation",
-                        choices=["variation", "stenosis", "area"],
-                        help="Methods for manipulating the area in the region of interest:" +
-                             "\n1) 'variation' will increase or decrease the changes in area" +
-                             " along the centerline of the region of interest." +
-                             "\n2) 'stenosis' will create or remove a local narrowing of the" +
-                             " surface. If two points is provided, the area between these" +
-                             " two points will be linearly interpolated to remove the narrowing." +
-                             " If only one point is provided it is assumed to be the center of" +
-                             " the stenosis. The new stenosis will have a sin shape, however, any" +
-                             " other shape may be easly implemented." +
-                             "\n3) 'area' will inflate or deflate the area in the region of" +
-                             " interest.")
-    parser.add_argument('-s', '--smooth', type=str2bool, default=True,
-                        help="Smooth the voronoi diagram, default is False")
-    parser.add_argument('-f', '--smooth_factor', type=float, default=0.25,
-                        help="If smooth option is true then each voronoi point" +
-                             " that has a radius less then MISR*(1-smooth_factor) at" +
-                             " the closest centerline point is removed.")
-    parser.add_argument("-n", "--no_smooth", type=bool, default=False,
-                        help="If true and smooth is true the user, if no_smooth_point is" +
-                             " not given, the user can provide points where the surface not will" +
-                             " be smoothed.")
-    parser.add_argument("--no_smooth_point", nargs="+", type=float, default=None,
-                        help="If model is smoothed the user can manually select points on" +
-                             " the surface that will not be smoothed. A centerline will be" +
-                             " created to the extra point, and the section were the centerline" +
-                             " differ from the other centerlines will be keept un-smoothed. This" +
-                             " can be practicle for instance when manipulating geometries" +
-                             " with aneurysms")
-    parser.add_argument("-b", "--poly-ball-size", nargs=3, type=int, default=[120, 120, 120],
-                        help="The size of the poly balls that will envelope the new" +
-                             " surface. The default value is 120, 120, 120. If two tubular" +
-                             " structures are very close compared to the bounds, the poly ball" +
-                             " size should be adjusted. For quick proto typing we" +
-                             " recommend ~100 in all directions, but >250 for a final " +
-                             " surface.", metavar="size")
     # Set region of interest:
     parser.add_argument("-r", "--region-of-interest", type=str, default="manuall",
                         choices=["manuall", "commandline"],
                         help="The method for defining the region to be changed. There are" +
-                             " three options: 'manuall', 'commandline', 'landmarking'. In" +
+                             " two options: 'manuall' and 'commandline'. In" +
                              " 'manuall' the user will be provided with a visualization of the" +
                              " input surface, and asked to provide an end and start point of the" +
                              " region of interest. Note that not all algorithms are robust over" +
                              " bifurcations. If 'commandline' is provided, then '--region-points'" +
-                             " is expected to be provided. Finally, if 'landmarking' is" +
-                             " given, it will look for the output from running" +
-                             " automated_geometric_quantities.py.")
+                             " is expected to be provided.")
     parser.add_argument("--region-points", nargs="+", type=float, default=None, metavar="points",
                         help="If -r or --region-of-interest is 'commandline' then this" +
                              " argument have to be given. The method expects two points" +
@@ -661,10 +619,6 @@ def read_command_line():
                              " is lower than the other bif line.")
     parser.add_argument("--cylinder_factor", type=float, default=7.0,
                         help="Factor for choosing the smaller cylinder")
-
-    # TODO: Expand explanation
-    parser.add_argument("--resampling-step", type=float, default=0.1,
-                        help="Resampling step used to resample centerlines")
 
     args = parser.parse_args()
     ang_ = 0 if args.angle == 0 else args.angle * math.pi / 180  # Convert from deg to rad

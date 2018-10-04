@@ -9,6 +9,7 @@ from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 # Local import
 from common import *
+from argparse_common import *
 
 
 def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_of_interest, region_points,
@@ -430,38 +431,8 @@ def read_command_line():
     parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
     required = parser.add_argument_group('required named arguments')
 
-    # Required arguments
-    required.add_argument('-i', '--ifile', type=str, default=None,
-                          help="Path to the surface model", required=True)
-    required.add_argument("-o", "--ofile", type=str, default=None, required=True,
-                          help="Relative path to the output surface. The default folder is" +
-                               " the same as the input file, and a name with a combination of the" +
-                               " parameters.")
-    # Optional arguments
-    parser.add_argument('-s', '--smooth', type=bool, default=True,
-                        help="Smooth the voronoi diagram, default is True")
-    parser.add_argument("-rs", "--resampling-step", type=float, default=0.1,
-                        help="Resampling step for centerline resampling.")
-    parser.add_argument('-f', '--smooth_factor', type=float, default=0.25,
-                        help="If smooth option is true then each voronoi point" +
-                             " that has a radius less then MISR*(1-smooth_factor) at" +
-                             " the closest centerline point is removed.")
-    parser.add_argument("-n", "--no-smooth", type=bool, default=False,
-                        help="If true and smooth is true the user, if no_smooth_point is" +
-                             " not given, the user can provide points where the surface not will" +
-                             " be smoothed.")
-    parser.add_argument("--no-smooth-point", nargs="+", type=float, default=None,
-                        help="If model is smoothed the user can manually select points on" +
-                             " the surface that will not be smoothed. A centerline will be" +
-                             " created to the extra point, and the section were the centerline" +
-                             " differ from the other centerlines will be keept un-smoothed. This" +
-                             " can be practicle for instance when manipulating geometries" +
-                             " with aneurysms")
-    parser.add_argument("-b", "--poly-ball-size", nargs=3, type=int, default=[120, 120, 120],
-                        help="The size of the poly balls that will envelope the new" +
-                             " surface. The default value is 120, 120, 120. If two tubular" +
-                             " structures are very close compared to the bounds, the poly ball" +
-                             " size should be adjusted", metavar="size")
+    # Add common arguments
+    add_common_arguments(parser)
 
     # Set region of interest:
     parser.add_argument("-r", "--region-of-interest", type=str, default="manuall",
