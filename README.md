@@ -1,3 +1,5 @@
+[![Documentation Status](https://readthedocs.org/projects/morphman/badge/?version=latest)](https://morphman.readthedocs.io/en/latest/?badge=latest)
+
 morphMan
 =====
 
