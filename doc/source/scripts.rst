@@ -1,5 +1,7 @@
 .. title:: API documentation
 
+.. _api_documentation:
+
 =================
 API documentation
 =================
@@ -13,8 +15,6 @@ manipulate_bend.py
 
 .. automodule:: manipulate_bend
     :members:
-    :undoc-members:
-    :show-inheritance:
 
 Manipulation of a the area
 ==========================

@@ -1,112 +1,129 @@
 .. title:: Tutorial: Manipulate area
 
+.. _manipulate_area:
 
 =========================
 Tutorial: Manipulate area
 =========================
-Manipulation of the cross-sectional area is performed by running the script ``area_variations.py``.
-[\\]: <> (The script performs geometric manipulation of the cross sectional area, represented by a centerline.)
-In order to preserve the inlet and the end of the geometry segment, the first and last 10% of the area of interest are left unchange. 
+Manipulation of the cross-sectional area is performed by running the script ``manipulate_area.py``. 
+In this tutorial we are using the model with `ID C0001 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0001/C0001_models.tar.gz>`_
+from the Aneurisk database. For the commands below we assume that there is a folder `./C0001`
+with the file `surface.vtp`, relative to where you execute the command.
 
-The script ``area_variations.py`` includes several options for area variations:
+For changing the area you first need to define which segment you want to alter. For ``manipulating_area.py`` there are
+three choises:
+ * Manuall selection, based on clicking on a surface
+ * Provide the points on the centerline
+ * Pass the argument ``--region-of-interest first_line``, which simply choses the section between the inlet
+  and the first bifurcation. Note: This options is not possible for creating or removing a stenosis.
 
-* Area variations
-* In-/deflation
-* Stenosis creation/removal
+There are three different methods for altering the cross-sectional area:
 
+ * Increase or deacrease the area variation
+ * Inflation of deflation of a vessel
+ * Create or remove a stenosis
 
-.. NOTE: manipulate_area.py is easy to extend with new features. Please make a pull request with changes, or contact the developers for help with extending the method.
+``manipulate_area.py`` is easy to extend with new features. Please make a pull request with changes,
+or contact the developers for help with extending the method.
+
+.. _area_variations:
 
 Area variations
 ===============
+The goal of this method is to increase or decrease the variation of the cross-sectional area along an arterial segment.
+Shown in Figure 1 drawing of the desired output. More speceficly, we would like to control R, the ration between the largest
+and smallest area. The area is changed with a factor :math:`F`, which is controlled by :math:`\beta`.
 
-Tulle illustrasjon av geometrien
+.. figure:: illustration_area.png
 
-Focus on R, and not beta.
+        Figure 1: A drawing of what we would like to happen.
 
-Area variation is initialized by a factor :math:`\beta` or a ratio, :math:`R = A_{min} / A_{max}`. 
-The script takes ``beta`` and ``ratio`` as command line arguments.
-However, the script requires only one of the two parameters to perform area variation. 
-Setting :math:`\beta < 0` will cause the ratio :math:`R` to decrease,  whereas :math:`\beta > 0` will cause the ratio to increase. 
-The ratio, :math:`R`, behaves as shown in the illustration below. 
+For changing the cross-sectional area variation you can either provide the  desired :math:`R` you want (``--ratio``),
+or specify :math:`\beta` (``--beta``). Note that :math:`\beta > 0` increases, and :math:`\beta < 0` decreases the
+variability.
 
-Examplified in Figure 3, where the ICA is defined as the region of interest.
+In order to output a plausible geometry the the first and last 10 % is a linear transition between the manipulated and original geometry.
+However, if you choose ``--region-of-interest first_line``, only the end of the line changes.
 
-To perform area variations of the vessel area, run the following command::
-    
-    python area_variations.py --dir_path [PATH_TO_CASES] --case [CASENAME] --smooth True --beta 0.5
+Figure 2, you can see the output of the algorithm, where the internal coratid artery was is defined as the region of interest, and were obtain by running::
 
-or::
+    python area_variations.py --ifile C0001/surface.vtp --ofile C0001/increased_variation.vtp --method variation --ratio 3.0 --region_of_interest first_line
 
-    python area_variations.py --dir_path [PATH_TO_CASES] --case [CASENAME] --smooth True --ratio 0.5
+For the model with increased cross-sectional area variation, and::
 
+    python area_variations.py --ifile C0001/surface.vtp --ofile C0001/increased_variation.vtp --method variation --ratio 1.4 --region_of_interest first_line
+
+For the model with decreased cross-sectional area variation.
 
 .. figure:: area_vary.png
 
-  Figure : Area variations throughout the geometry for different ratios. 
-
-Comment to the Figure: Old, new --> original and manipulated.
+  Figure 2: Area variations throughout the geometry for different ratios. 
 
 
-Overall area variation
-======================
 
-The area of interest can also be increase or decreased overall, by using the ``percentage`` argument. 
-The ``percentage`` argument determines the percentage to increase or decrease the overall area.
+Create / remove a stenosis
+==========================
+A stenosis is a local narrowing of the vessel, often caused by the buildup of plauqe. You can manipulate a stenosis with 
+``manipulate_area.py`` by setting ``--method stenosis``.
 
-To perform overall increase or decrease of the area of interest, run the following command::
-    
-    python area_variations.py --dir_path [PATH_TO_CASES] --case [CASENAME] --smooth True --percentage [%]
+Create a stenosis
+~~~~~~~~~~~~~~~~~
+For creating a stenosis you need to define the center, either by providing the point manually, or using ``--stenosis-points``.
+The stenosis will be upstream and downstream of the center, with ``--length`` times the local minimal inscribed sphere, and 
+``--percent`` controlls how much the local radius chould be changed. For instance, if ``--percent 50`` is provided as an argument,
+the stenosis will have an area in the midle of stenosis of :math:`(0.5r)^2\pi`, where :math:`r` is the radius of the area in the
+original geometry.
 
-Below is an illustration of area decrease and increase in a single patient-specific model. 
+The stenosis is now assumbed to have sinusodial shape. However, altering the shape is trivial,
+and can be done by adapting one line in the function ``get_factor`` in ``manipulate_area.py``.
 
-.. figure:: area_decinc.png
-
-  Figure : Decrease and increase in overall area.
-
-
-Stenosis creation / removal
-===========================
-
-The framework allows for creation or removal of one stenosis located along the area of interest.  
-Creation and removal of a stenosis is performed by specifying input argument ``stenosis`` to **True**.
-Spesifically for stenosis creation, the input arguments ``percentage`` and ``length`` determine the area reduction and length of the stenosis, respectively. 
-The ``length`` argument is multiplied with the radius at the selected center point of the stenosis, to expand the stenosis exposed area.
-
-Comment KVS: Upstream and downstream. Write sine function, can easly be modified in the script.
-
-For creation of a stenosis, run the follwing command::
-    
-    python area_variations.py --dir_path [PATH_TO_CASES] --case [CASENAME] --smooth True --percentage [%] --stenosis True --size [SIZE]
-
-Running this command will cause a render window to appear, asking (replace!) you to specify points on the surface which will act as the center point of the stenosis. 
-This will trigger the following prompt, with a suggested point placement:
-
-.. figure:: single_stenosis.png
-
-  Figure : Placing point where stenosis is centered. 
-
+In Figure 3 you can see the output of the script. Of note is that creating a stenosis in sections with high curvature,
+like the carotid siphon, is unproblematic.
 
 .. figure:: change_stenosis.png
 
   Figure : Comparison of new and old model, with and without stenosis.
 
-
-Similarly, removal of a stenosis is achieved by running the command:: 
+To recreate the above output, execute the following on the commandline line::
     
-    python area_variations.py --dir_path [PATH_TO_CASES] --case [CASENAME] --smooth True --stenosis True 
+    python manipulate_area.py --ifile C0001/surface.vtp --ofile C0001/stenosis.vtp --smooth True --method stenosis --stenosis-point x y z --percentage 50 --size 1
 
-The command will cause a render window to appear, asking you to specify points on the surface which will now act as the boundaries of the stenosis. 
 
-Comment: Linear change in area between the two points.
+Remove stenosis
+~~~~~~~~~~~~~~~
+To remove a stenosis, you need to provide two points, one at each end of the stenosis. The area will be changed to alter
+linearly over the chosen region of interest.
 
-This will trigger the following prompt, with a suggested point placement:
-
-.. figure:: place_stenosis.png
-
-  Figure : Placing points to indentify the boundaries of the stenosis.
-
+To exemplify this, we can use the output from the previous example ``C0001/stenosis.vtp``.
+To the left in Figure 4a you can see the stenosed model compared to the original, and to the
+right the comarison of the original model and the one were we have removed the stenosis.
 
 .. figure:: fixed_stenosis.png
 
   Figure : Comparison of new and old model, with and without stenosis. 
+    
+To reproduce the above result, execute the following command::
+
+    python manipulate_area.py --ifile C0001/stenosis.vtp --ofile C0001/no_stenosis.vtp --smooth True --method stenosis --stenosis-point x y z x y z
+
+
+
+Inflation / deflation of an arterial segment
+============================================
+The area of interest can also be inflated or decflated. To do so, pass the argument ``--method area``, and 
+set the percentage change with ``--percentage``. Like with :ref:`area_variations` the first and last 10 % of the 
+region of interest is a transition between the original and modified geometry to ensure smooth transitions.
+
+To perform a deflation run the following command::
+    
+    python manipulate_area.py --ifile C0001/surface.vtp --ofile C0001/inflated.vtp --smooth True --percentage -20 --method area --region-of-interest first_line
+
+Below is an illustration of area decrease and increase in a single patient-specific model.
+
+.. figure:: area_decinc.png
+
+  Figure : Decrease and increase in overall area.
+
+For additional information, beyond this tutorial, on the script and
+input parameters please run ``python manipulate_area.py -h`` or confere with
+the :ref:`api_documentation`.

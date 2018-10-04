@@ -1,5 +1,7 @@
 .. title:: Tutorial: Manipulate bend
 
+.. _manipulate_bend:
+
 =========================
 Tutorial: Manipulate bend
 =========================

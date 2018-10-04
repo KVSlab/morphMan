@@ -1,5 +1,7 @@
 .. title:: Tutorial: Manipulate curvature
 
+.. _manipulate_curvature:
+
 ==============================
 Tutorial: Manipulate curvature
 ==============================
