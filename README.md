@@ -10,7 +10,6 @@ morphMan
 
 Description
 -----------
-
 morphMan (morphological manipulation) is a collection of tools to objectivly manipulate morphological features
 of patient-specific vascular geometries. In the tutorials we examplify the usage
 by manipulating [internal carotid arteries](https://en.wikipedia.org/wiki/Internal_carotid_artery)
@@ -23,15 +22,14 @@ investigate how cross-sectional area, bifurcation angles, over all curvature cha
 
 Authors
 -------
-
 morphMan is developed by
 
   * Aslak W. Bergersen 
   * Henrik A. Kjeldsberg 
 
+
 Licence
 -------
-
 morphMan is licensed under the GNU GPL, version 3 or (at your option) any
 later version.
 
@@ -47,12 +45,9 @@ If you wish to use morphMan for journal publications, please cite the following 
 * [Kjeldsberg 2018, Master thesis](https://www.duo.uio.no/bitstream/handle/10852/63389/henrikkjeldsberg_master.pdf?sequence=1&isAllowed=y)
 
 
-moprhMan is specifically designed with complex cylindrical geometries in mind. 
-
 
 Installation
 ------------
-
 If you are on Linux or MaxOSX you can install all the packages through anaconda.
 First install Anaconda or Miniconda (preferably the python 3.6 version).
 Then execute the following command::
@@ -62,12 +57,11 @@ Then execute the following command::
 You can then activate your environment by runing ``source activate your_environment``.
 You are now all set and can clone morphMan, and start manipulating your geometries::
 
-    git clone https://github.com/hkjeldsberg/vascularManipulationToolkit
+    git clone https://github.com/KVSlab/vascularManipulationToolkit
 
 
 Contact
 -------
-
 The latest version of this software can be obtained from
 
   https://github.com/KVSlab/vascularManipulationToolkit
