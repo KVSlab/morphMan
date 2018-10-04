@@ -1,9 +1,8 @@
-Oasis
+morphMan
 =====
-[![Build Status](https://travis-ci.org/mikaem/Oasis.svg?branch=master)](https://travis-ci.org/mikaem/Oasis)
 
 <p align="center">
-    <img src="https://rawgit.com/mikaem/oasis/master/figs/channel3D.gif" width="360" height="200" alt="Channel flow"/>
+    <img src="https://rawgit.com/KVSlab/vascularManipulationToolkit/blob/master/docs/source/change_stenosis.png?raw=true" width="360" height="200" alt="Create a stenois"/>
 </p>
 <p align="center">
     Manipulation of the Internal Carotid Artery
