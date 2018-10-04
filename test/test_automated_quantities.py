@@ -1,8 +1,17 @@
+##   Copyright (c) Aslak W. Bergersen, Henrik A. Kjeldsberg. All rights reserved.
+##   See LICENSE file for details.
+
+##      This software is distributed WITHOUT ANY WARRANTY; without even 
+##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
+##      PURPOSE.  See the above copyright notices for more information.
+
 import pytest
 import sys
 from os import path
+
 rel_path = path.dirname(path.abspath(__file__))
 sys.path.insert(0, path.join(rel_path, '..', 'src'))
+
 from manipulate_bend import *
 from automated_geometric_quantities import compute_angle
 

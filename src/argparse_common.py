@@ -1,3 +1,10 @@
+##   Copyright (c) Aslak W. Bergersen, Henrik A. Kjeldsberg. All rights reserved.
+##   See LICENSE file for details.
+
+##      This software is distributed WITHOUT ANY WARRANTY; without even 
+##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
+##      PURPOSE.  See the above copyright notices for more information.
+
 from common import str2bool
 
 def add_common_arguments(parser):
