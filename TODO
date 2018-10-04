@@ -5,12 +5,14 @@ Formaleties
 - Add a badge for building on Travis CI
 - Add the original licence header to vmtkpointselector
 - Allow forking repo when repo is public
-- H:
+- Tests for bif angle, area variation, stenosis removal
+- Test for remove aneurysm (?)
+- Test landmarking
+
+Henrik
 - Refactor README file, like the one in Oasis
 - Merge automated_quant & alpha_beta + Add region selection
-- Feedback documentation
 - PEP8 in main scripts (Pycharm)
-
 
 Code
 - Make into a module
