@@ -13,9 +13,15 @@ The goal of ``manipulate_bend.py``, is to alter one specific bend in the vascula
    Figure 1: Illustration of how we would like to alter a bend.
 
 ..
-    Can be used for a general bend, but if used in ICA...
+ Can be used for a general bend, but if used in ICA...
         Manipulation is initialized by selecting a segment of the vessel, bounded by two clipping points. 
-    The two clipping points can be freely chosen along the centerline, but it is highly recommended to landmark the geometry in order to objectively segment the geometry, and use the resulting landmarking points as clipping points.  
+    The two clipping points can be freely chosen along the centerline, but it is highly recommended
+    to landmark the geometry in order to objectively segment the geometry, and use the resulting
+    landmarking points as clipping points.
+
+As shown in Figure 1, we have defined two directions to move a bend in: :math:`\alpha` and :math:`\beta`.
+The input parameters ``--alpha`` and ``--beta`` controll the distance to move the geometry in
+each directions. For a more detailed description of the vectors :math:`\alpha` and :math:`\beta`, see [1]_
 
 Adjusting curvature and angle in the anterior bend utilizes a common script: ``move_siphon.py``. The script performs geometric manipulation of the anterior bend segment, as defined in the landmarking section.
 Adjusting the anterior bend relies only on two parameters, the compression/extension factors :math:`\alpha \text{ and } \beta`.
@@ -43,4 +49,7 @@ In general, the compression / extension factors :math:`\alpha \text{ and } \beta
 
   Figure 7: Movement in the horizontal direction, determined by :math:`\beta`. FIXME: New model, old model. 
 
+For additional information, beyond this tutorial, on the script and input parameters,
+please run ``python manipulate_bend.py -h`` or confer with the :ref:`api_documentation`.
 
+.. [1] Kjeldsberg, Henrik Aasen. Investigating the Interaction Between Morphology of the Anterior Bend and Aneurysm Initiation. MS thesis. 2018.
