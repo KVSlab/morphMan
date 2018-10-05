@@ -1,3 +1,5 @@
+WARNING: morphMan is stil in development, and scripts might not work as expected.
+
 [![Documentation Status](https://readthedocs.org/projects/morphman/badge/?version=latest)](https://morphman.readthedocs.io/en/latest/?badge=latest)
 
 morphMan
@@ -40,6 +42,8 @@ morphMan is Copyright (2016-2018) by the authors.
 
 Documentation
 -------------
+For an introduction to morphMan, and tutorials, please see the [documentation](https://morphman.readthedocs.io/en/latest/).
+
 If you wish to use morphMan for journal publications, please cite the following master theses: 
 
 * [Bergersen 2016, Master thesis](https://www.duo.uio.no/bitstream/handle/10852/50515/master-bergersen.pdf?sequence=5&isAllowed=y)
