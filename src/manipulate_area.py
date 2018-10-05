@@ -35,7 +35,7 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
         ratio (float): Target ratio, A_max / A_min. Beta is ignored (and estimated) if given.
         percentage (float): Percentage the area of the geometry / stenosis is increase/decreased.
         stenosis_length (float): Length of affected stenosis area. Default is MISR x 2.0 of selected point.
-        region_of_interest (str): Method for setting the region of interest ['manuall' | 'commandline' | 'first_line']
+        region_of_interest (str): Method for setting the region of interest ['manual' | 'commandline' | 'first_line']
         region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint
         poly_ball_size (list): Resolution of polyballs used to create surface.
         output_filepath (str): Path to output the manipulated surface.
@@ -118,7 +118,7 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
     mean_area = np.mean(area)
 
     # Linear transition first and last 10 % for some combinations of method an region_of_interest
-    if region_of_interest in ["manuall", "commandline"] and method in ["area", "variation"]:
+    if region_of_interest in ["manual", "commandline"] and method in ["area", "variation"]:
         k = int(round(area.shape[0] * 0.10, 0))
         l = area.shape[0] - k * 2
     else:
@@ -182,7 +182,7 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
         beta (float): Factor deciding how area will change. Ignored if ratio is given.
         ratio (float): Desired ratio between min and max cross-sectional area.
         percentage (float): Percentage the area of the geometry / stenosis is increase/decreased.
-        region_of_interest (str): Method for setting the region of interest ['manuall' | 'commandline' | 'first_line']
+        region_of_interest (str): Method for setting the region of interest ['manual' | 'commandline' | 'first_line']
         region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint
 
     Returns:
@@ -279,11 +279,11 @@ def read_command_line():
                              " interest.")
 
     # Set region of interest
-    parser.add_argument("-r", "--region-of-interest", type=str, default="manuall",
-                        choices=["manuall", "commandline", "first_line"],
+    parser.add_argument("-r", "--region-of-interest", type=str, default="manual",
+                        choices=["manual", "commandline", "first_line"],
                         help="The method for defining the region to be changed. There are" +
-                             " three options: 'manuall', 'commandline', 'first_line'. In" +
-                             " 'manuall' the user will be provided with a visualization of the" +
+                             " three options: 'manual', 'commandline', 'first_line'. In" +
+                             " 'manual' the user will be provided with a visualization of the" +
                              " input surface, and asked to provide an end and start point of the" +
                              " region of interest. Note that not all algorithms are robust over" +
                              " bifurcations. If 'commandline' is provided, then '--region-points'" +

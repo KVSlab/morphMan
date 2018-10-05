@@ -27,7 +27,7 @@ def curvature_variations(input_filepath, smooth, smooth_factor, smooth_factor_li
         smooth_factor (float): Smoothing factor used for Voronoi diagram smoothing.
         smooth_factor_line (float): Smoothing factor used for centerline smoothing.
         iterations (int): Smoothing iterations of centerline.
-        region_of_interest (str): Method for setting the region of interest ['manuall' | 'commandline' | 'first_line']
+        region_of_interest (str): Method for setting the region of interest ['manual' | 'commandline' | 'first_line']
         region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint
         poly_ball_size (list): Resolution of polyballs used to create surface.
         resampling_step (float): Resampling length for centerline resampling.
@@ -303,11 +303,11 @@ def read_command_line():
     add_common_arguments(parser)
 
     # Set region of interest:
-    parser.add_argument("-r", "--region-of-interest", type=str, default="manuall",
-                        choices=["manuall", "commandline", "first_line"],
+    parser.add_argument("-r", "--region-of-interest", type=str, default="manual",
+                        choices=["manual", "commandline", "first_line"],
                         help="The method for defining the region to be changed. There are" +
-                             " three options: 'manuall', 'commandline', 'first_line'. In" +
-                             " 'manuall' the user will be provided with a visualization of the" +
+                             " three options: 'manual', 'commandline', 'first_line'. In" +
+                             " 'manual' the user will be provided with a visualization of the" +
                              " input surface, and asked to provide an end and start point of the" +
                              " region of interest. Note that not all algorithms are robust over" +
                              " bifurcations. If 'commandline' is provided, then '--region-points'" +

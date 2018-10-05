@@ -39,7 +39,7 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
         resampling_step (float): Resampling step used to resample centerlines.
         no_smooth (bool): True of part of the model is not to be smoothed.
         no_smooth_point (ndarray): Point which is untouched by smoothing.
-        region_of_interest (str): Method for setting the region of interest ['manuall' | 'commandline' | 'landmarking']
+        region_of_interest (str): Method for setting the region of interest ['manual' | 'commandline' | 'landmarking']
         region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint
         poly_ball_size (list): Resolution of polyballs used to create surface.
     """
@@ -74,7 +74,7 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
 
     # Get inlet and outlets
     inlet, outlets = get_centers(surface, base_path)
-    if region_of_interest == "manuall":
+    if region_of_interest == "manual":
         outlet1, outlet2 = get_relevant_outlets(capped_surface, base_path)
     else:
         outlet1, outlet2 = region_points[:3], region_points[3:]
@@ -583,11 +583,11 @@ def read_command_line():
     add_common_arguments(parser)
 
     # Set region of interest:
-    parser.add_argument("-r", "--region-of-interest", type=str, default="manuall",
-                        choices=["manuall", "commandline"],
+    parser.add_argument("-r", "--region-of-interest", type=str, default="manual",
+                        choices=["manual", "commandline"],
                         help="The method for defining the region to be changed. There are" +
-                             " two options: 'manuall' and 'commandline'. In" +
-                             " 'manuall' the user will be provided with a visualization of the" +
+                             " two options: 'manual' and 'commandline'. In" +
+                             " 'manual' the user will be provided with a visualization of the" +
                              " input surface, and asked to provide an end and start point of the" +
                              " region of interest. Note that not all algorithms are robust over" +
                              " bifurcations. If 'commandline' is provided, then '--region-points'" +

@@ -2846,7 +2846,7 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
     Args:
         surface (vtkPolyData): Surface model.
         centerline (vtkPolyData): Centerline in geometry.
-        region_of_interest (str): Method for setting the region of interest ['manuall' | 'commandline' | 'first_line']
+        region_of_interest (str): Method for setting the region of interest ['manual' | 'commandline' | 'first_line']
         method (str): Determines which kind of manipulation is performed.
         region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint.
         stenosis_length (float): Multiplier used to determine the length of the stenosis-affected area.
@@ -2881,9 +2881,9 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
 
         region_points = list(centerline.GetPoint(startID)) + list(centerline.GetPoint(endID))
 
-    elif region_of_interest == "commandline" or region_of_interest == "manuall":
+    elif region_of_interest == "commandline" or region_of_interest == "manual":
         # Get points from the user
-        if region_of_interest == "manuall":
+        if region_of_interest == "manual":
             print("\nPlease select region of interest in the render window.")
             stenosis_point_id = vtk.vtkIdList()
             first = True

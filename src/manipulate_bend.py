@@ -34,7 +34,7 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
         output_filepath (str): Path to output the manipulated surface.
         smooth (bool): Smooth the Voronoi diagram.
         smooth_factor (float): Smoothing factor used for Voronoi diagram smoothing.
-        region_of_interest (str): Method for setting the region of interest ['manuall' | 'commandline' | 'landmarking']
+        region_of_interest (str): Method for setting the region of interest ['manual' | 'commandline' | 'landmarking']
         region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint
         alpha (float): Extension / Compression factor in vertical direction.
         beta (float): Extension / Compression factor in horizontal direction.
@@ -435,11 +435,11 @@ def read_command_line():
     add_common_arguments(parser)
 
     # Set region of interest:
-    parser.add_argument("-r", "--region-of-interest", type=str, default="manuall",
-                        choices=["manuall", "commandline", "landmarking"],
+    parser.add_argument("-r", "--region-of-interest", type=str, default="manual",
+                        choices=["manual", "commandline", "landmarking"],
                         help="The method for defining the region to be changed. There are" +
-                             " three options: 'manuall', 'commandline', 'landmarking'. In" +
-                             " 'manuall' the user will be provided with a visualization of the" +
+                             " three options: 'manual', 'commandline', 'landmarking'. In" +
+                             " 'manual' the user will be provided with a visualization of the" +
                              " input surface, and asked to provide an end and start point of the" +
                              " region of interest. Note that not all algorithms are robust over" +
                              " bifurcations. If 'commandline' is provided, then '--region-points'" +
