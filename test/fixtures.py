@@ -26,7 +26,7 @@ def download_testdata(test_path, outputfile):
         # TODO: Windows command for extracting tar file
 
 
-@pytest.fixture(scope="module"):
+@pytest.fixture(scope="module")
 def common_input():
     abs_path = path.dirname(path.abspath(__file__))
 
@@ -35,7 +35,7 @@ def common_input():
     outputfile = path.join(abs_path, "C0001_models.tar.gz")
 
     # Download test data if necessary
-    if not path.exist(path.join(abs_path, "C0001")):
+    if not path.exists(path.join(abs_path, "C0001")):
         try:
             download_testdata(test_path, outputfile)
         except Exception:
@@ -44,12 +44,12 @@ def common_input():
                             + " test folder")
 
     # Define parameters shared by all functions
-    a = dict(input_filepath = path.join(abs_path, "C0001", "surface", "model.vtp")
-             output_filepath = path.join(abs_path, "C0001", "surface", "model_output.vtp")
+    a = dict(input_filepath = path.join(abs_path, "C0001", "surface", "model.vtp"),
+             output_filepath = path.join(abs_path, "C0001", "surface", "model_output.vtp"),
              smooth_factor = 0.25,
-             poly_ball_size = [120, 120, 120],
+             poly_ball_size = [180, 180, 180],
              smooth = True,
              resampling_step = 0.1,
              no_smooth = False,
              no_smooth_point = None)
-    return ai
+    return a

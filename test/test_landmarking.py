@@ -5,6 +5,11 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
 ##      PURPOSE.  See the above copyright notices for more information.
 
+import sys
+from os import path
+relative_path = path.dirname(path.abspath(__file__))
+sys.path.insert(0, path.join(relative_path, '..', 'src'))
+
 import pytest
 from manipulate_bend import *
 from automated_geometric_quantities import compute_angle
