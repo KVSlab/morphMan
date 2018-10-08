@@ -39,6 +39,7 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
         region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint
         poly_ball_size (list): Resolution of polyballs used to create surface.
         output_filepath (str): Path to output the manipulated surface.
+        resampling_step (float): Resampling length for centerline resampling.
     """
     base_path = get_path_names(input_filepath)
 
@@ -55,7 +56,7 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
     # Create centerline and voronoi diagram
     inlet, outlets = get_centers(surface, base_path)
     centerlines, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path,
-                                                         capped_surface, resampling=0.1,
+                                                         capped_surface, resampling=resampling_step,
                                                          smooth=False, base_path=base_path)
 
     # Smooth voronoi diagram
@@ -120,20 +121,20 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
     # Linear transition first and last 10 % for some combinations of method an region_of_interest
     if region_of_interest in ["manual", "commandline"] and method in ["area", "variation"]:
         k = int(round(area.shape[0] * 0.10, 0))
-        l = area.shape[0] - k * 2
+        linear = area.shape[0] - k * 2
     else:
         k = 0
-        l = area.shape[0]
+        linear = area.shape[0]
 
     # Transition
-    trans = np.asarray(np.linspace(1, 0, k).tolist() + np.zeros(l).tolist() +
+    trans = np.asarray(np.linspace(1, 0, k).tolist() + np.zeros(linear).tolist() +
                        np.linspace(0, 1, k).tolist())
 
     # Only smooth end with first_line
     if region_of_interest == "first_line":
         k = int(round(area.shape[0] * 0.10, 0))
-        l = area.shape[0] - k
-        trans = np.asarray(np.zeros(l).tolist() + np.linspace(0, 1, k).tolist())
+        linear = area.shape[0] - k
+        trans = np.asarray(np.zeros(linear).tolist() + np.linspace(0, 1, k).tolist())
 
     # Get factor
     if method == "variation":
@@ -176,7 +177,6 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
 
     Args:
         voronoi (vtkPolyData): Voronoi diagram.
-
         line_to_change (vtkPolyData): Centerline representing area of interest.
         method (str): Type of manipulation of the centerline.
         beta (float): Factor deciding how area will change. Ignored if ratio is given.
@@ -188,20 +188,20 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
     Returns:
         newVoronoi (vtkPolyData): Manipulated Voronoi diagram.
     """
-    arrayForTube = get_vtk_array("TubeRadius", 1, line_to_change.GetNumberOfPoints())
+    array_for_tube = get_vtk_array("TubeRadius", 1, line_to_change.GetNumberOfPoints())
 
     # Note: If you are looking at the ICA or other vascular structure which can be rather
     # non-circular, please multiply MISR by a factor of, e.g. ~1.7. For arteries that are
     # very close, there is an oposite problem, and one can include points from the Voronoi
     # diagram belonging to other arteries. For robustness, the factor is now 1.05.
-    MISR = get_array(radiusArrayName, line_to_change) * 1.05
-    for i in range(MISR.shape[0]):
-        arrayForTube.SetTuple1(i, MISR[i])
-    line_to_change.GetPointData().AddArray(arrayForTube)
+    misr = get_array(radiusArrayName, line_to_change) * 1.05
+    for i in range(misr.shape[0]):
+        array_for_tube.SetTuple1(i, misr[i])
+    line_to_change.GetPointData().AddArray(array_for_tube)
 
-    tubeFunction = vtkvmtk.vtkvmtkPolyBallLine()
-    tubeFunction.SetInput(line_to_change)
-    tubeFunction.SetPolyBallRadiusArrayName("TubeRadius")
+    tube_function = vtkvmtk.vtkvmtkPolyBallLine()
+    tube_function.SetInput(line_to_change)
+    tube_function.SetPolyBallRadiusArrayName("TubeRadius")
 
     # Get factor
     factor = get_factor(line_to_change, method, beta, ratio, percentage,
@@ -209,43 +209,42 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
 
     # Locator to find closest point on centerline
     locator = get_locator(line_to_change)
-    M = line_to_change.GetNumberOfPoints()
 
     # Voronoi diagram
-    N = voronoi.GetNumberOfPoints()
-    newVoronoi = vtk.vtkPolyData()
-    voronoiPoints = vtk.vtkPoints()
-    cellArray = vtk.vtkCellArray()
-    radiusArray = get_vtk_array(radiusArrayName, 1, N)
+    n = voronoi.GetNumberOfPoints()
+    new_voronoi = vtk.vtkPolyData()
+    voronoi_points = vtk.vtkPoints()
+    cell_array = vtk.vtkCellArray()
+    radius_array = get_vtk_array(radiusArrayName, 1, n)
 
     # Iterate through Voronoi diagram and manipulate
     # If inside MISR tube and inside plane, change r and move point.
     point = [0., 0., 0.]
-    for i in range(N):
+    for i in range(n):
         voronoi.GetPoint(i, point)
-        pointRadius = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
+        point_radius = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
 
-        tubeValue = tubeFunction.EvaluateFunction(point)
-        if tubeValue <= 0.0:
-            tmp_ID = locator.FindClosestPoint(point)
+        tube_value = tube_function.EvaluateFunction(point)
+        if tube_value <= 0.0:
+            tmp_id = locator.FindClosestPoint(point)
 
-            v1 = np.asarray(line_to_change.GetPoint(tmp_ID)) - np.asarray(point)
-            v2 = v1 * (1 - factor[tmp_ID])
+            v1 = np.asarray(line_to_change.GetPoint(tmp_id)) - np.asarray(point)
+            v2 = v1 * (1 - factor[tmp_id])
             point = (np.asarray(point) + v2).tolist()
 
             # Change radius
-            pointRadius = pointRadius * factor[tmp_ID]
+            point_radius = point_radius * factor[tmp_id]
 
-        voronoiPoints.InsertNextPoint(point)
-        radiusArray.SetTuple1(i, pointRadius)
-        cellArray.InsertNextCell(1)
-        cellArray.InsertCellPoint(i)
+        voronoi_points.InsertNextPoint(point)
+        radius_array.SetTuple1(i, point_radius)
+        cell_array.InsertNextCell(1)
+        cell_array.InsertCellPoint(i)
 
-    newVoronoi.SetPoints(voronoiPoints)
-    newVoronoi.SetVerts(cellArray)
-    newVoronoi.GetPointData().AddArray(radiusArray)
+    new_voronoi.SetPoints(voronoi_points)
+    new_voronoi.SetVerts(cell_array)
+    new_voronoi.GetPointData().AddArray(radius_array)
 
-    return newVoronoi
+    return new_voronoi
 
 
 def read_command_line():
@@ -312,7 +311,7 @@ def read_command_line():
                              " and instead approximated to obtain the target ratio")
 
     # "Stenosis" argument
-    parser.add_argument("--stenosis-length", type=float, default=2.0, metavar="length",
+    parser.add_argument("--size", type=float, default=2.0, metavar="length",
                         help="For method=stenosis: The length of the area " +
                              " affected by a stenosis relative to the minimal inscribed" +
                              " sphere radius of the selected point. Default is 2.0.")
@@ -347,7 +346,7 @@ def read_command_line():
                 smooth_factor=args.smooth_factor, beta=args.beta,
                 region_of_interest=args.region_of_interest,
                 region_points=args.region_points, ratio=args.ratio,
-                stenosis_length=args.stenosis_length,
+                stenosis_length=args.size,
                 percentage=args.percentage, output_filepath=args.ofile,
                 poly_ball_size=args.poly_ball_size, no_smooth=args.no_smooth,
                 no_smooth_point=args.no_smooth_point, resampling_step=args.resampling_step)

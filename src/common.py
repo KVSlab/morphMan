@@ -4124,8 +4124,6 @@ def interpolate_voronoi_diagram(interpolatedCenterlines, patchCenterlines,
             completeVoronoiDiagram = insert_new_voronoi_points(completeVoronoiDiagram, newVoronoiPoints,
                                                                newVoronoiPointsMISR)
 
-            print("Number of points in Voronoi diagram: %i" % completeVoronoiDiagram.GetNumberOfPoints())
-
     return completeVoronoiDiagram
 
 
