@@ -123,13 +123,13 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
         tetha[i] = math.acos(np.dot(a, b))
         tetha[i] = tetha[i] * 180 / math.pi
 
-    Z = np.zeros(length.shape[0])
-    Y = np.zeros(length.shape[0])
-    X = np.zeros(length.shape[0])
-    for i in range(Z.shape[0]):
-        X[i] = line.GetPoints().GetPoint(i)[0]
-        Y[i] = line.GetPoints().GetPoint(i)[1]
-        Z[i] = line.GetPoints().GetPoint(i)[2]
+    x = np.zeros(length.shape[0])
+    y = np.zeros(length.shape[0])
+    z = np.zeros(length.shape[0])
+    for i in range(z.shape[0]):
+        x[i] = line.GetPoints().GetPoint(i)[0]
+        y[i] = line.GetPoints().GetPoint(i)[1]
+        z[i] = line.GetPoints().GetPoint(i)[2]
 
     # Tolerance parameters from Bogunevic et al. (2012)
     tol_ant_post = 60
@@ -138,38 +138,38 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
     tol_inf_end = 110
 
     # Find max coronal coordinate
-    value_index = Z[argrelextrema(Z, np.less)[0]].min()
-    max_coronal_ids = np.array(Z.tolist().index(value_index))
+    value_index = z[argrelextrema(z, np.less)[0]].min()
+    max_coronal_ids = np.array(z.tolist().index(value_index))
     if abs(length[max_coronal_ids] - length[-1]) > 30:
         print("Sanity check failed")
         return None
 
-    def find_interface(start, dir, tol, part):
-        stop = dir if dir == -1 else tetha.shape[0]
-        sucess = False
-        for i in range(start - 1, stop, dir):
+    def find_interface(start, direction, tol, part):
+        stop = direction if direction == -1 else tetha.shape[0]
+        success = False
+        for i in range(start - 1, stop, direction):
             if tetha[i] > tol:
-                sucess = True
+                success = True
                 break
 
-        if sucess:
+        if success:
             start = max_point_ids[i]
             stop = max_point_ids[i + 1]
             index = ((min_point_ids > start) * (min_point_ids < stop)).nonzero()[0]
             min_point = (min_point_ids[index])
             interfaces[part] = min_point
 
-        elif not sucess and part == "sup_ant":
+        elif not success and part == "sup_ant":
             print("Where not able to identify the interface between the" +
                   "anterior and superior bend. Chekc the coronal coordinates")
             return None
 
-        elif not sucess and part != "inf_end":
+        elif not success and part != "inf_end":
             print("The geometry is to short to be classified with superior" +
                   ", anterior, posterior and inferior.")
             return None
 
-        elif not sucess and part == "inf_end":
+        elif not success and part == "inf_end":
             interfaces["inf_end"] = np.array([0])
             i = 0
             print("End of inferior is at the end of the geometry, this might" +
@@ -401,7 +401,7 @@ def spline_and_geometry(line, smooth, nknots):
     C1xC2_3 = ddlsfy * dlsfx - ddlsfx * dlsfy
 
     curvature_ = np.sqrt(C1xC2_1 ** 2 + C1xC2_2 ** 2 + C1xC2_3 ** 2) / \
-                 (dlsfx ** 2 + dlsfy ** 2 + dlsfz ** 2) ** 1.5
+                        (dlsfx ** 2 + dlsfy ** 2 + dlsfz ** 2) ** 1.5
 
     max_point_ids = list(argrelextrema(curvature_, np.greater)[0])
     min_point_ids = list(argrelextrema(curvature_, np.less)[0])
@@ -431,7 +431,7 @@ def spline_and_geometry(line, smooth, nknots):
     line.GetPointData().AddArray(torsion_array)
 
     curvature_ = np.sqrt(C1xC2_1 ** 2 + C1xC2_2 ** 2 + C1xC2_3 ** 2) / \
-                 (dlsfx ** 2 + dlsfy ** 2 + dlsfz ** 2) ** 1.5
+                        (dlsfx ** 2 + dlsfy ** 2 + dlsfz ** 2) ** 1.5
     curvature_[0] = curvature[0]
     curvature_[-1] = curvature[-1]
 

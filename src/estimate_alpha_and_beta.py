@@ -16,8 +16,7 @@ from scipy import interpolate
 
 
 def estimate_alpha_and_beta(input_filepath, quantity_to_compute, boundary, radius, grid_size, limit, method_angle,
-                            method_curv,
-                            region_of_interest, region_points):
+                            method_curv, region_of_interest, region_points):
     """
     Imports a matrix of parameter values corresponding
     to a (alpha,beta) point and perform spline interpolation

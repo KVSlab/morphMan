@@ -80,7 +80,7 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
     if region_of_interest == "landmarking":
         if not path.exists(point_path):
             raise RuntimeError(("The given .particles file: %s does not exist. Please run" +
-                          " landmarking with automated_landmarking.py first.") % point_path)
+                                " landmarking with automated_landmarking.py first.") % point_path)
         region_points = np.loadtxt(point_path)
     else:
         _, region_points = get_line_to_change(capped_surface, centerlines,
@@ -108,7 +108,7 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
     p1 = centerlines.GetPoint(id1)
     p2 = centerlines.GetPoint(id2)
     centerline_remaining = create_parent_artery_patches(centerlines,
-                                                     region_points_vtk, siphon=True)
+                                                        region_points_vtk, siphon=True)
     centerline_siphon = extract_single_line(centerlines, 0, startID=id1, endID=id2)
 
     if diverging_centerline_ispresent:

@@ -269,22 +269,22 @@ def rotate_voronoi(clipped_voronoi, patch_cl, div_points, m, R):
     Returns:
         maskedVoronoi (vtkPolyData): Rotated voronoi diagram.
     """
-    numberOfPoints = clipped_voronoi.GetNumberOfPoints()
+    number_of_points = clipped_voronoi.GetNumberOfPoints()
     distance = vtk.vtkMath.Distance2BetweenPoints
     I = np.eye(3)
     R_inv = np.linalg.inv(R)
 
     locator = []
-    cellLine = []
+    cell_line = []
     not_rotate = [0]
     for i in range(patch_cl.GetNumberOfCells()):
-        cellLine.append(extract_single_line(patch_cl, i))
-        tmp_locator = get_locator(cellLine[-1])
+        cell_line.append(extract_single_line(patch_cl, i))
+        tmp_locator = get_locator(cell_line[-1])
         locator.append(tmp_locator)
 
     for i in range(1, patch_cl.GetNumberOfCells()):
-        pnt = cellLine[i].GetPoints().GetPoint(0)
-        new = cellLine[0].GetPoints().GetPoint(locator[0].FindClosestPoint(pnt))
+        pnt = cell_line[i].GetPoints().GetPoint(0)
+        new = cell_line[0].GetPoints().GetPoint(locator[0].FindClosestPoint(pnt))
         dist = math.sqrt(distance(pnt, new)) < divergingRatioToSpacingTolerance
         if dist:
             not_rotate.append(i)
@@ -292,12 +292,12 @@ def rotate_voronoi(clipped_voronoi, patch_cl, div_points, m, R):
     def check_rotate(point):
         dist = []
         for i in range(len(locator)):
-            tmp = locator[i].FindClosestPoint(point)
-            tmp = cellLine[i].GetPoints().GetPoint(tmp)
+            tmp_id = locator[i].FindClosestPoint(point)
+            tmp = cell_line[i].GetPoints().GetPoint(tmp_id)
             dist.append(math.sqrt(distance(tmp, point)))
 
         if dist.index(min(dist)) not in not_rotate:
-            pnt = cellLine[dist.index(min(dist))].GetPoints().GetPoint(0)
+            pnt = cell_line[dist.index(min(dist))].GetPoints().GetPoint(0)
             if math.sqrt(distance(pnt, div_points[1])) > \
                     math.sqrt(distance(pnt, div_points[2])):
                 m_ = m[2]
@@ -309,32 +309,32 @@ def rotate_voronoi(clipped_voronoi, patch_cl, div_points, m, R):
         else:
             return I, np.array([0, 0, 0])
 
-    maskedVoronoi = vtk.vtkPolyData()
-    maskedPoints = vtk.vtkPoints()
-    cellArray = vtk.vtkCellArray()
-    radiusArray = get_vtk_array(radiusArrayName, 1, numberOfPoints)
+    masked_voronoi = vtk.vtkPolyData()
+    masked_points = vtk.vtkPoints()
+    cell_array = vtk.vtkCellArray()
+    radius_array = get_vtk_array(radiusArrayName, 1, number_of_points)
 
     # Iterate through voronoi diagram
-    for i in range(numberOfPoints):
+    for i in range(number_of_points):
         point = [0.0, 0.0, 0.0]
         clipped_voronoi.GetPoint(i, point)
 
-        pointRadius = clipped_voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
-        M, O = check_rotate(point)
-        tmp = np.dot(np.dot(np.dot(np.asarray(point) - O, R), M), R_inv) + O
-        maskedPoints.InsertNextPoint(tmp)
-        radiusArray.SetTuple1(i, pointRadius)
-        cellArray.InsertNextCell(1)
-        cellArray.InsertCellPoint(i)
+        point_radius = clipped_voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
+        M, origo = check_rotate(point)
+        tmp = np.dot(np.dot(np.dot(np.asarray(point) - origo, R), M), R_inv) + origo
+        masked_points.InsertNextPoint(tmp)
+        radius_array.SetTuple1(i, point_radius)
+        cell_array.InsertNextCell(1)
+        cell_array.InsertCellPoint(i)
 
-    maskedVoronoi.SetPoints(maskedPoints)
-    maskedVoronoi.SetVerts(cellArray)
-    maskedVoronoi.GetPointData().AddArray(radiusArray)
+    masked_voronoi.SetPoints(masked_points)
+    masked_voronoi.SetVerts(cell_array)
+    masked_voronoi.GetPointData().AddArray(radius_array)
 
-    return maskedVoronoi
+    return masked_voronoi
 
 
-def rotate_cl(patch_cl, div_points, rotation_matrix, R):
+def rotate_cl(patch_cl, div_points, rotation_matrices, R):
     """
     Perform rotation of the centerline representing the
     daughter branches. Rotate along the bifurcation plane
@@ -345,7 +345,7 @@ def rotate_cl(patch_cl, div_points, rotation_matrix, R):
     Args:
         patch_cl (vtkPolyData): Clipped centerline representing two daughter branches.
         div_points (ndarray): Contains bifurcation landmarking points.
-        rotation_matrix (dict): Cointains rotation matrices for each daughter branch.
+        rotation_matrices (dict): Cointains rotation matrices for each daughter branch.
         R (ndarray): Matrix containing unit vectors in the rotated coordinate system.
     Returns:
         centerline (vtkPolyData): Rotated centerline.
@@ -354,12 +354,12 @@ def rotate_cl(patch_cl, div_points, rotation_matrix, R):
     I = np.eye(3)
     R_inv = np.linalg.inv(R)
 
-    numberOfPoints = patch_cl.GetNumberOfPoints()
+    number_of_points = patch_cl.GetNumberOfPoints()
 
     centerline = vtk.vtkPolyData()
-    centerlinePoints = vtk.vtkPoints()
-    centerlineCellArray = vtk.vtkCellArray()
-    radiusArray = get_vtk_array(radiusArrayName, 1, numberOfPoints)
+    centerline_points = vtk.vtkPoints()
+    centerline_cell_array = vtk.vtkCellArray()
+    radius_array = get_vtk_array(radiusArrayName, 1, number_of_points)
 
     line0 = extract_single_line(patch_cl, 0)
     locator0 = get_locator(line0)
@@ -368,7 +368,7 @@ def rotate_cl(patch_cl, div_points, rotation_matrix, R):
     count = 0
     for i in range(patch_cl.GetNumberOfCells()):
         cell = extract_single_line(patch_cl, i)
-        centerlineCellArray.InsertNextCell(cell.GetNumberOfPoints())
+        centerline_cell_array.InsertNextCell(cell.GetNumberOfPoints())
 
         start = cell.GetPoint(0)
         dist = line0.GetPoint(locator0.FindClosestPoint(start))
@@ -376,31 +376,29 @@ def rotate_cl(patch_cl, div_points, rotation_matrix, R):
 
         if test or len(div_points) == 2:
             locator = get_locator(cell)
-
             pnt1 = cell.GetPoint(locator.FindClosestPoint(div_points[-2]))
             pnt2 = cell.GetPoint(locator.FindClosestPoint(div_points[-1]))
             dist1 = math.sqrt(distance(pnt1, div_points[-2]))
             dist2 = math.sqrt(distance(pnt2, div_points[-1]))
             k = -2 if dist1 < dist2 else -1
-            O = div_points[k]
-            m = rotation_matrix[k + 3]
-
+            origo = div_points[k]
+            m = rotation_matrices[k + 3]
         else:
             m = I
-            O = np.array([0, 0, 0])
+            origo = np.array([0, 0, 0])
 
-        getData = cell.GetPointData().GetArray(radiusArrayName).GetTuple1
+        radius_array_data = cell.GetPointData().GetArray(radiusArrayName).GetTuple1
         for j in range(cell.GetNumberOfPoints()):
             point = np.asarray(cell.GetPoints().GetPoint(j))
-            tmp = np.dot(np.dot(np.dot(point - O, R), m), R_inv) + O
-            centerlinePoints.InsertNextPoint(tmp)
-            radiusArray.SetTuple1(count, getData(j))
-            centerlineCellArray.InsertCellPoint(count)
+            tmp = np.dot(np.dot(np.dot(point - origo, R), m), R_inv) + origo
+            centerline_points.InsertNextPoint(tmp)
+            radius_array.SetTuple1(count, radius_array_data(j))
+            centerline_cell_array.InsertCellPoint(count)
             count += 1
 
-    centerline.SetPoints(centerlinePoints)
-    centerline.SetLines(centerlineCellArray)
-    centerline.GetPointData().AddArray(radiusArray)
+    centerline.SetPoints(centerline_points)
+    centerline.SetLines(centerline_cell_array)
+    centerline.GetPointData().AddArray(radius_array)
 
     return centerline
 
@@ -480,7 +478,7 @@ def merge_cl(centerline, end_point, div_point):
     """
     merge = vtk.vtkPolyData()
     points = vtk.vtkPoints()
-    cellArray = vtk.vtkCellArray()
+    cell_array = vtk.vtkCellArray()
     N_lines = centerline.GetNumberOfLines()
 
     arrays = []
@@ -496,7 +494,6 @@ def merge_cl(centerline, end_point, div_point):
     locators = [get_locator(lines[i]) for i in range(N_lines)]
     div_ID = [locators[i].FindClosestPoint(div_point[0]) for i in range(N_lines)]
     end_ID = [locators[i].FindClosestPoint(end_point[0]) for i in range(N_lines)]
-    dist = [np.sum(lines[i].GetPoint(end_ID[i]) - end_point[0]) for i in range(N_lines)]
 
     # Find the direction of each line
     map_other = {0: 1, 1: 0}
@@ -531,7 +528,7 @@ def merge_cl(centerline, end_point, div_point):
         # Get the other line
         other = lines[map_other[i]]
         N = line.GetNumberOfPoints()
-        cellArray.InsertNextCell(N)
+        cell_array.InsertNextCell(N)
 
         for j in range(N):
             # Add point
@@ -542,7 +539,7 @@ def merge_cl(centerline, end_point, div_point):
             else:
                 points.InsertNextPoint(line.GetPoint(j))
 
-            cellArray.InsertCellPoint(counter)
+            cell_array.InsertCellPoint(counter)
 
             # Add array
             for k in range(N_):
@@ -561,7 +558,7 @@ def merge_cl(centerline, end_point, div_point):
 
     # Insert points, lines and arrays
     merge.SetPoints(points)
-    merge.SetLines(cellArray)
+    merge.SetLines(cell_array)
     for i in range(N_):
         merge.GetPointData().AddArray(arrays[i])
 
@@ -576,7 +573,6 @@ def read_command_line():
     description = "Removes the bifurcation (possibly with an aneurysm), after which the" + \
                   " daughter branches can be rotated."
     parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
-    required = parser.add_argument_group('required named arguments')
 
     # Add common arguments
     add_common_arguments(parser)
