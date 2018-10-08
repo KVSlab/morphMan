@@ -39,7 +39,7 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
         resampling_step (float): Resampling step used to resample centerlines.
         no_smooth (bool): True of part of the model is not to be smoothed.
         no_smooth_point (ndarray): Point which is untouched by smoothing.
-        region_of_interest (str): Method for setting the region of interest ['manual' | 'commandline' | 'landmarking']
+        region_of_interest (str): Method for setting the region of interest ['manual' | 'commandline' ]
         region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint
         poly_ball_size (list): Resolution of polyballs used to create surface.
     """
@@ -158,9 +158,8 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
 
     # Interpolate the centerline
     print("-- Interpolate centerlines.")
-    interpolated_cl = interpolate_patch_centerlines(rotated_cl, centerline_par,
-                                                    div_points_rotated[0].GetPoint(0),
-                                                    None, False)
+    interpolated_cl = interpolate_patch_centerlines(rotated_cl, centerline_par, div_points_rotated[0].GetPoint(0), None,
+                                                    False)
     write_polydata(interpolated_cl, centerline_new_path.replace(".vtp", "1.vtp"))
 
     if bif:
@@ -234,15 +233,15 @@ def get_points(data, key, R, m, rotated=True, bif=False):
     div_points = np.asarray([data["bif"][key], data[0][key], data[1][key]])
 
     # Origo of the bifurcation
-    O_key = "div_point"
-    O = np.asarray([data["bif"][O_key], data[0][O_key], data[1][O_key]])
-    O = np.sum(np.asarray(O), axis=0) / 3.
+    origo_key = "div_point"
+    origo = np.asarray([data["bif"][origo_key], data[0][origo_key], data[1][origo_key]])
+    origo = np.sum(np.asarray(origo), axis=0) / 3.
 
     if rotated:
         R_inv = np.linalg.inv(R)
         for i in range(len(div_points)):
             m_ = m[i] if i > 0 else np.eye(3)
-            div_points[i] = np.dot(np.dot(np.dot(div_points[i] - O, R), m_), R_inv) + O
+            div_points[i] = np.dot(np.dot(np.dot(div_points[i] - origo, R), m_), R_inv) + origo
 
     # Insert landmarking points into VTK objects
     points = vtk.vtkPoints()

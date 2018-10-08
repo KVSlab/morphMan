@@ -187,8 +187,8 @@ def make_voronoi_diagram(surface, filename):
 
     write_polydata(voronoi.VoronoiDiagram, filename)
 
-    newVoronoi = voronoi.VoronoiDiagram
-    return newVoronoi
+    new_voronoi = voronoi.VoronoiDiagram
+    return new_voronoi
 
 
 def get_tolerance(centerline, n=50):
@@ -235,7 +235,7 @@ def get_relevant_outlets(surface, base_path):
         if key.startswith("relevant_outlet_"):
             relevant_outlets.append(value)
 
-    if relevant_outlets == []:
+    if not relevant_outlets:
         relevant_outlets = provide_relevant_outlets(surface, base_path)
 
     return relevant_outlets
@@ -2687,7 +2687,7 @@ def best_plane(Z, P):
 
     # Solve system
     x = la.solve(M, Y)
-    a, b, c = x[0], x[1], x[1]
+    a, b, c = x[0], x[1], x[2]
     n = np.array([a, b, c])
     n = n / la.norm(n)
 
@@ -3045,7 +3045,7 @@ def find_region_of_interest_and_diverging_centerlines(centerlines_complete, regi
     return centerlines, diverging_centerlines, region_points, region_points_vtk, diverging_ids
 
 
-def move_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_centerlines, direction):
+def move_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_centerlines, direction, merge_lines=True):
     """Given a centerline (patch_cl), move the centerline a distance (dx) between two
     points (p1 and p2).
 
@@ -3057,11 +3057,12 @@ def move_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_centerlines, 
         diverging_id (list): List of index where centerlines diverge from region of interest.
         diverging_centerlines (vtkPolyData): Centerlines which diverge from region of interest.
         direction (str): Manipulation direction parameter.
+        merge_lines (bool): Merge centerlines and diverging centerlines.
 
     Returns:
         centerline (vtkPolyData): Manipulated centerline.
     """
-    if diverging_id is not None:
+    if diverging_id is not None and merge_lines:
         patch_cl = merge_data([patch_cl, diverging_centerlines])
 
     numberOfPoints = patch_cl.GetNumberOfPoints()
@@ -3093,28 +3094,26 @@ def move_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_centerlines, 
             cl_id = locator.FindClosestPoint(point)
 
             if direction == "horizont":
-                if cl_id < id1:
-                    dist = dx
-                elif id1 <= cl_id < idmid:
-                    dist = dx * (idmid ** 2 - cl_id ** 2) / (idmid ** 2 - id1 ** 2)
-                elif idmid <= cl_id < (diverging_id - 1) and diverging_id is not None:
-                    dist = -dx * (cl_id - idmid) ** 0.5 / (id2 - idmid) ** 0.5
-                elif idmid <= cl_id < (id2 - 1):
-                    dist = -dx * (cl_id - idmid) ** 0.5 / (id2 - idmid) ** 0.5
+                if diverging_id is not None and i == (numberOfCells - 1) and diverging_id < cl_id:
+                    dist = -dx * (diverging_id - idmid) ** 0.5 / (diverging_id - idmid) ** 0.5
                 else:
-                    if diverging_id is not None and i == (numberOfCells - 1):
-                        dist = -dx * (diverging_id - idmid) ** 0.5 / (diverging_id - idmid) ** 0.5
+                    if cl_id < id1:
+                        dist = dx
+                    elif id1 <= cl_id < idmid:
+                        dist = dx * (idmid ** 2 - cl_id ** 2) / (idmid ** 2 - id1 ** 2)
+                    elif idmid <= cl_id < (id2 - 1):
+                        dist = -dx * (cl_id - idmid) ** 0.5 / (id2 - idmid) ** 0.5
                     else:
                         dist = -dx
 
             elif direction == "vertical":
-                if id1 <= cl_id <= id2:
-                    dist = 4 * dx * (cl_id - id1) * (id2 - cl_id) / (id2 - id1) ** 2
-                elif diverging_id is not None and i == (numberOfCells - 1) and cl_id > id2:
-                    cl_id = diverging_id
-                    dist = 4 * dx * (cl_id - id1) * (id2 - cl_id) / (id2 - id1) ** 2
+                if diverging_id is not None and i == (numberOfCells - 1) and diverging_id < cl_id:
+                    dist = 4 * dx * (diverging_id - id1) * (id2 - diverging_id) / (id2 - id1) ** 2
                 else:
-                    dist = 0
+                    if id1 <= cl_id <= id2:
+                        dist = 4 * dx * (cl_id - id1) * (id2 - cl_id) / (id2 - id1) ** 2
+                    else:
+                        dist = 0
 
             point = np.asarray(point)
             centerlinePoints.InsertNextPoint(point + dist)

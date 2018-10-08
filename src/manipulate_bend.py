@@ -79,8 +79,8 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
     # Get region of interest
     if region_of_interest == "landmarking":
         if not path.exists(point_path):
-            RuntimeError(("The given .particles file: %s does not exist. Please run" +
-                          " landmarking with automated_geometric_quantities.py first.") % point_path)
+            raise RuntimeError(("The given .particles file: %s does not exist. Please run" +
+                          " landmarking with automated_landmarking.py first.") % point_path)
         region_points = np.loadtxt(point_path)
     else:
         _, region_points = get_line_to_change(capped_surface, centerlines,
@@ -429,7 +429,6 @@ def read_command_line():
                   "Primary script used for application in blood vessels."
 
     parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
-    required = parser.add_argument_group('required named arguments')
 
     # Add common arguments
     add_common_arguments(parser)
@@ -444,16 +443,14 @@ def read_command_line():
                              " region of interest. Note that not all algorithms are robust over" +
                              " bifurcations. If 'commandline' is provided, then '--region-points'" +
                              " is expected to be provided. Finally, if 'landmarking' is" +
-                             " given, it will look for the output from running" +
-                             " automated_geometric_quantities.py.")
+                             " given, it will look for the output from running automated_landmarking.py.")
+
     parser.add_argument("--region-points", nargs="+", type=float, default=None, metavar="points",
                         help="If -r or --region-of-interest is 'commandline' then this" +
                              " argument have to be given. The method expects two points" +
-                             " which defines the start and end of the region of interest. If" +
-                             " 'method' is set to stenosis, then one point can be provided as well," +
-                             " which is assumbed to be the center of a new stenosis." +
+                             " which defines the start and end of the region of interest. " +
                              " Example providing the points (1, 5, -1) and (2, -4, 3):" +
-                             " --stenosis-points 1 5 -1 2 -4 3")
+                             " --region-points 1 5 -1 2 -4 3")
     # "Variation" argments
     parser.add_argument("--alpha", type=float, default=0.0,
                         help="Compression factor in vertical direction, " +

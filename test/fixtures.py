@@ -9,6 +9,7 @@ import pytest
 from os import system, path
 from sys import platform
 
+
 def download_testdata(test_path, outputfile):
     if platform == "darwin":
         system("curl {} --output {}".format(test_path, outputfile))
@@ -26,7 +27,10 @@ def download_testdata(test_path, outputfile):
         # TODO: Windows command for extracting tar file
 
 
-@pytest.fixture(scope="module"):
+@pytest.fixture(scope="module")
+
+:
+
 def common_input():
     abs_path = path.dirname(path.abspath(__file__))
 
@@ -44,12 +48,12 @@ def common_input():
                             + " test folder")
 
     # Define parameters shared by all functions
-    a = dict(input_filepath = path.join(abs_path, "C0001", "surface", "model.vtp")
-             output_filepath = path.join(abs_path, "C0001", "surface", "model_output.vtp")
-             smooth_factor = 0.25,
-             poly_ball_size = [120, 120, 120],
-             smooth = True,
-             resampling_step = 0.1,
-             no_smooth = False,
-             no_smooth_point = None)
-    return ai
+    a = dict(input_filepath=path.join(abs_path, "C0001", "surface", "model.vtp"),
+             output_filepath=path.join(abs_path, "C0001", "surface", "model_output.vtp"),
+             smooth_factor=0.25,
+             poly_ball_size=[120, 120, 120],
+             smooth=True,
+             resampling_step=0.1,
+             no_smooth=False,
+             no_smooth_point=None)
+    return a

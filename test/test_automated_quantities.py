@@ -15,6 +15,7 @@ sys.path.insert(0, path.join(rel_path, '..', 'src'))
 from manipulate_bend import *
 from automated_geometric_quantities import compute_angle
 
+
 @pytest.fixture(scope='module')
 def init_data():
     # Global parameters
@@ -38,8 +39,7 @@ def test_increase_siphon_angle(init_data):
     beta = 0.4
     method = "plane"
 
-
-    move_vessel(input_filepath, smooth, smooth_factor,  alpha, beta )
+    move_vessel(input_filepath, smooth, smooth_factor, alpha, beta)
     new_centerlines_path = path.join(input_filepath, name, "new_centerlines_alpha_%s_beta_%s.vtp"
                                      % (alpha, beta))
     new_cl = read_polydata(new_centerlines_path)

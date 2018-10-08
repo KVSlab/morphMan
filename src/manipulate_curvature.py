@@ -297,7 +297,6 @@ def read_command_line():
                   "determined by a smoothed version of the centerline representing the selected part."
 
     parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
-    required = parser.add_argument_group('required named arguments')
 
     # Add common arguments
     add_common_arguments(parser)
