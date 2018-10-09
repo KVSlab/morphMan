@@ -62,14 +62,8 @@ automated_landmarking.py
 .. automodule:: automated_landmarking
      :members:
 
-automated_geometric_quantities.py
+estimate_alpha_and_beta.py
 ----------------------------------------
 
-.. automodule:: automated_geometric_quantities
-     :members:
-
-calculate_alpha_beta_values.py
--------------------------------------
-
-.. automodule:: calculate_alpha_beta_values
+.. automodule:: estimate_alpha_and_beta.py
      :members:
