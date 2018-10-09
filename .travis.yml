@@ -21,14 +21,16 @@ install:
   - hash -r
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
-
-  # Useful for debugging any issues with conda
-  - conda info -a
-  
+  - conda install anaconda-client
+  - conda update conda anaconda-client
+ 
   # Set up environment
   - conda create -q -n morphman -c vmtk python=3.6 itk vtk vmtk scipy numpy pytest
   - source activate morphman
 
+    # Useful for debugging any issues with conda
+  - conda info -a
+ 
 script:
   # Your test script goes here
   - cd test
