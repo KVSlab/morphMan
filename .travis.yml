@@ -26,7 +26,7 @@ install:
   - conda info -a
   
   # Set up environment
-  - conda create -q -n morphman -c vmtk python=3.6 itk vtk vmtk scipy numpy
+  - conda create -q -n morphman -c vmtk python=3.6 itk vtk vmtk scipy numpy pytest
   - source activate morphman
 
 script:
