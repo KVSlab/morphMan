@@ -26,16 +26,18 @@ install:
 
   # Set conda parameters
   - conda config --set always_yes yes --set changeps1 no
-  - conda install --quiet -y conda conda-build==3.9.2 anaconda-client
-  - conda config --prepend channels vmtk
  
   # Set up environment
   - conda create -q -n morphman -c vmtk python=3.6 itk vtk vmtk scipy numpy pytest
   - source activate morphman
 
-    # Useful for debugging any issues with conda
+  # Useful for debugging any issues with conda
   - conda info -a
- 
+  
+  # / -> // in vmtkcenterlines
+  - bash fixvmtk.sh
+  
 script:
   # Your test script goes here
+  - cd test
   - pytest .
