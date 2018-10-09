@@ -22,12 +22,6 @@ In this tutorial, we are using the model with
 from the Aneurisk database. For the commands below we assume that there
 is a file `./C0003/surface/model.vtp` relative to where you execute the command.
 
-The default is to rotate both branches, but if either ``--keep-fixed1`` or
-``--keep-fixed2`` is set to **True**, daughter branch 1 or 2 will be kept
-fixed, respectively. Furthermore, if both parameters are set to **True**
-then the algorithm can be used to remove an aneurysm (a balloon-shaped bleb
-on the artery).
-
 Shown in Figure 2 is the result of rotating the two daughter branched with both
 a positive and negative angle.
 
@@ -49,7 +43,18 @@ and when used for computational fluid dynamics, a more physiological plausible w
 
   Figure 3: Rotation of daughter branches with a different reconstruction of the bifurcation.
 
-.. todo:: Add an example of removing an aneurysm.
+The default is to rotate both branches, but if either ``--keep-fixed1`` or
+``--keep-fixed2`` is set to **True**, daughter branch 1 or 2 will be kept
+fixed, respectively. Furthermore, if both parameters are set to **True**
+then the algorithm can be used to remove an aneurysm (a balloon-shaped bleb
+on the artery), see Figure 4.
+
+.. figure:: aneu_remove.png
+
+  Figure 4: Remove an aneurysm from the bifurcation.
+
+To repoduce the output in Figure 4, you can run::
+    python manipulate_bifurcation.py --ifile C0003/model/surface.vtp --ofile C0003/model/rotate_pluss.vtp --keep-fixed1 True --keep-fixed2 True --angle 0
 
 For additional information, beyond this tutorial, on the script and
 input parameters, please run ``python manipulate_bifurcation.py -h`` or confer with
