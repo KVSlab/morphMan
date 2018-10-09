@@ -1,6 +1,7 @@
 **WARNING**: morphMan is stil in development, and scripts might not work as expected.
 
 [![Documentation Status](https://readthedocs.org/projects/morphman/badge/?version=latest)](https://morphman.readthedocs.io/en/latest/?badge=latest)
+[![Build Status](https://travis-ci.org/KVSlab/morphMan.svg?branch=master)](https://travis-ci.org/KVSlab/morphMan)
 
 morphMan
 =====
