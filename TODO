@@ -4,10 +4,13 @@ Formaleties
 - Add a badge for building on Travis CI
 - Allow forking repo when repo is public
 - Tests for bif angle, area variation, stenosis removal
-- Test landmarking
 
 Henrik
 - Update documentation images
+- Travis CI fix SED
+- Curvature and bend images
+- Landmarking test
+
 
 Code
 - Make into a module

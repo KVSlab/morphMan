@@ -516,6 +516,7 @@ def provide_relevant_outlets(surface, dir_path=None):
     triangulated_surface = triangulate_surface(cleaned_surface)
 
     # Select seeds
+    print("-- Plese select the two relevant outlets in the interactive window.")
     seed_selector = vmtkPickPointSeedSelector()
     seed_selector.SetSurface(triangulated_surface)
     seed_selector.text = "Please select the two relevant outlets, \'u\' to undo\n"
@@ -3076,7 +3077,7 @@ def move_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_centerlines, 
 
         locator = get_locator(line)
         id1 = locator.FindClosestPoint(p1)
-        if diverging_id is not None and i == (numberOfCells - 1):
+        if diverging_id is not None and i == (number_of_cells - 1):
             # Note: Reuse id2 and idmid from previous loop
             pass
         else:
@@ -3812,6 +3813,7 @@ def voronoi_diagram_interpolation(interpolationcellid, id0, id1, voronoiDataset0
 
         for k in range(gapStartId, endSavingInterval, step):
             ptpoint = PTPoints.GetPoint(pointsToGap)
+
             clpoint = cellLine.GetPoint(k)
 
             vector = [0.0, 0.0, 0.0]
