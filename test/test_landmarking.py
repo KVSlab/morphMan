@@ -12,9 +12,7 @@ sys.path.insert(0, path.join(relative_path, '..', 'src'))
 
 import pytest
 from manipulate_bend import *
-from automated_geometric_quantities import compute_angle
-
-sys.path.insert(0, '../src/')
+from estimate_alpha_and_beta import compute_angle
 
 
 @pytest.fixture(scope='module')

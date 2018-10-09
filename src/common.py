@@ -2867,11 +2867,11 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
                     break
             point_ids.append(point_id)
 
-        startID = 0
-        endID = min(point_ids)
+        start_id = 0
+        end_id = min(point_ids)
         cl_id = 0
 
-        region_points = list(line2.GetPoint(startID)) + list(line2.GetPoint(endID))
+        region_points = list(line2.GetPoint(start_id)) + list(line2.GetPoint(end_id))
 
     elif region_of_interest == "commandline" or region_of_interest == "manual":
         # Get points from the user
@@ -2934,8 +2934,8 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
             center = centerline_length[tmp_id]
             region_of_interest_id = (center - length <= centerline_length) \
                                     * (centerline_length <= center + length)
-            startID = np.argmax(region_of_interest_id)
-            endID = region_of_interest_id.shape[0] - 1 - np.argmax(region_of_interest_id[::-1])
+            start_id = np.argmax(region_of_interest_id)
+            end_id = region_of_interest_id.shape[0] - 1 - np.argmax(region_of_interest_id[::-1])
 
         else:
             point1 = region_points[:3]

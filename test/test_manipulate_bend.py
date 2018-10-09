@@ -12,7 +12,7 @@ sys.path.insert(0, path.join(relative_path, '..', 'src'))
 
 import pytest
 from manipulate_bend import move_vessel
-from automated_geometric_quantities import compute_angle, compute_curvature
+from estimate_alpha_and_beta import compute_angle, compute_curvature
 from fixtures import common_input
 from common import read_polydata, get_path_names
 
