@@ -12,29 +12,10 @@ matrix:
     include:
         - os: linux
           python: 3.6
-        - os: osx
-          python: 3.6
-
-#before_install:
-#  - |
-#    if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-#      brew update; brew install $BREW_PYTHON;
-#    fi
 
 install:
   - sudo apt-get update
-  # We do this conditionally because it saves us some downloading if the
-  # version is the same.
-  - MINICONDA_URL="https://repo.continuum.io/miniconda/"
-  - MINICONDA_VERSION="Miniconda3-latest"
-  - |
-    if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-      MINICONDA_PLATFORM=MacOSX-x86_64.sh
-      curl -OL $MINICONDA_URL$MINICONDA_VERSION-$MINICONDA_PLATFORM miniconda.sh;
-    else
-      MINICONDA_PLATFORM="Linux-x86_64.sh"
-      wget $MINICONDA_URL$MINICONDA_VERSION-$MINICONDA_PLATFORM -O miniconda.sh;
-    fi
+  - wget "https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh" -O miniconda.sh;
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
@@ -43,8 +24,10 @@ install:
 
   # Useful for debugging any issues with conda
   - conda info -a
-  - conda create -q -n morphMan -c vmtk python=3.6 itk vtk vmtk scipy numpy
-  - source activate morphMan
+  
+  # Set up environment
+  - conda create -q -n morphman -c vmtk python=3.6 itk vtk vmtk scipy numpy
+  - source activate morphman
 
 script:
   # Your test script goes here
