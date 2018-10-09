@@ -15,14 +15,19 @@ matrix:
 
 install:
   - sudo apt-get update
+
+  # Install conda
   - wget "https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh" -O miniconda.sh;
   - bash miniconda.sh -b -p $HOME/miniconda
+
+  # Export path
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
+
+  # Set conda parameters
   - conda config --set always_yes yes --set changeps1 no
-  - conda update -q conda
-  - conda install anaconda-client
-  - conda update conda anaconda-client
+  - conda install --quiet -y conda conda-build==3.9.2 anaconda-client
+  - conda config --prepend channels vmtk
  
   # Set up environment
   - conda create -q -n morphman -c vmtk python=3.6 itk vtk vmtk scipy numpy pytest
@@ -33,5 +38,4 @@ install:
  
 script:
   # Your test script goes here
-  - cd test
   - pytest .
