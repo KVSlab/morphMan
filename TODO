@@ -7,9 +7,7 @@ Formaleties
 - Test landmarking
 
 Henrik
-- Refactor README file, like the one in Oasis
-- Merge automated_quant & alpha_beta + Add region selection
-- PEP8 in main scripts (Pycharm)
+- Update documentation images
 
 Code
 - Make into a module

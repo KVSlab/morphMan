@@ -9,6 +9,7 @@ import pytest
 from os import system, path
 from sys import platform
 
+
 def download_testdata(test_path, outputfile):
     if platform == "darwin":
         system("curl {} --output {}".format(test_path, outputfile))
@@ -52,4 +53,5 @@ def common_input():
              resampling_step = 0.1,
              no_smooth = False,
              no_smooth_point = None)
+
     return a

@@ -74,7 +74,8 @@ class vmtkPickPointSeedSelector(vmtkSeedSelector):
         minDistance = 1E10
         pickedSeedId = -1
         for i in range(pickedCellPointIds.GetNumberOfIds()):
-            distance = vtk.vtkMath.Distance2BetweenPoints(pickPosition, self._Surface.GetPoint(pickedCellPointIds.GetId(i)))
+            distance = vtk.vtkMath.Distance2BetweenPoints(pickPosition,
+                                                          self._Surface.GetPoint(pickedCellPointIds.GetId(i)))
             if distance < minDistance:
                 minDistance = distance
                 pickedSeedId = pickedCellPointIds.GetId(i)
