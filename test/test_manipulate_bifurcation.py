@@ -47,21 +47,13 @@ def test_bifurcation_angle(common_input, angle):
                                               59.80244827270,
                                               39.67420196533]))
 
-    #if angle < 0:
-    #    common_input["input_filepath"] = common_input["input_filepath"].replace(".vtp",
-    #                                                                            "2.vtp")
     rotate_branches(**common_input)
 
     base_path = get_path_names(common_input["input_filepath"])
     end_points = read_polydata(base_path + "_clippingpoints.vtp")
     end_rotated_points = read_polydata(base_path + "_rotated_divergingpoints.vtp")
 
-    print(end_points.GetPoint(0))
-    print(end_points.GetPoint(1))
-    print(end_points.GetPoint(2))
-    print(end_rotated_points.GetPoint(0))
-    print(end_rotated_points.GetPoint(1))
-    print(end_rotated_points.GetPoint(2))
-    #angle_original = 0.5
-    #angle_new = 0.7
+    angle_original = 7
+    angle_new = 9
+
     assert angle_original < angle_new
