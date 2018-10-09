@@ -1,0 +1,51 @@
+language: python
+
+notifications:
+  email:
+    recipients:
+      - aslak.bergersen@gmail.com
+      - henrik.kjeldsberg@live.no
+    on_success: never   # default: change
+    on_failure: always  # default: always
+
+matrix:
+    include:
+        - os: linux
+          python: 3.6
+        - os: osx
+          python: 3.6
+
+#before_install:
+#  - |
+#    if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+#      brew update; brew install $BREW_PYTHON;
+#    fi
+
+install:
+  - sudo apt-get update
+  # We do this conditionally because it saves us some downloading if the
+  # version is the same.
+  - MINICONDA_URL="https://repo.continuum.io/miniconda/"
+  - MINICONDA_VERSION="Miniconda3-latest"
+  - |
+    if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      MINICONDA_PLATFORM=MacOSX-x86_64.sh
+      curl -OL $MINICONDA_URL$MINICONDA_VERSION-$MINICONDA_PLATFORM miniconda.sh;
+    else
+      MINICONDA_PLATFORM="Linux-x86_64.sh"
+      wget $MINICONDA_URL$MINICONDA_VERSION-$MINICONDA_PLATFORM -O miniconda.sh;
+    fi
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+
+  # Useful for debugging any issues with conda
+  - conda info -a
+  - conda create -q -n morphMan -c vmtk python=3.6 itk vtk vmtk scipy numpy
+  - source activate morphMan
+
+script:
+  # Your test script goes here
+  - pytest .
