@@ -13,7 +13,7 @@ from sys import platform
 def download_testdata(test_path, outputfile):
     print("\n"*10)
     print(platform)
-    print"\n"*10)
+    print("\n"*10)
     if platform == "darwin":
         system("curl {} --output {}".format(test_path, outputfile))
         system("tar -zxvf {}".format(outputfile))
