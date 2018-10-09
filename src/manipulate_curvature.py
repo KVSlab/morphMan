@@ -46,7 +46,7 @@ def curvature_variations(input_filepath, smooth, smooth_factor, smooth_factor_li
     surface, capped_surface = prepare_surface(base_path, input_filepath)
 
     # Voronoi diagrams filenames
-    voronoi_remaining_path = base_path + "_voronoi_remaining.vtp"
+    voronoi_remaining_path = base_path + "_voronoi_curvature_remaining.vtp"
     voronoi_region_path = base_path + "_voronoi_region.vtp"
     voronoi_diverging_path = base_path + "_voronoi_diverging.vtp"
 

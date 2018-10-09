@@ -498,7 +498,7 @@ def read_command_line():
                           help="Path to the surface model", required=True)
 
     # Optinal arguments
-    parser.add_argument('-m', '--curv_method', type=str, default="spline",
+    parser.add_argument('-m', '--curv-method', type=str, default="spline",
                         help="Choose which method used for computing curvature: spline (default) " +
                              "| vmtk | disc |")
     parser.add_argument('-a', '--algorithm', type=str, default="bogunovic",

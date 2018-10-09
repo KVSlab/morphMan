@@ -13,7 +13,8 @@ import operator
 from common import *
 
 
-def compute_angle(input_filepath, alpha, beta, method, new_centerlines, proj=False):
+def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
+                  proj=False, region_points=None):
     """
     Primary collection of methods for computing the angle of a vessel bend.
     Three main methods are currently implemented:
@@ -41,14 +42,19 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines, proj=Fal
     centerline_path = base_path + "_centerline.vtp"
 
     # Extract Clipping points
-    point_path = base_path + "_anterior_bend.particles"
-    if not path.exists(point_path):
-        RuntimeError("The given .particles file: %s does not exist!" % point_path)
-    region_points = np.loadtxt(point_path)
-    p1 = region_points[0]
-    p2 = region_points[1]
+    if region_points is None:
+        point_path = base_path + "_anterior_bend.particles"
+        if not path.exists(point_path):
+            RuntimeError("The given .particles file: %s does not exist!" % point_path)
+        region_points = np.loadtxt(point_path)
+        p1 = region_points[0]
+        p2 = region_points[1]
+    else:
+        p1 = region_points[:3]
+        p2 = region_points[3:]
 
-    # Extract old centerline
+
+     # Extract old centerline
     if not path.exists(centerline_path):
         RuntimeError("The given .vtp file: %s does not exist!" % centerline_path)
     centerlines = read_polydata(centerline_path)
@@ -113,7 +119,7 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines, proj=Fal
     # Get direction to the point furthest away (dx)
     direction = "vertical"
     clipping_points_vtk = vtk.vtkPoints()
-    for point in np.asarray(region_points):
+    for point in [p1, p2]:
         clipping_points_vtk.InsertNextPoint(point)
     middle_points, middle_ids, dx = get_spline_points(extract_single_line(centerlines, 0), 0.1, direction,
                                                       clipping_points_vtk)
@@ -301,7 +307,8 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines, proj=Fal
     return newdeg, deg
 
 
-def compute_curvature(input_filepath, alpha, beta, method, new_centerlines):
+def compute_curvature(input_filepath, alpha, beta, method, new_centerlines,
+                      region_points=None):
     """
     Primary collection of methods for computing curvature of a centerline.
     Five methods are currently implemented:
@@ -327,12 +334,16 @@ def compute_curvature(input_filepath, alpha, beta, method, new_centerlines):
     centerline_path = base_path + "_centerline.vtp"
 
     # Extract Clipping points
-    point_path = base_path + "_anterior_bend.particles"
-    if not path.exists(point_path):
-        RuntimeError("The given .particles file: %s does not exist!" % point_path)
-    region_points = np.loadtxt(point_path)
-    p1 = region_points[0]
-    p2 = region_points[1]
+    if region_points is None:
+        point_path = base_path + "_anterior_bend.particles"
+        if not path.exists(point_path):
+            RuntimeError("The given .particles file: %s does not exist!" % point_path)
+        region_points = np.loadtxt(point_path)
+        p1 = region_points[0]
+        p2 = region_points[1]
+    else:
+        p1 = region_points[:3]
+        p2 = region_points[3:]
 
     # Extract old centerline
     if not path.exists(centerline_path):

@@ -55,8 +55,8 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
     centerlines_path = base_path + "_centerline.vtp"
 
     # Voronoi diagrams filenames
-    voronoi_remaining_path = base_path + "_voronoi_remaining.vtp"
-    voronoi_bend_path = base_path + "_voronoi_siphon.vtp"
+    voronoi_remaining_path = base_path + "_voronoi_bend_remaining.vtp"
+    voronoi_bend_path = base_path + "_voronoi_bend.vtp"
 
     # Region point filename
     point_path = base_path + "_anterior_bend.particles"
@@ -109,27 +109,23 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
     p2 = centerlines.GetPoint(id2)
     centerline_remaining = create_parent_artery_patches(centerlines,
                                                      region_points_vtk, siphon=True)
-    centerline_siphon = extract_single_line(centerlines, 0, startID=id1, endID=id2)
+    centerline_bend = extract_single_line(centerlines, 0, startID=id1, endID=id2)
 
     if diverging_centerline_ispresent:
         diverging_centerline_end = extract_single_line(patch_diverging_line, 1)
-        centerline_bend = merge_data([centerline_siphon, diverging_centerline_end])
+        centerline_bend = merge_data([centerline_bend, diverging_centerline_end])
 
     write_polydata(centerline_remaining, centerline_clipped_path)
-    write_polydata(centerline_siphon, centerline_clipped_part_path)
+    write_polydata(centerline_bend, centerline_clipped_part_path)
 
     # Clip Voronoi diagram into
     # bend and remaining part of geometry
     print("-- Clipping Voronoi diagrams")
-    if not path.exists(voronoi_bend_path) or not path.exists(voronoi_remaining_path):
-        voronoi_bend, voronoi_remaining = split_voronoi_with_centerlines(voronoi,
-                                                                         centerline_siphon,
-                                                                         centerline_remaining)
-        write_polydata(voronoi_bend, voronoi_bend_path)
-        write_polydata(voronoi_remaining, voronoi_remaining_path)
-    else:
-        voronoi_bend = read_polydata(voronoi_bend_path)
-        voronoi_remaining = read_polydata(voronoi_remaining_path)
+    voronoi_bend, voronoi_remaining = split_voronoi_with_centerlines(voronoi,
+                                                                     centerline_bend,
+                                                                     centerline_remaining)
+    write_polydata(voronoi_bend, voronoi_bend_path)
+    write_polydata(voronoi_remaining, voronoi_remaining_path)
 
     # Extract translation vectors
     print("-- Computing translation directions.")
@@ -218,8 +214,8 @@ def move_vessel_vertically(alpha, voronoi_remaining,
 
     # Special cases including the ophthalmic artery
     if diverging_centerline_ispresent:
-        patch_diverging_line = clip_diverging_line(extract_single_line(diverging_centerlines, 0), region_points[0],
-                                                   diverging_id)
+        patch_diverging_line = clip_diverging_line(extract_single_line(diverging_centerlines, 0),
+                                                   region_points[0], diverging_id)
 
     # Get clipped curve
     print("-- Clipping centerlines.")

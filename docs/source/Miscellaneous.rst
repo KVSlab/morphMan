@@ -9,35 +9,38 @@ Miscellaneous
 
 Landmarking of the internal carotid artery
 ==========================================
-The internal carotid artery can be classified into segments. For an *objective* and *reproduceble*
-maipulation of the segment historically referred to as the carotid siphon, we have implemented
-two previously published methods for landmarking: Piccinelli et al. (2011) [1]_, and Bogunović et al. (2014) [2]_ (``--algorithm``).
+The internal carotid artery can be classified, or landmarks, into segments.
+For an *objective* and *reproduceble* maipulation of the segment
+historically referred to as the carotid siphon, we have implemented two
+previously published methods for landmarking: Piccinelli et al.
+(2011) [1]_, and Bogunović et al. (2014) [2]_ (``--algorithm``).
 
-Although the algorithms are well described in both articles, neither mention
-how the centerline is computed, or how the curvature and torsion is derived.
+Although the algorithms are well described in both articles, neither state
+how the centerlines are computed, or how the curvature and torsion is derived.
 Both algorithms are very sensetive to the input curvature and torision, and
 are therefore not directly reproduceble. In Kjeldsberg 2018 [3]_ there is a
-a thorough comparison between methods, parameters, and centerline smoothing methods 
-which can help you to choose the corret options for your application.
+a thorough comparison between landmarking algorithms, input parameters,
+and centerline smoothing methods  which can help you to choose the corret
+options for your application.
 
-The script ``automated_landmarking.py`` has three methods for computing the descrete derivatives
-of the centerline curve, set with (``--curv_method``).
+The script ``automated_landmarking.py`` has three methods for computing
+the descrete derivatives of the centerline curve, set with
+``--curv-method``.
 
-1. B-Splines (``spine``)
-2. Discrete derivatives (``disc``)
-3. VMTK (``vmtk``)
+ 1. B-Splines (``spine``)
+ 2. Discrete derivatives (``disc``)
+ 3. VMTK (``vmtk``)
 
 To perform landmarking, run the following command::
 
     python automated_landmarking.py --ifile C0001/surface/model.vtp --algorithm bogunovic --curv_method spline
 
-This will produce ``landmark_[ALGORITHM]_[CURVMETHOD].particles`` which contains four points defining the interfaces between the segments of the vessel.
-
+The command will output a file `C0006/surface/landmark_[ALGORITHM]_[CURVMETHOD].particles`
+which contains four points defining the interfaces between the segments of the vessel.
 
 .. figure:: landmark.png
 
-  Figure 4: Landmarked geometry, with interfaces shown as red spheres.
-
+  Figure 1: Landmarked geometry, with interfaces shown as red spheres.
 
 
 .. _compute_alpha_beta:
@@ -50,18 +53,21 @@ Instead of directly setting the extent the model should be moved (``--alpha`` an
 it is more convinient to controll a morphological parameter like maximum curvature, or the
 angle in the bend.
 
-The idea behind ``calculate_alpha_beta_values.py`` is to use the centerline as a proxy for the new
-geometry, and manipulate that for a range of ``--alpha`` and ``--beta`` values. The resulting 2D
-data can be fited to a surface spline, from which one can easly collect an approporiate value
-for ``--alpha`` and ``--beta``. For a more detailed description, please see [3]_.
+The idea behind ``calculate_alpha_beta_values.py`` is to use the centerline as a
+proxy for the new geometry, and manipulate only the centerline for a range of ``--alpha`` and
+``--beta`` values. The resulting 2D data can be fited to a surface spline, from
+which one can easly collect an approporiate value for ``--alpha`` and ``--beta``.
+
+For more information on the input parameters in the script For a more detailed description, please see [3]_.
 
 
 Common
 ======
-In ``common.py`` we have collected all general functions used by multiple scripts.
+In ``common.py`` we have collected generic functions used by multiple scripts.
 Many of the functions wrap existing vtk and vmtk functions in a more pythonic syntax.
 Instead of writing 6-7 lines of code to initiate a vtk-object, and set each parameter,
-and the input surface, one can call one line with all the arguments.
+and the input surface, one can call one function with multiple arguments instead,
+see for instance :meth:`common.threshold`.
 
 In addition to wrapping vtk and vmtk functionality, there is also new methods for
 manipulating centerlines and Voronoi diagrams.

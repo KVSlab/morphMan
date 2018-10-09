@@ -18,19 +18,6 @@ def add_common_arguments(parser):
                                " parameters.")
 
     # General arguments
-    parser.add_argument("-m", "--method", type=str, default="variation",
-                        choices=["variation", "stenosis", "area"],
-                        help="Methods for manipulating the area in the region of interest:" +
-                             "\n1) 'variation' will increase or decrease the changes in area" +
-                             " along the centerline of the region of interest." +
-                             "\n2) 'stenosis' will create or remove a local narrowing of the" +
-                             " surface. If two points is provided, the area between these" +
-                             " two points will be linearly interpolated to remove the narrowing." +
-                             " If only one point is provided it is assumed to be the center of" +
-                             " the stenosis. The new stenosis will have a sin shape, however, any" +
-                             " other shape may be easly implemented." +
-                             "\n3) 'area' will inflate or deflate the area in the region of" +
-                             " interest.")
     parser.add_argument('-s', '--smooth', type=str2bool, default=True,
                         help="Smooth the voronoi diagram, default is False")
     parser.add_argument('-f', '--smooth_factor', type=float, default=0.25,

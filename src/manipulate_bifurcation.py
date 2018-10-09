@@ -68,6 +68,8 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
     # Points
     points_clipp_path = base_path + "_clippingpoints.vtp"
     points_div_path = base_path + "_divergingpoints.vtp"
+    points_clipp_rotated_path = base_path + "_rotated_clippingpoints.vtp"
+    points_div_rotated_path = base_path + "_rotated_divergingpoints.vtp"
 
     # Clean and capp / uncapp surface
     surface, capped_surface = prepare_surface(base_path, input_filepath)
@@ -122,6 +124,9 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
 
     write_points(div_points[0], points_div_path)
     write_points(end_points[0], points_clipp_path)
+    write_points(div_points_rotated[0], points_div_rotated_path)
+    write_points(end_points_rotated[0], points_clipp_rotated_path)
+
 
     # Clip centerlines
     print("-- Clipping centerlines.")
@@ -138,11 +143,8 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
 
     # Clip the voronoi diagram
     print("-- Clipping the Voronoi diagram")
-    if path.exists(voronoi_clipped_path):
-        voronoi_clipped = read_polydata(voronoi_clipped_path)
-    else:
-        voronoi_clipped, _ = split_voronoi_with_centerlines(voronoi, patch_cl, clipped_centerline)
-        write_polydata(voronoi_clipped, voronoi_clipped_path)
+    voronoi_clipped, _ = split_voronoi_with_centerlines(voronoi, patch_cl, clipped_centerline)
+    write_polydata(voronoi_clipped, voronoi_clipped_path)
 
     # Rotate branches (Centerline and Voronoi diagram)
     print("-- Rotate centerlines and voronoi diagram.")

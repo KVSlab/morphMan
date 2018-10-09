@@ -2912,6 +2912,8 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
             for i in range(stenosis_point_id.GetNumberOfIds()):
                 region_points += surface.GetPoint(stenosis_point_id.GetId(i))
 
+            print("-- The chosen region points:", region_points)
+
         # Get locator
         locator = get_locator(centerline)
 
@@ -3082,8 +3084,8 @@ def move_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_centerlines, 
         locator = get_locator(line)
         id1 = locator.FindClosestPoint(p1)
         if diverging_id is not None and i == (numberOfCells - 1):
+            # Note: Reuse id2 and idmid from previous loop
             pass
-            # Note, reuse id2, idmid from previous loop
         else:
             id2 = locator.FindClosestPoint(p2)
             idmid = int((id1 + id2) * 0.5)
@@ -3097,7 +3099,7 @@ def move_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_centerlines, 
                     dist = dx
                 elif id1 <= cl_id < idmid:
                     dist = dx * (idmid ** 2 - cl_id ** 2) / (idmid ** 2 - id1 ** 2)
-                elif idmid <= cl_id < (diverging_id - 1) and diverging_id is not None:
+                elif diverging_id is not None and idmid <= cl_id < (diverging_id - 1):
                     dist = -dx * (cl_id - idmid) ** 0.5 / (id2 - idmid) ** 0.5
                 elif idmid <= cl_id < (id2 - 1):
                     dist = -dx * (cl_id - idmid) ** 0.5 / (id2 - idmid) ** 0.5
@@ -3978,15 +3980,24 @@ def insert_new_voronoi_points(oldDataset, newPoints, newArray):
         value = oldDataset.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
         radiusArray.SetTuple1(i, value)
 
+    count = 0
     for i in range(numberOfNewPoints):
         point = [0.0, 0.0, 0.0]
         newPoints.GetPoint(i, point)
+
+        if np.sum(np.isinf(point) + np.isnan(point)) > 0:
+            continue
+
+        if np.sum(np.abs(np.array(point)) > 10000) > 0:
+            continue
+
         points.InsertNextPoint(point)
         cellArray.InsertNextCell(1)
-        cellArray.InsertCellPoint(numberOfDatasetPoints + i)
+        cellArray.InsertCellPoint(numberOfDatasetPoints + count)
 
         value = newArray.GetTuple1(i)
-        radiusArray.SetTuple1(numberOfDatasetPoints + i, value)
+        radiusArray.SetTuple1(numberOfDatasetPoints + count, value)
+        count += 1
 
     newDataset.SetPoints(points)
     newDataset.SetVerts(cellArray)
@@ -4069,6 +4080,7 @@ def interpolate_voronoi_diagram(interpolatedCenterlines, patchCenterlines,
         completeVoronoiDiagram = insert_new_voronoi_points(completeVoronoiDiagram, newVoronoiPoints,
                                                            newVoronoiPointsMISR)
 
+        completeVoronoiDiagram.GetNumberOfPoints()
         newVoronoiPoints, newVoronoiPointsMISR = voronoi_diagram_interpolation(interpolationCellId,
                                                                                endId, startId, endInterpolationDataset,
                                                                                startHalfInterpolationDataset,
