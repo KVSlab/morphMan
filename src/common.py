@@ -49,6 +49,7 @@ def read_polydata(filename, datatype=None):
 
     Args:
         filename (str): Path to input file.
+        datatype (str): Additional parameter for vtkIdList objects.
 
     Returns:
         polyData (vtkSTL/vtkPolyData/vtkXMLStructured/
@@ -1874,34 +1875,33 @@ def discrete_geometry(line, neigh=10):
         line (vtkPolyData): Output line with geometrical parameters.
         curv (vtkPolyData): Output line with geometrical parameters.
     """
-    len_line = line.GetNumberOfPoints()
-    N = line.GetNumberOfPoints()
+    n_points = line.GetNumberOfPoints()
 
     # Compute cumulative chord length
-    t = np.zeros(N)
+    t = np.zeros(n_points)
     p = []
-    for i in range(N):
+    for i in range(n_points):
         p.append(np.array(list(line.GetPoint(i))))
         p[i] = np.array(p[i])
 
-    norms = [la.norm(p[j] - p[j - 1]) for j in range(1, N)]
+    norms = [la.norm(p[j] - p[j - 1]) for j in range(1, n_points)]
     s = sum(norms)
-    for i in range(1, N):
+    for i in range(1, n_points):
         s1 = sum(norms[:i + 1])
         t[i] = s1 / s
 
     # Radius of sliding neighbourhood
     m = neigh
 
-    dxdt = np.zeros(N)
-    dydt = np.zeros(N)
-    dzdt = np.zeros(N)
+    dxdt = np.zeros(n_points)
+    dydt = np.zeros(n_points)
+    dzdt = np.zeros(n_points)
 
-    x = np.zeros(N)
-    y = np.zeros(N)
-    z = np.zeros(N)
+    x = np.zeros(n_points)
+    y = np.zeros(n_points)
+    z = np.zeros(n_points)
 
-    for i in range(N):
+    for i in range(n_points):
         x[i] = p[i][0]
         y[i] = p[i][1]
         z[i] = p[i][2]
@@ -1912,40 +1912,40 @@ def discrete_geometry(line, neigh=10):
         dydt[i] = sum([(t[j] - t[i]) * (y[j] - y[i]) for j in range(0, 2 * m + 1)]) / t_sum
         dzdt[i] = sum([(t[j] - t[i]) * (z[j] - z[i]) for j in range(0, 2 * m + 1)]) / t_sum
 
-    for i in range(m, N - m):
+    for i in range(m, n_points - m):
         t_sum = sum([(t[j] - t[i]) ** 2 for j in range(i - m, i + m + 1)])
         dxdt[i] = sum([(t[j] - t[i]) * (x[j] - x[i]) for j in range(i - m, i + m + 1)]) / t_sum
         dydt[i] = sum([(t[j] - t[i]) * (y[j] - y[i]) for j in range(i - m, i + m + 1)]) / t_sum
         dzdt[i] = sum([(t[j] - t[i]) * (z[j] - z[i]) for j in range(i - m, i + m + 1)]) / t_sum
 
-    for i in range(N - m, N):
-        t_sum = sum([(t[j] - t[i]) ** 2 for j in range(N - 2 * m, N)])
-        dxdt[i] = sum([(t[j] - t[i]) * (x[j] - x[i]) for j in range(N - 2 * m - 1, N)]) / t_sum
-        dydt[i] = sum([(t[j] - t[i]) * (y[j] - y[i]) for j in range(N - 2 * m - 1, N)]) / t_sum
-        dzdt[i] = sum([(t[j] - t[i]) * (z[j] - z[i]) for j in range(N - 2 * m - 1, N)]) / t_sum
+    for i in range(n_points - m, n_points):
+        t_sum = sum([(t[j] - t[i]) ** 2 for j in range(n_points - 2 * m, n_points)])
+        dxdt[i] = sum([(t[j] - t[i]) * (x[j] - x[i]) for j in range(n_points - 2 * m - 1, n_points)]) / t_sum
+        dydt[i] = sum([(t[j] - t[i]) * (y[j] - y[i]) for j in range(n_points - 2 * m - 1, n_points)]) / t_sum
+        dzdt[i] = sum([(t[j] - t[i]) * (z[j] - z[i]) for j in range(n_points - 2 * m - 1, n_points)]) / t_sum
 
     dgammadt = []
-    dgammadt_norm = np.zeros(N)
-    for i in range(N):
+    dgammadt_norm = np.zeros(n_points)
+    for i in range(n_points):
         dgammadt.append(np.array([dxdt[i], dydt[i], dzdt[i]]))
         dgammadt_norm[i] = la.norm(dgammadt[i])
 
     tg = []
-    for i in range(N):
+    for i in range(n_points):
         tg.append(dgammadt[i] / dgammadt_norm[i])
 
-    t1 = np.zeros(N)
-    t2 = np.zeros(N)
-    t3 = np.zeros(N)
+    t1 = np.zeros(n_points)
+    t2 = np.zeros(n_points)
+    t3 = np.zeros(n_points)
 
-    for i in range(N):
+    for i in range(n_points):
         t1[i] = tg[i][0]
         t2[i] = tg[i][1]
         t3[i] = tg[i][2]
 
-    dt1dt = np.zeros(N)
-    dt2dt = np.zeros(N)
-    dt3dt = np.zeros(N)
+    dt1dt = np.zeros(n_points)
+    dt2dt = np.zeros(n_points)
+    dt3dt = np.zeros(n_points)
 
     for i in range(0, m):
         t_sum = sum([(t[j] - t[i]) ** 2 for j in range(0, 2 * m + 1)])
@@ -1953,29 +1953,29 @@ def discrete_geometry(line, neigh=10):
         dt2dt[i] = sum([(t[j] - t[i]) * (t2[j] - t2[i]) for j in range(0, 2 * m + 1)]) / t_sum
         dt3dt[i] = sum([(t[j] - t[i]) * (t3[j] - t3[i]) for j in range(0, 2 * m + 1)]) / t_sum
 
-    for i in range(m, N - m):
+    for i in range(m, n_points - m):
         t_sum = sum([(t[j] - t[i]) ** 2 for j in range(i - m, i + m + 1)])
         dt1dt[i] = sum([(t[j] - t[i]) * (t1[j] - t1[i]) for j in range(i - m, i + m + 1)]) / t_sum
         dt2dt[i] = sum([(t[j] - t[i]) * (t2[j] - t2[i]) for j in range(i - m, i + m + 1)]) / t_sum
         dt3dt[i] = sum([(t[j] - t[i]) * (t3[j] - t3[i]) for j in range(i - m, i + m + 1)]) / t_sum
 
-    for i in range(N - m, N):
-        t_sum = sum([(t[j] - t[i]) ** 2 for j in range(N - 2 * m, N)])
-        dt1dt[i] = sum([(t[j] - t[i]) * (t1[j] - t1[i]) for j in range(N - 2 * m - 1, N)]) / t_sum
-        dt2dt[i] = sum([(t[j] - t[i]) * (t2[j] - t2[i]) for j in range(N - 2 * m - 1, N)]) / t_sum
-        dt3dt[i] = sum([(t[j] - t[i]) * (t3[j] - t3[i]) for j in range(N - 2 * m - 1, N)]) / t_sum
+    for i in range(n_points - m, n_points):
+        t_sum = sum([(t[j] - t[i]) ** 2 for j in range(n_points - 2 * m, n_points)])
+        dt1dt[i] = sum([(t[j] - t[i]) * (t1[j] - t1[i]) for j in range(n_points - 2 * m - 1, n_points)]) / t_sum
+        dt2dt[i] = sum([(t[j] - t[i]) * (t2[j] - t2[i]) for j in range(n_points - 2 * m - 1, n_points)]) / t_sum
+        dt3dt[i] = sum([(t[j] - t[i]) * (t3[j] - t3[i]) for j in range(n_points - 2 * m - 1, n_points)]) / t_sum
 
     dtgdt = []
-    dtgdt_norm = np.zeros(N)
-    for i in range(N):
+    dtgdt_norm = np.zeros(n_points)
+    for i in range(n_points):
         dtgdt.append(np.array([dt1dt[i], dt2dt[i], dt3dt[i]]))
         dtgdt_norm[i] = la.norm(dtgdt[i])
 
-    curv = np.zeros(N)
-    for i in range(N):
+    curv = np.zeros(n_points)
+    for i in range(n_points):
         curv[i] = dtgdt_norm[i] / dgammadt_norm[i]
 
-    curv = resample(curv, len_line)
+    curv = resample(curv, n_points)
 
     return line, curv
 
@@ -2111,11 +2111,11 @@ def spline_centerline(line, get_curv=False, isline=False,
         ddlsfy = splev(curv_coor, fy, der=2)
         ddlsfz = splev(curv_coor, fz, der=2)
 
-        C1xC2_1 = ddlsfz * dlsfy - ddlsfy * dlsfz
-        C1xC2_2 = ddlsfx * dlsfz - ddlsfz * dlsfx
-        C1xC2_3 = ddlsfy * dlsfx - ddlsfx * dlsfy
+        c1xc2_1 = ddlsfz * dlsfy - ddlsfy * dlsfz
+        c1xc2_2 = ddlsfx * dlsfz - ddlsfz * dlsfx
+        c1xc2_3 = ddlsfy * dlsfx - ddlsfx * dlsfy
 
-        curvature = np.sqrt(C1xC2_1 ** 2 + C1xC2_2 ** 2 + C1xC2_3 ** 2) / \
+        curvature = np.sqrt(c1xc2_1 ** 2 + c1xc2_2 ** 2 + c1xc2_3 ** 2) / \
                     (dlsfx ** 2 + dlsfy ** 2 + dlsfz ** 2) ** 1.5
 
         return line, curvature
@@ -2388,7 +2388,7 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
     inlet_point = lines[-1].GetPoint(0)
 
     if changed and old_centerline is None:
-        print("WARNING: The changed flag is true, but the old centerline is not provided," + \
+        print("WARNING: The changed flag is true, but the old centerline is not provided," +
               " and the outlet location can therefore not be changed.")
 
     # Get information from the original geometry
@@ -2517,15 +2517,15 @@ def check_if_surface_is_merged(surface, centerlines, output_filepath):
                                     " poly_ball_size.").format(tmp_path))
 
 
-def move_perp(n, P, Z, alpha):
+def move_perp(n, region_points, cl_points, alpha):
     """
     Find directions for manipulation
     in the vertical direction.
 
     Args:
         n (ndarray): Normal vector to plane through clipping points.
-        P (ndarray): Clipping points.
-        Z (ndarray): Points along the centerline.
+        region_points (ndarray): Region points.
+        cl_points (ndarray): Points along the centerline.
         alpha (float): Extension / Compression factor.
 
     Returns:
@@ -2533,16 +2533,16 @@ def move_perp(n, P, Z, alpha):
         dx (ndarray): Direction to move the centerline.
     """
     # Find midpoint and point furthest away
-    p1 = P[0]
-    p2 = P[1]
+    p1 = region_points[0]
+    p2 = region_points[1]
     dist = []
-    for z in Z:
-        d = la.norm(np.cross((z - p1), (z - p2))) / la.norm(p2 - p1)
+    for point in cl_points:
+        d = la.norm(np.cross((point - p1), (point - p2))) / la.norm(p2 - p1)
         dist.append(d)
 
     d_id = dist.index(max(dist))
     max_dist = max(dist)
-    z_m = Z[d_id]
+    z_m = cl_points[d_id]
 
     # Vector from line to Z_max and projection onto plane
     v = (z_m - p2) - (z_m - p2).dot(p2 - p1) * (p2 - p1) / la.norm(p2 - p1) ** 2
@@ -2553,25 +2553,25 @@ def move_perp(n, P, Z, alpha):
     dpv = dp + dv
 
     # Move points
-    dZ = []
-    for i in range(len(Z)):
+    z_plus_dz = []
+    for i in range(len(cl_points)):
         dz = np.array(dv) * dist[i] / max_dist * alpha
-        dZ.append(Z[i] + dz)
+        z_plus_dz.append(cl_points[i] + dz)
 
     dx = (dpv - dp) * alpha
 
-    return dZ, dx
+    return z_plus_dz, dx
 
 
-def move_para(n, P, Z, beta):
+def move_para(n, region_points, cl_points, beta):
     """
     Find directions for manipulation
     in the horizontal direction.
 
     Args:
         n (ndarray): Normal vector to plane through clipping points.
-        P (ndarray): Clipping points.
-        Z (ndarray): Points along the centerline.
+        region_points (ndarray): Clipping points.
+        cl_points (ndarray): Points along the centerline.
         beta (float): Extension / Compression factor.
 
     Returns:
@@ -2579,8 +2579,8 @@ def move_para(n, P, Z, beta):
         zp_min (ndarray): Translation direction in upstream direction.
         zm_min (ndarray): Translation direction in downstream direction.
     """
-    p1 = P[0]
-    p2 = P[1]
+    p1 = region_points[0]
+    p2 = region_points[1]
 
     # Find normal from q
     q = [(p1 + p2) / 2.]
@@ -2588,101 +2588,97 @@ def move_para(n, P, Z, beta):
     qp1 = np.array(p1 - q)[0]
     s = q[0] - np.cross(qp2, n) * 3
 
-    # Split points based on orientation
-    # to q normal
-    Z_p = []
-    Z_p_dist = []
-    Z_m = []
-    Z_m_dist = []
-    for z in Z:
-        d = la.norm(np.cross((z - s), (z - q[0]))) / la.norm(q[0] - s)
-        c = np.cross(s - q, z - q)
+    # Split points based on orientation to q normal
+    points_p = []
+    points_p_dist = []
+    points_m = []
+    points_m_dist = []
+    for point in cl_points:
+        d = la.norm(np.cross((point - s), (point - q[0]))) / la.norm(q[0] - s)
+        c = np.cross(s - q, point - q)
         if c[0][0] >= 0:
-            Z_p.append(z)
-            Z_p_dist.append(d)
+            points_p.append(point)
+            points_p_dist.append(d)
         else:
-            Z_m.append(z)
-            Z_m_dist.append(d)
+            points_m.append(point)
+            points_m_dist.append(d)
 
     # Move points
-    D = la.norm(p1 - p2) / 2.
-    dZ = []
-    dZ.append(p1 + qp1 * beta)
-    for i in range(len(Z_p)):
-        dz = qp1 * Z_p_dist[i] / D * beta
-        dZ.append(Z_p[i] + dz)
+    mid_point = la.norm(p1 - p2) / 2.
+    moved_points = [p1 + qp1 * beta]
+    for i in range(len(points_p)):
+        dz = qp1 * points_p_dist[i] / mid_point * beta
+        moved_points.append(points_p[i] + dz)
 
-    for i in range(len(Z_m)):
-        dz = qp2 * Z_m_dist[i] / D * beta
-        dZ.append(Z_m[i] + dz)
-    dZ.append(p2 + qp2 * beta)
+    for i in range(len(points_m)):
+        dz = qp2 * points_m_dist[i] / mid_point * beta
+        moved_points.append(points_m[i] + dz)
+    moved_points.append(p2 + qp2 * beta)
 
     # Check if moved in right direction
-    d_0 = la.norm(np.cross(Z_p[0] - q, Z_p[0] - s)) / la.norm(s - q)
-    d_1 = la.norm(np.cross(dZ[1] - q, dZ[1] - s)) / la.norm(s - q)
+    d_0 = la.norm(np.cross(points_p[0] - q, points_p[0] - s)) / la.norm(s - q)
+    d_1 = la.norm(np.cross(moved_points[1] - q, moved_points[1] - s)) / la.norm(s - q)
     if d_1 < d_0:
         # Split points based on orientation to q normal
-        Z_p = []
-        Z_p_dist = []
-        Z_m = []
-        Z_m_dist = []
-        for z in Z:
+        points_p = []
+        points_p_dist = []
+        points_m = []
+        points_m_dist = []
+        for z in cl_points:
             d = la.norm(np.cross((z - s), (z - q[0]))) / la.norm(q[0] - s)
             c = -np.cross(s - q, z - q)
             if c[0][0] >= 0:
-                Z_p.append(z)
-                Z_p_dist.append(d)
+                points_p.append(z)
+                points_p_dist.append(d)
             else:
-                Z_m.append(z)
-                Z_m_dist.append(d)
+                points_m.append(z)
+                points_m_dist.append(d)
 
         # Move points
-        D = la.norm(p1 - p2) / 2.
-        dZ = []
-        dZ.append(p1 + qp1 * beta)
-        for i in range(len(Z_p)):
-            dz = qp1 * Z_p_dist[i] / D * beta
-            dZ.append(Z_p[i] + dz)
+        moved_points = [p1 + qp1 * beta]
+        for i in range(len(points_p)):
+            dz = qp1 * points_p_dist[i] / mid_point * beta
+            moved_points.append(points_p[i] + dz)
 
-        for i in range(len(Z_m)):
-            dz = qp2 * Z_m_dist[i] / D * beta
-            dZ.append(Z_m[i] + dz)
-        dZ.append(p2 + qp2 * beta)
+        for i in range(len(points_m)):
+            dz = qp2 * points_m_dist[i] / mid_point * beta
+            moved_points.append(points_m[i] + dz)
+        moved_points.append(p2 + qp2 * beta)
 
-    zpid = Z_p_dist.index(min(Z_p_dist))
-    zp_min = Z_p[zpid]
-    zmid = Z_m_dist.index(min(Z_m_dist))
-    zm_min = Z_m[zmid]
+    zpid = points_p_dist.index(min(points_p_dist))
+    zp_min = points_p[zpid]
+    zmid = points_m_dist.index(min(points_m_dist))
+    zm_min = points_m[zmid]
 
-    return dZ, zp_min, zm_min
+    return moved_points, zp_min, zm_min
 
 
-def best_plane(Z, P):
+def best_plane(cl_points, region_points):
     """
     Find the least squares plane through
     the points in P and approximating the points
     in Z.
 
     Args:
-        Z (ndarray): Array of points to approximate.
-        P (ndarray): Array of points used as constraints.
+        cl_points (ndarray): Array of points to approximate.
+        region_points (ndarray): Array of points used as constraints.
 
     Returns:
         n (ndarray): Normal vector to plane.
     """
     # Defined matrices
-    b = np.ones(len(Z))
-    d = np.ones(len(P))
+    b = np.ones(len(cl_points))
+    d = np.ones(len(region_points))
 
     # Create complete matrix
-    ATA = np.transpose(Z).dot(Z)
-    M0 = np.c_[ATA, np.transpose(P)]
-    M1 = np.c_[P, np.zeros((len(P), len(P)))]
-    M = np.r_[M0, M1]
-    Y = np.r_[np.transpose(Z).dot(b), d]
+    ata = np.transpose(cl_points).dot(cl_points)
+    m0 = np.c_[ata, np.transpose(region_points)]
+    m1 = np.c_[region_points, np.zeros((len(region_points), len(region_points)))]
+    m = np.r_[m0, m1]
+    y = np.r_[np.transpose(cl_points).dot(b), d]
 
     # Solve system
-    x = la.solve(M, Y)
+    x = la.solve(m, y)
     a, b, c = x[0], x[1], x[2]
     n = np.array([a, b, c])
     n = n / la.norm(n)
@@ -2856,7 +2852,7 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
         number_of_points2 = line2.GetNumberOfPoints()
 
         # Iterate through lines and find diverging point
-        n = 2
+        n = centerline.GetNumberOfLines()
         point_ids = []
         for j in range(1, n):
             line1 = extract_single_line(centerline, j)
@@ -2875,7 +2871,7 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
         endID = min(point_ids)
         cl_id = 0
 
-        region_points = list(centerline.GetPoint(startID)) + list(centerline.GetPoint(endID))
+        region_points = list(line2.GetPoint(startID)) + list(line2.GetPoint(endID))
 
     elif region_of_interest == "commandline" or region_of_interest == "manual":
         # Get points from the user
@@ -2966,14 +2962,14 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
             cl_id = np.argmax(total_distance)
 
             if total_distance[cl_id] == 0:
-                raise RuntimeError("The two points provided have to be on the same " + \
-                                   " line (from inlet to outlet), and not at two different" + \
+                raise RuntimeError("The two points provided have to be on the same " +
+                                   " line (from inlet to outlet), and not at two different" +
                                    " outlets")
-            startID = min(ids1[cl_id], ids2[cl_id])
-            endID = max(ids1[cl_id], ids2[cl_id])
+            start_id = min(ids1[cl_id], ids2[cl_id])
+            end_id = max(ids1[cl_id], ids2[cl_id])
 
     # Extract and spline a single line
-    line_to_change = extract_single_line(centerline, cl_id, startID=startID, endID=endID)
+    line_to_change = extract_single_line(centerline, cl_id, startID=start_id, endID=end_id)
     line_to_change = spline_centerline(line_to_change, nknots=25, isline=True)
 
     return line_to_change, region_points

@@ -34,6 +34,7 @@ def curvature_variations(input_filepath, smooth, smooth_factor, smooth_factor_li
         no_smooth (bool): True of part of the model is not to be smoothed.
         no_smooth_point (ndarray): Point which is untouched by smoothing.
     """
+    print(smooth_line)
     # Input filenames
     base_path = get_path_names(input_filepath)
 
@@ -52,8 +53,6 @@ def curvature_variations(input_filepath, smooth, smooth_factor, smooth_factor_li
 
     # Compute centerlines
     inlet, outlets = get_centers(surface, base_path)
-
-    print("-- Compute centerlines and Voronoi diagram")
     centerlines, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path,
                                                          capped_surface, resampling=resampling_step,
                                                          smooth=False, base_path=base_path)
@@ -72,7 +71,6 @@ def curvature_variations(input_filepath, smooth, smooth_factor, smooth_factor_li
         find_region_of_interest_and_diverging_centerlines(centerlines, region_points)
     diverging_centerline_ispresent = diverging_centerlines is not None
     diverging_id = None if len(diverging_ids) == 0 else diverging_ids[0]
-
     # Handle diverging centerlines within region of interest
     diverging_centerlines_patch = []
     if diverging_centerline_ispresent:
@@ -245,6 +243,12 @@ def move_all_centerlines(old_cl, new_cl, diverging_id, diverging_centerlines, sm
     p1 = new_cl.GetPoint(0)
     p2 = new_cl.GetPoint(id_end)
 
+    id_old_end = old_cl.GetNumberOfPoints() - 1
+    id_midend = int(id_old_end * 0.9)
+    id_startmid = int(id_old_end * 0.1)
+    id_mid = int(id_old_end * 0.2)
+    # Iterate through voronoi points
+
     for i in range(number_of_cells):
         line = extract_single_line(old_cl, i)
         locator = get_locator(line)
@@ -274,6 +278,16 @@ def move_all_centerlines(old_cl, new_cl, diverging_id, diverging_centerlines, sm
 
             if not smooth_line:
                 dx = - dx
+
+            if p < id_startmid:
+                dx = 0
+            elif id_startmid <= p < id_mid:
+                dx = dx * (p - id_startmid) / float(id_mid - id_startmid)
+            elif p > id_midend:
+                if diverging_id is not None and i == (number_of_cells - 1):
+                    pass
+                else:
+                    dx = dx * (id_end - p) / float(id_end - id_midend)
 
             centerline_points.InsertNextPoint(p_old + dx)
             radius_array.SetTuple1(count, radius_array_data(p))
@@ -318,11 +332,11 @@ def read_command_line():
                              " which defines the start and end of the region of interest. ")
 
     # Set problem spesific arguments
-    parser.add_argument("-fl", "--smooth_factor_line", type=float, default=1.0,
+    parser.add_argument("-fl", "--smooth-factor-line", type=float, default=1.0,
                         help="Smoothing factor of centerline curve.")
     parser.add_argument("-it", "--iterations", type=int, default=100,
                         help="Smoothing iterations of centerline curve.")
-    parser.add_argument("-sl", "--smooth_line", type=bool, default=True,
+    parser.add_argument("-sl", "--smooth-line", type=str2bool, default=True,
                         help="Smoothes centerline if True, anti-smoothes if False")
 
     # Parse

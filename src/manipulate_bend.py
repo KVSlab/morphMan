@@ -164,6 +164,7 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
         write_polydata(new_centerlines, new_centerlines_path_tmp)
 
     if alpha == 0.0 and beta != 0.0:
+        print("-- Creating new surface.")
         new_voronoi = merge_data([voronoi_remaining, voronoi_bend])
         new_surface = create_new_surface(new_voronoi, poly_ball_size=poly_ball_size)
 
@@ -250,6 +251,7 @@ def move_vessel_vertically(alpha, voronoi_remaining,
     new_centerlines = move_centerlines(centerlines, dx, p1, p2, diverging_id, diverging_centerlines, direction)
 
     # Write a new surface from the new voronoi diagram
+    print("-- Creating new surface.")
     new_surface = create_new_surface(new_voronoi, poly_ball_size=poly_ball_size)
 
     return new_surface, new_centerlines

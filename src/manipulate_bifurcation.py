@@ -196,7 +196,7 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
                                                        bif_, cylinder_factor)
 
     # Note: This function is slow, and can be commented, but at the cost of robustness.
-    # interpolated_voronoi = remove_distant_points(interpolated_voronoi, interpolated_cl)
+    interpolated_voronoi = remove_distant_points(interpolated_voronoi, interpolated_cl)
     write_polydata(interpolated_voronoi, voronoi_ang_path)
 
     # Write a new surface from the new voronoi diagram
