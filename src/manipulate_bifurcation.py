@@ -7,9 +7,9 @@
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
+from argparse_common import *
 # Local import
 from common import *
-from argparse_common import *
 
 
 def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angle,
@@ -80,6 +80,13 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
         outlet1, outlet2 = get_relevant_outlets(capped_surface, base_path)
     else:
         outlet1, outlet2 = region_points[:3], region_points[3:]
+        surface_locator = get_locator(capped_surface)
+        id1 = surface_locator.FindClosestPoint(outlet1)
+        id2 = surface_locator.FindClosestPoint(outlet2)
+        outlet1 = capped_surface.GetPoint(id1)
+        outlet2 = capped_surface.GetPoint(id2)
+
+    print("Region of interest is defined by the region points: \nOutlet 1: %s \nOutlet 2: %s" % (outlet1, outlet2))
 
     # Sort outlets
     outlets, outlet1, outlet2 = sort_outlets(outlets, outlet1, outlet2, base_path)
@@ -124,9 +131,6 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
 
     write_points(div_points[0], points_div_path)
     write_points(end_points[0], points_clipp_path)
-    write_points(div_points_rotated[0], points_div_rotated_path)
-    write_points(end_points_rotated[0], points_clipp_rotated_path)
-
 
     # Clip centerlines
     print("-- Clipping centerlines.")
@@ -161,7 +165,7 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
 
     # Interpolate the centerline
     print("-- Interpolate centerlines.")
-    interpolated_cl = interpolate_patch_centerlines(rotated_cl, centerline_par, div_points_rotated[0].GetPoint(0), None,
+    interpolated_cl = interpolate_patch_centerlines(rotated_cl, centerline_par, div_points[0].GetPoint(0), None,
                                                     False)
     write_polydata(interpolated_cl, centerline_new_path.replace(".vtp", "1.vtp"))
 
@@ -173,14 +177,14 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
     if lower:
         center = ((1 / 9.) * div_points[1][0] + (4 / 9.) * div_points[1][1] +
                   (4 / 9.) * div_points[1][2]).tolist()
-        div_points_rotated_bif[0].SetPoint(0, center[0], center[1], center[2])
+        div_points[0].SetPoint(0, center[0], center[1], center[2])
         interpolated_bif_lower = interpolate_patch_centerlines(rotated_bif_cl, centerline_bif,
-                                                               div_points_rotated_bif[0].GetPoint(0),
+                                                               div_points[0].GetPoint(0),
                                                                "lower", True)
         write_polydata(interpolated_bif_lower, centerline_new_bif_lower_path)
 
-    interpolated_cl = merge_cl(interpolated_cl, div_points_rotated[1],
-                               end_points_rotated[1])
+    interpolated_cl = merge_cl(interpolated_cl, div_points[1],
+                               end_points[1])
     write_polydata(interpolated_cl, centerline_new_path)
 
     bif_ = []
@@ -195,9 +199,8 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
     print("-- Interpolate voronoi diagram.")
     interpolated_voronoi = interpolate_voronoi_diagram(interpolated_cl, rotated_cl,
                                                        rotated_voronoi,
-                                                       end_points_rotated,
+                                                       end_points,
                                                        bif_, cylinder_factor)
-
     # Note: This function is slow, and can be commented, but at the cost of robustness.
     interpolated_voronoi = remove_distant_points(interpolated_voronoi, interpolated_cl)
     write_polydata(interpolated_voronoi, voronoi_ang_path)
@@ -604,15 +607,15 @@ def read_command_line():
                         help="Each daughter branch is rotated an angle 'a' in the" +
                              " bifurcation plane. 'a' is assumed to be in degrees," +
                              " and not radians", metavar="rotation_angle")
-    parser.add_argument("--keep-fixed-1", type=bool, default=False,
+    parser.add_argument("--keep-fixed-1", type=str2bool, default=False,
                         help="Leave one branch untuched")
-    parser.add_argument("--keep-fixed-2", type=bool, default=False,
+    parser.add_argument("--keep-fixed-2", type=str2bool, default=False,
                         help="Leave one branch untuched")
 
     # Bifurcation reconstruction arguments
-    parser.add_argument("--bif", type=bool, default=False,
+    parser.add_argument("--bif", type=str2bool, default=False,
                         help="interpolate bif as well")
-    parser.add_argument("--lower", type=bool, default=False,
+    parser.add_argument("--lower", type=str2bool, default=False,
                         help="Make a fourth line to interpolate along that" +
                              " is lower than the other bif line.")
     parser.add_argument("--cylinder_factor", type=float, default=7.0,

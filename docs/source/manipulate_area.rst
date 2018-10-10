@@ -93,7 +93,6 @@ To recreate the above output, execute the following on the commandline line::
     
     python manipulate_area.py --ifile C0002/surface.vtp --ofile C0002/stenosis.vtp --smooth True --method stenosis --stenosis-point x y z --percentage 50 --size 1
 
-
 Remove stenosis
 ~~~~~~~~~~~~~~~
 To remove a stenosis, you need to provide two points, one at each end of the
@@ -110,7 +109,6 @@ right, the comparison between the original model and the 'healed' surface.
 To reproduce the above result, execute the following command::
 
     python manipulate_area.py --ifile C0002/stenosis.vtp --ofile C0002/no_stenosis.vtp --smooth True --method stenosis --stenosis-points x y z x y z
-
 
 Inflation / deflation of an arterial segment
 ============================================

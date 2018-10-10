@@ -19,7 +19,7 @@ def add_common_arguments(parser):
                                " parameters.")
 
     # General arguments
-    parser.add_argument('-s', '--smooth', type=str2bool, default=True,
+    parser.add_argument('-s', '--smooth', type=str2bool, default=False,
                         help="Smooth the voronoi diagram, default is False")
     parser.add_argument('-f', '--smooth_factor', type=float, default=0.25,
                         help="If smooth option is true then each voronoi point" +

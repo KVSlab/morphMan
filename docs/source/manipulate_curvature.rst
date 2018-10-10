@@ -9,7 +9,7 @@ Tutorial: Manipulate curvature
 The goal of ``manipulate_curvature.py`` is to increase or decrease the
 total curvature/torsion in a vascular segment, see Figure 1 for an example.
 
-.. figure:: Curvature.png
+.. figure:: Curvature_tmp.png
   
   Figure 1: An illustration of the desired output from the method.
 
@@ -35,15 +35,19 @@ and thus obtain a new surface, like depicted to the left in Figure 2. By simply
 inverting the direction of the vector, we can also increase the overall curvature,
 see the right most surface in Figure 2.
 
-.. figure:: smoothedsiphon.png
+.. figure:: curvature_variation.png
 
   Figure 2: Sharpened and smoothened version of the siphon.
 
-To reproduce the results shown in Figure 2, run::
-        
-        python manipulate_curvature.py --ifile C0004/surface/model.vtp --ofile C0004/surface/model.vtp --region-of-interest first_line --smooth_line True
+To reproduce the surface model with decreased total curvature shown on the left in Figure 2, run::
 
-To increase the curvature instead, set ``--smooth_line False``.
+        python manipulate_curvature.py --ifile C0005/surface/model.vtp --ofile C0005/surface/model_curvature_decreased.vtp --smooth-line True --iterations 100 --smooth-factor-line 1.8  --region-of-interest first_line
+
+To reproduce the surface model with increased total curvature shown on the left in Figure 2, run::
+
+        python manipulate_curvature.py --ifile C0005/surface/model.vtp --ofile C0005/surface/model_curvature_increased.vtp --smooth-line False --iterations 100 --smooth-factor-line 1.8  --region-of-interest first_line
+
+As shown in the command above, increased total curvature is achieved by setting the command line argument ``--smooth-line False``.
 
 For additional information, beyond this tutorial, on the script and
 input parameters, please run ``python manipulate_curvature.py -h`` or confer with

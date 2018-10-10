@@ -7,9 +7,9 @@
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
+from argparse_common import *
 # Local import
 from common import *
-from argparse_common import *
 
 
 def curvature_variations(input_filepath, smooth, smooth_factor, smooth_factor_line, iterations,
@@ -34,14 +34,14 @@ def curvature_variations(input_filepath, smooth, smooth_factor, smooth_factor_li
         no_smooth (bool): True of part of the model is not to be smoothed.
         no_smooth_point (ndarray): Point which is untouched by smoothing.
     """
-    print(smooth_line)
     # Input filenames
     base_path = get_path_names(input_filepath)
 
     # Centerlines
+    direction = "smoothed" if smooth_line else "extended"
     centerlines_path = base_path + "_centerline.vtp"
     centerline_smooth_path = base_path + "_centerline_smoothed.vtp"
-    new_centerlines_path = base_path + "_centerline_new.vtp"
+    new_centerlines_path = base_path + "_centerline_new_%s.vtp" % direction
 
     # Clean and capp / uncapp surface
     surface, capped_surface = prepare_surface(base_path, input_filepath)
@@ -71,6 +71,7 @@ def curvature_variations(input_filepath, smooth, smooth_factor, smooth_factor_li
         find_region_of_interest_and_diverging_centerlines(centerlines, region_points)
     diverging_centerline_ispresent = diverging_centerlines is not None
     diverging_id = None if len(diverging_ids) == 0 else diverging_ids[0]
+
     # Handle diverging centerlines within region of interest
     diverging_centerlines_patch = []
     if diverging_centerline_ispresent:
@@ -199,6 +200,7 @@ def make_voronoi_smooth(voronoi, old_cl, new_cl, smooth_line, div=False, div_poi
                 dx = dx * (cl_id - id_startmid) / float(id_mid - id_startmid)
             elif cl_id > id_midend:
                 dx = dx * (id_end - cl_id) / float(id_end - id_midend)
+
         points.InsertNextPoint(np.asarray(voronoi.GetPoint(i)) + dx)
         verts.InsertNextCell(1)
         verts.InsertCellPoint(i)
@@ -243,12 +245,7 @@ def move_all_centerlines(old_cl, new_cl, diverging_id, diverging_centerlines, sm
     p1 = new_cl.GetPoint(0)
     p2 = new_cl.GetPoint(id_end)
 
-    id_old_end = old_cl.GetNumberOfPoints() - 1
-    id_midend = int(id_old_end * 0.9)
-    id_startmid = int(id_old_end * 0.1)
-    id_mid = int(id_old_end * 0.2)
     # Iterate through voronoi points
-
     for i in range(number_of_cells):
         line = extract_single_line(old_cl, i)
         locator = get_locator(line)
@@ -278,16 +275,6 @@ def move_all_centerlines(old_cl, new_cl, diverging_id, diverging_centerlines, sm
 
             if not smooth_line:
                 dx = - dx
-
-            if p < id_startmid:
-                dx = 0
-            elif id_startmid <= p < id_mid:
-                dx = dx * (p - id_startmid) / float(id_mid - id_startmid)
-            elif p > id_midend:
-                if diverging_id is not None and i == (number_of_cells - 1):
-                    pass
-                else:
-                    dx = dx * (id_end - p) / float(id_end - id_midend)
 
             centerline_points.InsertNextPoint(p_old + dx)
             radius_array.SetTuple1(count, radius_array_data(p))

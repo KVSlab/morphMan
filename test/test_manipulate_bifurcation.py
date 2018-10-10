@@ -9,10 +9,11 @@ import sys
 from os import path
 relative_path = path.dirname(path.abspath(__file__))
 sys.path.insert(0, path.join(relative_path, '..', 'src'))
+sys.path.insert(0, "../src")
 
 import pytest
 import numpy as np
-from fixtures import common_input
+from .fixtures import common_input
 from manipulate_bifurcation import rotate_branches
 from common import get_path_names, read_polydata
 

@@ -26,16 +26,20 @@ install:
 
   # Set conda parameters
   - conda config --set always_yes yes --set changeps1 no
-  - conda install --quiet -y conda conda-build==3.9.2 anaconda-client
-  - conda config --prepend channels vmtk
  
   # Set up environment
   - conda create -q -n morphman -c vmtk python=3.6 itk vtk vmtk scipy numpy pytest
   - source activate morphman
 
-    # Useful for debugging any issues with conda
+  # Useful for debugging any issues with conda
   - conda info -a
- 
+  
+  # / -> // in vmtkcenterlines
+  # - bash workaround_vtmk.sh
+  - sed -i -e 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' ../../../miniconda/envs/morphman/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
+  - sed -i -e 's/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g' ../../../miniconda/envs/morphman/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
+
 script:
   # Your test script goes here
+  - cd test
   - pytest .
