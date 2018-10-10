@@ -46,6 +46,7 @@ def test_siphon(common_input, alpha, beta):
     new_centerlines = read_polydata(new_centerlines_path)
     angle_new, angle_original = compute_angle(common_input["input_filepath"], alpha, beta,
                                               "plane", new_centerlines,
+                                              region_of_interest=common_input["region_of_interest"],
                                               region_points=common_input["region_points"])
 
     if alpha < 0 and beta == 0 or beta > 0 and alpha == 0:

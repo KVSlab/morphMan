@@ -66,6 +66,7 @@ def test_create_stenosis(common_input):
                              beta = None))   # Inactive
 
     # Create a stenosis
+    print(common_input)
     area_variations(**common_input)
 
     # Import old area and splined centerline for region of interest
