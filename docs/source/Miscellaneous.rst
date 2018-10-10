@@ -9,7 +9,7 @@ Miscellaneous
 
 Landmarking of the internal carotid artery
 ==========================================
-The internal carotid artery can be classified, or landmarks, into segments.
+The internal carotid artery can be classified, or landmarked, into segments.
 For an *objective* and *reproduceble* maipulation of the segment
 historically referred to as the carotid siphon, we have implemented two
 previously published methods for landmarking: Piccinelli et al.
@@ -56,12 +56,12 @@ Instead of directly setting the extent the model should be moved (``--alpha`` an
 it is more convinient to controll a morphological parameter like maximum curvature, or the
 angle in the bend.
 
-The idea behind ``calculate_alpha_beta_values.py`` is to use the centerline as a
+The idea behind ``estimate_alpha_beta_values.py`` is to use the centerline as a
 proxy for the new geometry, and manipulate only the centerline for a range of ``--alpha`` and
 ``--beta`` values. The resulting 2D data can be fited to a surface spline, from
-which one can easly collect an approporiate value for ``--alpha`` and ``--beta``.
+which one can easly collect approporiate values for ``--alpha`` and ``--beta``.
 
-For more information on the input parameters in the script For a more detailed description, please see [3]_.
+For more information on the input parameters in the script, see :meth:`automated_landmarking.automated_landmarking`. For a more detailed description of the method, please see [3]_.
 
 
 Common

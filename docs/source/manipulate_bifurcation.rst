@@ -29,7 +29,7 @@ a positive and negative angle.
 
   Figure 2: Rotation of daughter branches, in both a widening and narrowing of the bifurcation angle. 
 
-You can reproduce the results in Figure 2 by running the two following commands::
+You can reproduce the results in Figure 2 by running the following commands::
 
     python manipulate_bifurcation.py --ifile C0005/surface/model.vtp --ofile C0005/surface/rotate_plus.vtp --angle 20 --region-of-interest commandline --region-points 43.2 70.5 26.4 84.4 60.6 50.6 --poly-ball-size 250 250 250
 

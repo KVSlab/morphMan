@@ -51,4 +51,4 @@ As shown in the command above, increased total curvature is achieved by setting 
 
 For additional information, beyond this tutorial, on the script and
 input parameters, please run ``python manipulate_curvature.py -h`` or confer with
-the :meth:`curvature_variations`.
+the :meth:`curvature_variations.curvature_variations`.
