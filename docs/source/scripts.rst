@@ -15,6 +15,8 @@ manipulate_bend.py
 
 .. automodule:: manipulate_bend
     :members:
+    :undoc-members:
+    :show-inheritance:
 
 Manipulation of a the area
 ==========================
@@ -23,8 +25,9 @@ manipulate_area.py
 ------------------
 
 .. automodule:: manipulate_area
-     :members:
-
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 Manipulation of a curvature
 ===========================
@@ -33,7 +36,9 @@ manipulate_curvature.py
 ------------------------------
 
 .. automodule:: manipulate_curvature
-     :members:
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 
 Manipulation of a bifurcation
@@ -43,8 +48,9 @@ manipulate_bifurcation.py
 --------------------------------
 
 .. automodule:: manipulate_bifurcation
-     :members:
-
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 
 Miscellaneous
@@ -55,15 +61,21 @@ common.py
 ----------------
 
 .. automodule:: common
-     :members:
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 automated_landmarking.py
 -------------------------------
 .. automodule:: automated_landmarking
-     :members:
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 estimate_alpha_and_beta.py
 ----------------------------------------
 
-.. automodule:: estimate_alpha_and_beta.py
-     :members:
+.. automodule:: estimate_alpha_and_beta
+    :members:
+    :undoc-members:
+    :show-inheritance:
