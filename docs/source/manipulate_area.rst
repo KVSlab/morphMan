@@ -60,7 +60,7 @@ for the model with increased cross-sectional area variation, and::
 
 for the model with decreased cross-sectional area variation.
 
-.. figure:: area_vary.png
+.. figure:: area_variation.png
 
   Figure 2: Area variations throughout the geometry for different ratios. 
 
@@ -85,7 +85,7 @@ and can be done by adapting one line in the function :meth:`manipulate_area.get_
 In Figure 3 you can see the output of the script. Of note is that creating a stenosis in
 sections with high curvature, like the internal carotid artery, is unproblematic.
 
-.. figure:: change_stenosis.png
+.. figure:: make_stenosis.png
 
   Figure 3: Comparison of the new and old model, with and without stenosis.
 
@@ -102,7 +102,7 @@ To exemplify this, we can use the output from the previous example ``C0002/surfa
 To the left in Figure 4 you can see the stenosed model compared to the original, and to the
 right, the comparison between the original model and the 'healed' surface.
 
-.. figure:: fixed_stenosis.png
+.. figure:: fix_stenosis.png
 
   Figure 4: Comparison between the original model in white with opacity, and the modified models in red.
     
@@ -117,12 +117,17 @@ set the percentage change with ``--percentage``. Like with :ref:`area_variations
 region of interest is a transition between the original and modified geometry to ensure smooth transitions.
 
 To perform a deflation run the following command::
-    
-    python manipulate_area.py --ifile C0002/surface.vtp --ofile C0002/inflated.vtp --smooth True --percentage -20 --method area --region-of-interest first_line
+
+    python manipulate_area.py --ifile C0002/surface/model.vtp --ofile C0002/area_deflated.vtp --method area --percentage -20 --region-of-interest first_line -b 250 250 250
+
+Simlarly, we can perform inflation by changing the sign of the ``--percentage`` argument.
+To reproduce the inflated model shown in Figure 5, you can run the command::
+
+    python manipulate_area.py --ifile C0002/surface/model.vtp --ofile C0002/area_inflated.vtp --method area --percentage 20 --region-of-interest first_line -b 250 250 250
 
 Below is an illustration of area decrease and increase in a single patient-specific model.
 
-.. figure:: area_decinc.png
+.. figure:: area_area.png
 
   Figure 5: Decrease and increase in overall area.
 

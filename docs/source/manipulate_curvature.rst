@@ -9,14 +9,14 @@ Tutorial: Manipulate curvature
 The goal of ``manipulate_curvature.py`` is to increase or decrease the
 total curvature/torsion in a vascular segment, see Figure 1 for an example.
 
-.. figure:: Curvature_tmp.png
+.. figure:: Curvature.png
   
   Figure 1: An illustration of the desired output from the method.
 
 In this tutorial, we are using the model with
-`ID C0004 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0004/C0004_models.tar.gz>`_
+`ID C0005 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0005/C0005_models.tar.gz>`_
 from the Aneurisk database. For the commands below we assume that there is a
-file `./C0004/surface/model.vtp`, relative to where you execute the command.
+file `./C0005/surface/model.vtp`, relative to where you execute the command.
 
 In ``manipulate_curvature.py``, there are three options for setting
 ``region-of-interest``:
@@ -41,11 +41,11 @@ see the right most surface in Figure 2.
 
 To reproduce the surface model with decreased total curvature shown on the left in Figure 2, run::
 
-        python manipulate_curvature.py --ifile C0005/surface/model.vtp --ofile C0005/surface/model_curvature_decreased.vtp --smooth-line True --iterations 100 --smooth-factor-line 1.8  --region-of-interest first_line
+        python manipulate_curvature.py --ifile C0005/surface/model.vtp --ofile C0005/surface/model_curvature_decreased.vtp --smooth-line True --iterations 100 --smooth-factor-line 1.8  --region-of-interest first_line --poly-ball-size 250 250 250
 
 To reproduce the surface model with increased total curvature shown on the left in Figure 2, run::
 
-        python manipulate_curvature.py --ifile C0005/surface/model.vtp --ofile C0005/surface/model_curvature_increased.vtp --smooth-line False --iterations 100 --smooth-factor-line 1.8  --region-of-interest first_line
+        python manipulate_curvature.py --ifile C0005/surface/model.vtp --ofile C0005/surface/model_curvature_increased.vtp --smooth-line False --iterations 100 --smooth-factor-line 1.8  --region-of-interest first_line --poly-ball-size 250 250 250
 
 As shown in the command above, increased total curvature is achieved by setting the command line argument ``--smooth-line False``.
 

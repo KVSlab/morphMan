@@ -39,16 +39,16 @@ Figure 2 depicts an example of modifying the input surface in the :math:`\alpha`
 
 To recreate the surfaces shown in Figure 2, run the two following commands::
 
-    python manipulate_bend.py --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_vertical_plus.vtp --alpha 0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3
+    python manipulate_bend.py --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_vertical_plus.vtp --alpha 0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3 --poly-ball-size 250 250 250
 
-    python manipulate_bend.py --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_vertical_minus.vtp --alpha -0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3
+    python manipulate_bend.py --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_vertical_minus.vtp --alpha -0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3 --poly-ball-size 250 250 250
 
 Shown in Figure 3 is the output of changing the surace in the
 :math:`\beta` ('vertical') direction only. This can be reproduced by running the two following commands::
 
-    python manipulate_bend.py --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_horizontal_plus.vtp --beta 0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3
+    python manipulate_bend.py --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_horizontal_plus.vtp --beta 0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3 --poly-ball-size 250 250 250
 
-    python manipulate_bend.py --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_horizontal_minus.vtp --beta -0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3
+    python manipulate_bend.py --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_horizontal_minus.vtp --beta -0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3 --poly-ball-size 250 250 250
 
 .. figure:: bend_beta_variation.png
 
@@ -58,9 +58,9 @@ Finally, we can extend the movement to both directions by setting both :math:`\a
 An example, where the bend has been moved in both directions, is illustrated in Figure 4.
 In order to reproduce this result, you can run the following commands::
 
-    python manipulate_bend.py --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_plus.vtp --alpha 0.4 --beta 0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3
+    python manipulate_bend.py --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_plus.vtp --alpha 0.4 --beta 0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3 --poly-ball-size 250 250 250
 
-    python manipulate_bend.py --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_minus.vtp --alpha -0.4 --beta -0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3
+    python manipulate_bend.py --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_minus.vtp --alpha -0.4 --beta -0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3 --poly-ball-size 250 250 250G
 
 .. figure:: bend_alpha_beta_variation.png
 

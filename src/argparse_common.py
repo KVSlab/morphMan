@@ -21,7 +21,7 @@ def add_common_arguments(parser):
     # General arguments
     parser.add_argument('-s', '--smooth', type=str2bool, default=False,
                         help="Smooth the voronoi diagram, default is False")
-    parser.add_argument('-f', '--smooth_factor', type=float, default=0.25,
+    parser.add_argument('-f', '--smooth-factor', type=float, default=0.25,
                         help="If smooth option is true then each voronoi point" +
                              " that has a radius less then MISR*(1-smooth_factor) at" +
                              " the closest centerline point is removed.")
