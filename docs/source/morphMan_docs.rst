@@ -4,15 +4,13 @@
    contain the root `toctree` directive.
 
 
-
-
 .. title:: morpMan
 
 ========
 morphMan
 ========
 
-Documentation for `morphMan <https://github.com/hkjeldsberg/vascularManipulationToolkit>`_.
+Documentation for `morphMan <https://github.com/kvslab/morphman>`_.
 
 .. toctree::
    :maxdepth: 2
