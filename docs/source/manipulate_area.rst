@@ -7,8 +7,8 @@ Tutorial: Manipulate area
 =========================
 Manipulation of the cross-sectional area is performed by running the script ``manipulate_area.py``. 
 In this tutorial, we are using the model with
-`ID C0001 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0001/C0001_models.tar.gz>`_
-from the Aneurisk database. For the commands below we assume that there is a file `./C0001/surface/model.vtp`
+`ID C0002 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0002/C0002_models.tar.gz>`_
+from the Aneurisk database. For the commands below we assume that there is a file `./C0002/surface/model.vtp`
 , relative to where you execute the command.
 
 For changing the area you first need to define which segment you want to alter. For ``manipulate_area.py`` there are
@@ -52,11 +52,11 @@ if you choose ``--region-of-interest first_line``, only the end has a smooth tra
 Figure 2, shows a possible output of the algorithm, where the ``first_line`` was is defined
 as the region of interest, and were obtain by running::
 
-    python manipulate_area.py --ifile C0001/surface.vtp --ofile C0001/increased_variation.vtp --method variation --ratio 3.0 --region_of_interest first_line
+    python manipulate_area.py --ifile C0002/surface/model.vtp --ofile C0002/surface/increased_variation.vtp --method variation --ratio 4.0 --region-of-interest first_line --smooth False --poly-ball-size 250 250 250
 
 for the model with increased cross-sectional area variation, and::
 
-    python area_variations.py --ifile C0001/surface.vtp --ofile C0001/increased_variation.vtp --method variation --ratio 1.4 --region_of_interest first_line
+    python manipulate_area.py --ifile C0002/surface/model.vtp --ofile C0002/surface/decreased_variation.vtp --method variation --ratio 2.0 --region-of-interest first_line --smooth False --poly-ball-size 250 250 250
 
 for the model with decreased cross-sectional area variation.
 
@@ -91,7 +91,7 @@ sections with high curvature, like the internal carotid artery, is unproblematic
 
 To recreate the above output, execute the following on the commandline line::
     
-    python manipulate_area.py --ifile C0001/surface.vtp --ofile C0001/stenosis.vtp --smooth True --method stenosis --stenosis-point x y z --percentage 50 --size 1
+    python manipulate_area.py --ifile C0002/surface.vtp --ofile C0002/stenosis.vtp --smooth True --method stenosis --stenosis-point x y z --percentage 50 --size 1
 
 
 Remove stenosis
@@ -99,7 +99,7 @@ Remove stenosis
 To remove a stenosis, you need to provide two points, one at each end of the
 stenosis. The area will be altered to change linearly between the two points.
 
-To exemplify this, we can use the output from the previous example ``C0001/surface/model.vtp``.
+To exemplify this, we can use the output from the previous example ``C0002/surface/model.vtp``.
 To the left in Figure 4 you can see the stenosed model compared to the original, and to the
 right, the comparison between the original model and the 'healed' surface.
 
@@ -109,7 +109,7 @@ right, the comparison between the original model and the 'healed' surface.
     
 To reproduce the above result, execute the following command::
 
-    python manipulate_area.py --ifile C0001/stenosis.vtp --ofile C0001/no_stenosis.vtp --smooth True --method stenosis --stenosis-points x y z x y z
+    python manipulate_area.py --ifile C0002/stenosis.vtp --ofile C0002/no_stenosis.vtp --smooth True --method stenosis --stenosis-points x y z x y z
 
 
 Inflation / deflation of an arterial segment
@@ -120,7 +120,7 @@ region of interest is a transition between the original and modified geometry to
 
 To perform a deflation run the following command::
     
-    python manipulate_area.py --ifile C0001/surface.vtp --ofile C0001/inflated.vtp --smooth True --percentage -20 --method area --region-of-interest first_line
+    python manipulate_area.py --ifile C0002/surface.vtp --ofile C0002/inflated.vtp --smooth True --percentage -20 --method area --region-of-interest first_line
 
 Below is an illustration of area decrease and increase in a single patient-specific model.
 
