@@ -36,7 +36,7 @@ install:
   
   # / -> // in vmtkcenterlines
   # - bash workaround_vtmk.sh
-  - sed -i -e 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' ../../../../miniconda/envs/morphman/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
+  - sed -i -e 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' ../../../miniconda/envs/morphman/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
 
 script:
   # Your test script goes here
