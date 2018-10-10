@@ -5,17 +5,17 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
 ##      PURPOSE.  See the above copyright notices for more information.
 
-import sys
-import vtk
 import math
+import sys
+from os import path, makedirs
+
 import numpy as np
 import numpy.linalg as la
-
-from os import path, makedirs
+import vtk
+from scipy.interpolate import splrep, splev
+from scipy.signal import resample
 from vmtk import vtkvmtk, vmtkscripts
 from vtk.util import numpy_support
-from scipy.signal import resample
-from scipy.interpolate import splrep, splev
 
 # Local import
 from vmtkpointselector import *
@@ -1701,7 +1701,7 @@ def vmtk_surface_smoother(surface, method, iterations=800, passband=1.0, relaxat
     return surface
 
 
-def extract_ica_centerline(base_path, resampling_step):
+def extract_ica_centerline(base_path, resampling_step, relevant_outlets=None):
     """
     Extract a centerline from the inlet to the first branch.
 
@@ -1712,6 +1712,7 @@ def extract_ica_centerline(base_path, resampling_step):
     Returns:
         centerline (vtkPolyData): Extracted centerline.
     """
+    # TODO: Extract ICA centerline by comparing daughter branch cross-section areas
     centerlines_path = base_path + "_centerline.vtp"
     input_filepath = base_path + ".vtp"
     ica_centerline_path = base_path + "_ica.vtp"
@@ -1722,7 +1723,15 @@ def extract_ica_centerline(base_path, resampling_step):
     # Prepare surface and identify in/outlets
     surface, capped_surface = prepare_surface(base_path, input_filepath)
     inlet, outlets = get_centers(surface, base_path)
-    outlet1, outlet2 = get_relevant_outlets(capped_surface, base_path)
+    if relevant_outlets is not None:
+        outlet1, outlet2 = relevant_outlets[:3], relevant_outlets[3:]
+        surface_locator = get_locator(capped_surface)
+        id1 = surface_locator.FindClosestPoint(outlet1)
+        id2 = surface_locator.FindClosestPoint(outlet2)
+        outlet1 = capped_surface.GetPoint(id1)
+        outlet2 = capped_surface.GetPoint(id2)
+    else:
+        outlet1, outlet2 = get_relevant_outlets(capped_surface, base_path)
     outlets, outlet1, outlet2 = sort_outlets(outlets, outlet1, outlet2, base_path)
 
     # Compute / import centerlines
@@ -1737,10 +1746,10 @@ def extract_ica_centerline(base_path, resampling_step):
                                                       resampling=resampling_step)
 
     # Extract ICA centerline
-    tmp_line_1 = extract_single_line(centerline_relevant_outlets, 0)
-    tmp_line_2 = extract_single_line(centerline_relevant_outlets, 1)
-    line = extract_single_line(centerlines, 0, startID=0, endID=centerline_div(tmp_line_1,
-                                                                               tmp_line_2))
+    tmp_line_1 = extract_single_line(centerline_relevant_outlets[0], 0)
+    tmp_line_2 = extract_single_line(centerline_relevant_outlets[0], 1)
+    tolerance = get_tolerance(tmp_line_1)
+    line = extract_single_line(tmp_line_1, 0, startID=0, endID=centerline_div(tmp_line_1, tmp_line_2, tolerance))
     write_polydata(line, ica_centerline_path)
     return line
 
@@ -2501,10 +2510,9 @@ def check_if_surface_is_merged(surface, centerlines, output_filepath):
     for i in range(centerlines.GetNumberOfLines()):
         line_to_compare = vmtk_centerline_resampling(lines_to_compare[i], length=0.1)
         line_to_check = vmtk_centerline_resampling(extract_single_line(lines_to_check, i), length=0.1)
-
         # Compare distance between points along both centerliens
         n = min([line_to_check.GetNumberOfPoints(), line_to_compare.GetNumberOfPoints()])
-        tolerance = get_tolerance(line_to_compare) * 100
+        tolerance = get_tolerance(line_to_compare) * 500
         for j in range(n):
             p1 = np.asarray(line_to_check.GetPoint(j))
             p2 = np.asarray(line_to_compare.GetPoint(j))

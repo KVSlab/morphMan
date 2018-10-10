@@ -6,6 +6,8 @@
 ##      PURPOSE.  See the above copyright notices for more information.
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
+
+from IPython import embed
 from scipy.ndimage.filters import gaussian_filter
 from scipy.signal import argrelextrema
 
@@ -41,8 +43,28 @@ def automated_landmarking(input_filepath, curv_method, resampling_step, algorith
     elif algorithm == "piccinelli":
         landmarking_piccinelli(ica_centerline, base_path, curv_method, algorithm, resampling_step, smooth_line,
                                nknots, smoothing_factor_curv, smoothing_factor_torsion, iterations)
-    else:
-        print("Algorithm is not valid. Select between 'bogunovic' and 'piccinelli'.")
+
+
+def map_landmarks(landmarks, centerline):
+    """
+    Takes new landmarks and original centerline,
+    mapping each landmark interface to the original centerline.
+
+    Args:
+        landmarks (dict): Contains landmarks.
+        centerline (vtkPolyData): Original centerline.
+
+    Returns:
+        landmarks (dict): Contains landmarks mapped to centerline.
+    """
+    locator = get_locator(centerline)
+    for key in landmarks:
+        landmark = landmarks[key]
+        landmark_id = locator.FindClosestPoint(landmark)
+        landmark_mapped = centerline.GetPoint(landmark_id)
+        landmarks[key] = landmark_mapped
+
+    return landmarks
 
 
 def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
@@ -64,12 +86,15 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
         nknots (int): Number of knots for B-splines.
         smoothing_factor (float): Smoothing factor used in VMTK
         iterations (int): Number of smoothing iterations.
+
+    Returns:
+        landmarks (dict): Landmarking interfaces as points.
     """
 
     if resampling_step is not None:
         centerline = vmtk_centerline_resampling(centerline, length=resampling_step)
 
-    elif curv_method == "vmtk":
+    if curv_method == "vmtk":
         line = vmtk_centerline_attributes(centerline)
         line = vmtk_centerline_geometry(line, smooth_line, factor=smoothing_factor, iterations=iterations)
         curvature_ = get_array("Curvature", line)
@@ -141,7 +166,7 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
     value_index = z[argrelextrema(z, np.less)[0]].min()
     max_coronal_ids = np.array(z.tolist().index(value_index))
     if abs(length[max_coronal_ids] - length[-1]) > 30:
-        print("Sanity check failed")
+        print("-- Sanity check failed")
         return None
 
     def find_interface(start, direction, tol, part):
@@ -160,22 +185,22 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
             interfaces[part] = min_point
 
         elif not success and part == "sup_ant":
-            print("Where not able to identify the interface between the" +
+            print("-- Where not able to identify the interface between the" +
                   "anterior and superior bend. Chekc the coronal coordinates")
             return None
 
         elif not success and part != "inf_end":
-            print("The geometry is to short to be classified with superior" +
+            print("-- The geometry is to short to be classified with superior" +
                   ", anterior, posterior and inferior.")
             return None
 
         elif not success and part == "inf_end":
             interfaces["inf_end"] = np.array([0])
             i = 0
-            print("End of inferior is at the end of the geometry, this might" +
+            print("-- End of inferior is at the end of the geometry, this might" +
                   "affect the geometry stats")
         else:
-            print("Something happend, idea: some bend ended at the last point")
+            print("-- Something happend, idea: some bend ended at the last point")
             return None
 
         return i
@@ -195,23 +220,21 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
     if start is None:
         return None
 
-    # Find a "center" of each bend
-    bends = ["inferior", "posterior", "anterior", "superior"]
+    # Set landmarks following Bogunovic
+    landmarks = {}
+    for k, v in interfaces.items():
+        landmarks[k] = line.GetPoint(int(v))
 
-    max_landmarks = {}
-    for i in range(len(bends)):
-        # Following Bogunovic
-        landmarks = {}
-        for k, v in max_landmarks.iteritems():
-            landmarks[k] = line.GetPoints().GetPoint(int(v))
-        for k, v in interfaces.iteritems():
-            landmarks[k] = line.GetPoints().GetPoint(int(v))
+    # Map landmarks to initial centerline
+    landmarks = map_landmarks(landmarks, centerline)
 
     # Save landmarks
-    print("Case %s was successfully landmarked." % (base_path[-5:]))
+    print("-- Case was successfully landmarked.")
     if landmarks is not None:
         write_parameters(landmarks, base_path)
         create_particles(base_path, algorithm, curv_method)
+
+    return landmarks
 
 
 def landmarking_piccinelli(centerline, base_path, curv_method, algorithm, resampling_step,
@@ -239,8 +262,10 @@ def landmarking_piccinelli(centerline, base_path, curv_method, algorithm, resamp
         smoothing_factor_curv (float): Smoothing factor for computing curvature.
         smoothing_factor_torsion (float): Smoothing factor for computing torsion.
         iterations (int): Number of smoothing iterations.
+
+    Returns:
+        landmarks (dict): Landmarking interfaces as points.
     """
-    print("Case: %s" % base_path.split("/")[-1])
 
     if resampling_step is not None:
         centerline = vmtk_centerline_resampling(centerline, resampling_step)
@@ -268,9 +293,8 @@ def landmarking_piccinelli(centerline, base_path, curv_method, algorithm, resamp
         max_point_tor_ids = list(argrelextrema(abs(torsion_smooth), np.greater)[0])
 
     else:
-        print("Not a valid method for computing curvature/torsion")
-        print("Methods available: 'spline' or 'vmtk'")
-        sys.exit(1)
+        raise ValueError("ERROR: Selected method for computing curvature / torsion not available" +
+                         "\nPlease select between 'spline' and 'vmtk'")
 
     # Extract local curvature minimums
     length = get_curvilinear_coordinate(line)
@@ -312,6 +336,7 @@ def landmarking_piccinelli(centerline, base_path, curv_method, algorithm, resamp
 
     # Define bend interfaces based on Piccinelli et al.
     def find_interface():
+        found = False
         interface = {}
         k = 0
         start_id = 0
@@ -331,13 +356,19 @@ def landmarking_piccinelli(centerline, base_path, curv_method, algorithm, resamp
     # Compute and extract interface points
     interfaces = find_interface()
     landmarks = {}
-    for k, v in interfaces.iteritems():
+    for k, v in interfaces.items():
         landmarks[k] = line.GetPoints().GetPoint(int(v))
 
+    # Map landmarks to initial centerline
+    landmarks = map_landmarks(landmarks, centerline)
+
     # Save landmarks
+    print("-- Case was successfully landmarked.")
     if landmarks is not None:
         write_parameters(landmarks, base_path)
         create_particles(base_path, algorithm, curv_method)
+
+    return landmarks
 
 
 def spline_and_geometry(line, smooth, nknots):
@@ -396,11 +427,11 @@ def spline_and_geometry(line, smooth, nknots):
     ddlsfy = splev(curv_coor, fy, der=2)
     ddlsfz = splev(curv_coor, fz, der=2)
 
-    C1xC2_1 = ddlsfz * dlsfy - ddlsfy * dlsfz
-    C1xC2_2 = ddlsfx * dlsfz - ddlsfz * dlsfx
-    C1xC2_3 = ddlsfy * dlsfx - ddlsfx * dlsfy
+    c1xc2_1 = ddlsfz * dlsfy - ddlsfy * dlsfz
+    c1xc2_2 = ddlsfx * dlsfz - ddlsfz * dlsfx
+    c1xc2_3 = ddlsfy * dlsfx - ddlsfx * dlsfy
 
-    curvature_ = np.sqrt(C1xC2_1 ** 2 + C1xC2_2 ** 2 + C1xC2_3 ** 2) / \
+    curvature_ = np.sqrt(c1xc2_1 ** 2 + c1xc2_2 ** 2 + c1xc2_3 ** 2) / \
                         (dlsfx ** 2 + dlsfy ** 2 + dlsfz ** 2) ** 1.5
 
     max_point_ids = list(argrelextrema(curvature_, np.greater)[0])
@@ -425,12 +456,12 @@ def spline_and_geometry(line, smooth, nknots):
     dddlsfy = splev(length, fy, der=3)
     dddlsfz = splev(length, fz, der=3)
 
-    torsion_spline = (dddlsfx * C1xC2_1 + dddlsfy * C1xC2_2 + dddlsfz * C1xC2_3) / \
-                     (C1xC2_1 ** 2 + C1xC2_2 ** 2 + C1xC2_3 ** 2)
+    torsion_spline = (dddlsfx * c1xc2_1 + dddlsfy * c1xc2_2 + dddlsfz * c1xc2_3) / \
+                     (c1xc2_1 ** 2 + c1xc2_2 ** 2 + c1xc2_3 ** 2)
     torsion_array = create_vtk_array(torsion_spline, "Torsion")
     line.GetPointData().AddArray(torsion_array)
 
-    curvature_ = np.sqrt(C1xC2_1 ** 2 + C1xC2_2 ** 2 + C1xC2_3 ** 2) / \
+    curvature_ = np.sqrt(c1xc2_1 ** 2 + c1xc2_2 ** 2 + c1xc2_3 ** 2) / \
                         (dlsfx ** 2 + dlsfy ** 2 + dlsfz ** 2) ** 1.5
     curvature_[0] = curvature[0]
     curvature_[-1] = curvature[-1]
@@ -487,36 +518,38 @@ def read_command_line():
     """
     description = "Perform landmarking of an input centerline to" + \
                   "identify different segments along the vessel." + \
-                  "Landmarking algorithm based on Bogunevic et al. (2012)."
+                  "Landmarking algorithm based on Bogunevic et al. (2012) " + \
+                  " and Piccinelli et al. (2011)."
 
     parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
-    required = parser.add_argument_group('required named arguments')
 
-    parser = ArgumentParser()
     # Required arguments
-    required.add_argument('-i', '--ifile', type=str, default=None,
-                          help="Path to the surface model", required=True)
+    required = parser.add_argument_group('Required arguments')
+    required.add_argument('-i', '--ifile', type=str, default=None, required=True,
+                          help="Path to the surface model")
 
     # Optinal arguments
     parser.add_argument('-m', '--curv-method', type=str, default="spline",
                         help="Choose which method used for computing curvature: spline (default) " +
-                             "| vmtk | disc |")
+                             "| vmtk | disc |",
+                        choices=['spline', 'vmtk', 'disc'])
     parser.add_argument('-a', '--algorithm', type=str, default="bogunovic",
                         help="Choose which landmarking algorithm to use: " +
-                             "'bogunovic' or 'piccinelli'. Default is 'bogunovic'.")
-    parser.add_argument('-r', '--resampling_length', type=float, default=None,
-                        help="Choose the resampling step when resampling the centerline.")
-    parser.add_argument('-n', '--nknots', type=int, default=11,
+                             "'bogunovic' or 'piccinelli'. Default is 'bogunovic'.",
+                        choices=['bogunovic', 'piccinelli'])
+    parser.add_argument('-k', '--nknots', type=int, default=11,
                         help="Number of knots used in B-splines.")
-    parser.add_argument('-s', '--smooth_line', type=bool, default=False,
+    parser.add_argument('-sl', '--smooth_line', type=str2bool, default=False,
                         help="If the original centerline should be smoothed " +
-                             "when computing the centerline attribiutes", metavar="smooth_line")
+                             "when computing the centerline attribiutes")
     parser.add_argument('-facc', '--smoothing_factor_curvature', type=float, default=1.0,
                         help="Smoothing factor for computing curvature.")
     parser.add_argument('-fact', '--smoothing_factor_torsion', type=float, default=1.0,
                         help="Smoothing factor for computing torsion.")
     parser.add_argument('-it', '--iterations', type=int, default=100,
                         help="Smoothing iterations.")
+    parser.add_argument("-r", "--resampling-step", type=float, default=0.1,
+                        help="Resampling step in centerlines.")
     args = parser.parse_args()
 
     return dict(input_filepath=args.ifile, curv_method=args.curv_method, resampling_step=args.resampling_step,

@@ -7,9 +7,9 @@
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
+from argparse_common import *
 # Local import
 from common import *
-from argparse_common import *
 
 
 def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angle,
@@ -200,7 +200,6 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
                                                        rotated_voronoi,
                                                        end_points,
                                                        bif_, cylinder_factor)
-
     # Note: This function is slow, and can be commented, but at the cost of robustness.
     interpolated_voronoi = remove_distant_points(interpolated_voronoi, interpolated_cl)
     write_polydata(interpolated_voronoi, voronoi_ang_path)
@@ -607,9 +606,9 @@ def read_command_line():
                         help="Each daughter branch is rotated an angle 'a' in the" +
                              " bifurcation plane. 'a' is assumed to be in degrees," +
                              " and not radians", metavar="rotation_angle")
-    parser.add_argument("--keep-fixed-1", type=bool, default=False,
+    parser.add_argument("--keep-fixed-1", type=str2bool, default=False,
                         help="Leave one branch untuched")
-    parser.add_argument("--keep-fixed-2", type=bool, default=False,
+    parser.add_argument("--keep-fixed-2", type=str2bool, default=False,
                         help="Leave one branch untuched")
 
     # Bifurcation reconstruction arguments

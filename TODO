@@ -3,14 +3,9 @@ Formaleties
 - Add a badge for coveralls
 - Add a badge for building on Travis CI
 - Allow forking repo when repo is public
-- Tests for bif angle, area variation, stenosis removal
-
-Henrik
-- Update documentation images
+- Update documentation images: branches --bif & --lower, aneu removal, area (all variations)
+- Add Curvature.png image
 - Travis CI fix SED
-- Curvature and bend images
-- Landmarking test
-
 
 Code
 - Make into a module
