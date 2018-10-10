@@ -35,7 +35,7 @@ install:
   - conda info -a
   
   # / -> // in vmtkcenterlines
-  - bash fixvmtk.sh
+  - bash workaround_vtmk.sh
   
 script:
   # Your test script goes here
