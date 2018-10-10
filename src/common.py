@@ -3905,16 +3905,6 @@ def compute_voronoi_vector_to_centerline_angle(pointId, vector, centerline):
 
     return alpha
 
-"""
-    tangent = list(np.array(centerline.GetPoint(pointId + 1)) \
-                   - np.array(centerline.GetPoint(pointId - 1)))
-
-    ptnnormal = centerline.GetPointData().GetArray(parallelTransportNormalsArrayName).GetTuple3(pointId)
-    alpha = compute_angle_between_vectors(ptnnormal, tangent, vector)
-
-    return alpha
-"""
-
 
 def normalize(vector):
     """Normalize a vector to unit length.
@@ -3974,26 +3964,6 @@ def compute_angle_between_vectors(normal, tangent, vector):
 
     return angle
 
-"""
-    # Compute the tangent component orthogonal to normal
-    normal_dot = np.dot(np.array(tangent), np.array(normal))
-    otangent = np.array(tangent) - normal_dot * np.array(normal)
-    otangent = normalize(otangent)
-
-    # Compute the vector component orthogonal to otangent, i.e. parallel to normal
-    vector_dot = np.dot(normalize(vector), otangent)
-    ovector = normalize(vector - vector_dot * otangent)
-
-    theta = np.arccos(np.dot(normalize(normal), ovector)) * np.pi / 180
-    cross = np.cross(normalize(ovector), normal)
-    tangent_dot = np.dot(otangent, cross)
-    if tangent_dot < 0.0:
-        theta = -1.0 * theta
-
-    angle = -theta
-
-    return angle
-"""
 
 def compute_spline(startValue, endValue, numberOfPoints):
     """Create a vtkDoubleArray which is a spline between startValue, mean(startValue,
