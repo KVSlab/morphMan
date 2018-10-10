@@ -20,7 +20,7 @@ how the centerlines are computed, or how the curvature and torsion is derived.
 Both algorithms are very sensetive to the input curvature and torision, and
 are therefore not directly reproduceble. In Kjeldsberg 2018 [3]_ there is a
 a thorough comparison between landmarking algorithms, input parameters,
-and centerline smoothing methods  which can help you to choose the corret
+and centerline smoothing methods which can help you to choose the corret
 options for your application.
 
 The script ``automated_landmarking.py`` has three methods for computing
@@ -31,16 +31,19 @@ the descrete derivatives of the centerline curve, set with
  2. Discrete derivatives (``disc``)
  3. VMTK (``vmtk``)
 
-To perform landmarking, run the following command::
+To perform landmarking, we will be using the model with `ID C0001 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0001/C0001_models.tar.gz>`_
+from the Aneurisk database. For the commands below we assume that there is a file `./C0001/surface/model.vtp`
+, relative to where you execute the command.
+To landmark the surface model, run the following command::
 
-    python automated_landmarking.py --ifile C0001/surface/model.vtp --algorithm bogunovic --curv_method spline
+    python automated_landmarking.py --ifile ../test/testdata/C0001/surface/model.vtp --method bogunovic --curv-method spline --curv-method spline --nknots 8
 
-The command will output a file `C0006/surface/landmark_[ALGORITHM]_[CURVMETHOD].particles`
+The command will output a file `C0001/surface/landmark_[ALGORITHM]_[CURVMETHOD].particles`
 which contains four points defining the interfaces between the segments of the vessel.
 
-.. figure:: landmark.png
+.. figure:: landmarking.png
 
-  Figure 1: Landmarked geometry, with interfaces shown as red spheres.
+  Figure 1: Landmarked geometry, with interfaces shown as red spheres along the white centerline.
 
 
 .. _compute_alpha_beta:

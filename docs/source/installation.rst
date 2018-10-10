@@ -32,3 +32,4 @@ You can then activate your environment by running ``source activate your_environ
 Now you are all set, and can clone morphMan, and start manipulating your geometries::
 
   git clone https://github.com/KVSlab/morphMan
+

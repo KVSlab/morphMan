@@ -90,9 +90,8 @@ sections with high curvature, like the internal carotid artery, is unproblematic
   Figure 3: Comparison of the new and old model, with and without stenosis.
 
 To recreate the above output, execute the following on the commandline line::
-    
-    python manipulate_area.py --ifile C0001/surface.vtp --ofile C0001/stenosis.vtp --smooth True --method stenosis --stenosis-point x y z --percentage 50 --size 1
 
+    python manipulate_area.py --ifile C0001/surface.vtp --ofile C0001/stenosis.vtp --smooth True --method stenosis --stenosis-point x y z --percentage 50 --size 1
 
 Remove stenosis
 ~~~~~~~~~~~~~~~
@@ -111,7 +110,6 @@ To reproduce the above result, execute the following command::
 
     python manipulate_area.py --ifile C0001/stenosis.vtp --ofile C0001/no_stenosis.vtp --smooth True --method stenosis --stenosis-points x y z x y z
 
-
 Inflation / deflation of an arterial segment
 ============================================
 The area of interest can also be inflated or decflated. To do so, pass the argument ``--method area``, and 
@@ -119,7 +117,7 @@ set the percentage change with ``--percentage``. Like with :ref:`area_variations
 region of interest is a transition between the original and modified geometry to ensure smooth transitions.
 
 To perform a deflation run the following command::
-    
+
     python manipulate_area.py --ifile C0001/surface.vtp --ofile C0001/inflated.vtp --smooth True --percentage -20 --method area --region-of-interest first_line
 
 Below is an illustration of area decrease and increase in a single patient-specific model.
