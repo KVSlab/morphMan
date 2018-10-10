@@ -86,7 +86,7 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
         outlet1 = capped_surface.GetPoint(id1)
         outlet2 = capped_surface.GetPoint(id2)
 
-    print("Region of interest is defined by the region points: \nOutlet 1: %s \nOutlet 2: %s" % (outlet1, outlet2))
+    print("-- Region of interest is defined by the region points: \nOutlet 1: %s \nOutlet 2: %s" % (outlet1, outlet2))
 
     # Sort outlets
     outlets, outlet1, outlet2 = sort_outlets(outlets, outlet1, outlet2, base_path)
@@ -131,6 +131,7 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
 
     write_points(div_points[0], points_div_path)
     write_points(end_points[0], points_clipp_path)
+    write_points(end_points_rotated[0], points_clipp_rotated_path)
 
     # Clip centerlines
     print("-- Clipping centerlines.")

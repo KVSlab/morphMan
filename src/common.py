@@ -3890,6 +3890,22 @@ def compute_voronoi_vector_to_centerline_angle(pointId, vector, centerline):
     Returns:
         alpha (float): Angle
     """
+
+    point0 = centerline.GetPoint(pointId)
+    point1 = centerline.GetPoint(pointId + 1)
+    point2 = centerline.GetPoint(pointId - 1)
+
+    tangent = [0.0, 0.0, 0.0]
+    for i in range(3):
+        tangent[i] += point1[i] - point0[i]
+        tangent[i] += point0[i] - point2[i]
+
+    ptnnormal = centerline.GetPointData().GetArray(parallelTransportNormalsArrayName).GetTuple3(pointId)
+    alpha = compute_angle_between_vectors(ptnnormal, tangent, vector)
+
+    return alpha
+
+"""
     tangent = list(np.array(centerline.GetPoint(pointId + 1)) \
                    - np.array(centerline.GetPoint(pointId - 1)))
 
@@ -3897,6 +3913,7 @@ def compute_voronoi_vector_to_centerline_angle(pointId, vector, centerline):
     alpha = compute_angle_between_vectors(ptnnormal, tangent, vector)
 
     return alpha
+"""
 
 
 def normalize(vector):
@@ -3927,6 +3944,38 @@ def compute_angle_between_vectors(normal, tangent, vector):
         angle (float): Angle in degrees.
     """
     # Compute the tangent component orthogonal to normal
+    otangent = [0.0, 0.0, 0.0]
+    normalDot = vtk.vtkMath.Dot(tangent, normal)
+    otangent[0] = tangent[0] - normalDot * normal[0]
+    otangent[1] = tangent[1] - normalDot * normal[1]
+    otangent[2] = tangent[2] - normalDot * normal[2]
+    vtk.vtkMath.Normalize(otangent)
+
+    # Compute the vector component orthogonal to otangent, i.e. parallel to normal
+    vtk.vtkMath.Normalize(vector)
+    ovector = [0.0, 0.0, 0.0]
+    vectorDot = vtk.vtkMath.Dot(vector, otangent)
+    ovector[0] = vector[0] - vectorDot * otangent[0]
+    ovector[1] = vector[1] - vectorDot * otangent[1]
+    ovector[2] = vector[2] - vectorDot * otangent[2]
+    vtk.vtkMath.Normalize(ovector)
+
+    theta = vtkvmtk.vtkvmtkMath.AngleBetweenNormals(normal, ovector)
+    theta = vtk.vtkMath.DegreesFromRadians(theta)
+
+    cross = [0.0, 0.0, 0.0]
+    vtk.vtkMath.Cross(ovector, normal, cross)
+    tangentDot = vtk.vtkMath.Dot(otangent, cross)
+
+    if tangentDot < 0.0:
+        theta = -1.0 * theta
+
+    angle = -theta
+
+    return angle
+
+"""
+    # Compute the tangent component orthogonal to normal
     normal_dot = np.dot(np.array(tangent), np.array(normal))
     otangent = np.array(tangent) - normal_dot * np.array(normal)
     otangent = normalize(otangent)
@@ -3944,7 +3993,7 @@ def compute_angle_between_vectors(normal, tangent, vector):
     angle = -theta
 
     return angle
-
+"""
 
 def compute_spline(startValue, endValue, numberOfPoints):
     """Create a vtkDoubleArray which is a spline between startValue, mean(startValue,
@@ -4095,6 +4144,8 @@ def interpolate_voronoi_diagram(interpolatedCenterlines, patchCenterlines,
                                                                                       endCellPointHalfRadius,
                                                                                       clippedVoronoi, patchCenterlines)
 
+        write_polydata(startInterpolationDataset, "tmp_start_%d.vtp" % j)
+        write_polydata(endInterpolationDataset, "tmp_end_%d.vtp" % j)
         # Find and insert new points
         newVoronoiPoints, newVoronoiPointsMISR = voronoi_diagram_interpolation(interpolationCellId,
                                                                                startId, endId,
