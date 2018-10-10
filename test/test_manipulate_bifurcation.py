@@ -19,7 +19,7 @@ from common import get_path_names, read_polydata, get_locator, get_tolerance, \
                    extract_single_line, distance
 
 
-@pytest.mark.parametrize("angle", [-20 / 180 * np.pi, 20 / 180 * np.pi])
+@pytest.mark.parametrize("angle", [20 / 180 * np.pi])
 def test_bifurcation_angle(common_input, angle):
     common_input.update(dict(keep_fixed_1 = False,
                              keep_fixed_2 = False,
@@ -28,12 +28,7 @@ def test_bifurcation_angle(common_input, angle):
                              cylinder_factor = 7,
                              angle = angle,
                              region_of_interest = "commandline",
-                             region_points = [74.02971649169,
-                                              54.54873275756,
-                                              43.89385986328,
-                                              35.75942230224,
-                                              59.80244827270,
-                                              39.67420196533]))
+                             region_points = [35.8, 59.8, 39.7, 76.8, 54.7, 53.2]))
 
     rotate_branches(**common_input)
 
@@ -107,4 +102,4 @@ def test_bifurcation_angle(common_input, angle):
 
     if (angle_original - 2*common_input["angle"]) > np.pi:
         angle_rotated = 2*np.pi - angle_rotated
-    assert abs(angle_original - angle_rotated - 2*common_input["angle"]) < 0.15
+    assert abs(angle_original - angle_rotated - 2*common_input["angle"]) < 0.08

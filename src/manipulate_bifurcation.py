@@ -68,8 +68,6 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
     # Points
     points_clipp_path = base_path + "_clippingpoints.vtp"
     points_div_path = base_path + "_divergingpoints.vtp"
-    points_clipp_rotated_path = base_path + "_rotated_clippingpoints.vtp"
-    points_div_rotated_path = base_path + "_rotated_divergingpoints.vtp"
 
     # Clean and capp / uncapp surface
     surface, capped_surface = prepare_surface(base_path, input_filepath)

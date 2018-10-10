@@ -1716,7 +1716,7 @@ def extract_ica_centerline(base_path, resampling_step, relevant_outlets=None):
     centerlines_path = base_path + "_centerline.vtp"
     input_filepath = base_path + ".vtp"
     ica_centerline_path = base_path + "_ica.vtp"
-    centerline_relevant_outlets_path = base_path + "_centerline_relevant_outlets.vtp"
+    centerline_relevant_outlets_path = base_path + "_centerline_relevant_outlets_landmark.vtp"
     if path.exists(ica_centerline_path):
         return read_polydata(ica_centerline_path)
 
@@ -1751,6 +1751,7 @@ def extract_ica_centerline(base_path, resampling_step, relevant_outlets=None):
     tolerance = get_tolerance(tmp_line_1)
     line = extract_single_line(tmp_line_1, 0, startID=0, endID=centerline_div(tmp_line_1, tmp_line_2, tolerance))
     write_polydata(line, ica_centerline_path)
+
     return line
 
 
