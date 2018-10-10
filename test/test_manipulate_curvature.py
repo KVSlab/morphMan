@@ -9,10 +9,11 @@ import sys
 from os import path
 relative_path = path.dirname(path.abspath(__file__))
 sys.path.insert(0, path.join(relative_path, '..', 'src'))
+sys.path.insert(0, "../src")
 
 import pytest
 import numpy as np
-from fixtures import common_input
+from .fixtures import common_input
 from manipulate_curvature import curvature_variations
 from common import get_path_names, extract_single_line, read_polydata, get_locator
 from estimate_alpha_and_beta import discrete_geometry

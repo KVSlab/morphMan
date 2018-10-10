@@ -9,11 +9,12 @@ import sys
 from os import path
 relative_path = path.dirname(path.abspath(__file__))
 sys.path.insert(0, path.join(relative_path, '..', 'src'))
+sys.path.insert(0, "../src")
 
 import pytest
 from manipulate_bend import move_vessel
 from estimate_alpha_and_beta import compute_angle, compute_curvature
-from fixtures import common_input
+from .fixtures import common_input
 from common import read_polydata, get_path_names
 
 @pytest.mark.parametrize("alpha,beta",

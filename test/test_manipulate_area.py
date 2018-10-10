@@ -9,9 +9,10 @@ import sys
 from os import path
 relative_path = path.dirname(path.abspath(__file__))
 sys.path.insert(0, path.join(relative_path, '..', 'src'))
+sys.path.insert(0, "../src")
 
 import pytest
-from fixtures import common_input
+from .fixtures import common_input
 import numpy as np
 from manipulate_area import area_variations
 from common import read_polydata, vmtk_compute_centerline_sections, get_array, \
