@@ -1,17 +1,3 @@
 Formaleties
 - Launch the documentation on ReadTheDocs
-- Add a badge for coveralls
-- Add a badge for building on Travis CI
-- Allow forking repo when repo is public
 - Update documentation images: branches --bif & --lower, aneu removal, area (all variations)
-- Add Curvature.png image
-- Travis CI fix SED
-
-Code
-- Make into a module
-
-Notes for the future
-- Replace for-loops with numpy_support in vtk
-- Generalize functions which wrapes vtk objects by exposing more agruments in the function
-- Restructure the code into: centerline_operations.py, voronoi_operations.py,
-  surface_operations io.py, etc. There are now overlapping functionalty in the code.
