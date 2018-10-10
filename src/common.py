@@ -2781,6 +2781,9 @@ def get_spline_points(line, param, direction, clip_points):
     id2 = locator.FindClosestPoint(p2)
     region_points = [p1, p2]
 
+    for i in range(len(region_points)):
+        region_points[i] = np.array([region_points[i][0], region_points[i][1], region_points[i][2]])
+
     # Select n uniformly spaced points
     n = 10
     points = []
@@ -2791,9 +2794,6 @@ def get_spline_points(line, param, direction, clip_points):
         ids[i - 1] = id_
         p = line.GetPoints().GetPoint(id_)
         points.append(np.array([p[0], p[1], p[2]]))
-
-    for i in range(len(region_points)):
-        region_points[i] = np.array([region_points[i][0], region_points[i][1], region_points[i][2]])
 
     n = best_plane(points, region_points)
 
@@ -2869,11 +2869,11 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
 
         start_id = 0
         end_id = min(point_ids)
-        cl_id = 0
+        cl_id = point_ids.index(end_id)
 
         region_points = list(line2.GetPoint(start_id)) + list(line2.GetPoint(end_id))
 
-    elif region_of_interest == "commandline" or region_of_interest == "manual":
+    elif region_of_interest in ["commandline", "landmarking", "manual"]:
         # Get points from the user
         if region_of_interest == "manual":
             print("\nPlease select region of interest in the render window.")
@@ -2974,7 +2974,33 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
     line_to_change = extract_single_line(centerline, cl_id, startID=start_id, endID=end_id)
     line_to_change = spline_centerline(line_to_change, nknots=25, isline=True)
 
-    return line_to_change, region_points
+    remaining_centerlines = []
+    diverging_centerlines = []
+    start_point = line_to_change.GetPoint(0)
+    end_point = line_to_change.GetPoint(line_to_change.GetNumberOfPoints() - 1)
+    tol = get_tolerance(centerline) * 4
+    for i in range(centerline.GetNumberOfLines()):
+        line = extract_single_line(centerline, i)
+        locator = get_locator(line)
+        id1 = locator.FindClosestPoint(start_point)
+        id2 = locator.FindClosestPoint(end_point)
+        p1_tmp = line.GetPoint(id1)
+        p2_tmp = line.GetPoint(id2)
+        if distance(start_point, p1_tmp) < tol and distance(end_point, p2_tmp) < tol:
+            if start_id != 0:
+                tmp = extract_single_line(centerline, i, startID=0, endID=start_id - 1)
+                remaining_centerlines.append(tmp)
+            tmp = extract_single_line(centerline, i, startID=end_id + 1,
+                                      endID=line.GetNumberOfPoints() - 1)
+            remaining_centerlines.append(tmp)
+        else:
+            diverging_centerlines.append(line)
+
+    if len(diverging_centerlines) == 0:
+        diverging_centerlines = None
+    remaining_centerlines = merge_data(remaining_centerlines)
+
+    return line_to_change, remaining_centerlines, diverging_centerlines, region_points
 
 
 def find_region_of_interest_and_diverging_centerlines(centerlines_complete, region_points):
@@ -3122,65 +3148,64 @@ def move_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_centerlines, 
     return centerline
 
 
-def split_voronoi_with_centerlines(voronoi, centerline1, centerline2):
+def split_voronoi_with_centerlines(voronoi, centerlines):
     """Given two centerlines, and a Voronoi diagram, return two Voronoi diagrams based on
     the distance of the two centerlines.
 
     Args:
         voronoi (vtkPolyData): Input Voronoi diagram
-        centerline1 (vtkPolyData): Centerline 1, should not overlap with centerline 2.
-        centerline2 (vtkPolyData): Centerline 2, should not overlap with centerline 1.
+        centerlines (list): A list of centerlines (vtkPolyData). An entery could
+                            alternativly be None as well, the corresponding voronoi
+                            diagram would then be None as well.
 
     Returns
-        voronoi1 (vtkPolyData): The Voronoi diagram closest to centerline 1.
-        voronoi2 (vtkPolyData): The Voronoi diagram closest to centerline 2.
+        voronoi2 (list): A list of Voronoi diagrams closest to each centerline.
     """
-    voronoi1 = vtk.vtkPolyData()
-    points1 = vtk.vtkPoints()
-    cell_array1 = vtk.vtkCellArray()
-    radius1 = np.zeros(voronoi.GetNumberOfPoints())
-    loc1 = get_locator(centerline1)
+    n = len(centerlines)
+    centerline1 = [centerlines[i] for i in range(n) if centerlines[i] is not None]
+    voronoi1 = [vtk.vtkPolyData() for i in range(n) if centerlines[i] is not None]
+    points1 = [vtk.vtkPoints() for i in range(n) if centerlines[i] is not None]
+    cell_array1 = [vtk.vtkCellArray() for i in range(n) if centerlines[i] is not None]
+    radius1 = [np.zeros(voronoi.GetNumberOfPoints()) for i in range(n) if centerlines[i] is not None]
+    loc1 = [get_locator(centerlines[i]) for i in range(n) if centerlines[i] is not None]
+    count1 = [0 for i in range(n) if centerlines[i] is not None]
 
-    voronoi2 = vtk.vtkPolyData()
-    points2 = vtk.vtkPoints()
-    cell_array2 = vtk.vtkCellArray()
-    radius2 = np.zeros(voronoi.GetNumberOfPoints())
-    loc2 = get_locator(centerline2)
+    n1 = len(centerline1)
 
     get_radius = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1
 
-    count1 = 0
-    count2 = 0
     for i in range(voronoi.GetNumberOfPoints()):
+        dists = []
         point = voronoi.GetPoint(i)
         radius = get_radius(i)
-        dist1 = distance(centerline1.GetPoint(loc1.FindClosestPoint(point)), point)
-        dist2 = distance(centerline2.GetPoint(loc2.FindClosestPoint(point)), point)
+        for i in range(n1):
+            dists.append(distance(centerline1[i].GetPoint(loc1[i].FindClosestPoint(point)), point))
 
-        if dist1 < dist2:
-            points1.InsertNextPoint(point)
-            radius1[count1] = radius
-            cell_array1.InsertNextCell(1)
-            cell_array1.InsertCellPoint(count1)
-            count1 += 1
-        else:
-            points2.InsertNextPoint(point)
-            radius2[count2] = radius
-            cell_array2.InsertNextCell(1)
-            cell_array2.InsertCellPoint(count2)
-            count2 += 1
+        index = dists.index(min(dists))
 
-    voronoi1.SetPoints(points1)
-    voronoi1.SetVerts(cell_array1)
-    radius1 = create_vtk_array(radius1[radius1 > 0], radiusArrayName)
-    voronoi1.GetPointData().AddArray(radius1)
+        points1[index].InsertNextPoint(point)
+        radius1[index][count1[index]] = radius
+        cell_array1[index].InsertNextCell(1)
+        cell_array1[index].InsertCellPoint(count1[index])
+        count1[index] += 1
 
-    voronoi2.SetPoints(points2)
-    voronoi2.SetVerts(cell_array2)
-    radius2 = create_vtk_array(radius2[radius2 > 0], radiusArrayName)
-    voronoi2.GetPointData().AddArray(radius2)
+    for i in range(n1):
+        voronoi1[i].SetPoints(points1[i])
+        voronoi1[i].SetVerts(cell_array1[i])
+        tmp_radius1 = create_vtk_array(radius1[i][radius1[i] > 0], radiusArrayName)
+        voronoi1[i].GetPointData().AddArray(tmp_radius1)
 
-    return voronoi1, voronoi2
+    if n1 != n:
+        voronoi2 = []
+        for i in range(n):
+            if centerlines[i] is None:
+                voronoi2.append(None)
+            else:
+                voronoi2.append(voronoi1[i])
+    else:
+        voronoi2 = voronoi1
+
+    return voronoi2
 
 
 def get_clipped_centerline(centerline_relevant_outlets, data):

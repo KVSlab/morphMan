@@ -49,6 +49,8 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
     centerline_area_spline_path = base_path + "_centerline_area_spline.vtp"
     centerline_area_spline_sections_path = base_path + "_centerline_area_sections.vtp"
     centerline_spline_path = base_path + "_centerline_spline.vtp"
+    centerline_remaining_path = base_path + "_centerline_remaining.vtp"
+    centerline_diverging_path = base_path + "_centerline_diverging.vtp"
 
     # Clean, triangulate, and capp/uncapp surface
     surface, capped_surface = prepare_surface(base_path, input_filepath)
@@ -66,10 +68,16 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
                                           no_smooth_point, voronoi, pole_ids)
 
     # Spline centerline and compute cross-sectional areas along line
-    centerline_splined, region_points = get_line_to_change(capped_surface, centerlines,
-                                                           region_of_interest, method,
-                                                           region_points, stenosis_length)
+    centerline_splined, centerline_remaining, \
+            centerline_diverging, region_points = get_line_to_change(capped_surface, centerlines,
+                                                                     region_of_interest, method,
+                                                                     region_points, stenosis_length)
     write_polydata(centerline_splined, centerline_spline_path)
+    write_polydata(centerline_remaining, centerline_remaining_path)
+    if centerline_diverging is not None:
+        write_polydata(merge_data(centerline_diverging), centerline_diverging_path)
+
+    # Compute area
     centerline_area, centerline_area_sections = vmtk_compute_centerline_sections(surface,
                                                                                  centerline_splined)
     write_polydata(centerline_area, centerline_area_spline_path)
@@ -77,13 +85,23 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
 
     # Manipulate the voronoi diagram
     print("-- Change Voronoi diagram")
-    newvoronoi = change_area(voronoi, centerline_area, method, beta, ratio, percentage,
-                             region_of_interest, region_points)
-    write_polydata(newvoronoi, voronoi_new_path)
+    centerline_regions = [centerline_splined, centerline_remaining]
+    if centerline_diverging is not None:
+        centerline_regions += centerline_diverging
+    else:
+        centerline_regions += [None]
+    voronoi_regions = split_voronoi_with_centerlines(voronoi, centerline_regions)
+
+    new_voronoi = change_area(voronoi_regions[0], centerline_area, method, beta, ratio, percentage,
+                              region_of_interest, region_points, centerline_diverging,
+                              voronoi_regions[2:])
+
+    new_voronoi = merge_data([new_voronoi, voronoi_regions[1]])
+    write_polydata(new_voronoi, voronoi_new_path)
 
     # Make new surface
     print("-- Create surface")
-    new_surface = create_new_surface(newvoronoi, poly_ball_size=poly_ball_size)
+    new_surface = create_new_surface(new_voronoi, poly_ball_size=poly_ball_size)
 
     print("-- Smoothing, clean, and check surface.")
     new_surface = prepare_surface_output(new_surface, surface, centerlines,
@@ -169,7 +187,8 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
 
 
 def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
-                region_of_interest, region_points):
+                region_of_interest, region_points, diverging_centerline,
+                diverging_voronoi):
     """
     Change the cross-sectional area of an input
     voronoi diagram along the corresponding area
@@ -188,21 +207,6 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
     Returns:
         newVoronoi (vtkPolyData): Manipulated Voronoi diagram.
     """
-    array_for_tube = get_vtk_array("TubeRadius", 1, line_to_change.GetNumberOfPoints())
-
-    # Note: If you are looking at the ICA or other vascular structure which can be rather
-    # non-circular, please multiply MISR by a factor of, e.g. ~1.7. For arteries that are
-    # very close, there is an oposite problem, and one can include points from the Voronoi
-    # diagram belonging to other arteries. For robustness, the factor is now 1.05.
-    misr = get_array(radiusArrayName, line_to_change) * 1.05
-    for i in range(misr.shape[0]):
-        array_for_tube.SetTuple1(i, misr[i])
-    line_to_change.GetPointData().AddArray(array_for_tube)
-
-    tube_function = vtkvmtk.vtkvmtkPolyBallLine()
-    tube_function.SetInput(line_to_change)
-    tube_function.SetPolyBallRadiusArrayName("TubeRadius")
-
     # Get factor
     factor = get_factor(line_to_change, method, beta, ratio, percentage,
                         region_of_interest, region_points)
@@ -218,27 +222,50 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
     radius_array = get_vtk_array(radiusArrayName, 1, n)
 
     # Iterate through Voronoi diagram and manipulate
-    # If inside MISR tube and inside plane, change r and move point.
-    point = [0., 0., 0.]
     for i in range(n):
-        voronoi.GetPoint(i, point)
+        point = voronoi.GetPoint(i)
         point_radius = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
 
-        tube_value = tube_function.EvaluateFunction(point)
-        if tube_value <= 0.0:
-            tmp_id = locator.FindClosestPoint(point)
+        tmp_id = locator.FindClosestPoint(point)
 
-            v1 = np.asarray(line_to_change.GetPoint(tmp_id)) - np.asarray(point)
-            v2 = v1 * (1 - factor[tmp_id])
-            point = (np.asarray(point) + v2).tolist()
+        v1 = np.asarray(line_to_change.GetPoint(tmp_id)) - np.asarray(point)
+        v2 = v1 * (1 - factor[tmp_id])
+        point = (np.asarray(point) + v2).tolist()
 
-            # Change radius
-            point_radius = point_radius * factor[tmp_id]
+        # Change radius
+        point_radius = point_radius * factor[tmp_id]
 
         voronoi_points.InsertNextPoint(point)
         radius_array.SetTuple1(i, point_radius)
         cell_array.InsertNextCell(1)
         cell_array.InsertCellPoint(i)
+
+    # Offset Voronoi diagram along "diverging" centerlines
+    if diverging_centerline is not None:
+        count = i
+        for j in range(len(diverging_voronoi)):
+            # Get offset for Voronoi diagram
+            for i in range(len(diverging_centerline.GetNumberOfPoints())):
+                point = diverging_centerline.GetPoint(i)
+                tmp_id = locator.FindClosestPoint(point)
+                dist = distance(diverging_centerline.GetPoint(i), line_to_change.GetPoint(tmp_id))
+                if dist > line_to_change.GetPointData().GetArray(radiusArrayName).GetTuple1(tmp_id):
+                    break
+
+            v1 = np.array(line_to_change.GetPoint(tmp_id)) - np.array(point)
+            v2 = v1 * (1 - factor[tmp_id])
+
+            # Offset Voronoi diagram
+            for i in range(diverging_voronoi):
+                point = diverging_voronoi[j].GetPoint(i)
+                point_radius = diverging_voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
+                point = (np.asarray(point) + v2).tolist()
+
+                voronoi_points.InsertNextPoint(point)
+                radius_array.SetTuple1(count, point_radius)
+                cell_array.InsertNextCell(1)
+                cell_array.InsertCellPoint(count)
+                count += 1
 
     new_voronoi.SetPoints(voronoi_points)
     new_voronoi.SetVerts(cell_array)

@@ -143,7 +143,8 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
 
     # Clip the voronoi diagram
     print("-- Clipping the Voronoi diagram")
-    voronoi_clipped, _ = split_voronoi_with_centerlines(voronoi, patch_cl, clipped_centerline)
+    voronoi_clipped, _ = split_voronoi_with_centerlines(voronoi, [patch_cl,
+                                                                  clipped_centerline])
     write_polydata(voronoi_clipped, voronoi_clipped_path)
 
     # Rotate branches (Centerline and Voronoi diagram)

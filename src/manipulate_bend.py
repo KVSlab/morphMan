@@ -83,7 +83,7 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
                                 " landmarking with automated_landmarking.py first.") % point_path)
         region_points = np.loadtxt(point_path)
     else:
-        _, region_points = get_line_to_change(capped_surface, centerlines,
+        _, _, _, region_points = get_line_to_change(capped_surface, centerlines,
                                               region_of_interest, "bend", region_points, 0)
         region_points = [[region_points[3 * i], region_points[3 * i + 1], region_points[3 * i + 2]]
                          for i in range(len(region_points) // 3)]
@@ -122,8 +122,8 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
     # bend and remaining part of geometry
     print("-- Clipping Voronoi diagrams")
     voronoi_bend, voronoi_remaining = split_voronoi_with_centerlines(voronoi,
-                                                                     centerline_bend,
-                                                                     centerline_remaining)
+                                                                     [centerline_bend,
+                                                                      centerline_remaining])
     write_polydata(voronoi_bend, voronoi_bend_path)
     write_polydata(voronoi_remaining, voronoi_remaining_path)
 

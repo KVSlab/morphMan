@@ -61,7 +61,7 @@ def curvature_variations(input_filepath, smooth, smooth_factor, smooth_factor_li
                                           smooth, smooth_factor, no_smooth,
                                           no_smooth_point, voronoi, pole_ids)
     # Get region of interest
-    _, region_points = get_line_to_change(capped_surface, centerlines,
+    _, _, _, region_points = get_line_to_change(capped_surface, centerlines,
                                           region_of_interest, "variation", region_points, 0)
     region_points = [[region_points[3 * i], region_points[3 * i + 1], region_points[3 * i + 2]]
                      for i in range(len(region_points) // 3)]
@@ -98,16 +98,16 @@ def curvature_variations(input_filepath, smooth, smooth_factor, smooth_factor_li
     # bend and remaining part of geometry
     print("-- Clipping Voronoi diagrams")
     voronoi_region, voronoi_remaining = split_voronoi_with_centerlines(voronoi,
-                                                                       centerline_region,
-                                                                       centerline_remaining)
+                                                                       [centerline_region,
+                                                                        centerline_remaining])
     # Spearate diverging parts and main region
     if diverging_centerline_ispresent:
         voronoi_region, voronoi_diverging = split_voronoi_with_centerlines(voronoi_region,
-                                                                           extract_single_line(centerlines_complete,
+                                                                           [extract_single_line(centerlines_complete,
                                                                                                0,
                                                                                                startID=id1,
                                                                                                endID=id2),
-                                                                           diverging_centerlines_patch)
+                                                                            diverging_centerlines_patch])
         write_polydata(voronoi_diverging, voronoi_diverging_path)
 
     write_polydata(voronoi_region, voronoi_region_path)
