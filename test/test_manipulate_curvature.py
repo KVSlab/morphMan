@@ -51,7 +51,8 @@ def test_decrease_curvature(common_input, smooth_line):
     old_centerline = extract_single_line(old_centerlines, 0, startID=old_id1,
                                          endID=old_id2)
 
-    new_centerlines_path = base_path + "_centerline_new.vtp"
+    direction = "smoothed" if smooth_line else "extended"
+    new_centerlines_path = base_path + "_centerline_new_%s.vtp" % direction
     new_centerlines = read_polydata(new_centerlines_path)
     new_locator = get_locator(extract_single_line(new_centerlines, 0))
     new_id1 = new_locator.FindClosestPoint(p1)
