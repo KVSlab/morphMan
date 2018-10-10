@@ -19,20 +19,6 @@ from common import get_path_names, read_polydata, get_locator, get_tolerance, \
                    extract_single_line, distance
 
 
-@pytest.fixture(scope='module')
-def init_data():
-    # Global parameters
-    l1 = l2 = False
-    bif = False
-    lower = True
-    cylinder_factor = 7
-    aneurysm = False
-    anu_num = 0
-    version = True
-
-    dit = dict(basedir)
-    return dic
-
 @pytest.mark.parametrize("angle", [-20 / 180 * np.pi, 20 / 180 * np.pi])
 def test_bifurcation_angle(common_input, angle):
     common_input.update(dict(keep_fixed_1 = False,
@@ -78,10 +64,9 @@ def test_bifurcation_angle(common_input, angle):
         id1_old = loc_old.FindClosestPoint(start_point1)
         id2_old = loc_old.FindClosestPoint(start_point2)
 
-        id1_new = loc_old.FindClosestPoint(start_point1)
-        id2_new = loc_old.FindClosestPoint(start_point2)
+        id1_new = loc_new.FindClosestPoint(start_point1)
+        id2_new = loc_new.FindClosestPoint(start_point2)
 
-        print(distance(start_point1, old_centerlines.GetPoint(id1_old)), tol)
         if distance(start_point1, line_old.GetPoint(id1_old)) < tol:
             cl_old_1 = i
             cl_old_id1 = id1_old
@@ -99,10 +84,10 @@ def test_bifurcation_angle(common_input, angle):
             break
 
     # Get end points
-    end_point1_old = np.array(old_centerlines.GetPoint(cl_old_id1 + 20))
-    end_point2_old = np.array(old_centerlines.GetPoint(cl_old_id2 + 20))
-    end_point1_new = np.array(new_centerlines.GetPoint(cl_new_id1 + 20))
-    end_point2_new = np.array(new_centerlines.GetPoint(cl_new_id2 + 20))
+    end_point1_old = np.array(extract_single_line(old_centerlines, cl_old_1).GetPoint(cl_old_id1 + 20))
+    end_point2_old = np.array(extract_single_line(old_centerlines, cl_old_2).GetPoint(cl_old_id2 + 20))
+    end_point1_new = np.array(extract_single_line(new_centerlines, cl_new_1).GetPoint(cl_new_id1 + 20))
+    end_point2_new = np.array(extract_single_line(new_centerlines, cl_new_2).GetPoint(cl_new_id2 + 20))
 
     # Vectors
     v1_old = end_point1_old - np.array(start_point1)
@@ -120,4 +105,6 @@ def test_bifurcation_angle(common_input, angle):
     angle_original = np.arccos(np.dot(v1_old, v2_old))
     angle_rotated = np.arccos(np.dot(v1_new, v2_new))
 
-    assert angle_original - angle_rotated -common_input["angle"] < 0.1
+    if (angle_original - 2*common_input["angle"]) > np.pi:
+        angle_rotated = 2*np.pi - angle_rotated
+    assert abs(angle_original - angle_rotated - 2*common_input["angle"]) < 0.15
