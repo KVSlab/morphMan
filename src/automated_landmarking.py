@@ -538,7 +538,7 @@ def read_command_line():
                         choices=['bogunovic', 'piccinelli'])
     parser.add_argument('-k', '--nknots', type=int, default=11,
                         help="Number of knots used in B-splines.")
-    parser.add_argument('-sl', '--smooth_line', type=str2bool, default=False,
+    parser.add_argument('-sl', '--smooth-line', type=str2bool, default=False,
                         help="If the original centerline should be smoothed " +
                              "when computing the centerline attribiutes")
     parser.add_argument('-facc', '--smoothing_factor_curvature', type=float, default=1.0,

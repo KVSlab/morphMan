@@ -31,18 +31,18 @@ a positive and negative angle.
 
 You can reproduce the results in Figure 2 by running the two following commands::
 
-    python manipulate_bifurcation.py --ifile C0005/surface/model.vtp --ofile C0005/surface/rotate_plus.vtp --angle 20 --region-of-interest commandline --region-points 43.2 70.5 26.4 84.4 60.6 50.6
+    python manipulate_bifurcation.py --ifile C0005/surface/model.vtp --ofile C0005/surface/rotate_plus.vtp --angle 20 --region-of-interest commandline --region-points 43.2 70.5 26.4 84.4 60.6 50.6 --poly-ball-size 250 250 250
 
 for narrowing of the bifurcation angle, and similarly for widening of the bifurcation angle::
 
-    python manipulate_bifurcation.py --ifile C0005/surface/model.vtp --ofile C0005/surface/rotate_minus.vtp --angle -20 --region-of-interest commandline --region-points 43.2 70.5 26.4 84.4 60.6 50.6
+    python manipulate_bifurcation.py --ifile C0005/surface/model.vtp --ofile C0005/surface/rotate_minus.vtp --angle -20 --region-of-interest commandline --region-points 43.2 70.5 26.4 84.4 60.6 50.6 --poly-ball-size 250 250 250
 
 Inspecting Figure 2 closely you can observe an unphysiological "notch" in the bifurcation of the surface
 with increased :math:`\theta`. One remedy is to add the flag ``--bif True`` and ``--lower True``,
 which will output a smoother bifurcation, see Figure 3. The results shown in Figure 3 can reproduced by
 running the command::
 
-    python manipulate_bifurcation.py --ifile C0005/surface/model.vtp --ofile C0005/surface/rotate_no_notch.vtp --angle -20 --bif True --lower True  --region-of-interest commandline --region-points 43.2 70.5 26.4 84.4 60.6 50.6
+    python manipulate_bifurcation.py --ifile C0005/surface/model.vtp --ofile C0005/surface/rotate_no_notch.vtp --angle -20 --bif True --lower True  --region-of-interest commandline --region-points 43.2 70.5 26.4 84.4 60.6 50.6 --poly-ball-size 250 250 250
 
 Using both flags haven proven to give an improved surface,
 and when used for computational fluid dynamics, a more physiological plausible wall shear stress [2]_.
