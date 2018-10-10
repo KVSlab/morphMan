@@ -120,18 +120,14 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
 
     # Locate divpoints and endpoints, for bif or lower, rotated or not
     key = "div_point"
-    div_points = get_points(data, key, R, m, rotated=False, bif=False)
-    div_points_rotated = get_points(data, key, R, m, rotated=True, bif=False)
-    div_points_rotated_bif = get_points(data, key, R, m, rotated=True, bif=True)
+    div_points = get_points(data, key, bif=False)
 
     key = "end_point"
-    end_points = get_points(data, key, R, m, rotated=False, bif=False)
-    end_points_rotated = get_points(data, key, R, m, rotated=True, bif=False)
-    end_points_bif = get_points(data, key, R, m, rotated=False, bif=True)
+    end_points = get_points(data, key, bif=False)
+    end_points_bif = get_points(data, key, bif=True)
 
     write_points(div_points[0], points_div_path)
     write_points(end_points[0], points_clipp_path)
-    write_points(end_points_rotated[0], points_clipp_rotated_path)
 
     # Clip centerlines
     print("-- Clipping centerlines.")
@@ -219,7 +215,7 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
     write_polydata(new_surface, output_filepath)
 
 
-def get_points(data, key, R, m, rotated=True, bif=False):
+def get_points(data, key, bif=False):
     """
     Finds spesific points around the bifurcation, based on the
     key argument. Points can before or after rotation.
@@ -227,9 +223,6 @@ def get_points(data, key, R, m, rotated=True, bif=False):
     Args:
         data (dict): Contains information about points and IDs of branches and bifurcation.
         key (str): Type of points to extract.
-        R (ndarray): Matrix containing unit vectors in the rotated coordinate system.
-        m (dict): Cointains rotation matrices for each daughter branch.
-        rotated (bool): Gets rotated points if True.
         bif (true): Gets only bifurcation points if True.
 
     Returns:
@@ -243,12 +236,6 @@ def get_points(data, key, R, m, rotated=True, bif=False):
     origo_key = "div_point"
     origo = np.asarray([data["bif"][origo_key], data[0][origo_key], data[1][origo_key]])
     origo = np.sum(np.asarray(origo), axis=0) / 3.
-
-    if rotated:
-        R_inv = np.linalg.inv(R)
-        for i in range(len(div_points)):
-            m_ = m[i] if i > 0 else np.eye(3)
-            div_points[i] = np.dot(np.dot(np.dot(div_points[i] - origo, R), m_), R_inv) + origo
 
     # Insert landmarking points into VTK objects
     points = vtk.vtkPoints()

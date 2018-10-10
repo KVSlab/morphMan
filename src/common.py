@@ -4114,8 +4114,6 @@ def interpolate_voronoi_diagram(interpolatedCenterlines, patchCenterlines,
                                                                                       endCellPointHalfRadius,
                                                                                       clippedVoronoi, patchCenterlines)
 
-        write_polydata(startInterpolationDataset, "tmp_start_%d.vtp" % j)
-        write_polydata(endInterpolationDataset, "tmp_end_%d.vtp" % j)
         # Find and insert new points
         newVoronoiPoints, newVoronoiPointsMISR = voronoi_diagram_interpolation(interpolationCellId,
                                                                                startId, endId,
