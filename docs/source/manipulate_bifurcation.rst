@@ -60,13 +60,13 @@ on the artery), see Figure 4. To this specific tutorial, we have used the model
 with `ID C0066 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0066/C0066_models.tar.gz>`_
 , which harbors an aneurysm located at the terminal bifurcation in the internal carotid artery.
 
-.. figure:: aneu_remove.png
+.. figure:: remove_aneurysm.png
 
   Figure 4: Remove an aneurysm from the bifurcation.
 
 To reproduce the result shown in Figure 4, you can run the following command::
 
-        python manipulate_bifurcation.py --ifile C0066/surface/model.vtp --ofile C0066/surface/removed_aneurysm.vtp --keep-fixed-1 True --keep-fixed-2 True --bif True --lower True --angle 0 --region-points 31.37 60.65 25.21 67.81 43.08 41.24
+        python manipulate_bifurcation.py --ifile C0066/surface/model.vtp --ofile C0066/surface/removed_aneurysm.vtp --keep-fixed-1 True --keep-fixed-2 True --bif True --lower True --angle 0 --region-of-interest commandline --region-points 31.37 60.65 25.21 67.81 43.08 41.24 --poly-ball-size 250 250 250
 
 For additional information, beyond this tutorial, on the script and
 input parameters, please run ``python manipulate_bifurcation.py -h`` or confer with
