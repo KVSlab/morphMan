@@ -3844,6 +3844,8 @@ def voronoi_diagram_interpolation(interpolationcellid, id0, id1, voronoiDataset0
         vectorNormArray = compute_spline(voronoiVectorNorm, arrivalVoronoiVectorNorm, numberOfPTPoints)
 
         pointsToGap = (gapStartId - closestPointId) * step
+        if pointsToGap < 0 or PTPoints.GetNumberOfPoints() <= pointsToGap:
+            continue
 
         for k in range(gapStartId, endSavingInterval, step):
             ptpoint = PTPoints.GetPoint(pointsToGap)
