@@ -5,7 +5,7 @@
 ================================
 Tutorial: Manipulate bifurcation
 ================================
-The goal with ``manipulate_bifurcations.py`` is to control the angle between two
+The goal with ``manipulate_bifurcation.py`` is to control the angle between two
 daughter branches in a bifurcation, see Figure 1. The daughter branches can be
 rotated towards each other, in other words reduce :math:`\theta`, or towards
 the parent artery, increasing :math:`\theta`. The naming convention is that the
@@ -20,7 +20,7 @@ The algorithm builds on previous work of Ford et al. [1]_
 In this tutorial, we are using the model with
 `ID C0005 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0005/C0005_models.tar.gz>`_
 from the Aneurisk database. For the commands below we assume that there
-is a file `./C0005/surface/model.vtp` relative to where you execute the command.
+is a file `./C0005/surface/model.vtp`, relative to where you execute the command.
 
 Shown in Figure 2 is the result of rotating the two daughter branched with both
 a positive and negative angle.
@@ -51,11 +51,11 @@ and when used for computational fluid dynamics, a more physiological plausible w
 
   Figure 3: Rotation of daughter branches with a different reconstruction of the bifurcation.
 
-The default is to rotate both branches, but if either ``--keep-fixed1`` or
-``--keep-fixed2`` is set to **True**, daughter branch 1 or 2 will be kept
+The default is to rotate both branches, but if either ``--keep-fixed-1`` or
+``--keep-fixed-2`` is set to **True**, daughter branch 1 or 2 will be kept
 fixed, respectively. Furthermore, if both parameters are set to **True**
 then the algorithm can be used to remove an aneurysm (a balloon-shaped bleb
-on the artery), see Figure 4. To this spesific tutorial, we have used the model
+on the artery), see Figure 4. To this specific tutorial, we have used the model
 with `ID C0066 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0066/C0066_models.tar.gz>`_
 , which harbors an aneurysm located at the terminal bifurcation in the internal carotid artery.
 
