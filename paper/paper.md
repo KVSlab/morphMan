@@ -52,7 +52,12 @@ the region of interest is manipulated. Using the Voronoi diagram to alter the su
 was first presented in [@Piccinelli2011]; moreover a subset of the algorithms are presented
 in [@Bergersen2016] and [@Kjeldsberg2018].
 
-![A visualization of the Voronoi diagram (left) and the centerline (right) of a surface.](figure1.png)
+<p align="center">
+    <img src="./figure1.png", width="320 height="140" alt="Voronoi diagram and centerline of a model."/>
+</p>
+<p align="center">
+   A visualization of the Voronoi diagram (left) and the centerline (right) of a surface.
+</p>
 
 In *morphMan v0.1* you can alter cross-sectional area, bifurcation angles, 
 overall curvature in a segment, and the shape of specific bends. For each
@@ -60,7 +65,12 @@ category, there is a wide range of options, thus providing the users with many d
 freedom for manipulating the geometries. Shown in Figure 2 is an example of rotating
 the branches in a bifurcation 'up' and 'down'. *morphMan* is easily expandable for specialized manipulations.
 
-![Output from *morphMan* for manipulating the bifurcation angles.](figure2.png)
+<p align="center">
+    <img src="./figure2.png", width="640 height="280" alt="Output of morphMan."\>
+</p>
+<p align="center">
+   Output from *morphMan* for manipulating the bifurcation angles.
+</p>
 
 *morphMan* opens new lines of investigation for unraveling the coupling between
 morphology and the local hemodynamics, and can guide clinical research and eventually
