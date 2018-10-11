@@ -38,7 +38,7 @@ To landmark the surface model, run the following command::
 
     python automated_landmarking.py --ifile ../test/testdata/C0001/surface/model.vtp --method bogunovic --curv-method spline --curv-method spline --nknots 8
 
-The command will output a file `C0001/surface/landmark_[ALGORITHM]_[CURVMETHOD].particles`
+The command will output a file ``C0001/surface/landmark_[ALGORITHM]_[CURVMETHOD].particles``
 which contains four points defining the interfaces between the segments of the vessel.
 
 .. figure:: landmarking.png
@@ -53,16 +53,34 @@ Compute alpha and beta
 Please see :ref:`manipulate_bend` for a definition of :math:`\alpha` and :math:`\beta`.
 
 Instead of directly setting the extent the model should be moved (``--alpha`` and ``--beta``),
-it is more convinient to controll a morphological parameter like maximum curvature, or the
+it is more convinient to control a morphological parameter like maximum curvature, or the
 angle in the bend.
 
 The idea behind ``estimate_alpha_beta_values.py`` is to use the centerline as a
-proxy for the new geometry, and manipulate only the centerline for a range of ``--alpha`` and
-``--beta`` values. The resulting 2D data can be fited to a surface spline, from
+proxy for the new geometry, used to compute quantities such as curvature or bend angle.
+For estimation of :math:`\alpha` and :math:`\beta`, the script
+manipulates only the centerline for a range of ``--alpha`` and
+``--beta`` values. The resulting 2D data can be fitted to a surface through cubic spline interpolation, from
 which one can easly collect approporiate values for ``--alpha`` and ``--beta``.
 
-For more information on the input parameters in the script, see :meth:`automated_landmarking.automated_landmarking`. For a more detailed description of the method, please see [3]_.
+To estimate :math:`\alpha` and :math:`\beta`, we will be using the model with `ID C0005 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0005/C0005_models.tar.gz>`_
+from the Aneurisk database. For the commands below we assume that there is a file `./C0005/surface/model.vtp`
+, relative to where you execute the command.
 
+Imagine we are interested in changing the bend angle by :math:`\pm 10^{\circ}`.
+To find appropriate values for :math:`\alpha` and :math:`\beta`, we can run the script through the following command::
+
+    python estimate_alpha_and_beta.py --ifile C0005/surface/model.vtp --quantity angle --value-change 10 --grid-size 25 --region-of-interest commandline --region-points 49.9 41.3 37.3 48 50.3 38.2
+
+The command will output a file ``./C0005/surface/model_alphabeta_values.txt``
+which contains two :math:`(\alpha, \beta)` - pairs, corresponding to the appropriate values resulting in plus and minus
+the desired change in angle.
+Thus we can proceed  manipulation of the bend as described in :ref:`manipulate_bend`.
+
+The algorithm can also be tweaked to get the initial value for the chosen quantity, as well as adding additional
+geometric quantities to compute for.
+For more information on the input parameters in the script, see :meth:`automated_landmarking.automated_landmarking`.
+For a more detailed description of the method, please see [3]_.
 
 Common
 ======

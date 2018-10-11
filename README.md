@@ -7,7 +7,7 @@ morphMan
 =====
 
 <p align="center">
-    <img src="https://raw.githubusercontent.com/KVSlab/vascularManipulationToolkit/master/docs/source/change_stenosis.png?token=AJKg8GZbIiq2gb9V1elUl0hqm3QrCco4ks5bv20iwA%3D%3D" width="426" height="293" alt="Create a stenois"/>
+    <img src="https://raw.githubusercontent.com/KVSlab/morphMan/master/docs/source/make_stenosis.png" width="640 height="280" alt="Create a stenois"/>
 </p>
 <p align="center">
     Manipulation of the internal carotid artery, by introducing an artificial stenosis.
