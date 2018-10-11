@@ -90,8 +90,8 @@ sections with high curvature, like the internal carotid artery, is unproblematic
   Figure 3: Comparison of the new and old model, with and without stenosis.
 
 To recreate the above output, execute the following on the commandline line::
-    
-    python manipulate_area.py --ifile C0002/surface/model.vtp --ofile C0002/surface/stenosis.vtp --smooth True --method stenosis --stenosis-point x y z --percentage 50 --size 1
+
+    python manipulate_area.py --ifile C0002/surface/model.vtp  --ofile C0002/surface/create_stenosis.vtp --method stenosis --size 4 --percentage 50 --region-of-interest commandline --region-points 28.7 18.4 39.5
 
 Remove stenosis
 ~~~~~~~~~~~~~~~
@@ -108,7 +108,7 @@ right, the comparison between the original model and the 'healed' surface.
     
 To reproduce the above result, execute the following command::
 
-    python manipulate_area.py --ifile C0002/stenosis.vtp --ofile C0002/no_stenosis.vtp --smooth True --method stenosis --stenosis-points x y z x y z
+    python manipulate_area.py --ifile C0002/surface/create_stenosis.vtp  --ofile C0002/surface/remove_stenosis.vtp --method stenosis --size 4 --percentage 50 --region-of-interest commandline --region-points 30.1 18.5 34.6 27.1 12.7 38.2
 
 Inflation / deflation of an arterial segment
 ============================================

@@ -5,17 +5,19 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 ##      PURPOSE.  See the above copyright notices for more information.
 
-from argparse import ArgumentParser, RawDescriptionHelpFormatter
-from scipy.signal import argrelextrema
-from scipy.ndimage.filters import gaussian_filter as gauss
 import operator
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
+
+from scipy import interpolate
+from scipy.ndimage.filters import gaussian_filter as gauss
+from scipy.signal import argrelextrema
 
 # Local import
 from common import *
-from scipy import interpolate
 
 
-def estimate_alpha_and_beta(input_filepath, quantity_to_compute, boundary, radius, grid_size, limit, method_angle,
+def estimate_alpha_and_beta(input_filepath, quantity_to_compute, boundary, radius, grid_size, value_change,
+                            method_angle,
                             method_curv, region_of_interest, region_points):
     """
     Imports a matrix of parameter values corresponding
@@ -31,13 +33,12 @@ def estimate_alpha_and_beta(input_filepath, quantity_to_compute, boundary, radiu
         boundary (list): Boundary of searching grid.
         radius (float): Minimum radius of circle to search outside of.
         grid_size (int): Size of searching grid ( grid_size x grid_size matrix)
-        limit (float): Desired change in curvature / bend angle to achieve
+        value_change (float): Desired change in curvature / bend angle to achieve
         method_angle (str): Method for computing angle.
         method_curv (str): Method for computing curv.
         region_of_interest (str): Method for setting the region of interest ['manual' | 'commandline' | 'landmarking']
         region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint
     """
-
     # Get grid values
     base_path = get_path_names(input_filepath)
 
@@ -49,32 +50,27 @@ def estimate_alpha_and_beta(input_filepath, quantity_to_compute, boundary, radiu
     data = compute_quantities(input_filepath, boundary, quantity_to_compute, method_curv, method_angle,
                               region_of_interest, region_points, n=grid_size, proj=False)
     # Get grid boundary
-
     amin, amax, bmin, bmax = float(boundary[0]), float(boundary[1]), float(boundary[2]), float(boundary[3])
 
     # Set standard deviations used to find intersetcion
-    if quantity_to_compute == "curvature":
-        sd_curv = limit
-    elif quantity_to_compute == "angle":
-        sd_angle = limit
 
     # Defined SD planes for curvature
     # Tolerance added for adjusting SD
     # if there are no intersections found
     def cpsd(tolerance=0.0):
-        return curv0 + sd_curv - tolerance
+        return curv0 + value_change - tolerance
 
     def cmsd(tolerance=0.0):
-        return curv0 - sd_curv + tolerance
+        return curv0 - value_change + tolerance
 
     def curv_init(tolerance=0.0):
         return curv0
 
     def apsd(tolerance=0.0):
-        return angle0 + sd_angle - tolerance
+        return angle0 + value_change - tolerance
 
     def amsd(tolerance=0.0):
-        return angle0 - sd_angle + tolerance
+        return angle0 - value_change + tolerance
 
     def angle_init(tolerance=0.0):
         return angle0
@@ -91,7 +87,9 @@ def estimate_alpha_and_beta(input_filepath, quantity_to_compute, boundary, radiu
         points[i] = [alpha[i], beta[i]]
 
     # Spline interpolation
+    # TODO: Change to griddata interpolation for robustness
     f = interpolate.interp2d(beta, alpha, data, kind='cubic')
+
     if quantity_to_compute == "curvature":
         curv0 = f(0, 0)
         methods = [cpsd, cmsd, curv_init]
@@ -171,9 +169,10 @@ def compute_quantities(input_filepath, boundary, quantity, method_curv, method_a
     amin, amax, bmin, bmax = boundary[0], boundary[1], boundary[2], boundary[3]
     alphas = np.linspace(amin, amax, n)
     betas = np.linspace(bmin, bmax, n)
-
+    k = 0
     for i, alpha in enumerate(alphas):
         for j, beta in enumerate(betas):
+            print("Iteration %i of %i" % (k + 1, n * n))
             if quantity == "curvature":
                 value, _ = compute_curvature(input_filepath, alpha, beta, method_curv, None, False, region_of_interest,
                                              region_points)
@@ -182,8 +181,10 @@ def compute_quantities(input_filepath, boundary, quantity, method_curv, method_a
                 value, _ = compute_angle(input_filepath, alpha, beta, method_angle, None,
                                          region_of_interest, region_points, proj)
             values[i, j] = value
+            k += 1
 
     return values
+
 
 def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
                   region_of_interest, region_points, proj=False):
@@ -240,14 +241,13 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
         region_points = np.loadtxt(point_path)
     else:
         _, _, _, region_points = get_line_to_change(capped_surface, centerlines,
-                                              region_of_interest, "bend", region_points, 0)
+                                                    region_of_interest, "bend", region_points, 0)
         region_points = [[region_points[3 * i], region_points[3 * i + 1], region_points[3 * i + 2]]
                          for i in range(len(region_points) // 3)]
     p1 = region_points[0]
     p2 = region_points[1]
 
     if new_centerlines is None:
-        print("-- Maniuplating centerline manually")
         centerlines, new_centerlines = get_new_centerlines(centerlines, region_points, alpha, beta, p1, p2)
 
     # Get new siphon and prepare
@@ -297,11 +297,6 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
 
         siphon.GetPointData().AddArray(misr_array)
         moved_siphon.GetPointData().AddArray(newmisr_array)
-
-    if proj:
-        print("-- Computing 2D Angles")
-    else:
-        print("-- Computing 3D Angles")
 
     # Get direction to the point furthest away (dx)
     direction = "vertical"
@@ -546,7 +541,7 @@ def compute_curvature(input_filepath, alpha, beta, method, new_centerlines, comp
         region_points = np.loadtxt(point_path)
     else:
         _, _, _, region_points = get_line_to_change(capped_surface, centerlines,
-                                              region_of_interest, "bend", region_points, 0)
+                                                    region_of_interest, "bend", region_points, 0)
         region_points = [[region_points[3 * i], region_points[3 * i + 1], region_points[3 * i + 2]]
                          for i in range(len(region_points) // 3)]
     p1 = region_points[0]
@@ -944,7 +939,8 @@ def read_command_line():
     required.add_argument('-i', '--ifile', type=str, default=None,
                           help="Path to the surface model", required=True)
     required.add_argument("-q", "--quantity", type=str, default="curvature",
-                          help="Parameter to compute. Choose between 'curvature' and 'angle'", required=True)
+                          help="Parameter to compute. Choose between 'curvature' and 'angle'", required=True,
+                          choices=['curvature', 'angle'])
     # Optional arguments
     parser.add_argument("-r", "--region-of-interest", type=str, default="manual",
                         choices=["manual", "commandline", "landmarking"],
@@ -969,20 +965,23 @@ def read_command_line():
                         help='Bounds of grid, as a list: [alpha_min, alpha_max, beta_min, beta_max]')
     parser.add_argument("-g", "--grid-size", type=int, default=25,
                         help="Size of n x n matrix used for computing a set of discrete values")
-    parser.add_argument('-l', '--limit', type=float, default=0.05,
+    parser.add_argument('-c', '--value-change', type=float, default=0.05,
                         help='Desired change in curvature / bend angle to achieve. Algorithm computes' +
                              'recommended values of alpha and beta for both plus and minus this change.')
     parser.add_argument('-mc', '--method_curv', type=str, default="disc",
                         help="Method for computing curv. Available methods: disc " +
-                             "| vmtkfactor | vmtkit | spline")
+                             "| vmtkfactor | vmtkit | spline",
+                        choices=['disc', 'vmtkfactor', 'vmtkit', 'spline'])
     parser.add_argument('-ma', '--method_angle', type=str, default="plane",
                         help="Method for computing siphon angle. Available methods: plane | " +
-                             "itplane | itplane_clip | maxcurv | smooth | discrete | frac | odrline | MISR ")
+                             "itplane | itplane_clip | maxcurv | smooth | discrete | frac | odrline | MISR ",
+                        choices=['plane', 'itplane', 'itplane_clip', 'maxcurv', 'smooth', 'discrete', 'frac',
+                                 'odrline', 'misr'])
 
     args = parser.parse_args()
 
     return dict(input_filepath=args.ifile, quantity_to_compute=args.quantity,
-                radius=args.radius, boundary=args.boundary, grid_size=args.grid_size, limit=args.limit,
+                radius=args.radius, boundary=args.boundary, grid_size=args.grid_size, value_change=args.value_change,
                 method_angle=args.method_angle, method_curv=args.method_curv, region_points=args.region_points,
                 region_of_interest=args.region_of_interest)
 
