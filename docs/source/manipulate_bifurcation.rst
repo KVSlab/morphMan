@@ -39,7 +39,8 @@ for narrowing of the bifurcation angle, and similarly for widening of the bifurc
 
 Inspecting Figure 2 closely you can observe an unphysiological "notch" in the bifurcation of the surface
 with increased :math:`\theta`. One remedy is to add the flag ``--bif True`` and ``--lower True``,
-which will output a smoother bifurcation, see Figure 3. The results shown in Figure 3 can reproduced by
+which will output a smoother bifurcation, as shown on the right side in Figure 3, compared with a model with no flags.
+The results shown in Figure 3 can reproduced by
 running the command::
 
     python manipulate_bifurcation.py --ifile C0005/surface/model.vtp --ofile C0005/surface/rotate_no_notch.vtp --angle -20 --bif True --lower True  --region-of-interest commandline --region-points 43.2 70.5 26.4 84.4 60.6 50.6 --poly-ball-size 250 250 250
@@ -47,7 +48,7 @@ running the command::
 Using both flags haven proven to give an improved surface,
 and when used for computational fluid dynamics, a more physiological plausible wall shear stress [2]_.
 
-.. figure:: angle_bif.png
+.. figure:: no_notch.png
 
   Figure 3: Rotation of daughter branches with a different reconstruction of the bifurcation.
 
