@@ -160,8 +160,8 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
 
     # Interpolate the centerline
     print("-- Interpolate centerlines.")
-    interpolated_cl = interpolate_patch_centerlines(rotated_cl, centerline_par, div_points[0].GetPoint(0), None,
-                                                    False)
+    interpolated_cl = interpolate_patch_centerlines(rotated_cl, centerline_par, div_points[0].GetPoint(0),
+                                                    None, False)
     write_polydata(interpolated_cl, centerline_new_path.replace(".vtp", "1.vtp"))
 
     if bif:

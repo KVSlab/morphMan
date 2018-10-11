@@ -3513,7 +3513,7 @@ def interpolate_spline(startCell, endCell, additionalPoint):
 
     curv_coor = np.zeros(len(points))
     for i in range(len(points) - 1):
-        curv_coor[i + 1] = curv_coor[i] + math.sqrt(distance(points[i], points[i + 1]))
+        curv_coor[i + 1] = curv_coor[i] + distance(points[i], points[i + 1])
 
     points = np.asarray(points)
 
