@@ -65,7 +65,7 @@ with `ID C0066 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0066/C0066_m
 
 To reproduce the result shown in Figure 4, you can run the following command::
 
-    python manipulate_bifurcation.py --ifile C0066/surface/model.vtp --ofile C0066/surface/removed_aneurysm.vtp --keep-fixed-1 True --keep-fixed-2 True
+        python manipulate_bifurcation.py --ifile C0066/surface/model.vtp --ofile C0066/surface/removed_aneurysm.vtp --keep-fixed-1 True --keep-fixed-2 True --bif True --lower True --angle 0 --region-points 31.37 60.65 25.21 67.81 43.08 41.24
 
 For additional information, beyond this tutorial, on the script and
 input parameters, please run ``python manipulate_bifurcation.py -h`` or confer with
