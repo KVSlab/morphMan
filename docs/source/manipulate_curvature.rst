@@ -25,7 +25,7 @@ In ``manipulate_curvature.py``, there are three options for setting
  * ``commandline``: Provide the points on the centerline
  * ``first_line``: The section between the inlet and the first bifurcation.
 
-For each point a long the centerline in the region of interest
+For each point along the centerline in the region of interest
 we need a direction to move the new geometry. To obtain the direction,
 we compute the distance between the original and a smoothed
 centerline. Using a gaussian smoothing, the new centerline will gradually converge
@@ -43,11 +43,11 @@ To reproduce the surface model with decreased total curvature shown on the left 
 
         python manipulate_curvature.py --ifile C0005/surface/model.vtp --ofile C0005/surface/model_curvature_decreased.vtp --smooth-line True --iterations 100 --smooth-factor-line 1.8  --region-of-interest first_line --poly-ball-size 250 250 250
 
-To reproduce the surface model with increased total curvature shown on the left in Figure 2, run::
+To reproduce the surface model with increased total curvature shown on the right in Figure 2, run::
 
         python manipulate_curvature.py --ifile C0005/surface/model.vtp --ofile C0005/surface/model_curvature_increased.vtp --smooth-line False --iterations 100 --smooth-factor-line 1.8  --region-of-interest first_line --poly-ball-size 250 250 250
 
-As shown in the command above, increased total curvature is achieved by setting the command line argument ``--smooth-line False``.
+As shown in the command above, increased total curvature is achieved by setting the command line argument ``--smooth-line`` to **False**.
 
 For additional information, beyond this tutorial, on the script and
 input parameters, please run ``python manipulate_curvature.py -h`` or confer with

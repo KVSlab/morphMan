@@ -10,21 +10,21 @@ Miscellaneous
 Landmarking of the internal carotid artery
 ==========================================
 The internal carotid artery can be classified, or landmarked, into segments.
-For an *objective* and *reproduceble* maipulation of the segment
+For an *objective* and *reproducible* manipulation of the segment
 historically referred to as the carotid siphon, we have implemented two
 previously published methods for landmarking: Piccinelli et al.
 (2011) [1]_, and Bogunović et al. (2014) [2]_ (``--algorithm``).
 
 Although the algorithms are well described in both articles, neither state
 how the centerlines are computed, or how the curvature and torsion is derived.
-Both algorithms are very sensetive to the input curvature and torision, and
-are therefore not directly reproduceble. In Kjeldsberg 2018 [3]_ there is a
+Both algorithms are very sensitive to the input curvature and torision, and
+are therefore not directly reproducible. In Kjeldsberg 2018 [3]_ there is a
 a thorough comparison between landmarking algorithms, input parameters,
-and centerline smoothing methods which can help you to choose the corret
+and centerline smoothing methods which can help you to choose the correct
 options for your application.
 
 The script ``automated_landmarking.py`` has three methods for computing
-the descrete derivatives of the centerline curve, set with
+the discrete derivatives of the centerline curve, set with
 ``--curv-method``.
 
  1. B-Splines (``spine``)
@@ -32,11 +32,10 @@ the descrete derivatives of the centerline curve, set with
  3. VMTK (``vmtk``)
 
 To perform landmarking, we will be using the model with `ID C0001 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0001/C0001_models.tar.gz>`_
-from the Aneurisk database. For the commands below we assume that there is a file `./C0001/surface/model.vtp`
-, relative to where you execute the command.
+from the Aneurisk database. For the commands below we assume that there is a file `./C0001/surface/model.vtp`, relative to where you execute the command.
 To landmark the surface model, run the following command::
 
-    python automated_landmarking.py --ifile ../test/testdata/C0001/surface/model.vtp --method bogunovic --curv-method spline --curv-method spline --nknots 8
+    python automated_landmarking.py --ifile C0001/surface/model.vtp --method bogunovic --curv-method spline --nknots 8
 
 The command will output a file ``C0001/surface/landmark_[ALGORITHM]_[CURVMETHOD].particles``
 which contains four points defining the interfaces between the segments of the vessel.
@@ -53,7 +52,7 @@ Compute alpha and beta
 Please see :ref:`manipulate_bend` for a definition of :math:`\alpha` and :math:`\beta`.
 
 Instead of directly setting the extent the model should be moved (``--alpha`` and ``--beta``),
-it is more convinient to control a morphological parameter like maximum curvature, or the
+it is more convenient to control a morphological parameter like maximum curvature, or the
 angle in the bend.
 
 The idea behind ``estimate_alpha_beta_values.py`` is to use the centerline as a
@@ -61,11 +60,10 @@ proxy for the new geometry, used to compute quantities such as curvature or bend
 For estimation of :math:`\alpha` and :math:`\beta`, the script
 manipulates only the centerline for a range of ``--alpha`` and
 ``--beta`` values. The resulting 2D data can be fitted to a surface through cubic spline interpolation, from
-which one can easly collect approporiate values for ``--alpha`` and ``--beta``.
+which one can easily collect appropriate values for ``--alpha`` and ``--beta``.
 
 To estimate :math:`\alpha` and :math:`\beta`, we will be using the model with `ID C0005 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0005/C0005_models.tar.gz>`_
-from the Aneurisk database. For the commands below we assume that there is a file `./C0005/surface/model.vtp`
-, relative to where you execute the command.
+from the Aneurisk database. For the commands below we assume that there is a file `./C0005/surface/model.vtp`, relative to where you execute the command.
 
 Imagine we are interested in changing the bend angle by :math:`\pm 10^{\circ}`.
 To find appropriate values for :math:`\alpha` and :math:`\beta`, we can run the script through the following command::

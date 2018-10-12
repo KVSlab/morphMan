@@ -11,10 +11,10 @@ by manipulating `internal carotid arteries <https://en.wikipedia.org/wiki/Intern
 
 The goal of morphMan is to provide researchers, and other users, with a set of tools to investigate the impact
 of altering morphological features in patient-specific geometries. For instance, by combining
-morphMan with a computational fluid mechincs solver, it can be used to  *objectivly* and
+morphMan with a computational fluid mechanics solver, it can be used to  *objectively* and
 *reproducibly* investigate how cross-sectional area, and overall curvature impacts
-the local hemodynamics. Previusly, one would have to investigate tens, if not hundreds, of models
-to correlate changes in specific morphological parameters to changes in local hemodyanamic. Now,
+the local hemodynamics. Previously, one would have to investigate tens, if not hundreds, of models
+to correlate changes in specific morphological parameters to changes in local hemodynamic. Now,
 one can keep all other morphological parameters fixed while investigating only the impact of one change.
 Thus, morphMan opens a wide range of problems which previously was practically infeasible to study.
 
@@ -36,7 +36,7 @@ and `VMTK <http://www.vmtk.org>`_, with are the basis of morphMan.
 
 Tutorials
 =========
-For morphMan to be userfriendly, we provide a tutorial for each of the scripts.
+For morphMan to be user friendly, we provide a tutorial for each of the scripts.
 
 * :ref:`manipulate_area` (create/remove a stenosis, in/decrease area variation, in/deflation of a vessel)
 * :ref:`manipulate_bend` (Change the curvature or angle of a bend)
