@@ -16,7 +16,7 @@ morphMan with a computational fluid mechincs solver, it can be used to  *objecti
 the local hemodynamics. Previusly, one would have to investigate tens, if not hundreds, of models
 to correlate changes in specific morphological parameters to changes in local hemodyanamic. Now,
 one can keep all other morphological parameters fixed while investigating only the impact of one change.
-Thus, morphMan opens a wide range of problems which previously was impossible to study.
+Thus, morphMan opens a wide range of problems which previously was practically infeasible to study.
 
 Although morphological features are possible to manually manipulate in advanced meshing software,
 morphMan is, to the best of our knowledge, the first *objective* and *reproducible* method for
@@ -31,7 +31,7 @@ The input surfaces used in the tutorials are taken from the Aneurisk repository 
 for anyone to download. You can therefore easily follow the tutorials with the same geometries as we have used.
 
 We would like to acknowledge the two open-source projects `VTK <https://www.vtk.org>`_
-and `VMTK <http://www.vmtk.org>`_, without morphMan would not have been possible.
+and `VMTK <http://www.vmtk.org>`_, with are the basis of morphMan.
 
 
 Tutorials

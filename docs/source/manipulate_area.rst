@@ -25,8 +25,8 @@ There are three methods, which can be set with ``--method``:
  * ``stenosis``: Create or remove a `stenosis <https://en.wikipedia.org/wiki/Stenosis>`_.
  * ``area``: Inflation of deflation of a vessel.
 
-It is easy ``manipulate_area.py`` to extend with new features. Please make a pull request with changes,
-or create an issue suggesting an enhancement, and we will look into it.
+It is easy to extend :meth:`manipulate_area.area_variations` with new features. Please make a pull
+request with changes, or create an issue suggesting an enhancement, and we will look into it.
 
 .. _area_variations:
 
