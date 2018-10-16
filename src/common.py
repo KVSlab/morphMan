@@ -522,52 +522,15 @@ def provide_relevant_outlets(surface, dir_path=None):
     seed_selector.text = "Please select the two relevant outlets, \'u\' to undo\n"
     seed_selector.Execute()
 
-    aneurysm_seed_ids = seed_selector.GetTargetSeedIds()
+    point_seed_ids = seed_selector.GetTargetSeedIds()
     get_point = surface.GetPoints().GetPoint
-    points = [list(get_point(aneurysm_seed_ids.GetId(i))) for i in range(aneurysm_seed_ids.GetNumberOfIds())]
+    points = [list(get_point(point_seed_ids.GetId(i))) for i in range(point_seed_ids.GetNumberOfIds())]
     info = {}
 
     if dir_path is not None:
         for i in range(len(points)):
             info["relevant_outlet_%d" % i] = points[i]
         write_parameters(info, dir_path)
-
-    return points
-
-
-def provide_aneurysm_points(surface, dir_path=None):
-    """
-    Get location of aneurysm(s) based on
-    selected points on a input surface.
-
-    Args:
-        surface (vtkPolyData): Surface model.
-        dir_path (str): Location of into.txt file
-
-    Returns:
-        points (list): List of aneurysm location IDs
-    """
-    # Fix surface
-    cleaned_surface = clean_surface(surface)
-    triangulated_surface = triangulate_surface(cleaned_surface)
-
-    # Select seeds
-    seed_selector = vmtkPickPointSeedSelector()
-    seed_selector.SetSurface(triangulated_surface)
-    seed_selector.text = "Please position the mouse and press space to add the top of the" + \
-                         " aneurysm, \'u\' to undo\n"
-    seed_selector.Execute()
-
-    aneurysm_seed_ids = seed_selector.GetTargetSeedIds()
-    get_point = surface.GetPoints().GetPoint
-    points = [list(get_point(aneurysm_seed_ids.GetId(i))) for i in range(aneurysm_seed_ids.GetNumberOfIds())]
-
-    if dir_path is not None:
-        info = {"number_of_aneurysms": len(points)}
-
-        for i in range(len(points)):
-            info["aneurysm_%d" % i] = points[i]
-            write_parameters(info, dir_path)
 
     return points
 
