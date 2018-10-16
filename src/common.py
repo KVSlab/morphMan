@@ -2179,13 +2179,23 @@ def prepare_voronoi_diagram(capped_surface, centerlines, base_path,
     # Check if a region should not be smoothed
     if smooth and no_smooth:
         no_smooth_path = base_path + "_centerline_no_smooth.vtp"
+        parameters = get_parameters(base_path)
+
         if not path.exists(no_smooth_path):
             # Get inlet and outlets
             tol = get_tolerance(centerlines)
             inlet = extract_single_line(centerlines, 0)
             inlet = inlet.GetPoint(0)  # inlet.GetNumberOfPoints() - 1)
             outlets = []
-            if no_smooth_point is None:
+            parameters = get_parameters(base_path)
+
+            if "no_smooth_point_1" in parameters.keys():
+                counter = 1
+                while "no_smooth_point_{}".format(counter) in parameters.keys():
+                    outlets += parameters["no_smooth_point_{}".format(counter)]
+                    counter += 1
+
+            elif no_smooth_point is None:
                 seed_selector = vmtkPickPointSeedSelector()
                 seed_selector.SetSurface(capped_surface)
                 seed_selector.text = "Please place a point on the segments you do not want" + \
@@ -2193,12 +2203,18 @@ def prepare_voronoi_diagram(capped_surface, centerlines, base_path,
                 seed_selector.Execute()
                 point_ids = seed_selector.GetTargetSeedIds()
                 for i in range(point_ids.GetNumberOfIds()):
+                    parameters["no_smooth_point_{}".format(i)] = capped_surface.GetPoint(point_ids.GetId(i))
                     outlets += capped_surface.GetPoint(point_ids.GetId(i))
+
             else:
                 locator = get_locator(capped_surface)
                 for i in range(len(no_smooth_point) // 3):
                     tmp_id = locator.FindClosestPoint(no_smooth_point[3 * i:3 * (i + 1)])
-                    outlets.append(capped_surface.GetPoint(tmp_id))
+                    parameters["no_smooth_point_{}".format(i)] = capped_surface.GetPoint(tmp_id)
+                    outlets += capped_surface.GetPoint(tmp_id)
+
+            # Store parameters
+            write_parameters(parameters)
 
             # Create the centerline
             no_smooth_centerlines, _, _ = compute_centerlines(inlet, outlets,
