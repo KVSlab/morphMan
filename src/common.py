@@ -2181,7 +2181,7 @@ def prepare_voronoi_diagram(capped_surface, centerlines, base_path,
         no_smooth_path = base_path + "_centerline_no_smooth.vtp"
         parameters = get_parameters(base_path)
 
-        elif not path.exists(no_smooth_path):
+        if not path.exists(no_smooth_path):
             # Get inlet and outlets
             tol = get_tolerance(centerlines)
             inlet = extract_single_line(centerlines, 0)
