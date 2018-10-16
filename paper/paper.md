@@ -6,10 +6,10 @@ tags:
   - vascular
   - biomedical
 authors:
+  - name: Henrik A. Kjeldsberg
+    affiliation: 1
   - name: Aslak W. Bergersen
     orcid: 0000-0001-5063-3680
-    affiliation: 1
-  - name: Henrik A. Kjeldsberg
     affiliation: 1
   - name: Kristian Valen-Sendstad
     orcid: 0000-0002-2907-0171
