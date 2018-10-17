@@ -16,7 +16,7 @@ from .fixtures import common_input
 import numpy as np
 from manipulate_area import area_variations
 from common import read_polydata, vmtk_compute_centerline_sections, get_array, \
-                   get_path_names, extract_single_line, write_polydata
+                   get_path_names, extract_single_line
 
 
 @pytest.mark.parametrize("ratio", [1.5, 3.0])

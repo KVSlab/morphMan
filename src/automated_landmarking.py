@@ -25,7 +25,7 @@ def automated_landmarking(input_filepath, curv_method, resampling_step, algorith
         resampling_step (float): Resampling step. Is None if no resampling.
         algorithm (str): Name of landmarking algorithm.
         nknots (int): Number of knots for B-splines.
-        smooth_line (bool): Smoothes centerline with VMTK if True.
+        smooth_line (bool): Smooths centerline with VMTK if True.
         smoothing_factor_curv (float): Smoothing factor used in VMTK for curvature
         smoothing_factor_torsion (float): Smoothing factor used in VMTK for torsion
         iterations (int): Number of smoothing iterations.
@@ -71,7 +71,7 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
     """
     Perform landmarking of an input centerline to
     identify different segments along the vessel.
-    Landmarking algorithm based on Bogunevic et al. (2012).
+    Landmarking algorithm based on Bogunovic (2012).
     Bends are identified where the angle in the k1-k2 basis
     exceeds a certain limit.
 
@@ -81,7 +81,7 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
         curv_method (str): Method used for computing curvature.
         algorithm (str): Name of landmarking algorithm.
         resampling_step (float): Resampling step. Is None if no resampling.
-        smooth_line (bool): Smoothes centerline with VMTK if True.
+        smooth_line (bool): Smooths centerline with VMTK if True.
         nknots (int): Number of knots for B-splines.
         smoothing_factor (float): Smoothing factor used in VMTK
         iterations (int): Number of smoothing iterations.
@@ -155,7 +155,7 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
         y[i] = line.GetPoints().GetPoint(i)[1]
         z[i] = line.GetPoints().GetPoint(i)[2]
 
-    # Tolerance parameters from Bogunevic et al. (2012)
+    # Tolerance parameters from Bogunovic et al. (2012)
     tol_ant_post = 60
     tol_sup_ant = 45
     tol_post_inf = 45
@@ -185,7 +185,7 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
 
         elif not success and part == "sup_ant":
             print("-- Where not able to identify the interface between the" +
-                  "anterior and superior bend. Chekc the coronal coordinates")
+                  "anterior and superior bend. Check the coronal coordinates")
             return None
 
         elif not success and part != "inf_end":
@@ -199,7 +199,7 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
             print("-- End of inferior is at the end of the geometry, this might" +
                   "affect the geometry stats")
         else:
-            print("-- Something happend, idea: some bend ended at the last point")
+            print("-- Something happened, idea: some bend ended at the last point")
             return None
 
         return i
@@ -242,8 +242,8 @@ def landmarking_piccinelli(centerline, base_path, curv_method, algorithm, resamp
     """
     Perform landmarking of an input centerline to
     identify different segments along the vessel.
-    Landmarking algorithm based on Bogunevic et al. (2012).
-    Uses curvature and torsion to objectivley subdivide
+    Landmarking algorithm based on Bogunovic et al. (2012).
+    Uses curvature and torsion to objectively subdivide
     the siphon into bends.
     Subdivision of individual siphon bends is
     performed by identifying locations of curvature and torsion peaks along
@@ -256,7 +256,7 @@ def landmarking_piccinelli(centerline, base_path, curv_method, algorithm, resamp
         curv_method (str): Method used for computing curvature.
         algorithm (str): Name of landmarking algorithm.
         resampling_step (float): Resampling step. Is None if no resampling.
-        smooth_line (bool): Smoothes centerline with VMTK if True.
+        smooth_line (bool): Smooths centerline with VMTK if True.
         nknots (int): Number of knots for B-splines.
         smoothing_factor_curv (float): Smoothing factor for computing curvature.
         smoothing_factor_torsion (float): Smoothing factor for computing torsion.
@@ -431,7 +431,7 @@ def spline_and_geometry(line, smooth, nknots):
     c1xc2_3 = ddlsfy * dlsfx - ddlsfx * dlsfy
 
     curvature_ = np.sqrt(c1xc2_1 ** 2 + c1xc2_2 ** 2 + c1xc2_3 ** 2) / \
-                        (dlsfx ** 2 + dlsfy ** 2 + dlsfz ** 2) ** 1.5
+                 (dlsfx ** 2 + dlsfy ** 2 + dlsfz ** 2) ** 1.5
 
     max_point_ids = list(argrelextrema(curvature_, np.greater)[0])
     min_point_ids = list(argrelextrema(curvature_, np.less)[0])
@@ -461,7 +461,7 @@ def spline_and_geometry(line, smooth, nknots):
     line.GetPointData().AddArray(torsion_array)
 
     curvature_ = np.sqrt(c1xc2_1 ** 2 + c1xc2_2 ** 2 + c1xc2_3 ** 2) / \
-                        (dlsfx ** 2 + dlsfy ** 2 + dlsfz ** 2) ** 1.5
+                 (dlsfx ** 2 + dlsfy ** 2 + dlsfz ** 2) ** 1.5
     curvature_[0] = curvature[0]
     curvature_[-1] = curvature[-1]
 
@@ -517,7 +517,7 @@ def read_command_line():
     """
     description = "Perform landmarking of an input centerline to" + \
                   "identify different segments along the vessel." + \
-                  "Landmarking algorithm based on Bogunevic et al. (2012) " + \
+                  "Landmarking algorithm based on Bogunovic et al. (2012) " + \
                   " and Piccinelli et al. (2011)."
 
     parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
@@ -527,7 +527,7 @@ def read_command_line():
     required.add_argument('-i', '--ifile', type=str, default=None, required=True,
                           help="Path to the surface model")
 
-    # Optinal arguments
+    # Optional arguments
     parser.add_argument('-m', '--curv-method', type=str, default="spline",
                         help="Choose which method used for computing curvature: spline (default) " +
                              "| vmtk | disc |",
@@ -540,10 +540,10 @@ def read_command_line():
                         help="Number of knots used in B-splines.")
     parser.add_argument('-sl', '--smooth-line', type=str2bool, default=False,
                         help="If the original centerline should be smoothed " +
-                             "when computing the centerline attribiutes")
-    parser.add_argument('-facc', '--smoothing_factor_curvature', type=float, default=1.0,
+                             "when computing the centerline attributes")
+    parser.add_argument('-facc', '--smoothing-factor-curvature', type=float, default=1.0,
                         help="Smoothing factor for computing curvature.")
-    parser.add_argument('-fact', '--smoothing_factor_torsion', type=float, default=1.0,
+    parser.add_argument('-fact', '--smoothing-factor-torsion', type=float, default=1.0,
                         help="Smoothing factor for computing torsion.")
     parser.add_argument('-it', '--iterations', type=int, default=100,
                         help="Smoothing iterations.")

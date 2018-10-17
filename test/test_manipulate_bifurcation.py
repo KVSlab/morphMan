@@ -19,7 +19,7 @@ from common import get_path_names, read_polydata, get_locator, get_tolerance, \
                    extract_single_line, distance
 
 
-@pytest.mark.parametrize("angle", [20 / 180 * np.pi])
+@pytest.mark.parametrize("angle", [20 / 180 * np.pi, -20 / 180 * np.pi])
 def test_bifurcation_angle(common_input, angle):
     common_input.update(dict(keep_fixed_1 = False,
                              keep_fixed_2 = False,
@@ -102,4 +102,8 @@ def test_bifurcation_angle(common_input, angle):
 
     if (angle_original - 2*common_input["angle"]) > np.pi:
         angle_rotated = 2*np.pi - angle_rotated
-    assert abs(angle_original - angle_rotated - 2*common_input["angle"]) < 0.08
+
+    if common_input["angle"] < 0:
+        assert abs(angle_original - angle_rotated - 2*common_input["angle"]) > 0.08
+    elif common_input["angle"] > 0:
+        assert abs(angle_original - angle_rotated - 2*common_input["angle"]) < 0.08

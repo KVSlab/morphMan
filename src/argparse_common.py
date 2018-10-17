@@ -33,8 +33,8 @@ def add_common_arguments(parser):
                         help="If model is smoothed the user can manually select points on" +
                              " the surface that will not be smoothed. A centerline will be" +
                              " created to the extra point, and the section were the centerline" +
-                             " differ from the other centerlines will be keept un-smoothed. This" +
-                             " can be practicle for instance when manipulating geometries" +
+                             " differ from the other centerlines will be kept un-smoothed. This" +
+                             " can be particle for instance when manipulating geometries" +
                              " with aneurysms")
     parser.add_argument("-b", "--poly-ball-size", nargs=3, type=int, default=[120, 120, 120],
                         help="The size of the poly balls that will envelope the new" +

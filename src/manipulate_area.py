@@ -1,9 +1,10 @@
 ##   Copyright (c) Aslak W. Bergersen, Henrik A. Kjeldsberg. All rights reserved.
 ##   See LICENSE file for details.
 
-##      This software is distributed WITHOUT ANY WARRANTY; without even 
-##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
+##      This software is distributed WITHOUT ANY WARRANTY; without even
+##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 ##      PURPOSE.  See the above copyright notices for more information.
+
 from scipy.ndimage.filters import gaussian_filter
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
@@ -29,7 +30,7 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
         smooth (bool): Determines Voronoi smoothing or not.
         smooth_factor (float): Smoothing factor used for voronoi diagram smoothing.
         no_smooth (bool): If True, define a region where the Voronoi diagram should not be smoothed.
-        no_smooth_point (list): A flattend list to the 'end' points of the regions not to smooth.
+        no_smooth_point (list): A flattened list to the 'end' points of the regions not to smooth.
         beta (float): Factor determining how much the geometry will differ.
         ratio (float): Target ratio, A_max / A_min. Beta is ignored (and estimated) if given.
         percentage (float): Percentage the area of the geometry / stenosis is increase/decreased.
@@ -68,9 +69,9 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
 
     # Spline centerline and compute cross-sectional areas along line
     centerline_splined, centerline_remaining, \
-            centerline_diverging, region_points = get_line_to_change(capped_surface, centerlines,
-                                                                     region_of_interest, method,
-                                                                     region_points, stenosis_length)
+        centerline_diverging, region_points = get_line_to_change(capped_surface, centerlines,
+                                                                 region_of_interest, method,
+                                                                 region_points, stenosis_length)
     write_polydata(centerline_splined, centerline_spline_path)
     write_polydata(centerline_remaining, centerline_remaining_path)
     if centerline_diverging is not None:
@@ -156,7 +157,7 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
     # Get factor
     if method == "variation":
         if ratio is not None:
-            # Inital guess
+            # Initial guess
             R_old = area.max() / area.min()
             beta = 0.5 * (math.log(ratio) / math.log(R_old) - 1)
             factor_ = (area / mean_area) ** beta
@@ -177,7 +178,7 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
             factor = np.sqrt(factor)
             factor = factor * (1 - trans) + trans
 
-    # Increase or deacrease overall area by a percentage
+    # Increase or decrease overall area by a percentage
     elif method == "area":
         factor_ = np.ones(len(trans)) * (1 + percentage * 0.01)
         factor = factor_ * (1 - trans) + trans
@@ -202,9 +203,11 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
         percentage (float): Percentage the area of the geometry / stenosis is increase/decreased.
         region_of_interest (str): Method for setting the region of interest ['manual' | 'commandline' | 'first_line']
         region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint
+        diverging_centerline (vtkPolyData): Polydata containing diverging centerlines along region of interest.
+        diverging_voronoi (vtkPolyData): Voronoi diagram diverging off region of interest.
 
     Returns:
-        newVoronoi (vtkPolyData): Manipulated Voronoi diagram.
+        new_voronoi (vtkPolyData): Manipulated Voronoi diagram.
     """
     # Get factor
     factor = get_factor(line_to_change, method, beta, ratio, percentage,
@@ -285,7 +288,7 @@ def read_command_line():
                   "\n3) Inflate or deflate the entire region of interest. (area)"
     parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
 
-    # Add comman arguments
+    # Add common arguments
     add_common_arguments(parser)
 
     # Mode / method for manipulation
@@ -299,7 +302,7 @@ def read_command_line():
                              " two points will be linearly interpolated to remove the narrowing." +
                              " If only one point is provided it is assumed to be the center of" +
                              " the stenosis. The new stenosis will have a sin shape, however, any" +
-                             " other shape may be easly implemented." +
+                             " other shape may be easily implemented." +
                              "\n3) 'area' will inflate or deflate the area in the region of" +
                              " interest.")
 
@@ -321,11 +324,11 @@ def read_command_line():
                              " argument have to be given. The method expects two points" +
                              " which defines the start and end of the region of interest. If" +
                              " 'method' is set to stenosis, then one point can be provided as well," +
-                             " which is assumbed to be the center of a new stenosis." +
+                             " which is assumed to be the center of a new stenosis." +
                              " Example providing the points (1, 5, -1) and (2, -4, 3):" +
                              " --stenosis-points 1 5 -1 2 -4 3")
 
-    # "Variation" argments
+    # "Variation" arguments
     parser.add_argument('--beta', type=float, default=0.5,
                         help="For method=variation: The new voronoi diagram is computed as" +
                              " (A/A_mean)**beta*r_old, over the respective area. If beta <" +

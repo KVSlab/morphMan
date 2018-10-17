@@ -9,7 +9,7 @@ import operator
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 from scipy import interpolate
-from scipy.ndimage.filters import gaussian_filter as gauss
+from scipy.ndimage.filters import gaussian_filter
 from scipy.signal import argrelextrema
 
 # Local import
@@ -25,7 +25,7 @@ def estimate_alpha_and_beta(input_filepath, quantity_to_compute, boundary, radiu
     to make a parameter surface.
     Parameter surface is used to find intersection with
     initial parameter value plus / minus one standard deviation.
-    Three criterias to find suggested alpha-beta value from intersection.
+    Three criteria to find suggested alpha-beta value from intersection.
 
     Args:
         input_filepath (str): Surface model filename and location where data is stored.
@@ -35,7 +35,7 @@ def estimate_alpha_and_beta(input_filepath, quantity_to_compute, boundary, radiu
         grid_size (int): Size of searching grid ( grid_size x grid_size matrix)
         value_change (float): Desired change in curvature / bend angle to achieve
         method_angle (str): Method for computing angle.
-        method_curv (str): Method for computing curv.
+        method_curv (str): Method for computing curvature.
         region_of_interest (str): Method for setting the region of interest ['manual' | 'commandline' | 'landmarking']
         region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint
     """
@@ -48,54 +48,37 @@ def estimate_alpha_and_beta(input_filepath, quantity_to_compute, boundary, radiu
     if type(boundary[-1]) is str:
         boundary = np.asarray(boundary, dtype=float)
     data = compute_quantities(input_filepath, boundary, quantity_to_compute, method_curv, method_angle,
-                              region_of_interest, region_points, n=grid_size, proj=False)
+                              region_of_interest, region_points, n=grid_size, projection=False)
     # Get grid boundary
     amin, amax, bmin, bmax = float(boundary[0]), float(boundary[1]), float(boundary[2]), float(boundary[3])
 
-    # Set standard deviations used to find intersetcion
+    # Set standard deviations used to find intersection
 
     # Defined SD planes for curvature
     # Tolerance added for adjusting SD
     # if there are no intersections found
-    def cpsd(tolerance=0.0):
-        return curv0 + value_change - tolerance
+    def value_plus(tolerance=0.0):
+        return initial_value + value_change - tolerance
 
-    def cmsd(tolerance=0.0):
-        return curv0 - value_change + tolerance
-
-    def curv_init(tolerance=0.0):
-        return curv0
-
-    def apsd(tolerance=0.0):
-        return angle0 + value_change - tolerance
-
-    def amsd(tolerance=0.0):
-        return angle0 - value_change + tolerance
-
-    def angle_init(tolerance=0.0):
-        return angle0
+    def value_minus(tolerance=0.0):
+        return initial_value - value_change + tolerance
 
     n = len(data)
     alpha = np.linspace(amin, amax, n)
     beta = np.linspace(bmin, bmax, n)
     alpha_long = np.linspace(amin, amax, 300)
     beta_long = np.linspace(bmin, bmax, 300)
-    yy, xx = np.meshgrid(beta, alpha)
+    xx, yy = np.meshgrid(alpha, beta)
 
     points = np.zeros((n, 2))
     for i in range(len(xx)):
         points[i] = [alpha[i], beta[i]]
 
     # Spline interpolation
-    # TODO: Change to griddata interpolation for robustness
-    f = interpolate.interp2d(beta, alpha, data, kind='cubic')
+    f = interpolate.SmoothBivariateSpline(xx.ravel(), yy.ravel(), data.ravel())
 
-    if quantity_to_compute == "curvature":
-        curv0 = f(0, 0)
-        methods = [cpsd, cmsd, curv_init]
-    elif quantity_to_compute == "angle":
-        angle0 = f(0, 0)
-        methods = [apsd, amsd, angle_init]
+    initial_value = f(0, 0)
+    methods = [value_plus, value_minus]
 
     # Find intersecting points
     # Reduces SD if no points are found
@@ -103,12 +86,14 @@ def estimate_alpha_and_beta(input_filepath, quantity_to_compute, boundary, radiu
         zeros = alpha_beta_intersection(plane, f, alpha_long, beta_long)
         if len(zeros) == 0:
             empty = True
+
+            # Leeway tolerance for matching quantity on interpolated surface
             tol = 0.005 if quantity_to_compute == "curvature" else 0.1
-            maxiter = 50
+            max_iter = 50
             iterations = 0
 
             print("-- Found no points..Adjusting SD")
-            while empty and iterations < maxiter:
+            while empty and iterations < max_iter:
                 print("-- Iterations: %i" % (iterations + 1))
                 zeros = alpha_beta_intersection(plane, f, alpha_long, beta_long, tol)
                 if len(zeros) > 0:
@@ -118,35 +103,36 @@ def estimate_alpha_and_beta(input_filepath, quantity_to_compute, boundary, radiu
                     tol += 0.001
                 elif quantity_to_compute == "angle":
                     tol += 0.2
-        # Check points and apply criterias
+
+        # Check points and apply criteria
         # to find suggested values for alpha and beta
         if len(zeros) > 0:
             points = []
             for p in zeros:
-                if plane.__name__ in ["cpsd", "amsd"]:
+                if (plane.__name__ == "value_plus" and quantity_to_compute == "curvature") \
+                        or (plane.__name__ == "value_minus" and quantity_to_compute == "angle"):
                     if p[1] < 0:
                         points.append(p)
-                elif plane.__name__ in ["cmsd", "apsd"]:
+                else:
                     if p[1] > 0:
                         points.append(p)
 
-            if plane.__name__ not in ["curv_init", "angle_init"]:
-                suggested_point = points[0]
-                dist = 10000
-                for p in points[1:]:
-                    dist_tmp = la.norm(np.array(p))
-                    if radius < dist_tmp < dist:
-                        dist = dist_tmp
-                        suggested_point = p
+            suggested_point = points[0]
+            dist = 1e9
+            for p in points[1:]:
+                dist_tmp = la.norm(np.array(p))
+                if radius < dist_tmp < dist:
+                    dist = dist_tmp
+                    suggested_point = p
 
-                # Write points to file
-                write_alpha_beta_point(base_path, suggested_point, plane.__name__)
+            # Write points to file
+            write_alpha_beta_point(base_path, suggested_point, plane.__name__, quantity_to_compute)
 
 
 def compute_quantities(input_filepath, boundary, quantity, method_curv, method_angle, region_of_interest, region_points,
-                       n=50, proj=False):
+                       n=50, projection=False):
     """
-    Initilization for computing curvature and angle.
+    Initialization for computing curvature and angle.
     Values are either printed to terminal or stored in a (n x n) matrix.
 
     Args:
@@ -158,7 +144,7 @@ def compute_quantities(input_filepath, boundary, quantity, method_curv, method_a
         region_of_interest (str): Method for setting the region of interest ['manual' | 'commandline' | 'landmarking']
         region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint
         n (int): Determines matrix size when computing multiple values.
-        proj (bool): Projects angle into 2d plane if True.
+        projection (bool): Projects angle into 2d plane if True.
 
     Returns:
         values (ndarray): (n x n) matrix with quantity values
@@ -179,7 +165,7 @@ def compute_quantities(input_filepath, boundary, quantity, method_curv, method_a
 
             elif quantity == "angle":
                 value, _ = compute_angle(input_filepath, alpha, beta, method_angle, None,
-                                         region_of_interest, region_points, proj)
+                                         region_of_interest, region_points, projection)
             values[i, j] = value
             k += 1
 
@@ -187,7 +173,7 @@ def compute_quantities(input_filepath, boundary, quantity, method_curv, method_a
 
 
 def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
-                  region_of_interest, region_points, proj=False):
+                  region_of_interest, region_points, projection=False):
     """
     Primary collection of methods for computing the angle of a vessel bend.
     Three main methods are currently implemented:
@@ -203,10 +189,10 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
         new_centerlines (vtkPolyData): New centerline.
         region_of_interest (str): Method for setting the region of interest ['manual' | 'commandline' | 'landmarking']
         region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint
-        proj (bool): True / False for computing 2D / 3D angle.
+        projection (bool): True / False for computing 2D / 3D angle.
 
     Returns:
-        newdeg (float): New angle of a vessel bend from a manipulated centerline.
+        new_deg (float): New angle of a vessel bend from a manipulated centerline.
     Returns:
         deg (float): Old angle of a vessel bend from a manipulated centerline.
     """
@@ -317,14 +303,14 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
 
         siphon = vmtk_centerline_geometry(siphon, False)
 
-        T1 = get_array("FrenetTangent", siphon, k=3)
-        T2 = get_array("FrenetTangent", moved_siphon, k=3)
+        frenet_t1 = get_array("FrenetTangent", siphon, k=3)
+        frenet_t2 = get_array("FrenetTangent", moved_siphon, k=3)
 
-        p1_1, p1_id = find_closest_point(T1[-1], 0, max_id, p2, siphon)
-        p2_2, p2_id = find_closest_point(T1[0], max_id, siphon.GetNumberOfPoints(), p1, siphon)
+        p1_1, p1_id = find_closest_point(frenet_t1[-1], 0, max_id, p2, siphon)
+        p2_2, p2_id = find_closest_point(frenet_t1[0], max_id, siphon.GetNumberOfPoints(), p1, siphon)
 
-        newp1, np1_id = find_closest_point(T2[-1], 0, newmax_id, moved_p2, moved_siphon)
-        newp2, np2_id = find_closest_point(T2[0], newmax_id,
+        newp1, np1_id = find_closest_point(frenet_t2[-1], 0, newmax_id, moved_p2, moved_siphon)
+        newp2, np2_id = find_closest_point(frenet_t2[0], newmax_id,
                                            moved_siphon.GetNumberOfPoints(), moved_p1,
                                            moved_siphon)
 
@@ -350,12 +336,12 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
 
         tmpcurv = cutcurv
         while len(allmaxcurv) > 2:
-            tmpcurv = gauss(tmpcurv, 2)
+            tmpcurv = gaussian_filter(tmpcurv, 2)
             allmaxcurv = argrelextrema(tmpcurv, np.greater)[0]
 
         tmpnewcurv = newcutcurv
         while len(allnewmaxcurv) > 2:
-            tmpnewcurv = gauss(tmpnewcurv, 2)
+            tmpnewcurv = gaussian_filter(tmpnewcurv, 2)
             allnewmaxcurv = argrelextrema(tmpnewcurv, np.greater)[0]
 
         max_id = allmaxcurv[0]
@@ -399,8 +385,8 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
             d1, d2, curvlineold = odr_line(id1, id2, siphon_splined, siphon_curv, limit)
             newd1, newd2, curvlinenew = odr_line(moved_id1, moved_id2, moved_siphon, moved_siphon_curv, limit)
 
-            deg = find_angle_odr(d1, d2, proj)
-            newdeg = find_angle_odr(newd1, newd2, proj)
+            deg = find_angle_odr(d1, d2, projection)
+            new_deg = find_angle_odr(newd1, newd2, projection)
 
     elif method == "MISR":
         multiplier = 1.5
@@ -416,8 +402,8 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
         new_pa, ra = move_past_sphere(moved_siphon, moved_p1, newrad1, 0, step=1, stop=n2 - 1, X=multiplier)
         new_pb, rb = move_past_sphere(moved_siphon, moved_p2, newrad2, n2 - 1, step=-1, stop=0, X=multiplier)
 
-        deg, l1, l2 = find_angle(pa, pb, p1, p2, proj)
-        newdeg, nl1, nl2 = find_angle(new_pa, new_pb, moved_p1, moved_p2, proj)
+        deg, l1, l2 = find_angle(pa, pb, p1, p2, projection)
+        new_deg, nl1, nl2 = find_angle(new_pa, new_pb, moved_p1, moved_p2, projection)
 
     else:
         if method == "frac":
@@ -436,8 +422,8 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
             new_pa = moved_siphon.GetPoints().GetPoint(ida)
             new_pb = moved_siphon.GetPoints().GetPoint(idb)
 
-            deg, l1, l2 = find_angle(pa, pb, p1, p2, proj)
-            newdeg, nl1, nl2 = find_angle(new_pa, new_pb, moved_p1, moved_p2, proj)
+            deg, l1, l2 = find_angle(pa, pb, p1, p2, projection)
+            new_deg, nl1, nl2 = find_angle(new_pa, new_pb, moved_p1, moved_p2, projection)
 
         elif method in ["plane", "itplane", "itplane_clip", "maxcurv", "smooth",
                         "discrete", "maxdist"]:
@@ -467,8 +453,8 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
                     new_pa = moved_siphon.GetPoints().GetPoint(ida)
                     new_pb = moved_siphon.GetPoints().GetPoint(idb)
 
-                deg, l1, l2 = find_angle(pa, pb, p1, p2, proj)
-                newdeg, nl1, nl2 = find_angle(new_pa, new_pb, moved_p1, moved_p2, proj)
+                deg, l1, l2 = find_angle(pa, pb, p1, p2, projection)
+                new_deg, nl1, nl2 = find_angle(new_pa, new_pb, moved_p1, moved_p2, projection)
 
             else:
                 ida = int(max_id * frac)
@@ -481,10 +467,10 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
                 new_pa = moved_siphon.GetPoints().GetPoint(ida)
                 new_pb = moved_siphon.GetPoints().GetPoint(idb)
 
-                deg, l1, l2 = find_angle(pa, pb, p1, p2, proj)
-                newdeg, nl1, nl2 = find_angle(new_pa, new_pb, moved_p1, moved_p2, proj)
+                deg, l1, l2 = find_angle(pa, pb, p1, p2, projection)
+                new_deg, nl1, nl2 = find_angle(new_pa, new_pb, moved_p1, moved_p2, projection)
 
-    return newdeg, deg
+    return new_deg, deg
 
 
 def compute_curvature(input_filepath, alpha, beta, method, new_centerlines, compute_original, region_of_interest,
@@ -566,46 +552,46 @@ def compute_curvature(input_filepath, alpha, beta, method, new_centerlines, comp
         factor = 0.5
         line_fac = vmtk_centerline_geometry(new_centerline, smooth=True, iterations=100, factor=factor)
         curv_fac = get_array("Curvature", line_fac)
-        new_curvature = gauss(curv_fac, 5)
+        new_curvature = gaussian_filter(curv_fac, 5)
 
         if compute_original:
             line_fac = vmtk_centerline_geometry(centerline, smooth=True, iterations=100, factor=factor)
             curv_fac = get_array("Curvature", line_fac)
-            curvature = gauss(curv_fac, 5)
+            curvature = gaussian_filter(curv_fac, 5)
 
     # 2) VMTK - Iteration variance
     elif method == "vmtkit":
         it = 150
         line_it = vmtk_centerline_geometry(new_centerline, smooth=True, iterations=it, factor=1.0)
         curv_it = get_array("Curvature", line_it)
-        new_curvature = gauss(curv_it, 5)
+        new_curvature = gaussian_filter(curv_it, 5)
 
         if compute_original:
             line_it = vmtk_centerline_geometry(centerline, smooth=True, iterations=it, factor=1.0)
             curv_it = get_array("Curvature", line_it)
-            curvature = gauss(curv_it, 5)
+            curvature = gaussian_filter(curv_it, 5)
 
     # 3) Splines
     elif method == "spline":
         nknots = 50
         siphon_splined, siphon_curv = spline_centerline(new_centerline, get_curv=True,
                                                         isline=True, nknots=nknots)
-        new_curvature = gauss(siphon_curv, 5)
+        new_curvature = gaussian_filter(siphon_curv, 5)
 
         if compute_original:
             siphon_splined, siphon_curv = spline_centerline(centerline, get_curv=True,
                                                             isline=True, nknots=nknots)
-            curvature = gauss(siphon_curv, 5)
+            curvature = gaussian_filter(siphon_curv, 5)
 
     # 4) Default: Discrete derivatives
     elif method == "disc":
         neigh = 20
         line_di, curv_di = discrete_geometry(new_centerline, neigh=neigh)
-        new_curvature = gauss(curv_di, 5)
+        new_curvature = gaussian_filter(curv_di, 5)
 
         if compute_original:
             line_di, curv_di = discrete_geometry(centerline, neigh=neigh)
-            curvature = gauss(curv_di, 5)
+            curvature = gaussian_filter(curv_di, 5)
 
     old_maxcurv = max(curvature[id1 + 10:id2 - 10]) if compute_original else None
     new_maxcurv = max(new_curvature[id1_new + 10:id2_new - 10])
@@ -819,7 +805,7 @@ def get_moved_siphon(new_centerlines, centerlines, p1, p2):
     return id1, id2, moved_id1, moved_id2, moved_p1, moved_p2
 
 
-def find_angle(pa, pb, p1, p2, proj):
+def find_angle(pa, pb, p1, p2, projection):
     """
     Compute the angle between two vectors
     a = pA - p1 and b = pB - p2
@@ -830,14 +816,14 @@ def find_angle(pa, pb, p1, p2, proj):
         pb (ndarray): Point along the centerline.
         p1 (ndarray): Point along the centerline.
         p2 (ndarray): Point along the centerline.
-        proj (bool): True / False for 2D / 3D angle.
+        projection (bool): True / False for 2D / 3D angle.
 
     Returns:
         deg (float): Angle between vectors.
         vector_a (ndarray): First vector.
         vector_b (ndarraty): Second vector.
     """
-    if not proj:
+    if not projection:
         vector_a = np.array([pa[0] - p1[0], pa[1] - p1[1], pa[2] - p1[2]])
         vector_b = np.array([pb[0] - p2[0], pb[1] - p2[1], pb[2] - p2[2]])
     else:
@@ -850,23 +836,23 @@ def find_angle(pa, pb, p1, p2, proj):
     return deg, vector_a, vector_b
 
 
-def find_angle_odr(d1, d2, proj):
+def find_angle_odr(d1, d2, projection):
     """
     Compute the angle between two vectors
     d1 and d2 using the classical formula.
-    Used for the ODR-method, spesifically.
+    Used for the ODR-method, specifically.
 
     Args:
         d1 (ndarray): First vector
         d2 (ndarray): Second vector
-        proj (bool): True / False for 2D / 3D angle.
+        projection (bool): True / False for 2D / 3D angle.
 
     Returns:
         deg (float): Angle between vectors.
     """
     if d1.dot(d2) > 0:
         d1 = -d1
-    if proj:
+    if projection:
         d1[0] = 0
         d2[0] = 0
 
@@ -877,7 +863,7 @@ def find_angle_odr(d1, d2, proj):
     return deg, d1, d2
 
 
-def write_alpha_beta_point(base_path, suggested_point, method):
+def write_alpha_beta_point(base_path, suggested_point, method, quantity_to_compute):
     """
     Write suggested choice of (alpha, beta) to file.
 
@@ -885,12 +871,14 @@ def write_alpha_beta_point(base_path, suggested_point, method):
         base_path (str): Path to file directory.
         suggested_point (ndarray): Array containing alpha and beta value
         method (str): Info about parameter, and increase / decrease of parameter.
+        quantity_to_compute (str): Quantity to compute.
     """
     save_path = base_path + "_alphabeta_values.txt"
     alpha = suggested_point[0]
     beta = suggested_point[1]
+    name = quantity_to_compute + "_" + method.split("_")[-1]
     with open(save_path, "a") as f:
-        f.write("%s alpha=%s beta=%s\n" % (method, alpha, beta))
+        f.write("%s alpha=%.4f beta=%.4f \n" % (name, alpha, beta))
 
 
 def alpha_beta_intersection(method, f, alphas, betas, tol=0.0):
@@ -928,8 +916,8 @@ def read_command_line():
     """
     description = "Algorithm used to compute the recommended value for " + \
                   "alpha and beta based on surface interpolation and a " + \
-                  "given limit, depening on the quantity to be computed. " + \
-                  "Primarly implemented for computing angle and curvature values." + \
+                  "given limit, depending on the quantity to be computed. " + \
+                  "Primarily implemented for computing angle and curvature values." + \
                   "Computes selected quantities using the centerline as a proxy."
 
     parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
