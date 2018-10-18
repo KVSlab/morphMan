@@ -23,7 +23,7 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
     moves voronoi diagram in the horizontal direction based on the
     definitions in "Investigating the Interaction Between Morphology
     of the Anterior Bend and Aneurysm Initiation" (2018).
-    Procedes by computing the corresponding centerline in the new
+    Proceeds by computing the corresponding centerline in the new
     geometries, used for postprocessing, geometric analysis and
     meshing.
 
@@ -84,7 +84,7 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
         region_points = np.loadtxt(point_path)
     else:
         _, _, _, region_points = get_line_to_change(capped_surface, centerlines,
-                                              region_of_interest, "bend", region_points, 0)
+                                                    region_of_interest, "bend", region_points, 0)
         region_points = [[region_points[3 * i], region_points[3 * i + 1], region_points[3 * i + 2]]
                          for i in range(len(region_points) // 3)]
 
@@ -108,7 +108,7 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
     p1 = centerlines.GetPoint(id1)
     p2 = centerlines.GetPoint(id2)
     centerline_remaining = create_parent_artery_patches(centerlines,
-                                                     region_points_vtk, siphon=True)
+                                                        region_points_vtk, siphon=True)
     centerline_bend = extract_single_line(centerlines, 0, startID=id1, endID=id2)
 
     if diverging_centerline_ispresent:
@@ -141,7 +141,7 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
                                            diverging_centerlines, direction)
 
         # Move anterior bend horizontally.
-        # Iterate over points P from Voronoi diagram and manioulate
+        # Iterate over points P from Voronoi diagram and manipulate
         print("-- Adjusting Voronoi diagram")
         voronoi_remaining = move_voronoi_horizontally(dx_p1, voronoi_remaining,
                                                       centerline_remaining, id1, id2,
@@ -186,8 +186,7 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
     write_polydata(new_surface, output_filepath)
 
 
-def move_vessel_vertically(alpha, voronoi_remaining,
-                           voronoi_bend, centerlines, region_points, poly_ball_size):
+def move_vessel_vertically(alpha, voronoi_remaining, voronoi_bend, centerlines, region_points, poly_ball_size):
     """
     Secondary script used for vertical displacement of
     the blood vessel. Moves the input voronoi diagram and
@@ -199,7 +198,7 @@ def move_vessel_vertically(alpha, voronoi_remaining,
         voronoi_remaining (vtkPolyData): Voronoi diagram excluding bend.
         voronoi_bend (vtkPolyData): Voronoi diagram representing bend.
         region_points (list): Points defining the bend to be manipulated.
-        poly_ball_size (list): Resulution of surface model.
+        poly_ball_size (list): Resolution of surface model.
 
     Returns:
         new_surface (vtkPolyData): New surface model.
@@ -213,7 +212,7 @@ def move_vessel_vertically(alpha, voronoi_remaining,
     diverging_centerline_ispresent = diverging_centerlines is not None
     diverging_id = None if len(diverging_ids) == 0 else diverging_ids[0]
 
-    # Special cases including the ophthalmic artery
+    # Special cases including the diverging centerline
     if diverging_centerline_ispresent:
         patch_diverging_line = clip_diverging_line(extract_single_line(diverging_centerlines, 0),
                                                    region_points[0], diverging_id)
@@ -231,7 +230,7 @@ def move_vessel_vertically(alpha, voronoi_remaining,
         diverging_centerline_end = extract_single_line(patch_diverging_line, 1)
         centerline_bend = merge_data([centerline_bend, diverging_centerline_end])
 
-    # Find ID of middle pooint:
+    # Find ID of middle point:
     print("-- Finding points to spline through.")
     direction = "vertical"
     middle_points, middle_ids, dx = get_spline_points(extract_single_line(centerlines, 0), alpha, direction,
@@ -258,7 +257,7 @@ def move_voronoi_horizontally(dx_p1, voronoi_clipped, centerline_clipped, id1, i
     """
     Iterate through voronoi diagram and move based on a profile
     for horizontal movement. Includes special treatment of
-    opthalmic artery if present.
+    diverging centerlines if present.
 
     Args:
         dx_p1 (ndarray): Direction to move upstream.
@@ -266,9 +265,9 @@ def move_voronoi_horizontally(dx_p1, voronoi_clipped, centerline_clipped, id1, i
         centerline_clipped (vtkPolyData): Centerline corresponding voronoi diagram.
         id1 (int): Index of first clipping point.
         id2 (int): Index of second clipping point.
-        clip_id (int): Index where opthamlic artery is located (if present)
+        clip_id (int): Index where diverging centerline is located (if present)
         clip (bool): Determines which part of geometry is being moved, True if bend.
-        diverging_centerline_ispresent (bool): Determines presence of opthamlic artery.
+        diverging_centerline_ispresent (bool): Determines presence of diverging centerline.
 
     Returns:
         new_dataset (vtkPolyData): Manipulated Voronoi diagram.
@@ -291,9 +290,9 @@ def move_voronoi_horizontally(dx_p1, voronoi_clipped, centerline_clipped, id1, i
             id2 = len(get_curvilinear_coordinate(centerline_clipped))
         idmid = int((id1 + id2) / 2.)
 
-        # Manpipulation of voronoi diagram..
+        # Manipulation of voronoi diagram..
         if diverging_centerline_ispresent:
-            # ..with opthalmic artery
+            # ..with diverging centerline
             for p in range(voronoi_clipped.GetNumberOfPoints()):
                 cl_id = centerline_loc.FindClosestPoint(voronoi_clipped.GetPoint(p))
 
@@ -316,7 +315,7 @@ def move_voronoi_horizontally(dx_p1, voronoi_clipped, centerline_clipped, id1, i
                 verts.InsertCellPoint(p)
 
         else:
-            # ..without opthalmic artery
+            # ..without diverging centerline
             for p in range(voronoi_clipped.GetNumberOfPoints()):
                 cl_id = centerline_loc.FindClosestPoint(voronoi_clipped.GetPoint(p))
 
@@ -330,7 +329,7 @@ def move_voronoi_horizontally(dx_p1, voronoi_clipped, centerline_clipped, id1, i
                 verts.InsertCellPoint(p)
 
     else:
-        # Move reamining part of the voronoi diagram
+        # Move remaining part of the voronoi diagram
         # representing the geometry excluding the bend to be moved
         for p in range(voronoi_clipped.GetNumberOfPoints()):
             cl_id = centerline_loc.FindClosestPoint(voronoi_clipped.GetPoint(p))
@@ -357,15 +356,15 @@ def move_voronoi_vertically(voronoi_clipped, centerline_clipped, id1_0, clip_id,
     """
     Iterate through voronoi diagram and move based on a profile
     for vertical movement. Includes special treatment of
-    opthalmic artery if present.
+    diverging centerline if present.
 
     Args:
         voronoi_clipped (vtkPolyData): Voronoi diagram to be moved.
         centerline_clipped (vtkPolyData): Centerline corresponding voronoi diagram.
         id1_0 (int): Index of first clipping point.
-        clip_id (int): Index where opthamlic artery is located (if present)
+        clip_id (int): Index where diverging centerline is located (if present)
         dx (ndarray): Direction to move.
-        diverging_centerline_ispresent (bool): Determines presence of opthamlic artery.
+        diverging_centerline_ispresent (bool): Determines presence of diverging centerline.
 
     Returns:
         new_dataset (vtkPolyData): Manipulated Voronoi diagram.
@@ -376,7 +375,7 @@ def move_voronoi_vertically(voronoi_clipped, centerline_clipped, id1_0, clip_id,
     points = vtk.vtkPoints()
     verts = vtk.vtkCellArray()
 
-    # Manpipulation of voronoi diagram..
+    # Manipulation of voronoi diagram..
     if diverging_centerline_ispresent:
         # ..with diverging centerline
         l1 = extract_single_line(centerline_clipped, 0)
@@ -396,7 +395,7 @@ def move_voronoi_vertically(voronoi_clipped, centerline_clipped, id1_0, clip_id,
             verts.InsertCellPoint(p)
 
     else:
-        # ..witout diverging centerline
+        # ..without diverging centerline
         id1 = 0
         id2 = len(get_curvilinear_coordinate(centerline_clipped)) - 1
         for p in range(voronoi_clipped.GetNumberOfPoints()):
@@ -422,7 +421,7 @@ def read_command_line():
     """
     # Description of the script
     description = "Moves a selected part of a tubular geometry, " + \
-                  "in two (horizontal, vertical) geometry-spesific directions. " + \
+                  "in two (horizontal, vertical) geometry-specific directions. " + \
                   "Magnitude of movement is defined by the parameters alpha and beta" + \
                   "Primary script used for application in blood vessels."
 
@@ -449,16 +448,16 @@ def read_command_line():
                              " which defines the start and end of the region of interest. " +
                              " Example providing the points (1, 5, -1) and (2, -4, 3):" +
                              " --region-points 1 5 -1 2 -4 3")
-    # "Variation" argments
+    # "Variation" arguments
     parser.add_argument("--alpha", type=float, default=0.0,
                         help="Compression factor in vertical direction, " +
                              "ranging from -1.0 to 1.0, defining the magnitude " +
-                             "of streching or compression of the tubular structure.")
+                             "of stretching or compression of the tubular structure.")
     parser.add_argument("--beta", type=float, default=0.0,
-                        help="Compression factor in verti cal direction,  " +
+                        help="Compression factor in vertical direction,  " +
                              "ranging from -1.0 to 1.0, defining the magnitude " +
-                             "of streching or compression of the tubular structure.")
-    # Outputfile argument
+                             "of stretching or compression of the tubular structure.")
+    # Output file argument
     args = parser.parse_args()
 
     if args.no_smooth_point is not None and len(args.no_smooth_point):

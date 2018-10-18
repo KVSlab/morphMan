@@ -56,15 +56,3 @@ def test_siphon(common_input, alpha, beta):
         assert angle_original > angle_new
     else:
         assert angle_original > angle_new
-
-    # Compute angle
-    #angle_new, angle_original = compute_curvature(common_input["input_filepath"], alpha,
-    #                                              beta, "disc", new_centerlines,
-    #                                              region_points=common_input["region_points"])
-
-    #if alpha < 0 and beta == 0 or beta < 0 and alpha == 0:
-    #    assert angle_original < angle_new
-    #elif alpha > 0 and beta == 0 or beta > 0 and alpha == 0:
-    #    assert angle_original > angle_new
-    #else:
-        assert angle_original > angle_new

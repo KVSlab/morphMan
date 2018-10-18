@@ -150,7 +150,7 @@ def write_polydata(input_data, filename, datatype=None):
 
 
 def get_path_names(input_filepath):
-    """Takes the input folderpath as argument, and returns the name of the case name, and
+    """Takes the input folder path as argument, and returns the name of the case name, and
     the path to the parent directory
 
     Args:
@@ -516,7 +516,7 @@ def provide_relevant_outlets(surface, dir_path=None):
     triangulated_surface = triangulate_surface(cleaned_surface)
 
     # Select seeds
-    print("-- Plese select the two relevant outlets in the interactive window.")
+    print("-- Please select the two relevant outlets in the interactive window.")
     seed_selector = vmtkPickPointSeedSelector()
     seed_selector.SetSurface(triangulated_surface)
     seed_selector.text = "Please select the two relevant outlets, \'u\' to undo\n"

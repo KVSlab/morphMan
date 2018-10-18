@@ -18,7 +18,7 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
                     region_of_interest, region_points):
     """
     Objective rotation of daughter branches, by rotating
-    centerlines and Voronoi diagram about the bifuraction center.
+    centerlines and Voronoi diagram about the bifurcation center.
     The implementation is an extension of the original method
     presented by Ford et al. (2009), for aneurysm removal,
     which introduces the possibility to rotate the
@@ -109,14 +109,14 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
     R, m = rotation_matrix(data, angle, keep_fixed_1, keep_fixed_2)
     write_parameters(data, base_path)
 
-    # Compute and smooth voornoi diagram (not aneurysm)
+    # Compute and smooth voronoi diagram (not aneurysm)
     print("-- Compute voronoi diagram.")
     if smooth:
         voronoi = prepare_voronoi_diagram(capped_surface, centerline_par, base_path, smooth,
                                           smooth_factor, no_smooth, no_smooth_point,
                                           voronoi, pole_ids)
 
-    # Locate divpoints and endpoints, for bif or lower, rotated or not
+    # Locate diverging-points and end-points, for bif or lower, rotated or not
     key = "div_point"
     div_points = get_points(data, key, bif=False)
 
@@ -215,7 +215,7 @@ def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angl
 
 def get_points(data, key, bif=False):
     """
-    Finds spesific points around the bifurcation, based on the
+    Finds specific points around the bifurcation, based on the
     key argument. Points can before or after rotation.
 
     Args:
@@ -229,11 +229,6 @@ def get_points(data, key, bif=False):
         div_points_bif (ndarray): Points as numpy objects.
     """
     div_points = np.asarray([data["bif"][key], data[0][key], data[1][key]])
-
-    # Origo of the bifurcation
-    origo_key = "div_point"
-    origo = np.asarray([data["bif"][origo_key], data[0][origo_key], data[1][origo_key]])
-    origo = np.sum(np.asarray(origo), axis=0) / 3.
 
     # Insert landmarking points into VTK objects
     points = vtk.vtkPoints()
@@ -257,12 +252,12 @@ def rotate_voronoi(clipped_voronoi, patch_cl, div_points, m, R):
         patch_cl (vtkPolyData): Clipped centerline.
         div_points (ndarray): Contains bifurcation landmarking points.
         R (ndarray): Matrix containing unit vectors in the rotated coordinate system.
-        m (dict): Cointains rotation matrices for each daughter branch.
+        m (dict): Contains rotation matrices for each daughter branch.
     Returns:
-        maskedVoronoi (vtkPolyData): Rotated voronoi diagram.
+        masked_voronoi (vtkPolyData): Rotated voronoi diagram.
     """
     number_of_points = clipped_voronoi.GetNumberOfPoints()
-    distance = vtk.vtkMath.Distance2BetweenPoints
+    vtk_distance = vtk.vtkMath.Distance2BetweenPoints
     I = np.eye(3)
     R_inv = np.linalg.inv(R)
 
@@ -277,7 +272,7 @@ def rotate_voronoi(clipped_voronoi, patch_cl, div_points, m, R):
     for i in range(1, patch_cl.GetNumberOfCells()):
         pnt = cell_line[i].GetPoints().GetPoint(0)
         new = cell_line[0].GetPoints().GetPoint(locator[0].FindClosestPoint(pnt))
-        dist = math.sqrt(distance(pnt, new)) < divergingRatioToSpacingTolerance
+        dist = math.sqrt(vtk_distance(pnt, new)) < divergingRatioToSpacingTolerance
         if dist:
             not_rotate.append(i)
 
@@ -286,12 +281,12 @@ def rotate_voronoi(clipped_voronoi, patch_cl, div_points, m, R):
         for i in range(len(locator)):
             tmp_id = locator[i].FindClosestPoint(point)
             tmp = cell_line[i].GetPoints().GetPoint(tmp_id)
-            dist.append(math.sqrt(distance(tmp, point)))
+            dist.append(math.sqrt(vtk_distance(tmp, point)))
 
         if dist.index(min(dist)) not in not_rotate:
             pnt = cell_line[dist.index(min(dist))].GetPoints().GetPoint(0)
-            if math.sqrt(distance(pnt, div_points[1])) > \
-                    math.sqrt(distance(pnt, div_points[2])):
+            if math.sqrt(vtk_distance(pnt, div_points[1])) > \
+                    math.sqrt(vtk_distance(pnt, div_points[2])):
                 m_ = m[2]
                 div = div_points[2]
             else:
@@ -337,7 +332,7 @@ def rotate_cl(patch_cl, div_points, rotation_matrices, R):
     Args:
         patch_cl (vtkPolyData): Clipped centerline representing two daughter branches.
         div_points (ndarray): Contains bifurcation landmarking points.
-        rotation_matrices (dict): Cointains rotation matrices for each daughter branch.
+        rotation_matrices (dict): Contains rotation matrices for each daughter branch.
         R (ndarray): Matrix containing unit vectors in the rotated coordinate system.
     Returns:
         centerline (vtkPolyData): Rotated centerline.
@@ -398,18 +393,18 @@ def rotate_cl(patch_cl, div_points, rotation_matrices, R):
 def rotation_matrix(data, angle, leave1, leave2):
     """
     Compute the rotation matrices for one or both
-    daughter brances of the vessel.
+    daughter branches of the vessel.
 
     Args:
         data  (dict): Contains information about landmarking points.
-        angle (float): Angle which brances are rotated.
+        angle (float): Angle which branches are rotated.
         leave1 (bool): Leaves first daughter branch if True.
         leave2 (bool): Leaves second daughter branch if True.
 
     Returns:
         R (ndarray): Matrix containing unit vectors in the rotated coordinate system.
     Returns:
-        m (dict): Cointains rotation matrices for each daughter branch.
+        m (dict): Contains rotation matrices for each daughter branch.
     """
 
     # Create basis vectors defining bifurcation plane
@@ -458,7 +453,7 @@ def rotation_matrix(data, angle, leave1, leave2):
 
 def merge_cl(centerline, end_point, div_point):
     """
-    Merge overlapping centerliens.
+    Merge overlapping centerlines.
 
     Args:
         centerline (vtkPolyData): Centerline data consisting of multiple lines.
@@ -543,7 +538,7 @@ def merge_cl(centerline, end_point, div_point):
                     tmp = line.GetPointData().GetArray(names[k]).GetTuple3(j)
                     arrays[k].SetTuple3(counter, tmp[0], tmp[1], tmp[2])
                 else:
-                    print("Add more options")
+                    print("-- Add more options")
                     sys.exit(0)
 
             counter += 1
@@ -584,7 +579,7 @@ def read_command_line():
                              " argument have to be given. The method expects two points" +
                              " which defines the start and end of the region of interest. If" +
                              " 'method' is set to stenosis, then one point can be provided as well," +
-                             " which is assumbed to be the center of a new stenosis." +
+                             " which is assumed to be the center of a new stenosis." +
                              " Example providing the points (1, 5, -1) and (2, -4, 3):" +
                              " --stenosis-points 1 5 -1 2 -4 3")
 
@@ -594,9 +589,9 @@ def read_command_line():
                              " bifurcation plane. 'a' is assumed to be in degrees," +
                              " and not radians", metavar="rotation_angle")
     parser.add_argument("--keep-fixed-1", type=str2bool, default=False,
-                        help="Leave one branch untuched")
+                        help="Leave one branch untouched")
     parser.add_argument("--keep-fixed-2", type=str2bool, default=False,
-                        help="Leave one branch untuched")
+                        help="Leave one branch untouched")
 
     # Bifurcation reconstruction arguments
     parser.add_argument("--bif", type=str2bool, default=False,
@@ -604,7 +599,7 @@ def read_command_line():
     parser.add_argument("--lower", type=str2bool, default=False,
                         help="Make a fourth line to interpolate along that" +
                              " is lower than the other bif line.")
-    parser.add_argument("--cylinder_factor", type=float, default=7.0,
+    parser.add_argument("--cylinder-factor", type=float, default=7.0,
                         help="Factor for choosing the smaller cylinder")
 
     args = parser.parse_args()

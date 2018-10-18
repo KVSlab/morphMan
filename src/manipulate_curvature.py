@@ -7,9 +7,9 @@
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
-from argparse_common import *
 # Local import
 from common import *
+from argparse_common import *
 
 
 def curvature_variations(input_filepath, smooth, smooth_factor, smooth_factor_line, iterations,
@@ -62,7 +62,7 @@ def curvature_variations(input_filepath, smooth, smooth_factor, smooth_factor_li
                                           no_smooth_point, voronoi, pole_ids)
     # Get region of interest
     _, _, _, region_points = get_line_to_change(capped_surface, centerlines,
-                                          region_of_interest, "variation", region_points, 0)
+                                                region_of_interest, "variation", region_points, 0)
     region_points = [[region_points[3 * i], region_points[3 * i + 1], region_points[3 * i + 2]]
                      for i in range(len(region_points) // 3)]
 
@@ -101,14 +101,11 @@ def curvature_variations(input_filepath, smooth, smooth_factor, smooth_factor_li
     voronoi_region, voronoi_remaining = split_voronoi_with_centerlines(voronoi,
                                                                        [centerline_region,
                                                                         centerline_remaining])
-    # Spearate diverging parts and main region
+    # Separate diverging parts and main region
     if diverging_centerline_ispresent:
-        voronoi_region, voronoi_diverging = split_voronoi_with_centerlines(voronoi_region,
-                                                                           [extract_single_line(centerlines_complete,
-                                                                                               0,
-                                                                                               startID=id1,
-                                                                                               endID=id2),
-                                                                            diverging_centerlines_patch])
+        centerlines_complete_patch = extract_single_line(centerlines_complete, 0, startID=id1, endID=id2)
+        voronoi_region, voronoi_diverging = split_voronoi_with_centerlines(voronoi_region, [centerlines_complete_patch,
+                                                                                            diverging_centerlines_patch])
         write_polydata(voronoi_diverging, voronoi_diverging_path)
 
     write_polydata(voronoi_region, voronoi_region_path)
@@ -179,6 +176,7 @@ def make_voronoi_smooth(voronoi, old_cl, new_cl, smooth_line, div=False, div_poi
     id_midend = int(id_end * 0.9)
     id_startmid = int(id_end * 0.1)
     id_mid = int(id_end * 0.2)
+
     # Iterate through voronoi points
     for i in range(n):
         if div:
@@ -294,7 +292,7 @@ def read_command_line():
     """
     # Description of the script
     description = "Manipulates a selected part of a tubular geometry" + \
-                  "by creaing a sharper or smoother version of the input geometry, " + \
+                  "by creating a sharper or smoother version of the input geometry, " + \
                   "determined by a smoothed version of the centerline representing the selected part."
 
     parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
@@ -318,13 +316,13 @@ def read_command_line():
                              " argument have to be given. The method expects two points" +
                              " which defines the start and end of the region of interest. ")
 
-    # Set problem spesific arguments
+    # Set problem specific arguments
     parser.add_argument("-fl", "--smooth-factor-line", type=float, default=1.0,
                         help="Smoothing factor of centerline curve.")
     parser.add_argument("-it", "--iterations", type=int, default=100,
                         help="Smoothing iterations of centerline curve.")
     parser.add_argument("-sl", "--smooth-line", type=str2bool, default=True,
-                        help="Smoothes centerline if True, anti-smoothes if False")
+                        help="Smooths centerline if True, anti-smooths if False")
 
     # Parse
     args = parser.parse_args()
