@@ -97,13 +97,9 @@ def test_bifurcation_angle(common_input, angle):
     v2_new = v2_new / np.sqrt(np.sum(v2_new**2))
 
     # Angle
-    angle_original = np.arccos(np.dot(v1_old, v2_old))
-    angle_rotated = np.arccos(np.dot(v1_new, v2_new))
+    first_daughter_branch_angle_change = np.arccos(np.dot(v1_old, v1_new))
+    second_daughter_branch_angle_change = np.arccos(np.dot(v2_old, v2_new))
 
-    if (angle_original - 2*common_input["angle"]) > np.pi:
-        angle_rotated = 2*np.pi - angle_rotated
-
-    if common_input["angle"] < 0:
-        assert abs(angle_original - angle_rotated - 2*common_input["angle"]) > 0.08
-    elif common_input["angle"] > 0:
-        assert abs(angle_original - angle_rotated - 2*common_input["angle"]) < 0.08
+    assert abs(first_daughter_branch_angle_change
+               + second_daughter_branch_angle_change
+               - 2 * abs(common_input["angle"])) < 0.01
