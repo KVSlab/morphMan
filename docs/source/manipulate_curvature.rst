@@ -21,8 +21,8 @@ file `./C0005/surface/model.vtp`, relative to where you execute the command.
 In ``manipulate_curvature.py``, there are three options for setting
 ``region-of-interest``:
 
- * ``manual``: Manual selection, based on clicking on a surface
- * ``commandline``: Provide the points on the centerline
+ * ``manual``: Manual selection, based on clicking on a surface.
+ * ``commandline``: Provide the points on the centerline.
  * ``first_line``: The section between the inlet and the first bifurcation.
 
 For each point along the centerline in the region of interest

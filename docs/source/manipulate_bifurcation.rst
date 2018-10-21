@@ -22,14 +22,14 @@ In this tutorial, we are using the model with
 from the Aneurisk database. For the commands below we assume that there
 is a file `./C0005/surface/model.vtp`, relative to where you execute the command.
 
-Shown in Figure 2 is the result of rotating the two daughter branched with both
+Shown in Figure 2 is the result of rotating the two daughter branches with both
 a positive and negative angle.
 
 .. figure:: manipulate_bif.png
 
   Figure 2: Rotation of daughter branches, in both a widening and narrowing of the bifurcation angle. 
 
-You can reproduce the results in Figure 2 by running the following commands::
+You can reproduce the results in Figure 2 by running the following command::
 
     python manipulate_bifurcation.py --ifile C0005/surface/model.vtp --ofile C0005/surface/rotate_plus.vtp --angle 20 --region-of-interest commandline --region-points 43.2 70.5 26.4 84.4 60.6 50.6 --poly-ball-size 250 250 250
 
@@ -45,7 +45,7 @@ running the command::
 
     python manipulate_bifurcation.py --ifile C0005/surface/model.vtp --ofile C0005/surface/rotate_no_notch.vtp --angle -20 --bif True --lower True  --region-of-interest commandline --region-points 43.2 70.5 26.4 84.4 60.6 50.6 --poly-ball-size 250 250 250
 
-Using both flags haven proven to give an improved surface,
+Using both flags have proven to give an improved surface,
 and when used for computational fluid dynamics, a more physiological plausible wall shear stress [2]_.
 
 .. figure:: no_notch.png

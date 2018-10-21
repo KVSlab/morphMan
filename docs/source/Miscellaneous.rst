@@ -35,7 +35,7 @@ To perform landmarking, we will be using the model with `ID C0001 <http://ecm2.m
 from the Aneurisk database. For the commands below we assume that there is a file `./C0001/surface/model.vtp`, relative to where you execute the command.
 To landmark the surface model, run the following command::
 
-    python automated_landmarking.py --ifile C0001/surface/model.vtp --method bogunovic --curv-method spline --nknots 8
+    python automated_landmarking.py --ifile C0001/surface/model.vtp --algorithm bogunovic --curv-method spline --nknots 8
 
 The command will output a file ``C0001/surface/landmark_[ALGORITHM]_[CURVMETHOD].particles``
 which contains four points defining the interfaces between the segments of the vessel.

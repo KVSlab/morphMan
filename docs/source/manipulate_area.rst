@@ -48,8 +48,8 @@ To output a plausible geometry the first and last 5 % of the region of interest 
 a linear transition between the manipulated and original geometry. However,
 if you choose ``--region-of-interest first_line``, only the end has a smooth transition.
 
-Figure 2 shows a possible output of the algorithm, where the ``first_line`` was is defined
-as the region of interest, and were obtain by running::
+Figure 2 shows a possible output of the algorithm, where the region of interest was set to ``first_line``,
+obtained by executing the following commands from the command line::
 
     python manipulate_area.py --ifile C0002/surface/model.vtp --ofile C0002/surface/increased_variation.vtp --method variation --ratio 4.0 --region-of-interest first_line --poly-ball-size 250 250 250
 
@@ -88,11 +88,11 @@ sections with high curvature, like the internal carotid artery, is unproblematic
 
   Figure 3: Comparison of the new and old model, with and without stenosis.
 
-To recreate the above output, execute the following on the commandline::
+To recreate the above output, execute the following from the commandline::
 
-    python manipulate_area.py --ifile C0002/surface/model.vtp  --ofile C0002/surface/stenosis.vtp --method stenosis --size 4 --percentage 50 --region-of-interest commandline --region-points 28.7 18.4 39.5
+    python manipulate_area.py --ifile C0002/surface/model.vtp  --ofile C0002/surface/stenosis.vtp --method stenosis --size 4 --percentage 50 --region-of-interest commandline --region-points 28.7 18.4 39.5 --poly-ball-size 250 250 250
 
-Remove stenosis
+Remove a stenosis
 ~~~~~~~~~~~~~~~
 To remove a stenosis, you need to provide two points, one at each end of the
 stenosis. The area will be altered to change linearly between the two points.
@@ -107,7 +107,7 @@ right, the comparison between the original model and the 'healed' surface.
     
 To reproduce the above result, execute the following command::
 
-    python manipulate_area.py --ifile C0002/surface/stenosis.vtp  --ofile C0002/surface/stenosis_removed.vtp --method stenosis --size 4 --percentage 50 --region-of-interest commandline --region-points 30.1 18.5 34.6 27.1 12.7 38.2
+    python manipulate_area.py --ifile C0002/surface/stenosis.vtp  --ofile C0002/surface/stenosis_removed.vtp --method stenosis --size 4 --percentage 50 --region-of-interest commandline --region-points 30.1 18.5 34.6 27.1 12.7 38.2 --poly-ball-size 250 250 250
 
 Inflation / deflation of an arterial segment
 ============================================
@@ -115,14 +115,14 @@ The area of interest can also be inflated or deflated. To do so, pass the argume
 set the percentage change with ``--percentage``. Like with :ref:`area_variations`, the first and last 5 % of the
 region of interest is a transition between the original and modified geometry to ensure smooth transitions.
 
-To perform a deflation run the following command::
+To perform a deflation, run the following command::
 
-    python manipulate_area.py --ifile C0002/surface/model.vtp --ofile C0002/surface/area_deflated.vtp --method area --percentage -20 --region-of-interest first_line -b 250 250 250
+    python manipulate_area.py --ifile C0002/surface/model.vtp --ofile C0002/surface/area_deflated.vtp --method area --percentage -20 --region-of-interest first_line --poly-ball-size 250 250 250
 
 Simlarly, we can perform inflation by changing the sign of the ``--percentage`` argument.
 To reproduce the inflated model shown in Figure 5, you can run the command::
 
-    python manipulate_area.py --ifile C0002/surface/model.vtp --ofile C0002/surface/area_inflated.vtp --method area --percentage 20 --region-of-interest first_line -b 250 250 250
+    python manipulate_area.py --ifile C0002/surface/model.vtp --ofile C0002/surface/area_inflated.vtp --method area --percentage 20 --region-of-interest first_line --poly-ball-size 250 250 250
 
 Below is an illustration of area decrease and increase in a single patient-specific model.
 

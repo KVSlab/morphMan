@@ -31,20 +31,20 @@ with three different options:
   * ``commandline``, provide two points on the commandline through ``--region-points``
   * ``landmarking``, only valid for the internal carotid artery, execute ``automated_landmarking.py`` prior to running ``manipulate_bend.py``, see :ref:`landmarking`.
 
-Figure 2 depicts an example of modifying the input surface in the :math:`\alpha` ('horizontal') direction only.
+Figure 2 depicts an example of modifying the input surface in the :math:`\alpha` ('vertical') direction only.
 
 .. figure:: bend_alpha_variation.png
 
   Figure 2: Movement in the vertical direction, determined by :math:`\alpha`.
 
-To recreate the surfaces shown in Figure 2, run the two following commands::
+To recreate the surfaces shown in Figure 2, run the following two commands::
 
     python manipulate_bend.py --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_vertical_plus.vtp --alpha 0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3 --poly-ball-size 250 250 250
 
     python manipulate_bend.py --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_vertical_minus.vtp --alpha -0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3 --poly-ball-size 250 250 250
 
 Shown in Figure 3 is the output of changing the surface in the
-:math:`\beta` ('vertical') direction only. This can be reproduced by running the two following commands::
+:math:`\beta` ('horizontal') direction only. This can be reproduced by running the following two commands::
 
     python manipulate_bend.py --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_horizontal_plus.vtp --beta 0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3 --poly-ball-size 250 250 250
 
