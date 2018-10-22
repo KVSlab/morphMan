@@ -9,7 +9,6 @@ import pytest
 from os import system, path
 from sys import platform
 
-
 def download_testdata(test_path, outputfile):
     if platform == "darwin":
         system("curl {} --output {}".format(test_path, outputfile))
@@ -20,12 +19,9 @@ def download_testdata(test_path, outputfile):
         system("tar -zxvf {}".format(outputfile))
         system("rm {}".format(outputfile))
     elif platform == "win32":
-        # FIXME: Test on a windows system.
-        cmd0 = "bitsadmin /create download"
-        cmd1 = "bitsadmin /addfile download {} {}".format(test_path, outputfile)
-        cmd2 = "bitsadmin /resume download"
-        # TODO: Windows command for extracting tar file
-
+        system("bitsadmin /transfer download_model /download /priority high {} {}".format(test_path, outputfile))
+        system("tar -zxvf {}".format(outputfile))
+        system("del /f {}".format(outputfile))
 
 @pytest.fixture(scope="module")
 def common_input():
