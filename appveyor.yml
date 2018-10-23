@@ -1,0 +1,49 @@
+notifications:
+  - provider: Email
+    to:
+      - henrik.kjeldsberg@live.no
+    on_build_success: false
+
+environment:
+  global:
+    # SDK v7.0 MSVC Express 2008's SetEnv.cmd script will fail if the
+    # /E:ON and /V:ON options are not enabled in the batch script interpreter
+    # See: http://stackoverflow.com/a/13751649/163740
+    CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\continuous-integration\\appveyor\\run_with_env.cmd"
+
+  matrix:
+    - PYTHON: "C:\\Python36_64"
+      PYTHON_VERSION: "3.6"
+      PYTHON_ARCH: "64"
+      CONDA_PY: "34"
+      CONDA_NPY: "18"
+
+platform:
+  - x64
+
+configuration:
+  - Release
+
+init:
+  - "ECHO %PYTHON_VERSION% %MINICONDA%"
+
+install:
+  # this installs the appropriate Miniconda (Py2/Py3, 32/64 bit),
+  # as well as pip, conda-build, and the binstar CLI
+  - powershell .\\continuous-integration\\appveyor\\install.ps1
+  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
+
+  - "%CMD_IN_ENV% conda build conda-recipe --quiet"
+  - "set PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
+  - "%CMD_IN_ENV% conda create -n morphman_env -c vmtk python=%PYTHON_VERSION% itk vtk vmtk scipy numpy pytest"
+  - "%CMD_IN_ENV% y"
+  - "%CMD_IN_ENV% source activate morphman_env"
+  - "%CMD_IN_ENV% git clone https://github.com/KVSlab/morphMan"
+  - "%CMD_IN_ENV% get-content anaconda\\envs\\morphman_env\\lib\\python3.6\\site-packages\\vmtk\\vmtkcenterlines.py | %{$_ -replace 'len(self.TargetPoints)/3','len(self.TargetPoints)//3'}"
+  - "%CMD_IN_ENV% get-content anaconda\\envs\\morphman_env\\lib\\python3.6\\site-packages\\vmtk\\vmtkcenterlines.py | %{$_ -replace 'len(self.SourcePoints)/3','len(self.SourcePoints)//3'}"
+
+build: false
+
+test_script:
+  - "%CMD_IN_ENV% cd morphMan\\test"
+  - "%CMD_IN_ENV% pytest ."
