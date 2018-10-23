@@ -23,33 +23,34 @@ bibliography: paper.bib
 
 # Summary
 
-Cardiovascular diseases are burdening the healthcare systems and the
-costs are expected to rise in the years to come [@Murray1997a].
+Cardiovascular diseases are overwhelming the healthcare systems, and the
+costs are anticipated to increase in the years to come [@Murray1997a],
+not to the mention the personal tragedy for those affected [@gage1996effect].
 Systemic risk factors are well known to correlate with cardiovascular diseases in general,
-but arterial plaques and brain aneurysms are focalized, highlighting
-the role of local hemodynamics. Blood-flow induced wall shear stress (WSS) is
-known to contribute to vessel wall adaption and
-remodeling [@Malek1999b, @morbiducci2016atherosclerosis], but *in-vivo* measurement of
-WSS is challenging. On the other hand, medical images are routinely available and have
+but, for instance, arterial plaques and brain aneurysms are focalized, highlighting
+the role of local hemodynamics stresses. Blood-flow induced wall shear stress (WSS) is
+known to contribute to vessel wall adaption and remodeling [@Malek1999b, @morbiducci2016atherosclerosis],
+but is challenging to measure *in-vivo*. On the other hand, medical images are routinely available and have
 been extensively used in combination with computational fluid dynamics to
 study the initiation, progression, and outcome of vascular pathologies [@taylor2010image].
 
 We know that the morphological features of, for instance, the internal
 carotid artery is statistically associated with the presence of aneurysms [@Schimansky01122013, @ingebrigtsen2004bifurcation].
 Therefore, understanding how the local hemodynamics change with morphology is of great interest and
-is typically investigated with idealized geometric models [@lauric2018proximal].
+is typically investigated with parameterized idealized geometric models [@lauric2018proximal], however at the cost of
+oversimplified models. Another alternative is to correlate the shape and computed stresses based on hundreds of
+patient-specific models, but this is very labor intensive and error-prone [@valen2018real, @berg2018multiple].
 
-The goal of *morphMan* was to develop a framework taking advantage of both
-the “patient-specificness” based on medical images and parameterize the natural variability
-of morpholigical features to study cerebrovascular flows. We here present a framework that
-allows for *objective*, *reproducible*, and *automatic* virtual manipulation of tubular structures,
+Our goal was to create a tool which could parameterize patient-specific geometries to mimic the natural
+variability of morphological features in the population. We here present a framework, *morphMan*, that
+allows for *objective*, *reproducible*, and *automatic* virtual manipulation of tubular structures
 here exemplified with application to the cerebrovasculature.
 
 The algorithms are based on the centerlines and Voronoi diagram of the surface, see Figure 1. These 'representations'
 of the surface are easier to manipulate and control since the cells
 are not connected. As a result, the rest of the geometry is left unchanged, and only
 the region of interest is manipulated. Using the Voronoi diagram to alter the surface
-was first presented in [@Piccinelli2011]; moreover a subset of the algorithms are presented
+was first presented in [@Piccinelli2011]; moreover, a subset of the algorithms are presented
 in [@Bergersen2016] and [@Kjeldsberg2018].
 
 <p align="center">
@@ -72,8 +73,9 @@ the branches in a bifurcation 'up' and 'down'. *morphMan* is easily expandable f
    Output from *morphMan* for manipulating the bifurcation angles.
 </p>
 
+*morphMan* is a general tool for manipulating tubular objects. In the context of flow in the cardiovascular system,
 *morphMan* opens new lines of investigation for unraveling the coupling between
-morphology and the local hemodynamics, and can guide clinical research and eventually
+morphology and the local hemodynamics and can guide clinical research and ultimately
 lead to novel treatment methods.
 
 
