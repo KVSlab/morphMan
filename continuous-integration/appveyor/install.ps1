@@ -1,16 +1,23 @@
-# Sample script to install Miniconda under Windows
-# Authors: Olivier Grisel, Jonathan Helmus and Kyle Kastner, Robert McGibbon
-# License: CC0 1.0 Universal: http://creativecommons.org/publicdomain/zero/1.0/
+##   Copyright (c) Aslak W. Bergersen, Henrik A. Kjeldsberg. All rights reserved.
+##   See LICENSE file for details.
+
+##      This software is distributed WITHOUT ANY WARRANTY; without even
+##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+##      PURPOSE.  See the above copyright notices for more information.
+##
+## Sample script to install Miniconda under Windows
+## Authors: Olivier Grisel, Jonathan Helmus and Kyle Kastner, Robert McGibbon
+## License: CC0 1.0 Universal: http://creativecommons.org/publicdomain/zero/1.0/
 
 $MINICONDA_URL = "http://repo.continuum.io/miniconda/"
 
 
 function DownloadMiniconda ($python_version, $platform_suffix) {
     $webclient = New-Object System.Net.WebClient
-    if ($python_version -match "3.4") {
+    if ($python_version -eq "3.5" -OR $python_version -eq "3.6") {
         $filename = "Miniconda3-latest-Windows-" + $platform_suffix + ".exe"
     } else {
-        $filename = "Miniconda-latest-Windows-" + $platform_suffix + ".exe"
+        $filename = "Miniconda2-latest-Windows-" + $platform_suffix + ".exe"
     }
     $url = $MINICONDA_URL + $filename
 
@@ -78,6 +85,7 @@ function InstallCondaPackages ($python_home, $spec) {
     Start-Process -FilePath "$conda_path" -ArgumentList $args -Wait -Passthru
 }
 
+
 function UpdateConda ($python_home) {
     $conda_path = $python_home + "\Scripts\conda.exe"
     Write-Host "Updating conda..."
@@ -86,11 +94,20 @@ function UpdateConda ($python_home) {
     Start-Process -FilePath "$conda_path" -ArgumentList $args -Wait -Passthru
 }
 
+function UpdateCondaChannel ($python_home, $channels) {
+    $conda_path = $python_home + "\Scripts\conda.exe"
+    Write-Host "Updating conda channels..."
+    $args = "conda config --prepend channels " + $channels 
+    Write-Host $conda_path $args
+    Start-Process -FilePath "$conda_path" -ArgumentList $args -Wait -Passthru
+}
+
 
 function main () {
     InstallMiniconda $env:PYTHON_VERSION $env:PYTHON_ARCH $env:PYTHON
     UpdateConda $env:PYTHON
-    InstallCondaPackages $env:PYTHON "conda-build jinja2 anaconda-client"
+    InstallCondaPackages $env:PYTHON "conda-build==3.9.2 jinja2 anaconda-client"
+    UpdateCondaChannel $env:PYTHON "vmtk"
 }
 
 main
