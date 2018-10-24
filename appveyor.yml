@@ -52,4 +52,5 @@ install:
 build: false
 
 test_script:
+  - "%CMD_IN_ENV% cd .\\test"
   - "%CMD_IN_ENV% pytest ."
