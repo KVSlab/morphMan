@@ -48,6 +48,7 @@ install:
   - ps: Start-FileDownload 'http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0001/C0001_models.tar.gz'
   - tar --force-local -zxvf C0001_models.tar.gz
   - del /f C0001_models.tar.gz
+  - cd ..
 
 build: false
 

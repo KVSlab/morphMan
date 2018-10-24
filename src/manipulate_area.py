@@ -1,16 +1,16 @@
 ##   Copyright (c) Aslak W. Bergersen, Henrik A. Kjeldsberg. All rights reserved.
 ##   See LICENSE file for details.
 
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
+
 ##      This software is distributed WITHOUT ANY WARRANTY; without even
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 ##      PURPOSE.  See the above copyright notices for more information.
-
 from scipy.ndimage.filters import gaussian_filter
-from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
+from argparse_common import *
 # Local import
 from common import *
-from argparse_common import *
 
 
 def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
@@ -69,9 +69,9 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
 
     # Spline centerline and compute cross-sectional areas along line
     centerline_splined, centerline_remaining, \
-        centerline_diverging, region_points = get_line_to_change(capped_surface, centerlines,
-                                                                 region_of_interest, method,
-                                                                 region_points, stenosis_length)
+    centerline_diverging, region_points = get_line_to_change(capped_surface, centerlines,
+                                                             region_of_interest, method,
+                                                             region_points, stenosis_length)
     write_polydata(centerline_splined, centerline_spline_path)
     write_polydata(centerline_remaining, centerline_remaining_path)
     if centerline_diverging is not None:
@@ -224,7 +224,14 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
     radius_array = get_vtk_array(radiusArrayName, 1, n)
 
     # Iterate through Voronoi diagram and manipulate
+    mean_rad = 0
     for i in range(n):
+        point_radius = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
+        mean_rad += point_radius
+    mean_rad = mean_rad / n
+
+    for i in range(n):
+
         point = voronoi.GetPoint(i)
         point_radius = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
 
@@ -234,8 +241,13 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
         v2 = v1 * (1 - factor[tmp_id])
         point = (np.asarray(point) + v2).tolist()
 
+        if 2 * point_radius < mean_rad:
+            noise = 1.0
+        else:
+            noise = 1.0
+
         # Change radius
-        point_radius = point_radius * factor[tmp_id]
+        point_radius = point_radius * factor[tmp_id] * noise
 
         voronoi_points.InsertNextPoint(point)
         radius_array.SetTuple1(i, point_radius)
