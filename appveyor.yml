@@ -50,7 +50,7 @@ install:
   - del /f C0001_models.tar.gz
   - cd ..
   
-build: false
+build: off
 
 test_script:
   - "%CMD_IN_ENV% cd .\\test"
