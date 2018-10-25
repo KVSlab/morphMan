@@ -49,6 +49,8 @@ install:
   - tar --force-local -zxvf C0001_models.tar.gz
   - del /f C0001_models.tar.gz
   - cd ..
+  
+build: false
 
 test_script:
   - "%CMD_IN_ENV% cd .\\test"
