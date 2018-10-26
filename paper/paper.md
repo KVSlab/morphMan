@@ -47,16 +47,15 @@ geometries to mimic the natural variability of morphological features in the pop
 *morphMan*, that allows for *objective*, *reproducible*, and *automatic* virtual manipulation of tubular structures
 here exemplified with application to the cerebrovasculature.
 
-In a surface, each cell is connected, and manipulating one will alter the surrounding geometry as well. Instead, we 
-have based the algorithms on the centerlines and Voronoi diagram of the surface, see Figure 1. The point in the Voronoi 
-diagram are not connected, and therefore easier to manipulate. As a result, only the region of interest is manipulated, and the rest of the geometry is left unchanged. Using the Voronoi diagram to alter the surface was first presented in 
-[@Piccinelli2011]; moreover, a subset of the algorithms are presented in [@Bergersen2016] and [@kjeldsberg2018investigating].
-
 ![voronoi centerline](./figure1.png)\
 
 **Figure 1:** 
    A visualization of the Voronoi diagram (left) and the centerline (right) of a surface.
 
+In a surface, each cell is connected, and manipulating one will alter the surrounding geometry as well. Instead, we 
+have based the algorithms on the centerlines and Voronoi diagram of the surface, see Figure 1. The point in the Voronoi 
+diagram are not connected, and therefore easier to manipulate. As a result, only the region of interest is manipulated, and the rest of the geometry is left unchanged. Using the Voronoi diagram to alter the surface was first presented in 
+[@Piccinelli2011]; moreover, a subset of the algorithms are presented in [@Bergersen2016] and [@kjeldsberg2018investigating].
 
 In *morphMan v0.1* you can alter cross-sectional area, bifurcation angles, 
 overall curvature in a segment, and the shape of specific bends. For each
