@@ -24,7 +24,7 @@ bibliography: paper.bib
 # Summary
 
 Cardiovascular diseases are overwhelming the healthcare systems, and the
-costs are anticipated to increase in the years to come [@Murray1997a],
+costs are anticipated to increase in the years to come [@Murray1997],
 not to the mention the personal tragedy for those affected [@gage1996effect].
 Systemic risk factors are well known to correlate with cardiovascular diseases in general,
 but, for instance, arterial plaques and brain aneurysms are focalized, highlighting
@@ -50,14 +50,13 @@ here exemplified with application to the cerebrovasculature.
 In a surface, each cell is connected, and manipulating one will alter the surrounding geometry as well. Instead, we 
 have based the algorithms on the centerlines and Voronoi diagram of the surface, see Figure 1. The point in the Voronoi 
 diagram are not connected, and therefore easier to manipulate. As a result, only the region of interest is manipulated, and the rest of the geometry is left unchanged. Using the Voronoi diagram to alter the surface was first presented in 
-[@Piccinelli2011]; moreover, a subset of the algorithms are presented in [@Bergersen2016] and [@Kjeldsberg2018].
+[@Piccinelli2011]; moreover, a subset of the algorithms are presented in [@Bergersen2016] and [@kjeldsberg2018investigating].
 
-<p align="center">
-    <img src="./figure1.png", width="320 height="140" alt="Voronoi diagram and centerline of a model."/>
-</p>
-<p align="center">
+![voronoi centerline](./figure1.png)\
+
+**Figure 1:** 
    A visualization of the Voronoi diagram (left) and the centerline (right) of a surface.
-</p>
+
 
 In *morphMan v0.1* you can alter cross-sectional area, bifurcation angles, 
 overall curvature in a segment, and the shape of specific bends. For each
@@ -65,12 +64,10 @@ category, there is a wide range of options, thus providing the users with many d
 freedom for manipulating the geometries. Shown in Figure 2 is an example of rotating the
 branches in a bifurcation 'up' and 'down'. *morphMan* is easily expandable for specialized manipulations.
 
-<p align="center">
-    <img src="./figure2.png", width="640 height="280" alt="Output of morphMan."\>
-</p>
-<p align="center">
+![manipulation ICA bifurcation](./figure2.png)\
+
+**Figure 2:** 
    Output from *morphMan* for manipulating the bifurcation angles.
-</p>
 
 *morphMan* is a general tool for manipulating tubular objects. In the context of flow in the cardiovascular system,
 *morphMan* opens new lines of investigation for unraveling the coupling between
