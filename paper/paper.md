@@ -65,12 +65,12 @@ freedom for manipulating the geometries.
 Shown in Figure 2 is an example of rotating the
 branches in a bifurcation 'up' and 'down'. 
 
+Although the framework is applicable by anyone familiar with the Python programming language and basic use of Git/Github, the intended audience of *morphMan* is researchers, particularly within the field of computational biomechanics. Our goal is to provide researchers, and other individuals, with a set of tools to investigate the impact of altering morphological features in patient-specific geometries. For instance, by combining morphMan with a computational fluid mechanics solver, it can be used to objectively and reproducibly investigate how cross-sectional area, and overall curvature impacts the local hemodynamics. Previously, one would have to investigate tens, if not hundreds, of models to correlate changes in specific morphological parameters to changes in local hemodynamic. Now, one can keep all other morphological parameters fixed while investigating only the impact of one change. Thus, morphMan opens a wide range of problems which previously was practically infeasible to study.
+
 ![manipulation ICA bifurcation](./figure2.png)\
 
 **Figure 2:** 
    Output from *morphMan* for manipulating the bifurcation angles.
-
-Although the framework is applicable by anyone familiar with the Python programming language and basic use of Git/Github, the intended audience of *morphMan* is researchers, particularly within the field of computational biomechanics. Our goal is to provide researchers, and other individuals, with a set of tools to investigate the impact of altering morphological features in patient-specific geometries. For instance, by combining morphMan with a computational fluid mechanics solver, it can be used to objectively and reproducibly investigate how cross-sectional area, and overall curvature impacts the local hemodynamics. Previously, one would have to investigate tens, if not hundreds, of models to correlate changes in specific morphological parameters to changes in local hemodynamic. Now, one can keep all other morphological parameters fixed while investigating only the impact of one change. Thus, morphMan opens a wide range of problems which previously was practically infeasible to study.
 
 To summarize, *morphMan* is a general tool for automated manipulation of tubular objects, easily expandable for specialized manipulations.
 In the context of flow in the cardiovascular system,
