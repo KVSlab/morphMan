@@ -3,15 +3,13 @@
 When contributing to this repository, please first discuss the change you wish to make via issue,
 email, or any other method with the owners of this repository before making a change. 
 
-
-
 ### Testing 
 
-Please provide unit tests for the  new code you create, testing the main functionality or feature to be submitted. We can always use more test coverage! 
+Please provide unit tests for the new code you create, testing the main functionality or feature to be submitted. We can always use more test coverage! 
 
 ### Submitting changes
 
-In order to submitt you changes, please send a [GitHub Pull Request to morphMan](https://github.com/KVSlab/morphMan/pull/new/master) with a clear list of what you've done (read more about [pull requests](http://help.github.com/pull-requests/)). Please follow our coding conventions (below) and make sure all of your commits are atomic (one feature per commit).
+In order to submit you changes, please send a [GitHub Pull Request to morphMan](https://github.com/KVSlab/morphMan/pull/new/master) with a clear list of what you've done (read more about [pull requests](http://help.github.com/pull-requests/)). Please follow our coding conventions (below) and make sure all of your commits are atomic (one feature per commit).
 
 Always write a clear commit message when submitting your changes. One-line messages are fine for small changes, but bigger changes should look like this:
 
@@ -46,7 +44,6 @@ Always write a clear commit message when submitting your changes. One-line messa
   they call.
 * Place methods receiving command line arguments at the bottom of the file, but above the top-level script environment check.
 * Separate local and global imports of modules.
-
 
 ### Code of Conduct
 
