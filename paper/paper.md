@@ -59,13 +59,12 @@ diagram are not connected, and therefore easier to manipulate. As a result, only
 
 In *morphMan v0.1* you can alter cross-sectional area, bifurcation angles, 
 overall curvature in a segment, and the shape of specific bends. 
-For each
-category, there is a wide range of options, thus providing the users with many degrees of
+For each category, there is a wide range of options, thus providing the users with many degrees of
 freedom for manipulating the geometries. 
 Shown in Figure 2 is an example of rotating the
 branches in a bifurcation 'up' and 'down'. 
 
-Although the framework is applicable by anyone familiar with the Python programming language and basic use of Git/Github, the intended audience of *morphMan* is researchers, particularly within the field of computational biomechanics. Our goal is to provide researchers, and other individuals, with a set of tools to investigate the impact of altering morphological features in patient-specific geometries. For instance, by combining morphMan with a computational fluid mechanics solver, it can be used to objectively and reproducibly investigate how cross-sectional area, and overall curvature impacts the local hemodynamics. Previously, one would have to investigate tens, if not hundreds, of models to correlate changes in specific morphological parameters to changes in local hemodynamic. Now, one can keep all other morphological parameters fixed while investigating only the impact of one change. Thus, morphMan opens a wide range of problems which previously was practically infeasible to study.
+The intended audience for *morphMan* are researchers, particularly within, but not limited to, computational biomechanics. For instance, by combining morphMan with a computational fluid mechanics solver, it can be used to objectively and reproducibly investigate how a specific geometric feature impacts the local hemodynamics. Following the tutorial, there are now prior knowledge needed, except for how to run a program from the terminal.
 
 ![manipulation ICA bifurcation](./figure2.png)\
 
