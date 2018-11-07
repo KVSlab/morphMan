@@ -8,8 +8,8 @@
 import sys
 from os import path
 relative_path = path.dirname(path.abspath(__file__))
-sys.path.insert(0, path.join(relative_path, '..', 'src'))
-sys.path.insert(0, "../src")
+sys.path.insert(0, path.join(relative_path, '..', 'morphman'))
+sys.path.insert(0, "../morphman")
 
 import pytest
 from .fixtures import common_input
