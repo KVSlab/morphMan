@@ -5,7 +5,24 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
 ##      PURPOSE.  See the above copyright notices for more information.
 
-from common import str2bool
+#from common import str2bool
+
+
+def str2bool(boolean):
+    """Convert a string to boolean.
+
+    Args:
+        boolean (str): Input string.
+
+    Returns:
+        return (bool): Converted string.
+    """
+    if boolean.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif boolean.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise ValueError('Boolean value expected.')
 
 
 def add_common_arguments(parser):

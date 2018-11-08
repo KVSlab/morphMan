@@ -8,11 +8,10 @@
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 # Local import
-from common import *
-from argparse_common import *
+from .common import *
 
 
-def curvature_variations(input_filepath, smooth, smooth_factor, smooth_factor_line, iterations,
+def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_line, iterations,
                          smooth_line, output_filepath, poly_ball_size, region_of_interest,
                          region_points, resampling_step, no_smooth, no_smooth_point):
     """
@@ -335,5 +334,9 @@ def read_command_line():
                 no_smooth=args.no_smooth, no_smooth_point=args.no_smooth_point)
 
 
+def main_curvature():
+    manipulate_curvature(**read_command_line())
+
+
 if __name__ == "__main__":
-    curvature_variations(**read_command_line())
+    manipulate_curvature(**read_command_line())

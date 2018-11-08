@@ -13,7 +13,7 @@ from scipy.ndimage.filters import gaussian_filter
 from scipy.signal import argrelextrema
 
 # Local import
-from common import *
+from .common import *
 
 
 def estimate_alpha_and_beta(input_filepath, quantity_to_compute, boundary, radius, grid_size, value_change,

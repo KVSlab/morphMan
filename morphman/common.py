@@ -18,7 +18,8 @@ from vmtk import vtkvmtk, vmtkscripts
 from vtk.util import numpy_support
 
 # Local import
-from vmtkpointselector import *
+from .vmtkpointselector import *
+from .argparse_common import *
 
 # Global array names
 radiusArrayName = 'MaximumInscribedSphereRadius'
@@ -1772,22 +1773,6 @@ def vmtk_centerline_resampling(line, length):
 
     return line
 
-
-def str2bool(boolean):
-    """Convert a string to boolean.
-
-    Args:
-        boolean (str): Input string.
-
-    Returns:
-        return (bool): Converted string.
-    """
-    if boolean.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif boolean.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise ValueError('Boolean value expected.')
 
 
 def vmtk_centerline_geometry(line, smooth, outputsmoothed=False, factor=1.0, iterations=100):

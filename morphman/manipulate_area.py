@@ -9,11 +9,11 @@ from scipy.ndimage.filters import gaussian_filter
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 # Local import
-from common import *
-from argparse_common import *
+from .common import *
+#from argparse_common import *
 
 
-def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
+def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
                     no_smooth_point, region_of_interest, region_points, beta, ratio,
                     stenosis_length, percentage, output_filepath, poly_ball_size,
                     resampling_step):
@@ -381,5 +381,8 @@ def read_command_line():
                 no_smooth_point=args.no_smooth_point, resampling_step=args.resampling_step)
 
 
+def main_area():
+    manipulate_area(**read_command_line())
+
 if __name__ == '__main__':
-    area_variations(**read_command_line())
+    manipulate_area(**read_command_line())
