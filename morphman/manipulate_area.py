@@ -10,7 +10,7 @@ from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 # Local import
 from .common import *
-#from argparse_common import *
+from .argparse_common import *
 
 
 def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,

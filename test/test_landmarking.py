@@ -6,19 +6,11 @@
 ##      PURPOSE.  See the above copyright notices for more information.
 
 
-import sys
-from os import path
-relative_path = path.dirname(path.abspath(__file__))
-sys.path.insert(0, path.join(relative_path, '..', 'morphman'))
-sys.path.insert(0, "../morphman")
-
 import pytest
-from common import *
 
-from automated_landmarking import landmarking_bogunovic, landmarking_piccinelli
-from .fixtures import common_input
-
-print(relative_path)
+from morphman import get_path_names, extract_ica_centerline, landmarking_bogunovic, \
+                     landmarking_piccinelli
+from fixtures import common_input
 
 
 @pytest.mark.parametrize("algorithm", ["bogunovic", "piccinelli"])

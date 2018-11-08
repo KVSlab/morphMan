@@ -5,17 +5,11 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
 ##      PURPOSE.  See the above copyright notices for more information.
 
-import sys
-from os import path
-relative_path = path.dirname(path.abspath(__file__))
-sys.path.insert(0, path.join(relative_path, '..', 'morphman'))
-sys.path.insert(0, "../morphman")
-
 import pytest
-from manipulate_bend import move_vessel
-from estimate_alpha_and_beta import compute_angle, compute_curvature
-from .fixtures import common_input
-from common import read_polydata, get_path_names
+
+from fixtures import common_input
+from morphman import read_polydata, get_path_names, compute_angle, compute_curvature, \
+                     manipulate_bend
 
 @pytest.mark.parametrize("alpha,beta",
                          [(-0.2,  0.0),

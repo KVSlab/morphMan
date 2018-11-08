@@ -5,18 +5,12 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
 ##      PURPOSE.  See the above copyright notices for more information.
 
-import sys
-from os import path
-relative_path = path.dirname(path.abspath(__file__))
-sys.path.insert(0, path.join(relative_path, '..', 'morphman'))
-sys.path.insert(0, "../morphman")
-
 import pytest
-from .fixtures import common_input
 import numpy as np
-from manipulate_area import area_variations
-from common import read_polydata, vmtk_compute_centerline_sections, get_array, \
-                   get_path_names, extract_single_line
+
+from fixtures import common_input
+from morphman import read_polydata, vmtk_compute_centerline_sections, get_array, \
+                     get_path_names, extract_single_line, manipulate_area
 
 
 @pytest.mark.parametrize("ratio", [1.5, 3.0])

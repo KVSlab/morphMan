@@ -36,9 +36,10 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
     ],
 
-    packages=["morphman"],
+    packages=["morphman",
+              "morphman.common",
+              "morphman.misc"],
     package_dir = {"morphman": "morphman"},
-    #setuptools.find_packages(exclude=["test"]),
 
     entry_points = {'console_scripts':
                         ['morphman-area=morphman.manipulate_area:main_area',

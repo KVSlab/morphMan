@@ -5,18 +5,12 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
 ##      PURPOSE.  See the above copyright notices for more information.
 
-import sys
-from os import path
-relative_path = path.dirname(path.abspath(__file__))
-sys.path.insert(0, path.join(relative_path, '..', 'morphman'))
-sys.path.insert(0, "../morphman")
-
 import pytest
 import numpy as np
-from .fixtures import common_input
-from manipulate_bifurcation import rotate_branches
-from common import get_path_names, read_polydata, get_locator, get_tolerance, \
-                   extract_single_line, distance
+
+from fixtures import common_input
+from morphman import get_path_names, read_polydata, get_locator, get_tolerance, \
+                   extract_single_line, distance, rotate_branches
 
 
 @pytest.mark.parametrize("angle", [20 / 180 * np.pi, -20 / 180 * np.pi])
