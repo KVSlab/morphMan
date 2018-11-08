@@ -7,9 +7,10 @@
 
 import pytest
 
-from fixtures import common_input
-from morphman import read_polydata, get_path_names, compute_angle, compute_curvature, \
-                     manipulate_bend
+from .fixtures import common_input
+from morphman.common import read_polydata, get_path_names
+from morphman.misc import compute_angle, compute_curvature
+from morphman import manipulate_bend
 
 @pytest.mark.parametrize("alpha,beta",
                          [(-0.2,  0.0),
@@ -32,8 +33,7 @@ def test_siphon(common_input, alpha, beta):
                              resampling_step = 0.1))
 
     # Perform manipulation
-    print(common_input.items())
-    move_vessel(**common_input)
+    manipulate_bend(**common_input)
 
     # Compute angle
     base_path = get_path_names(common_input['input_filepath'])

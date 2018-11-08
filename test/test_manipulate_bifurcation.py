@@ -8,9 +8,10 @@
 import pytest
 import numpy as np
 
-from fixtures import common_input
-from morphman import get_path_names, read_polydata, get_locator, get_tolerance, \
-                   extract_single_line, distance, rotate_branches
+from .fixtures import common_input
+from morphman.common import get_path_names, read_polydata, get_locator, get_tolerance, \
+                            extract_single_line, distance
+from morphman import manipulate_bifurcation
 
 
 @pytest.mark.parametrize("angle", [20 / 180 * np.pi, -20 / 180 * np.pi])
@@ -24,7 +25,7 @@ def test_bifurcation_angle(common_input, angle):
                              region_of_interest = "commandline",
                              region_points = [35.8, 59.8, 39.7, 76.8, 54.7, 53.2]))
 
-    rotate_branches(**common_input)
+    manipulate_bifurcation(**common_input)
 
     # Read in files to compute angle
     base_path = get_path_names(common_input["input_filepath"])

@@ -8,8 +8,7 @@
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 # Local import
-from .common import *
-from .argparse_common import *
+from morphman.common import *
 
 
 def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_line, iterations,

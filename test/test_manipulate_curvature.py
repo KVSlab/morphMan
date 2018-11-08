@@ -8,9 +8,10 @@
 import pytest
 import numpy as np
 
-from fixtures import common_input
-from morphman import manipulate_curvature, get_path_names, extract_single_line, \
-                     read_polydata, get_locator, discrete_geometry
+from .fixtures import common_input
+from morphman import manipulate_curvature
+from morphman.common import get_path_names, extract_single_line, \
+                            read_polydata, get_locator, discrete_geometry
 
 
 @pytest.mark.parametrize("smooth_line", [True, False])
@@ -31,7 +32,7 @@ def test_decrease_curvature(common_input, smooth_line):
                              smooth_line = smooth_line))
 
     # Manipulate surface
-    curvature_variations(**common_input)
+    manipulate_curvature(**common_input)
 
     # Select and compare altered region
     p1 = np.asarray(region_points[:3])
