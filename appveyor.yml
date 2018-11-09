@@ -50,7 +50,9 @@ install:
   - del /f C0001_models.tar.gz
   - cd ..
   
-build: false
+build_script:
+  # Build the compiled extension
+  - "%CMD_IN_ENV% python setup.py build"
 
 test_script:
   - "%CMD_IN_ENV% cd .\\test"
