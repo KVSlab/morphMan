@@ -1,0 +1,40 @@
+package:
+  name: morphman
+  version: "0.1"
+
+source:
+  git_rev: v0.1
+  git_url: ../
+
+build:
+  number: 1
+  script: python setup.py install
+
+requirements:
+  build:
+    - python
+    - setuptools
+
+  run:
+    - python 3.6.1
+    - scipy >= 1.0.0
+    - numpy >=1.13
+    - itk >= 4.13
+    - vtk >= 8.1.0
+    - vmtk
+
+test:
+  imports:
+    - morphman
+  source_files:
+    - ../test
+  requires:
+    - pytest
+
+
+about:
+  home: https://github.com/KVSlab/morphMan
+  summary: 'morphMan - morphological manipulation'
+  license: GPL 3.0
+  license_file: LICENSE
+  doc_url: https://morphman.readthedocs.io
