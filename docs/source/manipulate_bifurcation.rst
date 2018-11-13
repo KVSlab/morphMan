@@ -21,6 +21,10 @@ In this tutorial, we are using the model with
 `ID C0005 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0005/C0005_models.tar.gz>`_
 from the Aneurisk database. For the commands below we assume that there
 is a file `./C0005/surface/model.vtp`, relative to where you execute the command.
+Performing the manipulation can be achieved by running ``morphman-bifurcation`` in the terminal, followed by the
+respective command line arguments. Alternatively, you can execute the Python script directly,
+located in the ``morphman`` subfolder, by typing ``python manipulate_bifurcation.py``.
+
 
 Shown in Figure 2 is the result of rotating the two daughter branches with both
 a positive and negative angle.
@@ -31,11 +35,11 @@ a positive and negative angle.
 
 You can reproduce the results in Figure 2 by running the following command::
 
-    python manipulate_bifurcation.py --ifile C0005/surface/model.vtp --ofile C0005/surface/rotate_plus.vtp --angle 20 --region-of-interest commandline --region-points 43.2 70.5 26.4 84.4 60.6 50.6 --poly-ball-size 250 250 250
+    morphman-bifurcation --ifile C0005/surface/model.vtp --ofile C0005/surface/rotate_plus.vtp --angle 20 --region-of-interest commandline --region-points 43.2 70.5 26.4 84.4 60.6 50.6 --poly-ball-size 250 250 250
 
 for narrowing of the bifurcation angle, and similarly for widening of the bifurcation angle::
 
-    python manipulate_bifurcation.py --ifile C0005/surface/model.vtp --ofile C0005/surface/rotate_minus.vtp --angle -20 --region-of-interest commandline --region-points 43.2 70.5 26.4 84.4 60.6 50.6 --poly-ball-size 250 250 250
+    morphman-bifurcation --ifile C0005/surface/model.vtp --ofile C0005/surface/rotate_minus.vtp --angle -20 --region-of-interest commandline --region-points 43.2 70.5 26.4 84.4 60.6 50.6 --poly-ball-size 250 250 250
 
 Inspecting Figure 2 closely you can observe an unphysiological "notch" in the bifurcation of the surface
 with increased :math:`\theta`. One remedy is to add the flag ``--bif True`` and ``--lower True``,
@@ -43,7 +47,7 @@ which will output a smoother bifurcation, as shown on the right side in Figure 3
 The results shown in Figure 3 can reproduced by
 running the command::
 
-    python manipulate_bifurcation.py --ifile C0005/surface/model.vtp --ofile C0005/surface/rotate_no_notch.vtp --angle -20 --bif True --lower True  --region-of-interest commandline --region-points 43.2 70.5 26.4 84.4 60.6 50.6 --poly-ball-size 250 250 250
+    morphman-bifurcation --ifile C0005/surface/model.vtp --ofile C0005/surface/rotate_no_notch.vtp --angle -20 --bif True --lower True  --region-of-interest commandline --region-points 43.2 70.5 26.4 84.4 60.6 50.6 --poly-ball-size 250 250 250
 
 Using both flags have proven to give an improved surface,
 and when used for computational fluid dynamics, a more physiological plausible wall shear stress [2]_.
@@ -66,7 +70,7 @@ with `ID C0066 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0066/C0066_m
 
 To reproduce the result shown in Figure 4, you can run the following command::
 
-        python manipulate_bifurcation.py --ifile C0066/surface/model.vtp --ofile C0066/surface/removed_aneurysm.vtp --keep-fixed-1 True --keep-fixed-2 True --bif True --lower True --angle 0 --region-of-interest commandline --region-points 31.37 60.65 25.21 67.81 43.08 41.24 --poly-ball-size 250 250 250
+        morphman-bifurcation --ifile C0066/surface/model.vtp --ofile C0066/surface/removed_aneurysm.vtp --keep-fixed-1 True --keep-fixed-2 True --bif True --lower True --angle 0 --region-of-interest commandline --region-points 31.37 60.65 25.21 67.81 43.08 41.24 --poly-ball-size 250 250 250
 
 For additional information, beyond this tutorial, on the script and
 input parameters, please run ``python manipulate_bifurcation.py -h`` or confer with

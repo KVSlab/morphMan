@@ -19,6 +19,8 @@ import os
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),"..", "..", "morphman"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),"..", "..", "morphman", "common"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),"..", "..", "morphman", "misc"))
 
 # -- General configuration ------------------------------------------------
 

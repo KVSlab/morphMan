@@ -8,6 +8,9 @@ Tutorial: Manipulate curvature
 
 The goal of ``manipulate_curvature.py`` is to increase or decrease the
 total curvature/torsion in a vascular segment, see Figure 1 for an example.
+The manipulation can be achieved by running ``morphman-curvature`` in the terminal, followed by the
+respective command line arguments. Alternatively, you can execute the Python script directly,
+located in the ``morphman`` subfolder, by typing ``python manipulate_curvature.py``.
 
 .. figure:: Curvature.png
   
@@ -41,11 +44,11 @@ see the right most surface in Figure 2.
 
 To reproduce the surface model with decreased total curvature shown on the left in Figure 2, run::
 
-        python manipulate_curvature.py --ifile C0005/surface/model.vtp --ofile C0005/surface/model_curvature_decreased.vtp --smooth-line True --iterations 100 --smooth-factor-line 1.8  --region-of-interest first_line --poly-ball-size 250 250 250
+        morphman-curvature --ifile C0005/surface/model.vtp --ofile C0005/surface/model_curvature_decreased.vtp --smooth-line True --iterations 100 --smooth-factor-line 1.8  --region-of-interest first_line --poly-ball-size 250 250 250
 
 To reproduce the surface model with increased total curvature shown on the right in Figure 2, run::
 
-        python manipulate_curvature.py --ifile C0005/surface/model.vtp --ofile C0005/surface/model_curvature_increased.vtp --smooth-line False --iterations 100 --smooth-factor-line 1.8  --region-of-interest first_line --poly-ball-size 250 250 250
+        morphman-curvature --ifile C0005/surface/model.vtp --ofile C0005/surface/model_curvature_increased.vtp --smooth-line False --iterations 100 --smooth-factor-line 1.8  --region-of-interest first_line --poly-ball-size 250 250 250
 
 As shown in the command above, increased total curvature is achieved by setting the command line argument ``--smooth-line`` to **False**.
 

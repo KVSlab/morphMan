@@ -6,7 +6,6 @@
 ##      PURPOSE.  See the above copyright notices for more information.
 
 from scipy.ndimage.filters import gaussian_filter
-from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 # Local import
 from morphman.common import *
@@ -68,9 +67,9 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
 
     # Spline centerline and compute cross-sectional areas along line
     centerline_splined, centerline_remaining, \
-        centerline_diverging, region_points = get_line_to_change(capped_surface, centerlines,
-                                                                 region_of_interest, method,
-                                                                 region_points, stenosis_length)
+    centerline_diverging, region_points = get_line_to_change(capped_surface, centerlines,
+                                                             region_of_interest, method,
+                                                             region_points, stenosis_length)
     write_polydata(centerline_splined, centerline_spline_path)
     write_polydata(centerline_remaining, centerline_remaining_path)
     if centerline_diverging is not None:
@@ -382,6 +381,7 @@ def read_command_line():
 
 def main_area():
     manipulate_area(**read_command_line())
+
 
 if __name__ == '__main__':
     manipulate_area(**read_command_line())

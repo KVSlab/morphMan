@@ -5,8 +5,6 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
 ##      PURPOSE.  See the above copyright notices for more information.
 
-#from common import str2bool
-
 
 def str2bool(boolean):
     """Convert a string to boolean.

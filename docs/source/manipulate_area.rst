@@ -5,7 +5,11 @@
 =========================
 Tutorial: Manipulate area
 =========================
-Manipulation of the cross-sectional area is performed by running the script ``manipulate_area.py``. 
+
+Manipulation of the cross-sectional area is performed by running ``morphman-area`` in the terminal, followed by the
+respective command line arguments. Alternatively, you can execute the Python script directly,
+located in the ``morphman`` subfolder, by typing ``python manipulate_area.py``.
+
 In this tutorial, we are using the model with
 `ID C0002 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0002/C0002_models.tar.gz>`_
 from the Aneurisk database. For the commands below we assume that there is a file `./C0002/surface/model.vtp`, relative to where you execute the command.
@@ -51,11 +55,11 @@ if you choose ``--region-of-interest first_line``, only the end has a smooth tra
 Figure 2 shows a possible output of the algorithm, where the region of interest was set to ``first_line``,
 obtained by executing the following commands from the command line::
 
-    python manipulate_area.py --ifile C0002/surface/model.vtp --ofile C0002/surface/increased_variation.vtp --method variation --ratio 4.0 --region-of-interest first_line --poly-ball-size 250 250 250
+    morphman-area --ifile C0002/surface/model.vtp --ofile C0002/surface/increased_variation.vtp --method variation --ratio 4.0 --region-of-interest first_line --poly-ball-size 250 250 250
 
 for the model with increased cross-sectional area variation, and::
 
-    python manipulate_area.py --ifile C0002/surface/model.vtp --ofile C0002/surface/decreased_variation.vtp --method variation --ratio 0.5 --region-of-interest first_line --poly-ball-size 250 250 250
+    morphman-area --ifile C0002/surface/model.vtp --ofile C0002/surface/decreased_variation.vtp --method variation --ratio 0.5 --region-of-interest first_line --poly-ball-size 250 250 250
 
 for the model with decreased cross-sectional area variation.
 
@@ -90,10 +94,10 @@ sections with high curvature, like the internal carotid artery, is unproblematic
 
 To recreate the above output, execute the following from the commandline::
 
-    python manipulate_area.py --ifile C0002/surface/model.vtp  --ofile C0002/surface/stenosis.vtp --method stenosis --size 4 --percentage 50 --region-of-interest commandline --region-points 28.7 18.4 39.5 --poly-ball-size 250 250 250
+    morphman-area --ifile C0002/surface/model.vtp  --ofile C0002/surface/stenosis.vtp --method stenosis --size 4 --percentage 50 --region-of-interest commandline --region-points 28.7 18.4 39.5 --poly-ball-size 250 250 250
 
 Remove a stenosis
-~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
 To remove a stenosis, you need to provide two points, one at each end of the
 stenosis. The area will be altered to change linearly between the two points.
 
@@ -107,7 +111,7 @@ right, the comparison between the original model and the 'healed' surface.
     
 To reproduce the above result, execute the following command::
 
-    python manipulate_area.py --ifile C0002/surface/stenosis.vtp  --ofile C0002/surface/stenosis_removed.vtp --method stenosis --size 4 --percentage 50 --region-of-interest commandline --region-points 30.1 18.5 34.6 27.1 12.7 38.2 --poly-ball-size 250 250 250
+    morphman-area --ifile C0002/surface/stenosis.vtp  --ofile C0002/surface/stenosis_removed.vtp --method stenosis --size 4 --percentage 50 --region-of-interest commandline --region-points 30.1 18.5 34.6 27.1 12.7 38.2 --poly-ball-size 250 250 250
 
 Inflation / deflation of an arterial segment
 ============================================
@@ -117,12 +121,12 @@ region of interest is a transition between the original and modified geometry to
 
 To perform a deflation, run the following command::
 
-    python manipulate_area.py --ifile C0002/surface/model.vtp --ofile C0002/surface/area_deflated.vtp --method area --percentage -20 --region-of-interest first_line --poly-ball-size 250 250 250
+    morphman-area --ifile C0002/surface/model.vtp --ofile C0002/surface/area_deflated.vtp --method area --percentage -20 --region-of-interest first_line --poly-ball-size 250 250 250
 
 Simlarly, we can perform inflation by changing the sign of the ``--percentage`` argument.
 To reproduce the inflated model shown in Figure 5, you can run the command::
 
-    python manipulate_area.py --ifile C0002/surface/model.vtp --ofile C0002/surface/area_inflated.vtp --method area --percentage 20 --region-of-interest first_line --poly-ball-size 250 250 250
+    morphman-area --ifile C0002/surface/model.vtp --ofile C0002/surface/area_inflated.vtp --method area --percentage 20 --region-of-interest first_line --poly-ball-size 250 250 250
 
 Below is an illustration of area decrease and increase in a single patient-specific model.
 

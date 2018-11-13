@@ -1,5 +1,7 @@
 .. title:: Using morphMan
 
+.. _getting_started:
+
 ==============
 Using morphMan
 ==============
@@ -51,6 +53,8 @@ New features
 The existing methods provide many degrees of freedom, however, if you need a specific method
 or functionality, please do not hesitate to propose enhancements in the
 `issue tracker <https://github.com/KVSlab/morphMan/issues/>`_, or create a pull request with new features.
+Our only request is that you follow our
+`guidelines for contributing <https://github.com/KVSlab/morphMan/blob/master/CONTRIBUTING.md>`_.
 
 .. [1] Bergersen, Aslak Wigdahl. Investigating the Link Between Patient-specific Morphology and Hemodynamics: Implications for Aneurism Initiation?. MS thesis. 2016.
 .. [2] Kjeldsberg, Henrik Aasen. Investigating the Interaction Between Morphology of the Anterior Bend and Aneurysm Initiation. MS thesis. 2018.

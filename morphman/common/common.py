@@ -18,7 +18,7 @@ from vmtk import vtkvmtk, vmtkscripts
 from vtk.util import numpy_support
 
 # Local import
-from .vmtkpointselector import *
+from morphman.common.vmtkpointselector import *
 
 # Global array names
 radiusArrayName = 'MaximumInscribedSphereRadius'
