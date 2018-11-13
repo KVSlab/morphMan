@@ -7,7 +7,7 @@ DEPENDENCIES = ['scipy', 'numpy', 'vtk']
 TEST_DEPENDENCIES = ['pytest']
 
 VERSION = "0.1"
-URL = "https://github.com/KVSlab/morphman.git"
+URL = "https://github.com/KVSlab/morphMan.git"
 
 setuptools.setup(
     name="morphman",
