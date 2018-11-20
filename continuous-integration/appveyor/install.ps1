@@ -108,6 +108,7 @@ function main () {
     UpdateConda $env:PYTHON
     InstallCondaPackages $env:PYTHON "conda-build==3.9.2 jinja2 anaconda-client"
     UpdateCondaChannel $env:PYTHON "vmtk"
+    UpdateCondaChannel $env:PYTHON "morphman"
 }
 
 main
