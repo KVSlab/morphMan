@@ -52,7 +52,8 @@ install:
   - activate morphman
 
   # Install morphman
-  - "%CMD_IN_ENV% conda install morphman"
+  - conda install morphman
+  #- "%CMD_IN_ENV% conda install morphman"
 
   # Search and replace in vmtkcenterlines.py for / to //
   - sed -i 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' ..\\..\\Python36_64\\envs\\morphman_env\\lib\\site-packages\\vmtk\\vmtkcenterlines.py
