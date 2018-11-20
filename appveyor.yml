@@ -41,7 +41,7 @@ install:
   - "%CMD_IN_ENV% conda config --add channels vmtk"
 
   # Install morphman through conda
-  - "%CMD_IN_ENV% conda create -n morphman -c morphman python=%PYTHON_VERSION% morphman"
+  - "%CMD_IN_ENV% conda create -n morphman -c morphman python=%PYTHON_VERSION% morphman --yes"
 
   # Activate environment
   - activate morphman
