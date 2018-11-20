@@ -42,7 +42,7 @@ install:
   - "%CMD_IN_ENV% conda config --add channels morphman"
   - "%CMD_IN_ENV% conda config --set always_yes yes"
 
-  # Useful for debugging any issues with conda
+# Useful for debugging any issues with conda
   - "%CMD_IN_ENV% conda info -a"
 
   # Create environment for morphman
