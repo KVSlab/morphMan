@@ -68,9 +68,9 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
 
     # Spline centerline and compute cross-sectional areas along line
     centerline_splined, centerline_remaining, \
-    centerline_diverging, region_points, diverging_ids = get_line_to_change(capped_surface, centerlines,
-                                                             region_of_interest, method,
-                                                             region_points, stenosis_length)
+        centerline_diverging, region_points, diverging_ids = get_line_to_change(capped_surface, centerlines,
+                                                                                region_of_interest, method,
+                                                                                region_points, stenosis_length)
     write_polydata(centerline_splined, centerline_spline_path)
     write_polydata(centerline_remaining, centerline_remaining_path)
     if centerline_diverging is not None:
@@ -250,7 +250,7 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
 
     # Offset Voronoi diagram along "diverging" centerlines
     if diverging_centerline is not None:
-        count = i
+        count = i+1
         for j in range(len(diverging_voronoi)):
             # Get offset for Voronoi diagram
             point = diverging_centerline[j].GetPoint(0)
@@ -266,7 +266,6 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
                 point = (np.asarray(point) + v2).tolist()
 
                 voronoi_points.InsertNextPoint(point)
-                # FIXME: MISR along diverging centerline is off
                 radius_array.SetTuple1(count, point_radius_array(i))
                 cell_array.InsertNextCell(1)
                 cell_array.InsertCellPoint(count)
