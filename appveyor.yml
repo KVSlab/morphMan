@@ -45,6 +45,7 @@ install:
 # Useful for debugging any issues with conda
   - "%CMD_IN_ENV% conda info -a"
 
+  - "%CMD_IN_ENV% conda info morphman"
   # Create environment for morphman
   - "%CMD_IN_ENV% conda create -n morphman python=%PYTHON_VERSION%"
 
@@ -52,7 +53,7 @@ install:
   - activate morphman
 
   # Install morphman
-  - conda install morphman
+  #- conda install morphman
   #- "%CMD_IN_ENV% conda install morphman"
 
   # Search and replace in vmtkcenterlines.py for / to //
