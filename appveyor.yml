@@ -37,6 +37,9 @@ install:
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
   - "set PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
 
+  # Conda setup
+  - "%CMD_IN_ENV% conda config --add channels vmtk"
+
   # Install morphman through conda
   - "%CMD_IN_ENV% conda create -n morphman -c morphman morphman"
 
