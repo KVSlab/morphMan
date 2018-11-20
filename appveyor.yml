@@ -44,12 +44,14 @@ install:
   # Useful for debugging any issues with conda
   - "%CMD_IN_ENV% conda info -a"
 
-  # Install morphman through conda
-  - "%CMD_IN_ENV% conda create -n morphman python=%PYTHON_VERSION% morphman --yes"
+  # Create environment for morphman
+  - "%CMD_IN_ENV% conda create -n morphman python=%PYTHON_VERSION%"
 
   # Activate environment
   - activate morphman
 
+  # Install morphman
+  - "%CMD_IN_ENV% conda install morphman"
 
 
   # Search and replace in vmtkcenterlines.py for / to //
