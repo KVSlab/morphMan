@@ -46,15 +46,15 @@ install:
   - "%CMD_IN_ENV% conda info -a"
 
   - "%CMD_IN_ENV% conda info morphman"
+
   # Create environment for morphman
-  - "%CMD_IN_ENV% conda create -n morphman python=%PYTHON_VERSION%"
+  - "%CMD_IN_ENV% conda create -n morphman python=%PYTHON_VERSION% morphman vmtk"
 
   # Activate environment
   - activate morphman
 
   # Install morphman
   #- conda install morphman
-  #- "%CMD_IN_ENV% conda install morphman"
 
   # Search and replace in vmtkcenterlines.py for / to //
   - sed -i 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' ..\\..\\Python36_64\\envs\\morphman_env\\lib\\site-packages\\vmtk\\vmtkcenterlines.py
