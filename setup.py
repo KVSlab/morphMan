@@ -3,8 +3,8 @@ import setuptools
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-DEPENDENCIES = ['scipy', 'numpy', 'vtk']
-TEST_DEPENDENCIES = ['pytest']
+DEPENDENCIES = []  # 'scipy', 'numpy', 'vtk']
+TEST_DEPENDENCIES = []  # 'pytest']
 
 VERSION = "0.1"
 URL = "https://github.com/KVSlab/morphMan.git"
@@ -41,7 +41,7 @@ setuptools.setup(
     entry_points={'console_scripts':
                       ['morphman-area=morphman.manipulate_area:main_area',
                        'morphman-bend=morphman.manipulate_bend:main_bend',
-                       'morphman-bifurcation=morphman.manipulate_angle:main_bifurcation',
+                       'morphman-bifurcation=morphman.manipulate_bifurcation:main_bifurcation',
                        'morphman-curvature=morphman.manipulate_curvature:main_curvature']
                   }
 )

@@ -615,7 +615,7 @@ def read_command_line():
 
 
 def main_bifurcation():
-    manipulate_bifurcatio(**read_command_line())
+    manipulate_bifurcation(**read_command_line())
 
 
 if __name__ == "__main__":

@@ -60,7 +60,7 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
                                           smooth, smooth_factor, no_smooth,
                                           no_smooth_point, voronoi, pole_ids)
     # Get region of interest
-    _, _, _, region_points = get_line_to_change(capped_surface, centerlines,
+    _, _, _, region_points, _ = get_line_to_change(capped_surface, centerlines,
                                                 region_of_interest, "variation", region_points, 0)
     region_points = [[region_points[3 * i], region_points[3 * i + 1], region_points[3 * i + 2]]
                      for i in range(len(region_points) // 3)]
