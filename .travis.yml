@@ -28,18 +28,19 @@ install:
   - conda config --set always_yes yes --set changeps1 no
  
   # Set up environment
-  - conda create -q -n morphman -c vmtk python=3.6 itk vtk vmtk scipy numpy pytest
+  - conda create -q -n morphman -c morphman -c vmtk python=3.6 morphman pytest
+  # - conda create -q -n morphman -c vmtk python=3.6 itk vtk vmtk scipy numpy pytest
   - source activate morphman
 
   # Useful for debugging any issues with conda
   - conda info -a
   
   # / -> // in vmtkcenterlines.py
-  - sed -i -e 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' ../../../miniconda/envs/morphman/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
-  - sed -i -e 's/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g' ../../../miniconda/envs/morphman/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
+  # - sed -i -e 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' ../../../miniconda/envs/morphman/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
+  # - sed -i -e 's/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g' ../../../miniconda/envs/morphman/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
 
   # Install morphman
-  - python setup.py install
+  # - python setup.py install
 
 script:
   - cd test

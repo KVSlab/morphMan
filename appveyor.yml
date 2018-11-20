@@ -36,12 +36,12 @@ install:
   - powershell .\\continuous-integration\\appveyor\\install.ps1
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
   - "set PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
-  - "%CMD_IN_ENV% conda create -n morphman_env -c vmtk python=%PYTHON_VERSION% itk vtk vmtk scipy numpy pytest --yes"
+  - "%CMD_IN_ENV% conda create -n morphman_env -c morphman -c vmtk python=%PYTHON_VERSION% morphman"
   - activate morphman_env
 
   # Search and replace in vmtkcenterlines.py for / to //
-  - sed -i 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' ..\\..\\Python36_64\\envs\\morphman_env\\lib\\site-packages\\vmtk\\vmtkcenterlines.py
-  - sed -i 's/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g' ..\\..\\Python36_64\\envs\\morphman_env\\lib\\site-packages\\vmtk\\vmtkcenterlines.py
+  # - sed -i 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' ..\\..\\Python36_64\\envs\\morphman_env\\lib\\site-packages\\vmtk\\vmtkcenterlines.py
+  # - sed -i 's/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g' ..\\..\\Python36_64\\envs\\morphman_env\\lib\\site-packages\\vmtk\\vmtkcenterlines.py
 
   # Workaround for downloading on windows, as bitsadmin is not in sync on AppVeyor
   - cd .\\test
@@ -50,9 +50,9 @@ install:
   - del /f C0001_models.tar.gz
   - cd ..
   
-build_script:
+#build_script:
   # Build the compiled extension
-  - "%CMD_IN_ENV% python setup.py build"
+  # - "%CMD_IN_ENV% python setup.py build"
 
 test_script:
   - "%CMD_IN_ENV% cd .\\test"
