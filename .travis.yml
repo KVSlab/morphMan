@@ -28,9 +28,9 @@ install:
   - conda config --set always_yes yes --set changeps1 no
  
   # Set up environment
-  - conda create -q -n morphman -c morphman -c vmtk python=3.6 morphman pytest
+  - conda create -n morphman -c morphman -c vmtk python=3.6 morphman pytest
   # - conda create -q -n morphman -c vmtk python=3.6 itk vtk vmtk scipy numpy pytest
-  - source activate morphman
+  - source activate morphman_env
 
   # Useful for debugging any issues with conda
   - conda info -a

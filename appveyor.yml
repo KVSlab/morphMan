@@ -36,7 +36,8 @@ install:
   - powershell .\\continuous-integration\\appveyor\\install.ps1
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
   - "set PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
-  - "%CMD_IN_ENV% conda create -n morphman_env -c morphman -c vmtk python=%PYTHON_VERSION% morphman"
+  - "%CMD_IN_ENV% conda install python=%PYTHON_VERSION% "
+  - "%CMD_IN_ENV% conda create -n morphman_env -c morphman -c vmtk morphman"
   - activate morphman_env
 
   # Search and replace in vmtkcenterlines.py for / to //
