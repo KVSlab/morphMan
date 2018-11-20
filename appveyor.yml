@@ -39,15 +39,18 @@ install:
 
   # Conda setup
   - "%CMD_IN_ENV% conda config --add channels vmtk"
+  - "%CMD_IN_ENV% conda config --add channels morphman"
+
+  # Useful for debugging any issues with conda
+  - "%CMD_IN_ENV% conda info -a"
 
   # Install morphman through conda
-  - "%CMD_IN_ENV% conda create -n morphman -c morphman python=%PYTHON_VERSION% morphman --yes"
+  - "%CMD_IN_ENV% conda create -n morphman python=%PYTHON_VERSION% morphman --yes"
 
   # Activate environment
   - activate morphman
 
-# Useful for debugging any issues with conda
-  - "%CMD_IN_ENV% conda info -a"
+
 
   # Search and replace in vmtkcenterlines.py for / to //
   - sed -i 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' ..\\..\\Python36_64\\envs\\morphman_env\\lib\\site-packages\\vmtk\\vmtkcenterlines.py
