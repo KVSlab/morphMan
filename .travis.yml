@@ -36,8 +36,8 @@ install:
   - conda info -a
   
   # / -> // in vmtkcenterlines.py
-  # - sed -i -e 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' ../../../miniconda/envs/morphman/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
-  # - sed -i -e 's/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g' ../../../miniconda/envs/morphman/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
+  - sed -i -e 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' ../../../miniconda/envs/morphman/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
+  - sed -i -e 's/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g' ../../../miniconda/envs/morphman/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
 
   # Install morphman
   # - python setup.py install
