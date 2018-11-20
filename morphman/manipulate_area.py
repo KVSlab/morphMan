@@ -86,15 +86,15 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     print("-- Change Voronoi diagram")
     centerline_regions = [centerline_splined, centerline_remaining]
     if centerline_diverging is not None:
-        centerline_diverging_clipped = [extract_single_line(centerline_diverging[0], 0, startID=diverging_ids[0])]
-        centerline_regions += centerline_diverging_clipped
+        centerline_diverging = [extract_single_line(centerline_diverging[0], 0, startID=diverging_ids[0])]
+        centerline_regions += centerline_diverging
     else:
         centerline_regions += [None]
 
     voronoi_regions = split_voronoi_with_centerlines(voronoi, centerline_regions)
 
     new_voronoi = change_area(voronoi_regions[0], centerline_area, method, beta, ratio, percentage,
-                              region_of_interest, region_points, centerline_diverging_clipped,
+                              region_of_interest, region_points, centerline_diverging,
                               voronoi_regions[2:])
 
     new_voronoi = merge_data([new_voronoi, voronoi_regions[1]])
