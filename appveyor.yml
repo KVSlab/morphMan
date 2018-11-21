@@ -24,12 +24,14 @@ environment:
       PYTHON_ARCH: "64"
       CONDA_PY: "35"
       CONDA_NPY: "18"
+      APP_CONDA_PY: "3.5.1"
 
     - PYTHON: "C:\\Python36_64"
       PYTHON_VERSION: "3.6"
       PYTHON_ARCH: "64"
       CONDA_PY: "36"
       CONDA_NPY: "18"
+      APP_CONDA_PY: "3.6.1"
 
 platform:
   - x64
