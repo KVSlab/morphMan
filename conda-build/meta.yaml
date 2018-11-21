@@ -16,18 +16,16 @@ requirements:
   run:
     - python {{ python }}
     - setuptools
-    - scipy {{ scipy }}
-    - numpy <=1.13
+    - scipy #{{ scipy }}
+    - numpy #<=1.13
     - vtk {{ vtk }}
     - vmtk
 
 test:
-  imports:
-    - morphman
-  source_files:
-    - ./test
   requires:
     - pytest
+  source_files:
+    - ./test
 
 about:
   home: https://github.com/KVSlab/morphMan

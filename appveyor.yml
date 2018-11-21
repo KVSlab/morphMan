@@ -48,13 +48,13 @@ install:
   # Conda setup
   #- "%CMD_IN_ENV% conda config --add channels vmtk"
   #- "%CMD_IN_ENV% conda config --add channels morphman"
-  - "%CMD_IN_ENV% conda config --set always_yes yes"
+  #- "%CMD_IN_ENV% conda config --set always_yes yes"
 
   # Useful for debugging any issues with conda
-  - "%CMD_IN_ENV% conda info -a"
+  #- "%CMD_IN_ENV% conda info -a"
 
   # Update conda
-  - "%CMD_IN_ENV% conda update -q conda"
+  #- "%CMD_IN_ENV% conda update -q conda"
 
   # Create environment for morphman
   #- "%CMD_IN_ENV% conda create -n morphman python=%PYTHON_VERSION% morphman vmtk"
@@ -82,6 +82,8 @@ install:
 build: false
 
 test_script:
+  - "%CMD_IN_ENV% conda update -q conda"
+  - "%CMD_IN_ENV% conda config --set always_yes yes"
   - "%CMD_IN_ENV% conda config --add channels vmtk"
   - "%CMD_IN_ENV% conda config --add channels morphman"
   - "%CMD_IN_ENV% conda config --show"
