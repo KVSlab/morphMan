@@ -63,7 +63,7 @@ install:
   #- activate morphman
 
   # Install morphman
-  #- conda install morphman
+  #- conda install pytest
 
   # Search and replace in vmtkcenterlines.py for / to //
   #- sed -i 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' ..\\..\\Python36_64\\envs\\morphman_env\\lib\\site-packages\\vmtk\\vmtkcenterlines.py
@@ -87,6 +87,7 @@ test_script:
   - "%CMD_IN_ENV% conda config --add channels vmtk"
   - "%CMD_IN_ENV% conda config --add channels morphman"
   - "%CMD_IN_ENV% conda config --show"
+  - "%CMD_IN_ENV% conda install pytest"
   - "%CMD_IN_ENV% conda build --python %APP_CONDA_PY% ."
   - "%CMD_IN_ENV% cd .\\test"
   - "%CMD_IN_ENV% pytest ."
