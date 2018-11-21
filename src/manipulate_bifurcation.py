@@ -603,7 +603,7 @@ def read_command_line():
                         help="Factor for choosing the smaller cylinder")
 
     args = parser.parse_args()
-    ang_ = 0 if args.angle == 0 else args.angle * math.pi / 180  # Convert from deg to rad
+    ang_ = args.angle * math.pi / 180  # Convert from deg to rad
 
     return dict(input_filepath=args.ifile, smooth=args.smooth, output_filepath=args.ofile,
                 smooth_factor=args.smooth_factor, angle=ang_,

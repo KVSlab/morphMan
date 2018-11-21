@@ -33,6 +33,8 @@ eikonalSolutionArrayName = 'EikonalSolutionArray'
 edgeArrayName = 'EdgeArray'
 edgePCoordArrayName = 'EdgePCoordArray'
 costFunctionArrayName = 'CostFunctionArray'
+surfaceNormalsArrayName = 'SurfaceNormalArray'
+frenetTangentArrayName = 'FrenetTangent'
 
 # Options not available from commandline
 divergingRatioToSpacingTolerance = 2.0
@@ -4059,7 +4061,7 @@ def interpolate_voronoi_diagram(interpolatedCenterlines, patchCenterlines,
     completeVoronoiDiagram = vtk.vtkPolyData()
     completeVoronoiDiagram.DeepCopy(clippedVoronoi)
 
-    for j in range(1, 3):
+    for j in range(1, patchCenterlines.GetNumberOfLines()):
         interpolationCellId = j - 1
         startId = 0
         endId = j
