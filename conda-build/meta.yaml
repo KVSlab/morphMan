@@ -16,7 +16,7 @@ requirements:
   run:
     - python {{ python }}
     - setuptools
-    - scipy 1.1.0
+    - scipy {{ scipy }}
     - numpy <=1.13
     - vtk {{ vtk }}
     - vmtk
