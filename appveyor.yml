@@ -85,6 +85,6 @@ test_script:
   - "%CMD_IN_ENV% conda config --add channels vmtk"
   - "%CMD_IN_ENV% conda config --add channels morphman"
   - "%CMD_IN_ENV% conda config --show"
-  - "%CMD_IN_ENV% conda build --python %APP_CONDA_PY%"
+  - "%CMD_IN_ENV% conda build --python %APP_CONDA_PY% ."
   - "%CMD_IN_ENV% cd .\\test"
   - "%CMD_IN_ENV% pytest ."
