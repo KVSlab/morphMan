@@ -9,7 +9,7 @@ notifications:
   - provider: Email
     to:
       - henrik.kjeldsberg@live.no
-    on_build_success: false
+    on_build_success: true
 
 environment:
   global:
@@ -44,27 +44,28 @@ install:
   - "set PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
 
   # Conda setup
-  - "%CMD_IN_ENV% conda config --add channels vmtk"
-  - "%CMD_IN_ENV% conda config --add channels morphman"
+  #- "%CMD_IN_ENV% conda config --add channels vmtk"
+  #- "%CMD_IN_ENV% conda config --add channels morphman"
   - "%CMD_IN_ENV% conda config --set always_yes yes"
 
-# Useful for debugging any issues with conda
+  # Useful for debugging any issues with conda
   - "%CMD_IN_ENV% conda info -a"
 
-  - "%CMD_IN_ENV% conda info morphman"
+  # Update conda
+  - "%CMD_IN_ENV% conda update -q conda"
 
   # Create environment for morphman
-  - "%CMD_IN_ENV% conda create -n morphman python=%PYTHON_VERSION% morphman vmtk"
+  #- "%CMD_IN_ENV% conda create -n morphman python=%PYTHON_VERSION% morphman vmtk"
 
   # Activate environment
-  - activate morphman
+  #- activate morphman
 
   # Install morphman
   #- conda install morphman
 
   # Search and replace in vmtkcenterlines.py for / to //
-  - sed -i 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' ..\\..\\Python36_64\\envs\\morphman_env\\lib\\site-packages\\vmtk\\vmtkcenterlines.py
-  - sed -i 's/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g' ..\\..\\Python36_64\\envs\\morphman_env\\lib\\site-packages\\vmtk\\vmtkcenterlines.py
+  #- sed -i 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' ..\\..\\Python36_64\\envs\\morphman_env\\lib\\site-packages\\vmtk\\vmtkcenterlines.py
+  #- sed -i 's/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g' ..\\..\\Python36_64\\envs\\morphman_env\\lib\\site-packages\\vmtk\\vmtkcenterlines.py
 
   # Workaround for downloading on windows, as bitsadmin is not in sync on AppVeyor
   - cd .\\test
@@ -76,7 +77,12 @@ install:
 #build_script:
   # Build the compiled extension
   # - "%CMD_IN_ENV% python setup.py build"
+build: false
 
 test_script:
+  - "%CMD_IN_ENV% conda config --add channels vmtk"
+  - "%CMD_IN_ENV% conda config --add channels morphman"
+  - "%CMD_IN_ENV% conda config --show"
+  - "%CMD_IN_ENV% conda build --python %APP_CONDA_PY% --no-copy-test-source-files distribution"
   - "%CMD_IN_ENV% cd .\\test"
   - "%CMD_IN_ENV% pytest ."
