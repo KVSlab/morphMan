@@ -1,14 +1,12 @@
 package:
-  name: morphman
+  name: "morphman"
   version: "0.1"
 
 source:
-  git_rev: v0.1
   path: ../
 
 build:
   number: 1
-  script: python setup.py install
 
 requirements:
   build:
@@ -30,7 +28,6 @@ test:
     - ./test
   requires:
     - pytest
-
 
 about:
   home: https://github.com/KVSlab/morphMan
