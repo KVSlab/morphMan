@@ -60,7 +60,7 @@ test_script:
   
   # Search and replace in vmtkcenterlines.py for / to //
   - "%CMD_IN_ENV% dir"
-  - "%CMD_IN_ENV% Python%CONDA_PY%_64"
+  - "%CMD_IN_ENV% cd Python%CONDA_PY%_64"
   - "%CMD_IN_ENV% dir"
   - "%CMD_IN_ENV% cd Library"
   - "%CMD_IN_ENV% dir"
