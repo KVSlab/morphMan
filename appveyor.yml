@@ -107,8 +107,10 @@ test_script:
   - "%CMD_IN_ENV% conda build --python %APP_CONDA_PY% ."
   
   # Start testing
+  - cd .\\test #"%CMD_IN_ENV% cd .\\test"
+  - dir
   - ps: Start-FileDownload 'http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0001/C0001_models.tar.gz'
   - tar --force-local -zxvf C0001_models.tar.gz
   - del /f C0001_models.tar.gz
-  - cd .\\test #"%CMD_IN_ENV% cd .\\test"
+  - dir
   - pytest . #"%CMD_IN_ENV% pytest ."
