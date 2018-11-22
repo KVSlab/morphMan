@@ -44,7 +44,12 @@ install:
   - powershell .\\continuous-integration\\appveyor\\install.ps1
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
   - "set PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
-
+  
+  - "%CMD_IN_ENV% conda update -q conda"
+  - "%CMD_IN_ENV% conda config --set always_yes yes"
+  - "%CMD_IN_ENV% conda config --add channels vmtk"
+  - "%CMD_IN_ENV% conda config --add channels morphman"
+  - "%CMD_IN_ENV% conda config --show"
   # Conda setup
   #- "%CMD_IN_ENV% conda config --add channels vmtk"
   #- "%CMD_IN_ENV% conda config --add channels morphman"
@@ -97,11 +102,7 @@ test_script:
   #- sed -i 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' .\\Python%CONDA_PY%_64\lib\site-packages\vmtk\vmtkcenterlines.py
   #- sed -i 's/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g' .\\Python%CONDA_PY%_64\lib\site-packages\vmtk\vmtkcenterlines.py
   
-  - "%CMD_IN_ENV% conda update -q conda"
-  - "%CMD_IN_ENV% conda config --set always_yes yes"
-  - "%CMD_IN_ENV% conda config --add channels vmtk"
-  - "%CMD_IN_ENV% conda config --add channels morphman"
-  - "%CMD_IN_ENV% conda config --show"
+
   - "%CMD_IN_ENV% conda install pytest vtk vmtk scipy numpy"
   - "%CMD_IN_ENV% conda build --python %APP_CONDA_PY% ."
   - "%CMD_IN_ENV% cd .\\test"
