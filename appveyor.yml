@@ -79,12 +79,13 @@ install:
 #build_script:
   # Build the compiled extension
   # - "%CMD_IN_ENV% python setup.py build"
+
 build: false
 
 test_script:
   - dir
   - cd\
-  - cd .\\projects\\morphman\\test
+  - cd .\\projects\\morphman-s1s38\\test
   - dir
   - ps: Start-FileDownload 'http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0001/C0001_models.tar.gz'
   - tar --force-local -zxvf C0001_models.tar.gz
