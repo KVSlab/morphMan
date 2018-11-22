@@ -59,13 +59,12 @@ test_script:
   - "%CMD_IN_ENV% conda build --python %APP_CONDA_PY% ."
   
   # Search and replace in vmtkcenterlines.py for / to //
-  - dir
-  - cd Python%CONDA_PY%_64
-  - dir
-  - cd Library
-  - dir
-  - cd bin
-  - dir
+  - "%CMD_IN_ENV% dir"
+  - "%CMD_IN_ENV% Python%CONDA_PY%_64"
+  - "%CMD_IN_ENV% dir"
+  - "%CMD_IN_ENV% cd Library"
+  - "%CMD_IN_ENV% dir"
+  - "%CMD_IN_ENV% cd bin"
 
   - "%CMD_IN_ENV% dir /s vmtkcenterlines.py"
   - '%CMD_IN_ENV% sed -i "s/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g" .\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtkcenterlines.py'
