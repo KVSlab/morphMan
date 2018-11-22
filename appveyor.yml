@@ -59,14 +59,14 @@ test_script:
   - "%CMD_IN_ENV% conda build --python %APP_CONDA_PY% ."
   
   # Search and replace in vmtkcenterlines.py for / to //
-  #- sed -i 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' .\\Python%CONDA_PY%_64\lib\site-packages\vmtk\vmtkcenterlines.py
-  #- sed -i 's/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g' .\\Python%CONDA_PY%_64\lib\site-packages\vmtk\vmtkcenterlines.py
+  - sed -i 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' .\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtkcenterlines.py
+  - sed -i 's/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g' .\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtkcenterlines.py
 
   # Start testing
-  #- cd .\\test #"%CMD_IN_ENV% cd .\\test"
-  #- dir
-  #- ps: Start-FileDownload 'http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0001/C0001_models.tar.gz'
-  #- tar --force-local -zxvf C0001_models.tar.gz
-  #- del /f C0001_models.tar.gz
-  #- dir
-  #- pytest . #"%CMD_IN_ENV% pytest ."
+  - cd .\\test #"%CMD_IN_ENV% cd .\\test"
+  - dir
+  - ps: Start-FileDownload 'http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0001/C0001_models.tar.gz'
+  - tar --force-local -zxvf C0001_models.tar.gz
+  - del /f C0001_models.tar.gz
+  - dir
+  - pytest . #"%CMD_IN_ENV% pytest ."
