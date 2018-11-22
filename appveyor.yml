@@ -94,8 +94,8 @@ test_script:
   #- dir
   
   # Search and replace in vmtkcenterlines.py for / to //
-  #- sed -i 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' .\\Python%CONDA_PY%_64\lib\site-packages\vmtk\vmtkcenterlines.py
-  #- sed -i 's/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g' .\\Python%CONDA_PY%_64\lib\site-packages\vmtk\vmtkcenterlines.py
+  - sed -i 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' .\\Python%CONDA_PY%_64\lib\site-packages\vmtk\vmtkcenterlines.py
+  - sed -i 's/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g' .\\Python%CONDA_PY%_64\lib\site-packages\vmtk\vmtkcenterlines.py
   
   # Start building
   - "%CMD_IN_ENV% conda update -q conda"
