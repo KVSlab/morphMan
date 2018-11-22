@@ -84,12 +84,13 @@ build: false
 test_script:
   - dir
   - cd\
-  - cd .\\projects\\morphman-s1s38\\test
+  - cd .\\projects\\morphman\\test
   - dir
   - ps: Start-FileDownload 'http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0001/C0001_models.tar.gz'
   - tar --force-local -zxvf C0001_models.tar.gz
   - del /f C0001_models.tar.gz
   - cd\
+  - dir
   
   # Search and replace in vmtkcenterlines.py for / to //
   - sed -i 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' .\\Python36_64\lib\site-packages\vmtk\vmtkcenterlines.py
