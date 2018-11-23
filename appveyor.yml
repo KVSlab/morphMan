@@ -49,12 +49,11 @@ build: false
 
 test_script:
   # Start building
-  - dir
-  - "%CMD_IN_ENV% conda update -q conda"
+  # - "%CMD_IN_ENV% conda update -q conda"
   - "%CMD_IN_ENV% conda config --set always_yes yes"
   - "%CMD_IN_ENV% conda config --add channels vmtk"
   - "%CMD_IN_ENV% conda config --add channels morphman"
-  - "%CMD_IN_ENV% conda config --show"
+  # - "%CMD_IN_ENV% conda config --show"
   - "%CMD_IN_ENV% conda install pytest vtk vmtk scipy numpy"
   - "%CMD_IN_ENV% conda build --python %APP_CONDA_PY% ."
   
@@ -71,9 +70,9 @@ test_script:
 
   # Start testing
   - cd .\\test #"%CMD_IN_ENV% cd .\\test"
-  - dir
+  #- dir
   - ps: Start-FileDownload 'http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0001/C0001_models.tar.gz'
   - tar --force-local -zxvf C0001_models.tar.gz
   - del /f C0001_models.tar.gz
-  - dir
+  #- dir
   - pytest . #"%CMD_IN_ENV% pytest ."
