@@ -49,30 +49,19 @@ build: false
 
 test_script:
   # Start building
-  # - "%CMD_IN_ENV% conda update -q conda"
   - "%CMD_IN_ENV% conda config --set always_yes yes"
   - "%CMD_IN_ENV% conda config --add channels vmtk"
   - "%CMD_IN_ENV% conda config --add channels morphman"
-  # - "%CMD_IN_ENV% conda config --show"
   - "%CMD_IN_ENV% conda install pytest vtk vmtk scipy numpy"
   - "%CMD_IN_ENV% conda build --python %APP_CONDA_PY% ."
   
   # Search and replace in vmtkcenterlines.py for / to //
-  #- "%CMD_IN_ENV% dir"
-  #- "%CMD_IN_ENV% cd Python%CONDA_PY%_64"
-  #- "%CMD_IN_ENV% dir"
-  #- "%CMD_IN_ENV% cd Library"
-  #- "%CMD_IN_ENV% dir"
-  #- "%CMD_IN_ENV% cd bin"
-
   - '%CMD_IN_ENV% sed -i "s/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g" ..\\..\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtkcenterlines.py'
   - '%CMD_IN_ENV% sed -i "s/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g" ..\\..\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtkcenterlines.py'
 
   # Start testing
-  - cd .\\test #"%CMD_IN_ENV% cd .\\test"
-  #- dir
+  - cd .\\test
   - ps: Start-FileDownload 'http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0001/C0001_models.tar.gz'
   - tar --force-local -zxvf C0001_models.tar.gz
   - del /f C0001_models.tar.gz
-  #- dir
-  - pytest . #"%CMD_IN_ENV% pytest ."
+  - pytest .
