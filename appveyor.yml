@@ -51,7 +51,6 @@ test_script:
   # Start building
   - "%CMD_IN_ENV% conda config --set always_yes yes"
   - "%CMD_IN_ENV% conda config --add channels vmtk"
-  - "%CMD_IN_ENV% conda config --add channels morphman"
   - "%CMD_IN_ENV% conda install pytest vtk vmtk scipy numpy"
   - "%CMD_IN_ENV% conda build --python %APP_CONDA_PY% ."
   
