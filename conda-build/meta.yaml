@@ -11,10 +11,11 @@ build:
 requirements:
   build:
     - python
-    - setuptools             # [win]
+    - setuptools
 
   run:
     - python {{ python }}
+    - setuptools
     - scipy
     - numpy <=1.13
     - vtk {{ vtk }}
