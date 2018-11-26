@@ -24,7 +24,7 @@ Basic Installation
 Please consult with the homepage of each package for installation instructions.
 However, for simplicty, you can install all the packages (including morphMan) through Anaconda.
 First, install Anaconda or Miniconda (preferably the python 3.6 version).
-Then execute the following command::
+Then execute the following command in the terminal window::
 
   conda create -n your_environment -c morphman morphman
 
