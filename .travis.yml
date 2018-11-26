@@ -27,12 +27,13 @@ install:
   # Set conda parameters
   - conda config --set always_yes yes --set changeps1 no
   - conda config --add channels vmtk
- 
+  - conda config --add channels morphman
+
   # Set up environment
-  - conda create -n morphman -c morphman python=3.6 morphman pytest
+  - conda create -n morphman_env morphman pytest
 
   # Activate environment
-  - source activate morphman
+  - source activate morphman_env
 
   # Useful for debugging any issues with conda
   - conda info -a

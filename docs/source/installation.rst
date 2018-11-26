@@ -26,7 +26,7 @@ However, for simplicty, you can install all the packages (including morphMan) th
 First, install Anaconda or Miniconda (preferably the python 3.6 version).
 Then execute the following command in the terminal window::
 
-  conda create -n your_environment -c morphman morphman
+  conda create -n your_environment -c vmtk -c morphman morphman
 
 You can then activate your environment by running ``source activate your_environment``.
 Now you are all set, and can start using morphMan. morphMan can be accessed by opening a Python console
