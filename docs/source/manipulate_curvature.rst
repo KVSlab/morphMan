@@ -21,7 +21,7 @@ In this tutorial, we are using the model with
 from the Aneurisk database. For the commands below we assume that there is a
 file `./C0005/surface/model.vtp`, relative to where you execute the command.
 
-In ``manipulate_curvature.py``, there are three options for setting
+When using ``morphman-curvature``, there are three options for setting
 ``region-of-interest``:
 
  * ``manual``: Manual selection, based on clicking on a surface.
@@ -40,18 +40,18 @@ see the right most surface in Figure 2.
 
 .. figure:: curvature_variation.png
 
-  Figure 2: Sharpened and smoothened version of the siphon.
+  Figure 2: Sharpened and smoothed version of the siphon.
 
 To reproduce the surface model with decreased total curvature shown on the left in Figure 2, run::
 
-        morphman-curvature --ifile C0005/surface/model.vtp --ofile C0005/surface/model_curvature_decreased.vtp --smooth-line True --iterations 100 --smooth-factor-line 1.8  --region-of-interest first_line --poly-ball-size 250 250 250
+    morphman-curvature --ifile C0005/surface/model.vtp --ofile C0005/surface/model_curvature_decreased.vtp --smooth-line True --iterations 100 --smooth-factor-line 1.8  --region-of-interest first_line --poly-ball-size 250 250 250
 
 To reproduce the surface model with increased total curvature shown on the right in Figure 2, run::
 
-        morphman-curvature --ifile C0005/surface/model.vtp --ofile C0005/surface/model_curvature_increased.vtp --smooth-line False --iterations 100 --smooth-factor-line 1.8  --region-of-interest first_line --poly-ball-size 250 250 250
+    morphman-curvature --ifile C0005/surface/model.vtp --ofile C0005/surface/model_curvature_increased.vtp --smooth-line False --iterations 100 --smooth-factor-line 1.8  --region-of-interest first_line --poly-ball-size 250 250 250
 
 As shown in the command above, increased total curvature is achieved by setting the command line argument ``--smooth-line`` to **False**.
 
 For additional information, beyond this tutorial, on the script and
-input parameters, please run ``python manipulate_curvature.py -h`` or confer with
+input parameters, please run ``morphman-curvature -h`` or confer with
 the :meth:`curvature_variations.curvature_variations`.

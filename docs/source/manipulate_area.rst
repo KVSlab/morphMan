@@ -14,7 +14,7 @@ In this tutorial, we are using the model with
 `ID C0002 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0002/C0002_models.tar.gz>`_
 from the Aneurisk database. For the commands below we assume that there is a file `./C0002/surface/model.vtp`, relative to where you execute the command.
 
-For changing the area you first need to define which segment you want to alter. For ``manipulate_area.py`` there are
+For changing the area you first need to define which segment you want to alter. For ``morphman-area`` there are
 three choices you can set with ``--region-of-interest``:
 
  * ``manual``: Manual selection, based on clicking on a surface
@@ -135,5 +135,5 @@ Below is an illustration of area decrease and increase in a single patient-speci
   Figure 5: Decrease and increase in overall area.
 
 For additional information, beyond this tutorial, on the script and
-input parameters, please run ``python manipulate_area.py -h`` or confer with
+input parameters, please run ``morphman-area -h`` or confer with
 the API documentation for :meth:`area_variations.area_variations`.

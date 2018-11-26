@@ -6,27 +6,27 @@ Installation
 morphMan (morphological manipulation) is a collection of scripts to objectively manipulate
 morphological features of patient-specific vascular geometries. Each script
 can be run from the command line, and installation is therefore merely to ensure that all the
-dependencies are installed. Currently, the project is only accessible through
-`GitHub <https://github.com/KVSlab/morphMan/>`_.
+dependencies are installed. Currently, the project is accessible through
+`GitHub <https://github.com/KVSlab/morphMan/>`_ and `Anaconda <https://anaconda.org/morphman/morphman>`_.
 
 
 Compatibility and Dependencies
 ==============================
 The general dependencies of morphMan are 
 
-* VTK > 8.1
-* Numpy > 1.13
-* SciPy > 1.0.0
-* VMTK 1.4
+* VMTK 1.4.0
+* VTK 8.1.0
+* Numpy <= 1.13
+* SciPy 1.1.0
 
 Basic Installation
 ==================
 Please consult with the homepage of each package for installation instructions.
-However, for simplicty, you can install all the packages (including morphman) through anaconda.
+However, for simplicty, you can install all the packages (including morphMan) through Anaconda.
 First, install Anaconda or Miniconda (preferably the python 3.6 version).
 Then execute the following command::
 
-  conda create -n your_environment -c vmtk python=3.6 itk vtk vmtk scipy numpy morphman
+  conda create -n your_environment -c morphman morphman
 
 You can then activate your environment by running ``source activate your_environment``.
 Now you are all set, and can start using morphMan. morphMan can be accessed by opening a Python console
@@ -48,14 +48,14 @@ Requirements
 The latest development version of morphMan may be acquired through GitHub.
 In order to successfully build and use morphMan, the following additional software needs to be installed on your system:
 
-* Git (>1.6)
-* Python (>2.6)
+* Git (>=1.6)
+* Python (>=2.5)
 
 Downloading
 ~~~~~~~~~~~
 The latest development version of morphMan can be found on the official
 `morphMan git repository <https://github.com/KVSlab/morphMan>`_ on Github.
-Make sure Git (> 1.6) is installed, which is needed to clone the repository.
+Make sure Git (>=1.6) is installed, which is needed to clone the repository.
 To clone the morphMan repository, navigate to the directory where you wish
 morphMan to be stored, type the following command, and press Enter::
 

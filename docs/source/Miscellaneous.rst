@@ -17,7 +17,7 @@ previously published methods for landmarking: Piccinelli et al.
 
 Although the algorithms are well described in both articles, neither state
 how the centerlines are computed, or how the curvature and torsion is derived.
-Both algorithms are very sensitive to the input curvature and torision, and
+Both algorithms are very sensitive to the input curvature and torsion, and
 are therefore not directly reproducible. In Kjeldsberg 2018 [3]_ there is a
 a thorough comparison between landmarking algorithms, input parameters,
 and centerline smoothing methods which can help you to choose the correct

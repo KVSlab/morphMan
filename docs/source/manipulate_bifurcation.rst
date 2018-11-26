@@ -15,7 +15,7 @@ The algorithm builds on previous work of Ford et al. [1]_
 
 .. figure:: Angle_variation.png
 
-    Figure 1: An illustration of the goal of ``manipulate_bifurcation.py``.
+    Figure 1: An illustration of the goal of ``morphman-bifurcation``.
 
 In this tutorial, we are using the model with
 `ID C0005 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0005/C0005_models.tar.gz>`_
@@ -70,10 +70,10 @@ with `ID C0066 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0066/C0066_m
 
 To reproduce the result shown in Figure 4, you can run the following command::
 
-        morphman-bifurcation --ifile C0066/surface/model.vtp --ofile C0066/surface/removed_aneurysm.vtp --keep-fixed-1 True --keep-fixed-2 True --bif True --lower True --angle 0 --region-of-interest commandline --region-points 31.37 60.65 25.21 67.81 43.08 41.24 --poly-ball-size 250 250 250
+    morphman-bifurcation --ifile C0066/surface/model.vtp --ofile C0066/surface/removed_aneurysm.vtp --keep-fixed-1 True --keep-fixed-2 True --bif True --lower True --angle 0 --region-of-interest commandline --region-points 31.37 60.65 25.21 67.81 43.08 41.24 --poly-ball-size 250 250 250
 
 For additional information, beyond this tutorial, on the script and
-input parameters, please run ``python manipulate_bifurcation.py -h`` or confer with
+input parameters, please run ``morphman-bifurcation -h`` or confer with
 the :meth:`manipulate_bifurcation`.
 
 .. [1] Ford, M.D., Hoi, Y., Piccinelli, M., Antiga, L. and Steinman, D.A., 2009. An objective approach to digital removal of saccular aneurysms: technique and applications. The British Journal of Radiology, 82(special_issue_1), pp.S55-S61.
