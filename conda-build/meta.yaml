@@ -1,0 +1,35 @@
+package:
+  name: "morphman"
+  version: "0.1"
+
+source:
+  path: ../
+
+build:
+  number: 1
+
+requirements:
+  build:
+    - python
+    - setuptools  # [win]
+
+  run:
+    - python {{ python }}
+    - scipy
+    - numpy <=1.13
+    - vtk {{ vtk }}
+    - vmtk
+
+test:
+  requires:
+    - pytest
+  source_files:
+    - ./test
+
+
+about:
+  home: https://github.com/KVSlab/morphMan
+  summary: 'morphMan - morphological manipulation'
+  license: GNU GPL 3.0
+  license_file: LICENSE
+  doc_url: https://morphman.readthedocs.io

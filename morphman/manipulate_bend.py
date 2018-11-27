@@ -8,11 +8,10 @@
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 # Local import
-from common import *
-from argparse_common import *
+from morphman.common import *
 
 
-def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_of_interest, region_points,
+def manipulate_bend(input_filepath, output_filepath, smooth, smooth_factor, region_of_interest, region_points,
                 alpha, beta, poly_ball_size, no_smooth, no_smooth_point, resampling_step):
     """
     Primary script for moving a selected part of any blood vessel.
@@ -27,7 +26,7 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
     geometries, used for postprocessing, geometric analysis and
     meshing.
 
-    Continuation in the move_vessel_vertically-method for vertical movement.
+    Continuation in the manipulate_bend_vertically-method for vertical movement.
 
     Args:
         input_filepath (str): Path to input surface.
@@ -83,7 +82,7 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
                                 " landmarking with automated_landmarking.py first.") % point_path)
         region_points = np.loadtxt(point_path)
     else:
-        _, _, _, region_points = get_line_to_change(capped_surface, centerlines,
+        _, _, _, region_points, _ = get_line_to_change(capped_surface, centerlines,
                                                     region_of_interest, "bend", region_points, 0)
         region_points = [[region_points[3 * i], region_points[3 * i + 1], region_points[3 * i + 2]]
                          for i in range(len(region_points) // 3)]
@@ -172,7 +171,7 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
 
         # Vertical movement
         print("-- Moving geometry vertically")
-        new_surface, new_centerlines = move_vessel_vertically(alpha, voronoi_remaining,
+        new_surface, new_centerlines = manipulate_bend_vertically(alpha, voronoi_remaining,
                                                               voronoi_bend,
                                                               new_centerlines, region_points, poly_ball_size)
 
@@ -186,7 +185,7 @@ def move_vessel(input_filepath, output_filepath, smooth, smooth_factor, region_o
     write_polydata(new_surface, output_filepath)
 
 
-def move_vessel_vertically(alpha, voronoi_remaining, voronoi_bend, centerlines, region_points, poly_ball_size):
+def manipulate_bend_vertically(alpha, voronoi_remaining, voronoi_bend, centerlines, region_points, poly_ball_size):
     """
     Secondary script used for vertical displacement of
     the blood vessel. Moves the input voronoi diagram and
@@ -472,5 +471,9 @@ def read_command_line():
                 resampling_step=args.resampling_step)
 
 
+def main_bend():
+    manipulate_bend(**read_command_line())
+
+
 if __name__ == "__main__":
-    move_vessel(**read_command_line())
+    manipulate_bend(**read_command_line())

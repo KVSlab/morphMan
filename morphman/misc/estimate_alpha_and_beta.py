@@ -13,7 +13,7 @@ from scipy.ndimage.filters import gaussian_filter
 from scipy.signal import argrelextrema
 
 # Local import
-from common import *
+from morphman.common import *
 
 
 def estimate_alpha_and_beta(input_filepath, quantity_to_compute, boundary, radius, grid_size, value_change,
@@ -226,7 +226,7 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
                                 " landmarking with automated_landmarking.py first.") % point_path)
         region_points = np.loadtxt(point_path)
     else:
-        _, _, _, region_points = get_line_to_change(capped_surface, centerlines,
+        _, _, _, region_points,_ = get_line_to_change(capped_surface, centerlines,
                                                     region_of_interest, "bend", region_points, 0)
         region_points = [[region_points[3 * i], region_points[3 * i + 1], region_points[3 * i + 2]]
                          for i in range(len(region_points) // 3)]
@@ -526,7 +526,7 @@ def compute_curvature(input_filepath, alpha, beta, method, new_centerlines, comp
                                 " landmarking with automated_landmarking.py first.") % point_path)
         region_points = np.loadtxt(point_path)
     else:
-        _, _, _, region_points = get_line_to_change(capped_surface, centerlines,
+        _, _, _, region_points,_ = get_line_to_change(capped_surface, centerlines,
                                                     region_of_interest, "bend", region_points, 0)
         region_points = [[region_points[3 * i], region_points[3 * i + 1], region_points[3 * i + 2]]
                          for i in range(len(region_points) // 3)]

@@ -9,11 +9,10 @@ from scipy.ndimage.filters import gaussian_filter
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 # Local import
-from common import *
-from argparse_common import *
+from morphman.common import *
 
 
-def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
+def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
                     no_smooth_point, region_of_interest, region_points, beta, ratio,
                     stenosis_length, percentage, output_filepath, poly_ball_size,
                     resampling_step):
@@ -69,9 +68,9 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
 
     # Spline centerline and compute cross-sectional areas along line
     centerline_splined, centerline_remaining, \
-        centerline_diverging, region_points = get_line_to_change(capped_surface, centerlines,
-                                                                 region_of_interest, method,
-                                                                 region_points, stenosis_length)
+        centerline_diverging, region_points, diverging_ids = get_line_to_change(capped_surface, centerlines,
+                                                                                region_of_interest, method,
+                                                                                region_points, stenosis_length)
     write_polydata(centerline_splined, centerline_spline_path)
     write_polydata(centerline_remaining, centerline_remaining_path)
     if centerline_diverging is not None:
@@ -87,9 +86,11 @@ def area_variations(input_filepath, method, smooth, smooth_factor, no_smooth,
     print("-- Change Voronoi diagram")
     centerline_regions = [centerline_splined, centerline_remaining]
     if centerline_diverging is not None:
+        centerline_diverging = [extract_single_line(centerline_diverging[0], 0, startID=diverging_ids[0])]
         centerline_regions += centerline_diverging
     else:
         centerline_regions += [None]
+
     voronoi_regions = split_voronoi_with_centerlines(voronoi, centerline_regions)
 
     new_voronoi = change_area(voronoi_regions[0], centerline_area, method, beta, ratio, percentage,
@@ -218,15 +219,20 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
 
     # Voronoi diagram
     n = voronoi.GetNumberOfPoints()
+    if diverging_voronoi[0]:
+        m = n + sum([diverging_voro.GetNumberOfPoints() for diverging_voro in diverging_voronoi])
+    else:
+        m = n
+
     new_voronoi = vtk.vtkPolyData()
     voronoi_points = vtk.vtkPoints()
     cell_array = vtk.vtkCellArray()
-    radius_array = get_vtk_array(radiusArrayName, 1, n)
+    radius_array = get_vtk_array(radiusArrayName, 1, m)
 
     # Iterate through Voronoi diagram and manipulate
+    point_radius_array = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1
     for i in range(n):
         point = voronoi.GetPoint(i)
-        point_radius = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
 
         tmp_id = locator.FindClosestPoint(point)
 
@@ -235,7 +241,7 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
         point = (np.asarray(point) + v2).tolist()
 
         # Change radius
-        point_radius = point_radius * factor[tmp_id]
+        point_radius = point_radius_array(i) * factor[tmp_id]
 
         voronoi_points.InsertNextPoint(point)
         radius_array.SetTuple1(i, point_radius)
@@ -244,27 +250,23 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
 
     # Offset Voronoi diagram along "diverging" centerlines
     if diverging_centerline is not None:
-        count = i
+        count = i+1
         for j in range(len(diverging_voronoi)):
             # Get offset for Voronoi diagram
-            for i in range(len(diverging_centerline.GetNumberOfPoints())):
-                point = diverging_centerline.GetPoint(i)
-                tmp_id = locator.FindClosestPoint(point)
-                dist = distance(diverging_centerline.GetPoint(i), line_to_change.GetPoint(tmp_id))
-                if dist > line_to_change.GetPointData().GetArray(radiusArrayName).GetTuple1(tmp_id):
-                    break
+            point = diverging_centerline[j].GetPoint(0)
+            tmp_id = locator.FindClosestPoint(point)
 
             v1 = np.array(line_to_change.GetPoint(tmp_id)) - np.array(point)
             v2 = v1 * (1 - factor[tmp_id])
 
             # Offset Voronoi diagram
-            for i in range(diverging_voronoi):
+            point_radius_array = diverging_voronoi[j].GetPointData().GetArray(radiusArrayName).GetTuple1
+            for i in range(diverging_voronoi[j].GetNumberOfPoints()):
                 point = diverging_voronoi[j].GetPoint(i)
-                point_radius = diverging_voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
                 point = (np.asarray(point) + v2).tolist()
 
                 voronoi_points.InsertNextPoint(point)
-                radius_array.SetTuple1(count, point_radius)
+                radius_array.SetTuple1(count, point_radius_array(i))
                 cell_array.InsertNextCell(1)
                 cell_array.InsertCellPoint(count)
                 count += 1
@@ -381,5 +383,9 @@ def read_command_line():
                 no_smooth_point=args.no_smooth_point, resampling_step=args.resampling_step)
 
 
+def main_area():
+    manipulate_area(**read_command_line())
+
+
 if __name__ == '__main__':
-    area_variations(**read_command_line())
+    manipulate_area(**read_command_line())

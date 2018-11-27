@@ -6,8 +6,10 @@
 Tutorial: Manipulate bend
 =========================
 
-The goal of ``manipulate_bend.py``, is to alter one specific bend in the
-vasculature, like shown in Figure 1.
+The goal of ``morphman-bend``, is to alter one specific bend in the
+vasculature, like shown in Figure 1. This can be performed by running ``morphman-bend`` in the terminal, followed by the
+respective command line arguments. Alternatively, you can execute the Python script directly,
+located in the ``morphman`` subfolder, by typing ``python manipulate_bend.py``.
 
 .. figure:: Bend_moving.png
 
@@ -29,7 +31,7 @@ with three different options:
 
   * ``manual``, provide the start and end of the bend by selecting points interactively
   * ``commandline``, provide two points on the commandline through ``--region-points``
-  * ``landmarking``, only valid for the internal carotid artery, execute ``automated_landmarking.py`` prior to running ``manipulate_bend.py``, see :ref:`landmarking`.
+  * ``landmarking``, only valid for the internal carotid artery, execute ``automated_landmarking.py`` in misc prior to running ``manipulate_bend.py``, see :ref:`landmarking`.
 
 Figure 2 depicts an example of modifying the input surface in the :math:`\alpha` ('vertical') direction only.
 
@@ -39,16 +41,16 @@ Figure 2 depicts an example of modifying the input surface in the :math:`\alpha`
 
 To recreate the surfaces shown in Figure 2, run the following two commands::
 
-    python manipulate_bend.py --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_vertical_plus.vtp --alpha 0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3 --poly-ball-size 250 250 250
+    morphman-bend --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_vertical_plus.vtp --alpha 0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3 --poly-ball-size 250 250 250
 
-    python manipulate_bend.py --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_vertical_minus.vtp --alpha -0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3 --poly-ball-size 250 250 250
+    morphman-bend --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_vertical_minus.vtp --alpha -0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3 --poly-ball-size 250 250 250
 
 Shown in Figure 3 is the output of changing the surface in the
 :math:`\beta` ('horizontal') direction only. This can be reproduced by running the following two commands::
 
-    python manipulate_bend.py --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_horizontal_plus.vtp --beta 0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3 --poly-ball-size 250 250 250
+    morphman-bend --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_horizontal_plus.vtp --beta 0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3 --poly-ball-size 250 250 250
 
-    python manipulate_bend.py --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_horizontal_minus.vtp --beta -0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3 --poly-ball-size 250 250 250
+    morphman-bend --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_horizontal_minus.vtp --beta -0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3 --poly-ball-size 250 250 250
 
 .. figure:: bend_beta_variation.png
 
@@ -58,9 +60,9 @@ Finally, we can extend the movement to both directions by setting both :math:`\a
 An example, where the bend has been moved in both directions, is illustrated in Figure 4.
 In order to reproduce this result, you can run the following commands::
 
-    python manipulate_bend.py --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_plus.vtp --alpha 0.4 --beta 0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3 --poly-ball-size 250 250 250
+    morphman-bend --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_plus.vtp --alpha 0.4 --beta 0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3 --poly-ball-size 250 250 250
 
-    python manipulate_bend.py --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_minus.vtp --alpha -0.4 --beta -0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3 --poly-ball-size 250 250 250
+    morphman-bend --ifile C0005/surface/model.vtp --ofile C0005/surface/bend_minus.vtp --alpha -0.4 --beta -0.4  --region-of-interest commandline --region-points 49.8 49.7 36.6 53.1 41.8 38.3 --poly-ball-size 250 250 250
 
 .. figure:: bend_alpha_beta_variation.png
 
@@ -74,6 +76,6 @@ that can *a priori* find appropriate values for :math:`\alpha` and :math:`\beta`
 target change in maximum curvature or angle. Please see :ref:`compute_alpha_beta` for more information.
 
 For additional information, beyond this tutorial, on the script and input parameters,
-please run ``python manipulate_bend.py -h`` or confer with the :ref:`manipulate_bend`.
+please run ``morphman-bend -h`` or confer with the :ref:`manipulate_bend`.
 
 .. [1] Kjeldsberg, Henrik Aasen. Investigating the Interaction Between Morphology of the Anterior Bend and Aneurysm Initiation. MS thesis. 2018.
