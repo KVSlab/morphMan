@@ -4,9 +4,7 @@
 Installation
 ============
 morphMan (morphological manipulation) is a collection of scripts to objectively manipulate
-morphological features of patient-specific vascular geometries. Each script
-can be run from the command line, and installation is therefore merely to ensure that all the
-dependencies are installed. Currently, the project is accessible through
+morphological features of patient-specific vascular geometries. The project is accessible through
 `GitHub <https://github.com/KVSlab/morphMan/>`_ and `Anaconda <https://anaconda.org/morphman/morphman>`_.
 
 
@@ -21,8 +19,7 @@ The general dependencies of morphMan are
 
 Basic Installation
 ==================
-Please consult with the homepage of each package for installation instructions.
-However, for simplicty, you can install all the packages (including morphMan) through Anaconda.
+We recommend that you can install morphMan through Anaconda.
 First, install Anaconda or Miniconda (preferably the python 3.6 version).
 Then execute the following command in the terminal window::
 
@@ -39,7 +36,7 @@ Alternatively you can use one of the four main methods of manipulation directly 
 
     $ morphman-[METHOD]
 
-followed by the command line arguments for the selected method.
+followed by the command line arguments for the selected method. A detailed explanation for usage of morphMan is described in :ref:`getting_started`.
 
 Development version
 ===================
@@ -66,12 +63,8 @@ in the newly created ``morphMan`` folder.
 
 Building
 ~~~~~~~~
-In order to build and install morphMan, navigate into the ``morphMan`` folder, where a ``setup.py`` file will be located.
-Building and installation of morphMan can be performed by simply running the following command from the terminal window::
+In order to build and install morphMan, navigate into the ``morphMan`` folder, where a ``setup.py``
+file will be located. Building and installation of morphMan can be performed by simply running the
+following command from the terminal window::
 
     python setup.py install
-
-Usage
-~~~~~
-You are now ready to use morphMan as a Python module, either in the terminal or in a Python console.
-A detailed explanation for usage of morphMan is described in :ref:`getting_started`.

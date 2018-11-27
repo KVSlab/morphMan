@@ -6,7 +6,7 @@
 Tutorial: Manipulate bend
 =========================
 
-The goal of ``manipulate_bend.py``, is to alter one specific bend in the
+The goal of ``morphman-bend``, is to alter one specific bend in the
 vasculature, like shown in Figure 1. This can be performed by running ``morphman-bend`` in the terminal, followed by the
 respective command line arguments. Alternatively, you can execute the Python script directly,
 located in the ``morphman`` subfolder, by typing ``python manipulate_bend.py``.
@@ -31,7 +31,7 @@ with three different options:
 
   * ``manual``, provide the start and end of the bend by selecting points interactively
   * ``commandline``, provide two points on the commandline through ``--region-points``
-  * ``landmarking``, only valid for the internal carotid artery, execute ``automated_landmarking.py`` prior to running ``manipulate_bend.py``, see :ref:`landmarking`.
+  * ``landmarking``, only valid for the internal carotid artery, execute ``automated_landmarking.py`` in misc prior to running ``manipulate_bend.py``, see :ref:`landmarking`.
 
 Figure 2 depicts an example of modifying the input surface in the :math:`\alpha` ('vertical') direction only.
 

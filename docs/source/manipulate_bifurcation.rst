@@ -5,7 +5,7 @@
 ================================
 Tutorial: Manipulate bifurcation
 ================================
-The goal with ``manipulate_bifurcation.py`` is to control the angle between two
+The goal with ``morphman-bifurcation`` is to control the angle between two
 daughter branches in a bifurcation, see Figure 1. The daughter branches can be
 rotated towards each other, in other words reduce :math:`\theta`, or towards
 the parent artery, increasing :math:`\theta`. The naming convention is that the

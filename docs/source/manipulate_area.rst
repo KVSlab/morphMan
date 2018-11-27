@@ -71,7 +71,7 @@ for the model with decreased cross-sectional area variation.
 Create / remove a stenosis
 ==========================
 A stenosis is a local narrowing of the vessel, often caused by the buildup of plaque.
-You can manipulate a stenosis with  ``manipulate_area.py`` by setting ``--method stenosis``.
+You can manipulate a stenosis with  ``morphman-area`` by setting ``--method stenosis``.
 
 Create a stenosis
 ~~~~~~~~~~~~~~~~~
