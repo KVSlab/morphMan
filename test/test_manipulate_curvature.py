@@ -5,18 +5,13 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
 ##      PURPOSE.  See the above copyright notices for more information.
 
-import sys
-from os import path
-relative_path = path.dirname(path.abspath(__file__))
-sys.path.insert(0, path.join(relative_path, '..', 'src'))
-sys.path.insert(0, "../src")
-
 import pytest
 import numpy as np
+
 from .fixtures import common_input
-from manipulate_curvature import curvature_variations
-from common import get_path_names, extract_single_line, read_polydata, get_locator
-from estimate_alpha_and_beta import discrete_geometry
+from morphman import manipulate_curvature
+from morphman.common import get_path_names, extract_single_line, \
+                            read_polydata, get_locator, discrete_geometry
 
 
 @pytest.mark.parametrize("smooth_line", [True, False])
@@ -37,7 +32,7 @@ def test_decrease_curvature(common_input, smooth_line):
                              smooth_line = smooth_line))
 
     # Manipulate surface
-    curvature_variations(**common_input)
+    manipulate_curvature(**common_input)
 
     # Select and compare altered region
     p1 = np.asarray(region_points[:3])

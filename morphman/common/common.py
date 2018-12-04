@@ -18,7 +18,7 @@ from vmtk import vtkvmtk, vmtkscripts
 from vtk.util import numpy_support
 
 # Local import
-from vmtkpointselector import *
+from morphman.common.vmtkpointselector import *
 
 # Global array names
 radiusArrayName = 'MaximumInscribedSphereRadius'
@@ -1775,22 +1775,6 @@ def vmtk_centerline_resampling(line, length):
     return line
 
 
-def str2bool(boolean):
-    """Convert a string to boolean.
-
-    Args:
-        boolean (str): Input string.
-
-    Returns:
-        return (bool): Converted string.
-    """
-    if boolean.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif boolean.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise ValueError('Boolean value expected.')
-
 
 def vmtk_centerline_geometry(line, smooth, outputsmoothed=False, factor=1.0, iterations=100):
     """Wrapper for vmtk centerline geometry.
@@ -2963,7 +2947,6 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
 
     # Extract and spline a single line
     line_to_change = extract_single_line(centerline, cl_id, startID=start_id, endID=end_id)
-    line_to_change = spline_centerline(line_to_change, nknots=25, isline=True)
 
     remaining_centerlines = []
     diverging_centerlines = []
@@ -2987,11 +2970,27 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
         else:
             diverging_centerlines.append(line)
 
+    # Find diverging ids
+    diverging_ids = []
+    main_line = extract_single_line(centerline, 0)
+    id_start = 0
+    for line in diverging_centerlines:
+        id_end = min([line.GetNumberOfPoints(), main_line.GetNumberOfPoints()])
+        for i in np.arange(id_start, id_end):
+            p_div = np.asarray(line.GetPoint(i))
+            p_cl = np.asarray(main_line.GetPoint(i))
+            if distance(p_div, p_cl) > tol * 10:
+                diverging_ids.append(i)
+                break
+
+    # Spline the single line
+    line_to_change = spline_centerline(line_to_change, nknots=25, isline=True)
+
     if len(diverging_centerlines) == 0:
         diverging_centerlines = None
     remaining_centerlines = merge_data(remaining_centerlines)
 
-    return line_to_change, remaining_centerlines, diverging_centerlines, region_points
+    return line_to_change, remaining_centerlines, diverging_centerlines, region_points, diverging_ids
 
 
 def find_region_of_interest_and_diverging_centerlines(centerlines_complete, region_points):

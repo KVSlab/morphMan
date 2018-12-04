@@ -7,12 +7,11 @@
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
-from argparse_common import *
 # Local import
-from common import *
+from morphman.common import *
 
 
-def rotate_branches(input_filepath, output_filepath, smooth, smooth_factor, angle,
+def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_factor, angle,
                     keep_fixed_1, keep_fixed_2, bif, lower, no_smooth, no_smooth_point,
                     poly_ball_size, cylinder_factor, resampling_step,
                     region_of_interest, region_points):
@@ -615,5 +614,9 @@ def read_command_line():
                 region_points=args.region_points)
 
 
+def main_bifurcation():
+    manipulate_bifurcation(**read_command_line())
+
+
 if __name__ == "__main__":
-    rotate_branches(**read_command_line())
+    manipulate_bifurcation(**read_command_line())

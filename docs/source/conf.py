@@ -18,7 +18,9 @@ import os
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),"..", "..", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),"..", "..", "morphman"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),"..", "..", "morphman", "common"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),"..", "..", "morphman", "misc"))
 
 # -- General configuration ------------------------------------------------
 
@@ -55,7 +57,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'morphMan'
+project = u'morphman'
 copyright = u'2018, Aslak W. Bergersen & Henrik A. Kjeldsberg'
 author = u'Aslak W. Bergersen & Henrik A. Kjeldsberg'
 
@@ -234,7 +236,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'morphMan_docs.tex', u'morphMan\\_docs Documentation',
+    (master_doc, 'morphMan_docs.tex', u'morphman\\_docs Documentation',
      u'Henrik A. Kjeldsberg & Aslak W. Bergersen', 'manual'),
 ]
 
@@ -278,7 +280,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'morphMan_docs', u'morphMan Documentation',
+    (master_doc, 'morphMan_docs', u'morphman Documentation',
      author, 'morphMan_docs', 'One line description of project.',
      'Miscellaneous'),
 ]

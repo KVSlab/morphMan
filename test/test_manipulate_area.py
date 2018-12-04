@@ -5,18 +5,13 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
 ##      PURPOSE.  See the above copyright notices for more information.
 
-import sys
-from os import path
-relative_path = path.dirname(path.abspath(__file__))
-sys.path.insert(0, path.join(relative_path, '..', 'src'))
-sys.path.insert(0, "../src")
-
 import pytest
-from .fixtures import common_input
 import numpy as np
-from manipulate_area import area_variations
-from common import read_polydata, vmtk_compute_centerline_sections, get_array, \
-                   get_path_names, extract_single_line
+
+from .fixtures import common_input
+from morphman.common import read_polydata, vmtk_compute_centerline_sections, get_array, \
+                            get_path_names, extract_single_line
+from morphman import manipulate_area
 
 
 @pytest.mark.parametrize("ratio", [1.5, 3.0])
@@ -30,7 +25,7 @@ def test_area_variation(ratio, common_input):
                              beta = None))
 
     # Run area variation
-    area_variations(**common_input)
+    manipulate_area(**common_input)
 
     # Set file paths
     base_path = get_path_names(common_input['input_filepath'])
@@ -68,7 +63,7 @@ def test_create_stenosis(common_input):
 
     # Create a stenosis
     print(common_input)
-    area_variations(**common_input)
+    manipulate_area(**common_input)
 
     # Import old area and splined centerline for region of interest
     base_path = get_path_names(common_input['input_filepath'])
@@ -98,7 +93,7 @@ def test_inflation_and_deflation_of_area(common_input, percentage):
                              beta = None))                       # Inactive
 
     # Perform area manipulation
-    area_variations(**common_input)
+    manipulate_area(**common_input)
 
     # Import old area and splined centerline for region of interest
     base_path = get_path_names(common_input['input_filepath'])

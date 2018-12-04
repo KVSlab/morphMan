@@ -57,12 +57,10 @@ If you are on Linux or MaxOSX you can install all the general dependencies throu
 First install Anaconda or Miniconda (preferably the python 3.6 version).
 Then execute the following command::
 
-        conda create -n your_environment -c vmtk python=3.6 itk vtk vmtk scipy numpy
+        conda create -n your_environment -c vmtk -c morphman morphman
 
 You can then activate your environment by runing ``source activate your_environment``.
-You are now all set, and can clone morphMan, and start manipulating your geometries::
-
-    git clone https://github.com/KVSlab/morphMan
+You are now all set, and can start manipulating your geometries.
 
 Contact
 -------

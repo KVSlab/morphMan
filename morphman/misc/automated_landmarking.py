@@ -11,7 +11,7 @@ from scipy.ndimage.filters import gaussian_filter
 from scipy.signal import argrelextrema
 
 # Local import
-from common import *
+from morphman.common import *
 
 
 def automated_landmarking(input_filepath, curv_method, resampling_step, algorithm, nknots, smooth_line,

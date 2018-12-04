@@ -9,7 +9,7 @@ notifications:
   - provider: Email
     to:
       - henrik.kjeldsberg@live.no
-    on_build_success: false
+    on_build_success: true
 
 environment:
   global:
@@ -19,11 +19,19 @@ environment:
     CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\continuous-integration\\appveyor\\run_with_env.cmd"
 
   matrix:
+    - PYTHON: "C:\\Python35_64"
+      PYTHON_VERSION: "3.5"
+      PYTHON_ARCH: "64"
+      CONDA_PY: "35"
+      CONDA_NPY: "18"
+      APP_CONDA_PY: "3.5.1"
+
     - PYTHON: "C:\\Python36_64"
       PYTHON_VERSION: "3.6"
       PYTHON_ARCH: "64"
-      CONDA_PY: "34"
+      CONDA_PY: "36"
       CONDA_NPY: "18"
+      APP_CONDA_PY: "3.6.1"
 
 platform:
   - x64
@@ -36,22 +44,23 @@ install:
   - powershell .\\continuous-integration\\appveyor\\install.ps1
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
   - "set PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
-  - "%CMD_IN_ENV% conda create -n morphman_env -c vmtk python=%PYTHON_VERSION% itk vtk vmtk scipy numpy pytest --yes"
-  - activate morphman_env
 
+build: false
+
+test_script:
+  # Start building
+  - "%CMD_IN_ENV% conda config --set always_yes yes"
+  - "%CMD_IN_ENV% conda config --add channels vmtk"
+  - "%CMD_IN_ENV% conda install pytest vtk vmtk scipy numpy"
+  - "%CMD_IN_ENV% conda build --python %APP_CONDA_PY% ."
+  
   # Search and replace in vmtkcenterlines.py for / to //
-  - sed -i 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' ..\\..\\Python36_64\\envs\\morphman_env\\lib\\site-packages\\vmtk\\vmtkcenterlines.py
-  - sed -i 's/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g' ..\\..\\Python36_64\\envs\\morphman_env\\lib\\site-packages\\vmtk\\vmtkcenterlines.py
+  - '%CMD_IN_ENV% sed -i "s/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g" ..\\..\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtkcenterlines.py'
+  - '%CMD_IN_ENV% sed -i "s/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g" ..\\..\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtkcenterlines.py'
 
-  # Workaround for downloading on windows, as bitsadmin is not in sync on AppVeyor
+  # Start testing
   - cd .\\test
   - ps: Start-FileDownload 'http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0001/C0001_models.tar.gz'
   - tar --force-local -zxvf C0001_models.tar.gz
   - del /f C0001_models.tar.gz
-  - cd ..
-  
-build: false
-
-test_script:
-  - "%CMD_IN_ENV% cd .\\test"
-  - "%CMD_IN_ENV% pytest ."
+  - pytest .
