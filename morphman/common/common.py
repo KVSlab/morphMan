@@ -2960,7 +2960,11 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
         id2 = locator.FindClosestPoint(end_point)
         p1_tmp = line.GetPoint(id1)
         p2_tmp = line.GetPoint(id2)
-        if distance(start_point, p1_tmp) < tol and distance(end_point, p2_tmp) < tol:
+
+        # Remaining is the same as passing through one or both of the points
+        both = distance(start_point, p1_tmp) < tol and distance(end_point, p2_tmp) < tol
+        neither = distance(start_point, p1_tmp) > tol and distance(end_point, p2_tmp) > tol
+        if neither or both:
             if start_id != 0:
                 tmp = extract_single_line(centerline, i, startID=0, endID=start_id - 1)
                 remaining_centerlines.append(tmp)
@@ -2972,7 +2976,7 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
 
     # Find diverging ids
     diverging_ids = []
-    main_line = extract_single_line(centerline, 0)
+    main_line = extract_single_line(centerline, cl_id)
     id_start = 0
     for line in diverging_centerlines:
         id_end = min([line.GetNumberOfPoints(), main_line.GetNumberOfPoints()])
@@ -3152,38 +3156,38 @@ def split_voronoi_with_centerlines(voronoi, centerlines):
         voronoi2 (list): A list of Voronoi diagrams closest to each centerline.
     """
     n = len(centerlines)
-    centerline1 = [centerlines[i] for i in range(n) if centerlines[i] is not None]
-    voronoi1 = [vtk.vtkPolyData() for i in range(n) if centerlines[i] is not None]
-    points1 = [vtk.vtkPoints() for i in range(n) if centerlines[i] is not None]
-    cell_array1 = [vtk.vtkCellArray() for i in range(n) if centerlines[i] is not None]
-    radius1 = [np.zeros(voronoi.GetNumberOfPoints()) for i in range(n) if centerlines[i] is not None]
-    loc1 = [get_locator(centerlines[i]) for i in range(n) if centerlines[i] is not None]
-    count1 = [0 for i in range(n) if centerlines[i] is not None]
+    centerline = [centerlines[i] for i in range(n) if centerlines[i] is not None]
+    voronois = [vtk.vtkPolyData() for i in range(n) if centerlines[i] is not None]
+    points = [vtk.vtkPoints() for i in range(n) if centerlines[i] is not None]
+    cell_array = [vtk.vtkCellArray() for i in range(n) if centerlines[i] is not None]
+    radius = [np.zeros(voronoi.GetNumberOfPoints()) for i in range(n) if centerlines[i] is not None]
+    loc = [get_locator(centerlines[i]) for i in range(n) if centerlines[i] is not None]
+    count = [0 for i in range(n) if centerlines[i] is not None]
 
-    n1 = len(centerline1)
+    n1 = len(centerline)
 
     get_radius = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1
 
     for i in range(voronoi.GetNumberOfPoints()):
         dists = []
         point = voronoi.GetPoint(i)
-        radius = get_radius(i)
+        r = get_radius(i)
         for i in range(n1):
-            dists.append(distance(centerline1[i].GetPoint(loc1[i].FindClosestPoint(point)), point))
+            dists.append(distance(centerline[i].GetPoint(loc[i].FindClosestPoint(point)), point))
 
         index = dists.index(min(dists))
 
-        points1[index].InsertNextPoint(point)
-        radius1[index][count1[index]] = radius
-        cell_array1[index].InsertNextCell(1)
-        cell_array1[index].InsertCellPoint(count1[index])
-        count1[index] += 1
+        points[index].InsertNextPoint(point)
+        radius[index][count[index]] = r
+        cell_array[index].InsertNextCell(1)
+        cell_array[index].InsertCellPoint(count[index])
+        count[index] += 1
 
     for i in range(n1):
-        voronoi1[i].SetPoints(points1[i])
-        voronoi1[i].SetVerts(cell_array1[i])
-        tmp_radius1 = create_vtk_array(radius1[i][radius1[i] > 0], radiusArrayName)
-        voronoi1[i].GetPointData().AddArray(tmp_radius1)
+        voronois[i].SetPoints(points[i])
+        voronois[i].SetVerts(cell_array[i])
+        tmp_radius = create_vtk_array(radius[i][radius[i] > 0], radiusArrayName)
+        voronois[i].GetPointData().AddArray(tmp_radius)
 
     if n1 != n:
         voronoi2 = []
@@ -3191,9 +3195,9 @@ def split_voronoi_with_centerlines(voronoi, centerlines):
             if centerlines[i] is None:
                 voronoi2.append(None)
             else:
-                voronoi2.append(voronoi1[i])
+                voronoi2.append(voronois[i])
     else:
-        voronoi2 = voronoi1
+        voronoi2 = voronois
 
     return voronoi2
 

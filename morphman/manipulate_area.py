@@ -43,13 +43,20 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     base_path = get_path_names(input_filepath)
 
     # Files paths
-    voronoi_new_path = base_path + "_voronoi_manipulated.vtp"
     centerlines_path = base_path + "_centerline.vtp"
     centerline_area_spline_path = base_path + "_centerline_area_spline.vtp"
     centerline_area_spline_sections_path = base_path + "_centerline_area_sections.vtp"
     centerline_spline_path = base_path + "_centerline_spline.vtp"
     centerline_remaining_path = base_path + "_centerline_remaining.vtp"
     centerline_diverging_path = base_path + "_centerline_diverging.vtp"
+
+    voronoi_new_path = base_path + "_voronoi_manipulated.vtp"
+    voronoi_roi_path = base_path + "_voronoi_region_of_intrest.vtp"
+    voronoi_rest_path = base_path + "_voronoi_rest.vtp"
+    voronoi_div_path = base_path + "_voronoi_div{:d}.vtp"
+
+    surface_roi_path = base_path + "_surface_for_computing_area.vtp"
+
 
     # Clean, triangulate, and capp/uncapp surface
     surface, capped_surface = prepare_surface(base_path, input_filepath)
@@ -66,7 +73,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
                                           smooth, smooth_factor, no_smooth,
                                           no_smooth_point, voronoi, pole_ids)
 
-    # Spline centerline and compute cross-sectional areas along line
+    # Spline centerline
     centerline_splined, centerline_remaining, \
         centerline_diverging, region_points, diverging_ids = get_line_to_change(capped_surface, centerlines,
                                                                                 region_of_interest, method,
@@ -76,23 +83,61 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     if centerline_diverging is not None:
         write_polydata(merge_data(centerline_diverging), centerline_diverging_path)
 
+    # Split the Voronoi diagram
+    print("-- Change Voronoi diagram")
+    centerline_regions = [centerline_splined, centerline_remaining]
+    if centerline_diverging is not None:
+        for div_cl in centerline_diverging:
+            centerline_diverging = [extract_single_line(div_cl, 0, startID=diverging_ids[0])]
+            centerline_regions += centerline_diverging
+    voronoi_regions = split_voronoi_with_centerlines(voronoi, centerline_regions)
+
+    # Write the seperate segments
+    write_polydata(voronoi_regions[0], voronoi_roi_path)
+    write_polydata(voronoi_regions[1], voronoi_rest_path)
+    for i in range(2, len(voronoi_regions)):
+        write_polydata(voronoi_regions[i], voronoi_div_path.format(i-1))
+
     # Compute area
+    if centerline_diverging is not None:
+        tmp_surface = create_new_surface(voronoi_regions[0],
+                                         poly_ball_size=poly_ball_size)
+        ###### FIXME
+        ###### For creating surface to plot
+        #from IPython import embed; embed()
+        center1, center2 = centerline_splined.GetPoint(0), centerline_splined.GetPoint(centerline_splined.GetNumberOfPoints() - 1)
+        normals = get_array("FrenetTangent", centerline_splined, k=3)
+        normal1, normal2 = normals[0], normals[-1]
+        plane1 = vtk_plane(center1, normal1)
+        plane2 = vtk_plane(center1, -normal1)
+
+        tmp_surface, tmp = clip_polydata(tmp_surface, plane1)
+        tmp_surface = attach_clipped_regions(tmp_surface, tmp, center1)
+        tmp_surface2, _ = clip_polydata(surface, plane2)
+        tmp_surface2 = get_connectivity(tmp_surface2, mode="Closest",
+                                        closest_point=center1)
+
+        plane1 = vtk_plane(center2, normal2)
+        plane2 = vtk_plane(center2, -normal2)
+        tmp_surface, tmp = clip_polydata(tmp_surface, plane2)
+        tmp_surface = attach_clipped_regions(tmp_surface, tmp, center2)
+        tmp_surface3, _ = clip_polydata(surface, plane1)
+        tmp_surface3 = get_connectivity(tmp_surface3, mode="Closest",
+                                        closest_point=center2)
+
+       ############
+
+        write_polydata(tmp_surface, surface_roi_path)
+        write_polydata(tmp_surface2, surface_roi_path.replace(".vtp", "2.vtp"))
+        write_polydata(tmp_surface3, surface_roi_path.replace(".vtp", "3.vtp"))
+    else:
+        surface_area = surface
     centerline_area, centerline_area_sections = vmtk_compute_centerline_sections(surface,
                                                                                  centerline_splined)
     write_polydata(centerline_area, centerline_area_spline_path)
     write_polydata(centerline_area_sections, centerline_area_spline_sections_path)
 
-    # Manipulate the voronoi diagram
-    print("-- Change Voronoi diagram")
-    centerline_regions = [centerline_splined, centerline_remaining]
-    if centerline_diverging is not None:
-        centerline_diverging = [extract_single_line(centerline_diverging[0], 0, startID=diverging_ids[0])]
-        centerline_regions += centerline_diverging
-    else:
-        centerline_regions += [None]
-
-    voronoi_regions = split_voronoi_with_centerlines(voronoi, centerline_regions)
-
+    # Manipulate the Voronoi diagram
     new_voronoi = change_area(voronoi_regions[0], centerline_area, method, beta, ratio, percentage,
                               region_of_interest, region_points, centerline_diverging,
                               voronoi_regions[2:])
@@ -219,8 +264,8 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
 
     # Voronoi diagram
     n = voronoi.GetNumberOfPoints()
-    if diverging_voronoi[0]:
-        m = n + sum([diverging_voro.GetNumberOfPoints() for diverging_voro in diverging_voronoi])
+    if len(diverging_voronoi) > 0:
+        m = n + sum([div_voro.GetNumberOfPoints() for div_voro in diverging_voronoi])
     else:
         m = n
 
