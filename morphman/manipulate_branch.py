@@ -7,15 +7,11 @@
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
-from argparse_common import *
-from common import *
-from vmtkpointselector import *
-
-
 # Local import
+from morphman.common import *
 
 
-def move_vessel_branch(input_filepath, output_filepath, smooth, smooth_factor, region_of_interest, region_points,
+def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, region_of_interest, region_points,
                        poly_ball_size, no_smooth, no_smooth_point, resampling_step):
     """
     Primary script for moving a selected part of any blood vessel.
@@ -71,12 +67,12 @@ def move_vessel_branch(input_filepath, output_filepath, smooth, smooth_factor, r
                                           no_smooth_point, voronoi, pole_ids)
 
     # FIXME: For testing only:
-    write_polydata(centerlines_complete, "COMPLETE.vtp")
-    branch_point = (52.46571350097656, 28.395702362060547, 17.509746551513672)
+    #write_polydata(centerlines_complete, "COMPLETE.vtp")
+    #branch_point = (52.46571350097656, 28.395702362060547, 17.509746551513672)
 
-    branch_point_surface_id = 13747
-    region_points = np.asarray([[48.86489486694336, 30.49808120727539, 19.696435928344727],
-                                [47.171661376953125, 33.69294357299805, 28.17209815979004]])
+    #branch_point_surface_id = 13747
+    #region_points = np.asarray([[48.86489486694336, 30.49808120727539, 19.696435928344727],
+    #                            [47.171661376953125, 33.69294357299805, 28.17209815979004]])
 
     if region_points is None:
         # Get region of interest
@@ -93,8 +89,6 @@ def move_vessel_branch(input_filepath, output_filepath, smooth, smooth_factor, r
         seed_selector.Execute()
         branch_point_id = seed_selector.GetTargetSeedIds()
         branch_point = capped_surface.GetPoint(branch_point_id.GetId(0))
-        print(branch_point_id.GetId(0))
-        print(branch_point)
 
     # Test branch-extractor
     Brancher = vmtkscripts.vmtkBranchExtractor()
@@ -125,7 +119,7 @@ def move_vessel_branch(input_filepath, output_filepath, smooth, smooth_factor, r
     else:
         raise RuntimeError("No diverging branch detected! Cannot translate nothing.")
 
-        # Select diverging branch
+    # Select diverging branch
     for i in range(centerlines_branched.GetNumberOfLines()):
         centerline_branch = extract_single_line(centerlines_branched, i)
         if centerline_branch.GetPoint(centerline_branch.GetNumberOfPoints() - 1) == diverging_centerline_end:
@@ -463,14 +457,14 @@ def read_command_line():
                              " Example providing the points (1, 5, -1) and (2, -4, 3):" +
                              " --region-points 1 5 -1 2 -4 3")
     # "Variation" arguments
-    parser.add_argument("--alpha", type=float, default=0.0,
-                        help="Compression factor in vertical direction, " +
-                             "ranging from -1.0 to 1.0, defining the magnitude " +
-                             "of stretching or compression of the tubular structure.")
-    parser.add_argument("--beta", type=float, default=0.0,
-                        help="Compression factor in vertical direction,  " +
-                             "ranging from -1.0 to 1.0, defining the magnitude " +
-                             "of stretching or compression of the tubular structure.")
+    #parser.add_argument("--alpha", type=float, default=0.0,
+    #                    help="Compression factor in vertical direction, " +
+    #                         "ranging from -1.0 to 1.0, defining the magnitude " +
+    #                         "of stretching or compression of the tubular structure.")
+    #parser.add_argument("--beta", type=float, default=0.0,
+    #                    help="Compression factor in vertical direction,  " +
+    #                         "ranging from -1.0 to 1.0, defining the magnitude " +
+    #                         "of stretching or compression of the tubular structure.")
     # Output file argument
     args = parser.parse_args()
 
@@ -486,5 +480,9 @@ def read_command_line():
                 resampling_step=args.resampling_step)
 
 
+def main_branch():
+    manipulate_branch(**read_command_line())
+
+
 if __name__ == "__main__":
-    move_vessel_branch(**read_command_line())
+    manipulate_branch(**read_command_line())
