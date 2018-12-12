@@ -36,14 +36,6 @@ costFunctionArrayName = 'CostFunctionArray'
 surfaceNormalsArrayName = 'SurfaceNormalArray'
 frenetTangentArrayName = 'FrenetTangent'
 
-# Options not available from commandline
-divergingRatioToSpacingTolerance = 2.0
-interpolationHalfSize = 3
-voronoiCoreCutOffThreshold = 0.75
-numberOfSplineAnalyzedPoints = 40
-phiValues = [float(i) for i in range(2, 43, 2)]
-thetaStep = 2.0
-
 
 def read_polydata(filename, datatype=None):
     """
@@ -195,7 +187,7 @@ def make_voronoi_diagram(surface, filename):
     return new_voronoi
 
 
-def get_tolerance(centerline, n=50):
+def get_tolerance(centerline, n=50, divergingRatioToSpacingTolerance=2):
     """
     Finds tolerance based on
     average length between first N points
@@ -204,6 +196,7 @@ def get_tolerance(centerline, n=50):
     Args:
         centerline (vtkPolyData): Centerline data.
         n (int): Number of points
+        divergingRatioToSpacingTolerance (float): Divide the tolerance with this number.
 
     Returns:
         tolerance (float): Tolerance value.
@@ -3581,7 +3574,8 @@ def interpolate_two_cells(startCell, endCell, numberOfSplinePoints, additionalPo
 
 
 def extract_cylindric_interpolation_voronoi_diagram(cellId, pointId, cylinderRadius,
-                                                    voronoi, centerlines):
+                                                    voronoi, centerlines,
+                                                    interpolationHalfSize=3):
     """Extract the voronoi diagram within a cylinder to be used for extrapolation.
 
     Args:
@@ -3590,6 +3584,7 @@ def extract_cylindric_interpolation_voronoi_diagram(cellId, pointId, cylinderRad
         cylinderRadius (float): The radius of the cylinder.
         voronoi (vtkPolyData): The voronoi diagram to extract cylinder from.
         centerlines (vtkPolyData): Centerline corresponding to the Voronoi diagram.
+        interpolationHalfSize (float): 'Height' of the cylinder to extract.
 
     Returns:
         interpolationDataset (vtkPolyData): The extracted cylinder from the Voronoi
