@@ -2824,11 +2824,11 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
                 point1 = line1.GetPoints().GetPoint(i)
                 point2 = line2.GetPoints().GetPoint(i)
                 if distance(point1, point2) > tol:
-                    point_id = i
+                    point_id = i - 5 # Safety margin
                     break
             point_ids.append(point_id)
 
-        start_id = 0
+        start_id = 5 # Safety margin
         end_id = min(point_ids)
         cl_id = point_ids.index(end_id)
 

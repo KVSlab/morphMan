@@ -98,7 +98,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
         write_polydata(voronoi_regions[i], voronoi_div_path.format(i-1))
 
     # Compute area, and acount for diverging branches.
-    if centerline_diverging is not None:
+    if centerline_diverging is not None or smooth:
         surface_area = create_new_surface(voronoi_regions[0],
                                          poly_ball_size=poly_ball_size)
     else:
@@ -147,10 +147,6 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
     """
     # Array to change the radius
     area = get_array("CenterlineSectionArea", line_to_change)
-
-    # Safety smoothing, section area does not always work perfectly
-    for i in range(2):
-        area = gaussian_filter(area, 5)
     mean_area = np.mean(area)
 
     # Linear transition first and last 10 % for some combinations of method an region_of_interest
@@ -191,10 +187,11 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
 
     # Linear change in area between start and stop
     elif method == "linear":
+        # Note: No need for a transition since the area should not change in the start and
+        #       end
         length = get_curvilinear_coordinate(line_to_change)
         factor = (area[0] + (area[-1] - area[0]) * (length / length.max())) / area[:, 0]
         factor = np.sqrt(factor)
-        factor = factor * (1 - trans) + trans
 
     # Create a fusiform aneurysm or bulge
     elif method == "bulge":
@@ -264,23 +261,22 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
 
         # Get direction (v_change) to move the point
         A = np.asarray(line_to_change.GetPoint(tmp_id1))
-        B = np.asarray(line_to_change.GetPoint(tmp_id2))
-        C = np.asarray(point)
+        B = np.asarray(point)
+        C = np.asarray(line_to_change.GetPoint(tmp_id2))
         BA = A - B
         BC = C - B
         AC = C - A
-        AC_length = np.sqrt(np.sum(AC**2))
-        if AC_length == 0:
-            h = np.cross(BA, BC) / AC_length # shortest distance between point and line
-            D = A + (AC / AC_length) * np.sqrt(h**2 + AC_length**2)
+        AC_length = np.linalg.norm(AC)
+        if AC_length != 0:
+            h = np.linalg.norm(np.cross(BA, BC)) / AC_length # shortest distance between point and line
+            D = A + (AC / AC_length) * np.sqrt(np.linalg.norm(BA)**2 - h**2)
         else:
             D = A
 
-        v_change = B - D
-
+        v_change = D - B
 
         v = v_change * (1 - factor[tmp_id1])
-        voronoi_points.InsertNextPoint((point + v).tolist())
+        voronoi_points.InsertNextPoint((B + v).tolist())
 
         # Change radius
         point_radius = point_radius_array(i) * factor[tmp_id1]
