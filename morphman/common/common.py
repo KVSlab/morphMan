@@ -290,6 +290,8 @@ def smooth_voronoi_diagram(voronoi, centerlines, smoothing_factor,
         id_ = locator.FindClosestPoint(point)
         cl_point = centerlines.GetPoint(id_)
 
+        # FIXME (Aslak): I suspect that this line is wrong. It should be dist < thresh[id_]
+        #                The same for the last if-test, it should be radius < threholds[id_]
         if distance(point, cl_point) > 2 * thresholds[id_] / (1 - smoothing_factor):
             points.InsertNextPoint(point)
             cell_array.InsertNextCell(1)
@@ -323,11 +325,7 @@ def smooth_voronoi_diagram(voronoi, centerlines, smoothing_factor,
                 radius_array_numpy[count] = radius
                 count += 1
 
-        radius_array = get_vtk_array(radiusArrayName, 1, count)
-
-    for i in range(count):
-        radius_array.SetTuple1(i, radius_array_numpy[i])
-
+    radius_array = create_vtk_array(radius_array_numpy, radiusArrayName, k=1)
     smoothed_diagram.SetPoints(points)
     smoothed_diagram.SetVerts(cell_array)
     smoothed_diagram.GetPointData().AddArray(radius_array)
@@ -841,9 +839,7 @@ def uncapp_surface(surface, gradients_limit=0.15, area_limit=0.3, circleness_lim
 
     # Mark all cells with a gradient magnitude less then gradient_limit
     end_capp_array = gradients_magnitude < gradients_limit
-    end_capp_vtk = get_vtk_array("Gradients_mag", 1, end_capp_array.shape[0])
-    for i, p in enumerate(end_capp_array):
-        end_capp_vtk.SetTuple(i, [p])
+    end_capp_vtk = create_vtk_array(end_capp_array, "Gradients_mag", k=1)
     gradients.GetCellData().AddArray(end_capp_vtk)
 
     # Extract capps
@@ -1220,10 +1216,7 @@ def remove_distant_points(voronoi, centerline):
 
     print("Removed %s points from the voronoi diagram" % count)
 
-    radius_array = get_vtk_array(radiusArrayName, 1, n - count)
-    for i in range(n - count):
-        radius_array.SetTuple(i, [float(radius[i])])
-
+    radius_array = create_vtk_array(radius, radiusArrayName[:n - count], k=1)
     new_voronoi.SetPoints(points)
     new_voronoi.SetVerts(cell_array)
     new_voronoi.GetPointData().AddArray(radius_array)
@@ -2847,20 +2840,20 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
             print("\nPlease select region of interest in the render window.")
             stenosis_point_id = vtk.vtkIdList()
             first = True
-            while stenosis_point_id.GetNumberOfIds() not in [1, 2]:
+            target = 1 if method in ["stenosis", "bulge"] else 2
+            while stenosis_point_id.GetNumberOfIds() != target:
                 if not first:
                     print("Please provide only one or two points, try again")
 
                 # Select point on surface
                 seed_selector = vmtkPickPointSeedSelector()
                 seed_selector.SetSurface(surface)
-                if method == "variation" or method == "area":
+                if method in ["variation", "area", "linear"]:
                     seed_selector.text = "Press space to select the start and endpoint of the" + \
                                          " region of interest, 'u' to undo.\n"
-                elif method == "stenosis":
+                elif method in ["stenosis", "bulge"]:
                     seed_selector.text = "Press space to select, the center of a new" + \
-                                         " stenosis (one point),\nOR place two points on each side" + \
-                                         " of an existing stenosis to remove it, \'u\' to undo."
+                                         " stenosis/bulge (one point), \'u\' to undo."
                 elif method == "bend":
                     seed_selector.text = "Press space to select the start and end of the" + \
                                          " bend that you want to manipulate, 'u' to undo.\n"

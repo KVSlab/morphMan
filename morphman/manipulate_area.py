@@ -88,8 +88,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     centerline_regions = [centerline_splined, centerline_remaining]
     if centerline_diverging is not None:
         for div_cl in centerline_diverging:
-            centerline_diverging = [extract_single_line(div_cl, 0, startID=diverging_ids[0])]
-            centerline_regions += centerline_diverging
+            centerline_regions += [extract_single_line(div_cl, 0, startID=diverging_ids[0])]
     voronoi_regions = split_voronoi_with_centerlines(voronoi, centerline_regions)
 
     # Write the seperate segments
@@ -98,41 +97,13 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     for i in range(2, len(voronoi_regions)):
         write_polydata(voronoi_regions[i], voronoi_div_path.format(i-1))
 
-    # Compute area
+    # Compute area, and acount for diverging branches.
     if centerline_diverging is not None:
-        tmp_surface = create_new_surface(voronoi_regions[0],
+        surface_area = create_new_surface(voronoi_regions[0],
                                          poly_ball_size=poly_ball_size)
-        ###### FIXME
-        ###### For creating surface to plot
-        #from IPython import embed; embed()
-        center1, center2 = centerline_splined.GetPoint(0), centerline_splined.GetPoint(centerline_splined.GetNumberOfPoints() - 1)
-        normals = get_array("FrenetTangent", centerline_splined, k=3)
-        normal1, normal2 = normals[0], normals[-1]
-        plane1 = vtk_plane(center1, normal1)
-        plane2 = vtk_plane(center1, -normal1)
-
-        tmp_surface, tmp = clip_polydata(tmp_surface, plane1)
-        tmp_surface = attach_clipped_regions(tmp_surface, tmp, center1)
-        tmp_surface2, _ = clip_polydata(surface, plane2)
-        tmp_surface2 = get_connectivity(tmp_surface2, mode="Closest",
-                                        closest_point=center1)
-
-        plane1 = vtk_plane(center2, normal2)
-        plane2 = vtk_plane(center2, -normal2)
-        tmp_surface, tmp = clip_polydata(tmp_surface, plane2)
-        tmp_surface = attach_clipped_regions(tmp_surface, tmp, center2)
-        tmp_surface3, _ = clip_polydata(surface, plane1)
-        tmp_surface3 = get_connectivity(tmp_surface3, mode="Closest",
-                                        closest_point=center2)
-
-       ############
-
-        write_polydata(tmp_surface, surface_roi_path)
-        write_polydata(tmp_surface2, surface_roi_path.replace(".vtp", "2.vtp"))
-        write_polydata(tmp_surface3, surface_roi_path.replace(".vtp", "3.vtp"))
     else:
         surface_area = surface
-    centerline_area, centerline_area_sections = vmtk_compute_centerline_sections(surface,
+    centerline_area, centerline_area_sections = vmtk_compute_centerline_sections(surface_area,
                                                                                  centerline_splined)
     write_polydata(centerline_area, centerline_area_spline_path)
     write_polydata(centerline_area_sections, centerline_area_spline_sections_path)
@@ -212,17 +183,24 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
             factor_ = ((area / mean_area) ** beta)[:, 0]
             factor = factor_ * (1 - trans) + trans
 
+    # Create or remove stenosis
     elif method == "stenosis":
-        if len(region_points) == 3:
-            t = np.linspace(0, np.pi, line_to_change.GetNumberOfPoints())
-            factor = (1 - np.sin(t) * percentage * 0.01).tolist()
-            factor = factor * (1 - trans) + trans
+        t = np.linspace(0, np.pi, line_to_change.GetNumberOfPoints())
+        factor = (1 - np.sin(t) * percentage * 0.01).tolist()
+        factor = factor * (1 - trans) + trans
 
-        elif len(region_points) == 6:
-            length = get_curvilinear_coordinate(line_to_change)
-            factor = (area[0] + (area[-1] - area[0]) * (length / length.max())) / area[:, 0]
-            factor = np.sqrt(factor)
-            factor = factor * (1 - trans) + trans
+    # Linear change in area between start and stop
+    elif method == "linear":
+        length = get_curvilinear_coordinate(line_to_change)
+        factor = (area[0] + (area[-1] - area[0]) * (length / length.max())) / area[:, 0]
+        factor = np.sqrt(factor)
+        factor = factor * (1 - trans) + trans
+
+    # Create a fusiform aneurysm or bulge
+    elif method == "bulge":
+        t = np.linspace(0, np.pi, line_to_change.GetNumberOfPoints())
+        factor = (1 + np.sin(t) * percentage * 0.01).tolist()
+        factor = factor * (1 - trans) + trans
 
     # Increase or decrease overall area by a percentage
     elif method == "area":
@@ -249,8 +227,8 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
         percentage (float): Percentage the area of the geometry / stenosis is increase/decreased.
         region_of_interest (str): Method for setting the region of interest ['manual' | 'commandline' | 'first_line']
         region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint
-        diverging_centerline (vtkPolyData): Polydata containing diverging centerlines along region of interest.
-        diverging_voronoi (vtkPolyData): Voronoi diagram diverging off region of interest.
+        diverging_centerline (list): List of polydata containing diverging centerlines along region of interest.
+        diverging_voronoi (list): List of Voronoi diagram diverging off region of interest.
 
     Returns:
         new_voronoi (vtkPolyData): Manipulated Voronoi diagram.
@@ -277,23 +255,43 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
     # Iterate through Voronoi diagram and manipulate
     point_radius_array = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1
     for i in range(n):
+        id_list = vtk.vtkIdList()
         point = voronoi.GetPoint(i)
 
-        tmp_id = locator.FindClosestPoint(point)
+        # Find two closest points on centerline
+        locator.FindClosestNPoints(2, point, id_list)
+        tmp_id1, tmp_id2 = id_list.GetId(0), id_list.GetId(1)
 
-        v1 = np.asarray(line_to_change.GetPoint(tmp_id)) - np.asarray(point)
-        v2 = v1 * (1 - factor[tmp_id])
-        point = (np.asarray(point) + v2).tolist()
+        # Get direction (v_change) to move the point
+        A = np.asarray(line_to_change.GetPoint(tmp_id1))
+        B = np.asarray(line_to_change.GetPoint(tmp_id2))
+        C = np.asarray(point)
+        BA = A - B
+        BC = C - B
+        AC = C - A
+        AC_length = np.sqrt(np.sum(AC**2))
+        if AC_length == 0:
+            h = np.cross(BA, BC) / AC_length # shortest distance between point and line
+            D = A + (AC / AC_length) * np.sqrt(h**2 + AC_length**2)
+        else:
+            D = A
+
+        v_change = B - D
+
+
+        v = v_change * (1 - factor[tmp_id1])
+        voronoi_points.InsertNextPoint((point + v).tolist())
 
         # Change radius
-        point_radius = point_radius_array(i) * factor[tmp_id]
+        point_radius = point_radius_array(i) * factor[tmp_id1]
 
-        voronoi_points.InsertNextPoint(point)
         radius_array.SetTuple1(i, point_radius)
         cell_array.InsertNextCell(1)
         cell_array.InsertCellPoint(i)
 
     # Offset Voronoi diagram along "diverging" centerlines
+    # FIXME (Aslak): This have to be more robust. Code should be moved to a seperate
+    #                function.
     if diverging_centerline is not None:
         count = i+1
         for j in range(len(diverging_voronoi)):
@@ -340,7 +338,7 @@ def read_command_line():
 
     # Mode / method for manipulation
     parser.add_argument("-m", "--method", type=str, default="variation",
-                        choices=["variation", "stenosis", "area"],
+                        choices=["variation", "stenosis", "area", "bulge", "linear"],
                         help="Methods for manipulating the area in the region of interest:" +
                              "\n1) 'variation' will increase or decrease the changes in area" +
                              " along the centerline of the region of interest." +
@@ -388,7 +386,7 @@ def read_command_line():
 
     # "Stenosis" argument
     parser.add_argument("--size", type=float, default=2.0, metavar="length",
-                        help="For method=stenosis: The length of the area " +
+                        help="For method=[stenosis, bulge]: The length of the area " +
                              " affected by a stenosis relative to the minimal inscribed" +
                              " sphere radius of the selected point. Default is 2.0.")
 
@@ -396,14 +394,14 @@ def read_command_line():
     parser.add_argument("--percentage", type=float, default=50.0,
                         help="Percentage the" +
                              " area of the geometry is increase/decreased overall or only" +
-                             " stenosis")
+                             " in stenosis / bulge.")
 
     # Parse
     args = parser.parse_args()
 
-    if args.method == "stenosis" and args.region_of_interest == "first_line":
-        raise ValueError("Can not set region of interest to 'first_line' when creating or" +
-                         " removing a stenosis")
+    if args.method in ["stenosis", "bulge", "linear"] and args.region_of_interest == "first_line":
+        raise ValueError("Can not set region of interest to 'first_line' for 'stenosis'," + \
+                         " 'bulge', or 'linear'")
 
     if args.method == "variation" and args.ratio is not None and args.beta != 0.5:
         print("WARNING: The beta value you provided will be ignored, using ratio instead.")
