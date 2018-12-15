@@ -313,7 +313,7 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
         new_centerliens = vtk.vtkPolyData()
         new_centerlines.SetPoints(centerlines.GetPoints())
         new_centerlines.SetVerts(centerlines.GetVerts())
-        new_centerlines.GetPointData().AddArray(centerlines.GetPointData().GetArray(radiusArrayName)
+        new_centerlines.GetPointData().AddArray(centerlines.GetPointData().GetArray(radiusArrayName))
         points = new_centerlines.GetPoints()
         for j in range(len(diverging_voronoi)):
             # Get closest point on centerline to surface
