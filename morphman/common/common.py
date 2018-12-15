@@ -187,7 +187,7 @@ def make_voronoi_diagram(surface, filename):
     return new_voronoi
 
 
-def get_tolerance(centerline, n=50, divergingRatioToSpacingTolerance=2):
+def get_tolerance(centerline, n=10, divergingRatioToSpacingTolerance=2):
     """
     Finds tolerance based on
     average length between first N points
@@ -1082,6 +1082,7 @@ def compute_centers(polydata, case_path=None):
         # Create surface for computing area of opening
         delaunay = vtk.vtkDelaunay2D()
         delaunay.SetInputData(boundary_points)
+        delaunay.SetOffset(0)
         delaunay.Update()
 
         # Add quanteties
@@ -2021,9 +2022,10 @@ def spline_centerline(line, get_curv=False, isline=False,
         data[i, :] = line.GetPoint(i)
 
     t = np.linspace(curv_coor[0], curv_coor[-1], nknots + 2)[1:-1]
-    fx = splrep(curv_coor, data[:, 0], k=4, t=t)
-    fy = splrep(curv_coor, data[:, 1], k=4, t=t)
-    fz = splrep(curv_coor, data[:, 2], k=4, t=t)
+    k = min(data.shape[0] - 1, 4)
+    fx = splrep(curv_coor, data[:, 0], k=k, t=t)
+    fy = splrep(curv_coor, data[:, 1], k=k, t=t)
+    fz = splrep(curv_coor, data[:, 2], k=k, t=t)
 
     fx_ = splev(curv_coor, fx)
     fy_ = splev(curv_coor, fy)
@@ -2332,6 +2334,10 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
         if path.dirname(output_filepath) != "":
             makedirs(path.dirname(output_filepath))
 
+    # In special cases the voronoi diagram might create surface which is not connected to
+    # the rest, we would therefore want to extract the largest surface
+    surface = get_connectivity(surface, mode="Largest")
+
     # Get planes if outlets of the original surface
     boundary_edges = get_feature_edges(original_surface)
     boundary_connectivity = get_connectivity(boundary_edges)
@@ -2364,7 +2370,7 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
                               tmp_points[0] - tmp_points[tmp_points.shape[0] // 2])
         normal = tmp_normal / np.sqrt(np.sum(tmp_normal ** 2))
 
-        # Get Center
+        # Get center
         center = np.mean(tmp_points, axis=0)
 
         # Get corresponding centerline to in/outlet
@@ -2388,7 +2394,7 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
         angle = np.arccos(np.dot(in_dir, normal)) * 180 / np.pi
         normal = -normal if 90 < angle < 270 else normal
 
-        # Mapp the old center and normals to the altered model
+        # Map the old center and normals to the altered model
         if changed and old_centerline is not None:
             new_line = extract_single_line(new_centerline, line_id)
 
@@ -2951,12 +2957,15 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
         both = distance(start_point, p1_tmp) < tol and distance(end_point, p2_tmp) < tol
         neither = distance(start_point, p1_tmp) > tol and distance(end_point, p2_tmp) > tol
         if neither or both:
-            if start_id != 0:
-                tmp = extract_single_line(centerline, i, startID=0, endID=start_id - 1)
+            if both:
+                if start_id != 0:
+                    tmp = extract_single_line(centerline, i, startID=0, endID=start_id - 1)
+                    remaining_centerlines.append(tmp)
+                tmp = extract_single_line(centerline, i, startID=end_id + 1,
+                                          endID=line.GetNumberOfPoints() - 1)
                 remaining_centerlines.append(tmp)
-            tmp = extract_single_line(centerline, i, startID=end_id + 1,
-                                      endID=line.GetNumberOfPoints() - 1)
-            remaining_centerlines.append(tmp)
+            else:
+                remaining_centerlines.append(line)
         else:
             diverging_centerlines.append(line)
 
