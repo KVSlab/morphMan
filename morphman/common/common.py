@@ -972,8 +972,7 @@ def get_connectivity(surface, mode="All", closest_point=None):
         connectivity.SetExtractionModeToLargestRegion()
     elif mode == "Closest":
         if closest_point is None:
-            print("ERROR: point not set for extracting closest region")
-            sys.exit(0)
+            raise ValueError("ERROR: point not set for extracting closest region")
         connectivity.SetExtractionModeToClosestPointRegion()
         connectivity.SetClosestPoint(closest_point)
     connectivity.ColorRegionsOn()

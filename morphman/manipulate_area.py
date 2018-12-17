@@ -310,9 +310,10 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
         loc_cl = get_locator(centerlines)
 
         # 'Copy' old centerlines
-        new_centerliens = vtk.vtkPolyData()
+        new_centerlines = vtk.vtkPolyData()
         new_centerlines.SetPoints(centerlines.GetPoints())
         new_centerlines.SetVerts(centerlines.GetVerts())
+        new_centerlines.SetLines(centerlines.GetLines())
         new_centerlines.GetPointData().AddArray(centerlines.GetPointData().GetArray(radiusArrayName))
         points = new_centerlines.GetPoints()
         for j in range(len(diverging_voronoi)):
@@ -368,7 +369,11 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
                 cell_array.InsertCellPoint(count)
                 count += 1
 
-    new_centerlines.SetPoints(points)
+        new_centerlines.SetPoints(points)
+
+    else:
+        new_centerlines = None
+
     new_voronoi.SetPoints(voronoi_points)
     new_voronoi.SetVerts(cell_array)
     new_voronoi.GetPointData().AddArray(radius_array)
