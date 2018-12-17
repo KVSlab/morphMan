@@ -372,7 +372,7 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
         new_centerlines.SetPoints(points)
 
     else:
-        new_centerlines = None
+        new_centerlines = centerlines
 
     new_voronoi.SetPoints(voronoi_points)
     new_voronoi.SetVerts(cell_array)
