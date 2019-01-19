@@ -23,9 +23,13 @@ def str2bool(boolean):
         raise ValueError('Boolean value expected.')
 
 
-def add_common_arguments(parser):
+def add_common_arguments(parser, required=True):
     # Required arguments
-    required = parser.add_argument_group('Required arguments')
+    if required:
+        required = parser.add_argument_group('Required arguments')
+    else:
+        required = parser
+
     required.add_argument('-i', '--ifile', type=str, default=None, required=True,
                           help="Path to the surface model")
     required.add_argument("-o", "--ofile", type=str, default=None, required=True,
