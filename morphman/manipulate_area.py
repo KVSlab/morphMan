@@ -349,7 +349,7 @@ def read_command_line_area(input_path=None, output_path=None):
                              " and instead approximated to obtain the target ratio")
 
     # "Stenosis" argument
-    parser.add_argument("--size", type=float, default=2.0, metavar="length",
+    parser.add_argument("-l", "--stenosis-length", type=float, default=2.0,
                         help="For method=stenosis: The length of the area " +
                              " affected by a stenosis relative to the minimal inscribed" +
                              " sphere radius of the selected point. Default is 2.0.")
@@ -387,7 +387,7 @@ def read_command_line_area(input_path=None, output_path=None):
                 smooth_factor=args.smooth_factor, beta=args.beta,
                 region_of_interest=args.region_of_interest,
                 region_points=args.region_points, ratio=args.ratio,
-                stenosis_length=args.size,
+                stenosis_length=args.stenosis_length,
                 percentage=args.percentage, output_filepath=args.ofile,
                 poly_ball_size=args.poly_ball_size, no_smooth=args.no_smooth,
                 no_smooth_point=args.no_smooth_point, resampling_step=args.resampling_step)
