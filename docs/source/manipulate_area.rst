@@ -8,7 +8,9 @@ Tutorial: Manipulate area
 
 Manipulation of the cross-sectional area is performed by running ``morphman-area`` in the terminal, followed by the
 respective command line arguments. Alternatively, you can execute the Python script directly,
-located in the ``morphman`` subfolder, by typing ``python manipulate_area.py``.
+located in the ``morphman`` subfolder, by typing ``python manipulate_area.py``. We have also created a
+demo folder where we show how to run this tutorial from a python script, please checkout the code from github to
+run the demos.
 
 In this tutorial, we are using the model with
 `ID C0002 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0002/C0002_models.tar.gz>`_
@@ -59,7 +61,7 @@ obtained by executing the following commands from the command line::
 
 for the model with increased cross-sectional area variation, and::
 
-    morphman-area --ifile C0002/surface/model.vtp --ofile C0002/surface/decreased_variation.vtp --method variation --ratio 0.5 --region-of-interest first_line --poly-ball-size 250 250 250
+    morphman-area --ifile C0002/surface/model.vtp --ofile C0002/surface/decreased_variation.vtp --method variation --ratio 1.0 --region-of-interest first_line --poly-ball-size 250 250 250
 
 for the model with decreased cross-sectional area variation.
 
@@ -94,7 +96,7 @@ sections with high curvature, like the internal carotid artery, is unproblematic
 
 To recreate the above output, execute the following from the commandline::
 
-    morphman-area --ifile C0002/surface/model.vtp  --ofile C0002/surface/stenosis.vtp --method stenosis --size 4 --percentage 50 --region-of-interest commandline --region-points 28.7 18.4 39.5 --poly-ball-size 250 250 250
+    morphman-area --ifile C0002/surface/model.vtp --ofile C0002/surface/stenosis.vtp --method stenosis --size 4 --percentage 50 --region-of-interest commandline --region-points 28.7 18.4 39.5 --poly-ball-size 250 250 250
 
 Remove a stenosis
 ~~~~~~~~~~~~~~~~~
@@ -111,7 +113,7 @@ right, the comparison between the original model and the 'healed' surface.
     
 To reproduce the above result, execute the following command::
 
-    morphman-area --ifile C0002/surface/stenosis.vtp  --ofile C0002/surface/stenosis_removed.vtp --method stenosis --size 4 --percentage 50 --region-of-interest commandline --region-points 30.1 18.5 34.6 27.1 12.7 38.2 --poly-ball-size 250 250 250
+    morphman-area --ifile C0002/surface/stenosis.vtp --ofile C0002/surface/stenosis_removed.vtp --method stenosis --region-of-interest commandline --region-points 30.1 18.5 34.6 27.1 12.7 38.2 --poly-ball-size 250 250 250
 
 Inflation / deflation of an arterial segment
 ============================================
