@@ -67,5 +67,5 @@ default_values["poly_ball_size"] = [250, 250, 250]
 for b, a, n in zip(beta, alpha, names):
     default_values["beta"] = b
     default_values["alpha"] = a
-    default_values["output_filepath"] = n
+    default_values["output_filepath"] = n + ".vtp"
     manipulate_bend(**default_values)

@@ -88,7 +88,7 @@ default_values["input_filepath"] = path.join(absolute_path, case, "surface", "mo
 default_values["output_filepath"] = path.join(absolute_path, case, "surface", "rotate_plus.vtp")
 
 # Download case from the Aneurisk web for this demo
-if not path.exists(path.join(input_filepath)):
+if not path.exists(path.join(default_values["input_filepath"])):
     download_case(case)
 
 # Set region of interest

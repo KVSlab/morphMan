@@ -8,7 +8,7 @@
 
 # This demo is the equivalent of executing the following in a terminal:
 #  $ morphman-area --ifile C0002/surface/model.vtp --ofile C0002/surface/stenosis.vtp \
-#       --method stenosis --size 4 --percentage 50 --region-of-interest commandline \
+#       --method stenosis --stenosis-length 4 --percentage 50 --region-of-interest commandline \
 #       --region-points 28.7 18.4 39.5 --poly-ball-size 250 250 250
 #  $ morphman-area --ifile C0002/surface/stenosis.vtp --ofile C0002/surface/stenosis_removed.vtp \
 #       --method stenosis --region-of-interest commandline \
@@ -44,7 +44,7 @@ default_values["region_points"] = [28.7, 18.4, 39.5]
 default_values["method"] = "stenosis"
 
 # Method spesific parameters - create a stenosis
-default_values["size"] = 4.0
+default_values["stenosis_length"] = 4.0
 default_values["percentage"] = 50
 
 # Parameters for reconstructing the surface

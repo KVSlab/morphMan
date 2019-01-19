@@ -41,7 +41,7 @@ default_values = read_command_line_curvature(input_filepath, output_filepath)
 default_values["region_of_interest"] = "first_line"
 
 # Method spesific parameters - reduce the curvature
-dafault_values["smooth_line"] = True
+default_values["smooth_line"] = True
 default_values["iterations"] = 100
 default_values["smooth_factor_line"] = 1.8
 
