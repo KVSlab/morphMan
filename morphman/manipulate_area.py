@@ -88,8 +88,8 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     print("-- Change Voronoi diagram")
     centerline_regions = [centerline_splined, centerline_remaining]
     if centerline_diverging is not None:
-        for div_cl in centerline_diverging:
-            centerline_regions += [extract_single_line(div_cl, 0, startID=diverging_ids[0])]
+        for i, div_cl in enumerate(centerline_diverging):
+            centerline_regions += [extract_single_line(div_cl, 0, startID=diverging_ids[i][1])]
     voronoi_regions = split_voronoi_with_centerlines(voronoi, centerline_regions)
 
     # Write the seperate segments
