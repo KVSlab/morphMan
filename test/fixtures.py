@@ -8,6 +8,7 @@
 import pytest
 from os import system, path
 from sys import platform
+from morphman.common import get_centers, get_path_names, prepare_surface, compute_centerlines
 
 def download_testdata(test_path, outputfile):
     if platform == "darwin":
@@ -22,6 +23,7 @@ def download_testdata(test_path, outputfile):
         system("bitsadmin /transfer download_model /download /priority high {} {}".format(test_path, outputfile))
         system("tar -zxvf {}".format(outputfile))
         system("del /f {}".format(outputfile))
+
 
 @pytest.fixture(scope="module")
 def common_input():
@@ -40,8 +42,19 @@ def common_input():
                             + test_path + " and extract the compressed tarball in the" \
                             + " test folder")
 
+    # Create centerline
+    input_filepath = path.join(abs_path, "C0001", "surface", "model.vtp")
+    base_path = get_path_names(input_filepath)
+    centerlines_path = base_path + "_centerline.vtp"
+    if not path.exists(centerlines_path):
+        surface, capped_surface = prepare_surface(base_path, input_filepath)
+        inlet, outlets = get_centers(surface, base_path)
+        centerlines, _, _ = compute_centerlines(inlet, outlets, centerlines_path,
+                                                capped_surface, resampling=0.1,
+                                                smooth=False, base_path=base_path)
+
     # Define parameters shared by all functions
-    a = dict(input_filepath = path.join(abs_path, "C0001", "surface", "model.vtp"),
+    a = dict(input_filepath = input_filepath,
              output_filepath = path.join(abs_path, "C0001", "surface", "model_output.vtp"),
              smooth_factor = 0.25,
              poly_ball_size = [180, 180, 180],
