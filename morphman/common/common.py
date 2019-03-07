@@ -13,9 +13,11 @@ import numpy as np
 import numpy.linalg as la
 import vtk
 from scipy.interpolate import splrep, splev
+from itertools import islice
 from scipy.signal import resample
 from vmtk import vtkvmtk, vmtkscripts
 from vtk.util import numpy_support
+from vtk.numpy_interface import dataset_adapter as dsa
 
 # Local import
 from morphman.common.vmtkpointselector import *
@@ -65,11 +67,25 @@ def read_polydata(filename, datatype=None):
         reader = vtk.vtkSTLReader()
         reader.MergingOn()
     elif fileType == 'vtk':
-        reader = vtk.vtkPolyDataReader()
+        # Read header
+        with open(filename) as myfile:
+            head = "".join(list(islice(myfile, 10))).lower()
+
+        # Set reader based on header
+        if "unstructured_grid" in head:
+            reader = vtk.vtkUnstructuredGridReader()
+        elif "structured_grid" in head:
+            reader = vtk.vtkStructuredGridReader()
+        elif "rectilinear_grid" in head:
+            reader = vtk.vtkRectilinearGridReader()
+        elif "structured_points" in head:
+            reader = vtk.vtkStructuredPointsReader()
+        elif "polydata" in head:
+            reader = vtk.vtkPolyDataReader()
     elif fileType == 'vtp':
         reader = vtk.vtkXMLPolyDataReader()
     elif fileType == 'vts':
-        reader = vtk.vtkXMinkorporereLStructuredGridReader()
+        reader = vtk.vtkXMLStructuredGridReader()
     elif fileType == 'vtr':
         reader = vtk.vtkXMLRectilinearGridReader()
     elif fileType == 'vtu':
@@ -747,6 +763,24 @@ def threshold(surface, name, lower=0, upper=1, threshold_type="between", source=
     return surface
 
 
+def compute_volume(surface):
+    """
+    Compute volume of closed surface
+
+    Args:
+        surface (vtkPolyData): Surfae to compute volume off
+
+    Returns:
+        volume (float): Volume of the input surface
+    """
+    mass_filter = vtk.vtkMassProperties()
+    mass_filter.SetInputData(surface)
+    mass_filter.Update()
+    volume = mass_filter.GetVolume()
+
+    return volume
+
+
 def compute_area(surface):
     """
     Compute area of polydata
@@ -759,8 +793,10 @@ def compute_area(surface):
     """
     mass = vtk.vtkMassProperties()
     mass.SetInputData(surface)
+    mass.Update()
+    area = mass.GetSurfaceArea()
 
-    return mass.GetSurfaceArea()
+    return area
 
 
 def clipp_capped_surface(surface, centerlines, clipspheres=0):
@@ -802,6 +838,31 @@ def clipp_capped_surface(surface, centerlines, clipspheres=0):
     return surface
 
 
+def compute_normals(surface, source="cell"):
+    """
+    A wrapper around vtkPolyDataNormals.
+
+    Args:
+        surface (vtkPolyData): Surface to generate normals from
+        source (str): Either cell or point
+
+    Returns:
+        surface (vtkPolyData): Surface with array 'Normals'
+    """
+    normal_generator = vtk.vtkPolyDataNormals()
+    normal_generator.SetInputData(surface)
+    if source == "cell":
+        normal_generator.ComputePointNormalsOff()
+        normal_generator.ComputeCellNormalsOn()
+    else:
+        normal_generator.ComputePointNormalsOn()
+        normal_generator.ComputeCellNormalsOff()
+
+    normal_generator.Update()
+
+    return normal_generator.GetOutput()
+
+
 def uncapp_surface(surface, gradients_limit=0.15, area_limit=0.3, circleness_limit=3):
     """
     A rule-based method for removing endcapps on a surface. The method considers the
@@ -817,14 +878,8 @@ def uncapp_surface(surface, gradients_limit=0.15, area_limit=0.3, circleness_lim
         surface (vtkPolyData): The uncapped surface.
 
     """
-
     # Get cell normals
-    normal_generator = vtk.vtkPolyDataNormals()
-    normal_generator.SetInputData(surface)
-    normal_generator.ComputePointNormalsOff()
-    normal_generator.ComputeCellNormalsOn()
-    normal_generator.Update()
-    cell_normals = normal_generator.GetOutput()
+    cell_normals = compute_normals(surface)
 
     # Compute gradients of the normals
     gradients_generator = vtk.vtkGradientFilter()
@@ -1035,6 +1090,25 @@ def get_feature_edges(polydata):
     return feature_edges.GetOutput()
 
 
+def delaunay2D(points):
+    """
+    Wrapper around vtk function vtkDelaunay2D
+
+    Args:
+        points (vtkPolyData): Points to triangulate
+
+    Returns:
+        surface (vtkPolyData): Triangulated surface
+    """
+    # Create surface for computing area of opening
+    delaunay = vtk.vtkDelaunay2D()
+    delaunay.SetInputData(points)
+    delaunay.SetOffset(0)
+    delaunay.Update()
+
+    return delaunay.GetOutput()
+
+
 def compute_centers(polydata, case_path=None):
     """
     Compute the center of all the openings in the surface. The inlet is chosen based on
@@ -1079,13 +1153,10 @@ def compute_centers(polydata, case_path=None):
                                     threshold_type="between", source=0)
 
         # Create surface for computing area of opening
-        delaunay = vtk.vtkDelaunay2D()
-        delaunay.SetInputData(boundary_points)
-        delaunay.SetOffset(0)
-        delaunay.Update()
+        triangulated = delaunay2D(boundary_points)
 
         # Add quanteties
-        area.append(compute_area(delaunay.GetOutput()))
+        area.append(compute_area(triangulated))
         center.append(np.mean(tmp_points, axis=0))
 
     # Store the center and area
@@ -2977,8 +3048,13 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
         for i in np.arange(id_start, id_end):
             p_div = np.asarray(line.GetPoint(i))
             p_cl = np.asarray(main_line.GetPoint(i))
-            if distance(p_div, p_cl) > tol * 10:
-                diverging_ids.append(i)
+            if distance(p_div, p_cl) > tol:
+                if len(diverging_ids) == 0:
+                    diverging_ids.append([i])
+                elif len(diverging_ids[-1]) == 2:
+                    diverging_ids.append([i])
+            if distance(p_div, p_cl) > main_line.GetPointData().GetArray(radiusArrayName).GetTuple1(i):
+                diverging_ids[-1].append(i)
                 break
 
     # Spline the single line
@@ -3217,6 +3293,23 @@ def get_clipped_centerline(centerline_relevant_outlets, data):
 
     centerline = merge_data(lines)
     return centerline
+
+
+def offset_voronoi(voronoi, offset):
+    """Offset points in a Voronoi diagram with a constent offset using the numpy interface
+    in vtk.
+
+    Args:
+        voronoi (vtkPolyData): Voronoi diagram
+        offset (nparray): A vector to offset, or move the Voronoi diagram
+
+    Returns:
+        voronoi (vtkPolyData): The offseted Voronoi diagram.
+    """
+    voro = dsa.WrapDataObject(voronoi)
+    voro.Points += offset
+
+    return voro.VTKObject
 
 
 ### The following code is adapted from:
