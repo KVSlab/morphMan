@@ -14,7 +14,7 @@ from morphman.common import *
 def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_factor, angle,
                     keep_fixed_1, keep_fixed_2, bif, lower, no_smooth, no_smooth_point,
                     poly_ball_size, cylinder_factor, resampling_step,
-                    region_of_interest, region_points):
+                    region_of_interest, region_points, tension, continuity):
     """
     Objective rotation of daughter branches, by rotating
     centerlines and Voronoi diagram about the bifurcation center.
@@ -146,35 +146,43 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
     write_polydata(voronoi_clipped, voronoi_clipped_path)
 
     # Rotate branches (Centerline and Voronoi diagram)
-    print("-- Rotate centerlines and voronoi diagram.")
-    rotated_cl = rotate_cl(patch_cl, end_points[1], m, R)
-    write_polydata(rotated_cl, centerline_rotated_path)
+    angle = 0 if keep_fixed_1 and keep_fixed_2 else angle
+    if angle != 0:
+        print("-- Rotate centerlines and voronoi diagram.")
+        rotated_cl = rotate_cl(patch_cl, end_points[1], m, R)
+        write_polydata(rotated_cl, centerline_rotated_path)
 
-    if lower or bif:
-        rotated_bif_cl = rotate_cl(patch_bif_cl, end_points_bif[1], m, R)
-        write_polydata(rotated_bif_cl, centerline_rotated_bif_path)
+        if lower or bif:
+            rotated_bif_cl = rotate_cl(patch_bif_cl, end_points_bif[1], m, R)
+            write_polydata(rotated_bif_cl, centerline_rotated_bif_path)
 
-    rotated_voronoi = rotate_voronoi(voronoi_clipped, patch_cl, end_points[1], m, R)
-    write_polydata(rotated_voronoi, voronoi_rotated_path)
+        rotated_voronoi = rotate_voronoi(voronoi_clipped, patch_cl, end_points[1], m, R)
+        write_polydata(rotated_voronoi, voronoi_rotated_path)
+    else:
+        rotated_cl = patch_cl
+        rotated_voronoi = voronoi_clipped
+        if lower or bif:
+            rotated_bif_cl = patch_bif_cl
 
     # Interpolate the centerline
     print("-- Interpolate centerlines.")
     interpolated_cl = interpolate_patch_centerlines(rotated_cl, centerline_par, div_points[0].GetPoint(0),
-                                                    None, False)
+                                                    True, tension, continuity)
     write_polydata(interpolated_cl, centerline_new_path.replace(".vtp", "1.vtp"))
 
     if bif:
         interpolated_bif = interpolate_patch_centerlines(rotated_bif_cl, centerline_bif,
-                                                         None, "bif", True)
+                                                         None, True, tension, continuity)
         write_polydata(interpolated_bif, centerline_new_bif_path)
 
     if lower:
-        center = ((1 / 9.) * div_points[1][0] + (4 / 9.) * div_points[1][1] +
-                  (4 / 9.) * div_points[1][2]).tolist()
+        center = ((2 / 9.) * div_points[1][0] + (3.5 / 9.) * div_points[1][1] +
+                  (3.5 / 9.) * div_points[1][2]).tolist()
+        print("Center", center)
         div_points[0].SetPoint(0, center[0], center[1], center[2])
         interpolated_bif_lower = interpolate_patch_centerlines(rotated_bif_cl, centerline_bif,
                                                                div_points[0].GetPoint(0),
-                                                               "lower", True)
+                                                               True, tension, continuity)
         write_polydata(interpolated_bif_lower, centerline_new_bif_lower_path)
 
     interpolated_cl = merge_cl(interpolated_cl, div_points[1],
@@ -259,6 +267,7 @@ def rotate_voronoi(clipped_voronoi, patch_cl, div_points, m, R):
     vtk_distance = vtk.vtkMath.Distance2BetweenPoints
     I = np.eye(3)
     R_inv = np.linalg.inv(R)
+    tolerance = get_tolerance(patch_cl)
 
     locator = []
     cell_line = []
@@ -271,8 +280,7 @@ def rotate_voronoi(clipped_voronoi, patch_cl, div_points, m, R):
     for i in range(1, patch_cl.GetNumberOfCells()):
         pnt = cell_line[i].GetPoints().GetPoint(0)
         new = cell_line[0].GetPoints().GetPoint(locator[0].FindClosestPoint(pnt))
-        dist = math.sqrt(vtk_distance(pnt, new)) < divergingRatioToSpacingTolerance
-        if dist:
+        if distance(pnt, new) < tolerance*10:
             not_rotate.append(i)
 
     def check_rotate(point):
@@ -339,6 +347,7 @@ def rotate_cl(patch_cl, div_points, rotation_matrices, R):
     distance = vtk.vtkMath.Distance2BetweenPoints
     I = np.eye(3)
     R_inv = np.linalg.inv(R)
+    tolerance = get_tolerance(patch_cl)
 
     number_of_points = patch_cl.GetNumberOfPoints()
 
@@ -358,7 +367,7 @@ def rotate_cl(patch_cl, div_points, rotation_matrices, R):
 
         start = cell.GetPoint(0)
         dist = line0.GetPoint(locator0.FindClosestPoint(start))
-        test = math.sqrt(distance(start, dist)) > divergingRatioToSpacingTolerance
+        test = distance(start, dist) > tolerance*10
 
         if test or len(div_points) == 2:
             locator = get_locator(cell)
@@ -592,6 +601,13 @@ def read_command_line():
     parser.add_argument("--keep-fixed-2", type=str2bool, default=False,
                         help="Leave one branch untouched")
 
+    # Arguments for parent artery centerline interpolation (not daughter)
+    parser.add_argument("-t", "--tension", type=restricted_float, default=0,
+                        help="Set tention of the KochanekSpline from -1 to 1")
+    parser.add_argument("-c", "--continuity", type=restricted_float, default=0,
+                        help="Set continuity of the KochanekSpline from -1 to 1")
+
+
     # Bifurcation reconstruction arguments
     parser.add_argument("--bif", type=str2bool, default=False,
                         help="interpolate bif as well")
@@ -611,7 +627,8 @@ def read_command_line():
                 resampling_step=args.resampling_step, no_smooth=args.no_smooth,
                 no_smooth_point=args.no_smooth_point, poly_ball_size=args.poly_ball_size,
                 region_of_interest=args.region_of_interest,
-                region_points=args.region_points)
+                region_points=args.region_points,
+                tension=args.tension, continuity=args.continuity)
 
 
 def main_bifurcation():

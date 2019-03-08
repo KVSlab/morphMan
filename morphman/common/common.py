@@ -244,7 +244,7 @@ def get_relevant_outlets(surface, base_path):
     parameters = get_parameters(base_path)
     relevant_outlets = []
     for key, value in list(parameters.items()):
-        if key.startswith("relevant_outlet_"):
+        if str(key).startswith("relevant_outlet_"):
             relevant_outlets.append(value)
 
     if not relevant_outlets:
@@ -669,9 +669,9 @@ def get_centers(surface, base_path, flowext=False):
     outlets = []
     inlet = []
     for key, value in list(parameters.items()):
-        if key == "inlet":
+        if str(key) == "inlet":
             inlet = value
-        elif "outlet" in key and "area" not in key and "relevant" not in key:
+        elif "outlet" in str(key) and "area" not in str(key) and "relevant" not in str(key):
             outlets += value
 
     num_outlets = len(outlets) // 3
@@ -1482,10 +1482,17 @@ def get_parameters(folder):
             else:
                 key = split[0]
                 value = ": ".join(split[1:])
+
+            try:
+                key = int(key)
+            except:
+                key = key
+
             try:
                 data[key] = eval(value)
             except:
                 data[key] = value
+
     return data
 
 
@@ -3481,7 +3488,7 @@ def extract_patches_ids(parentCl, clipPts):
 
 
 def interpolate_patch_centerlines(patchCenterlines, parentCenterlines,
-                                  additionalPoint, lower, version):
+                                  additionalPoint, version, tension=0, continuity=0):
     """Interpolate new centerlines between end and starting points. Given
     additionalPoiint, lower, and version, then number and method for interpolation varies.
 
@@ -3489,8 +3496,9 @@ def interpolate_patch_centerlines(patchCenterlines, parentCenterlines,
         patchCenterlines (vtkPolyData): Clipped centerline.
         parentCenterlines (vtkPolyData): The original centerline.
         additionalPoint (vtkPoints): Additional point to interpolate through.
-        lower (str): None / 'lower' / 'bif' to indicate how to interpolate.
         version (bool): Method for interpolation.
+        tension (float): Variable for the Kochanek spline
+        continuity (float): Variable for the Kochanek spline
 
     Returns:
         centerline (vtkPolyData): The new centerline, including the new interpolated
@@ -3524,7 +3532,8 @@ def interpolate_patch_centerlines(patchCenterlines, parentCenterlines,
             splinePoints = interpolate_spline(startingCell, endingCell, additionalPoint)
         else:
             splinePoints = interpolate_two_cells(startingCell, endingCell, numberOfInterpolationPoints,
-                                                 additionalPointIds[i], additionalPoint)
+                                                 additionalPointIds[i], additionalPoint,
+                                                 tension, continuity)
 
         interpolatedCellArray.InsertNextCell(splinePoints.GetNumberOfPoints())
         for j in range(splinePoints.GetNumberOfPoints()):
@@ -3616,7 +3625,7 @@ def interpolate_spline(startCell, endCell, additionalPoint):
 
 
 def interpolate_two_cells(startCell, endCell, numberOfSplinePoints, additionalPointId,
-                          additionalPoint):
+                          additionalPoint, tension, continuitiy):
     """Interpolate between two lines using vtkCardinalSpline from vtk, potentially with an
     additional point (additionalPoint).
 
@@ -3624,16 +3633,21 @@ def interpolate_two_cells(startCell, endCell, numberOfSplinePoints, additionalPo
         startCell (vtkPolyData): Start line
         endCell (tkPolyData): End line
         numberOfSplinePoints (int): Number of spline point.
-        additionalPointId (int): Id of the additional point.
-        additionalPoint (list): A list with the coordinates to the additional point.
 
     Returns:
         centerline (vtkPolyData): The new interpolated centerline.
     """
     points = vtk.vtkPoints()
-    xspline = vtk.vtkCardinalSpline()
-    yspline = vtk.vtkCardinalSpline()
-    zspline = vtk.vtkCardinalSpline()
+    #xspline = vtk.vtkCardinalSpline()
+    #yspline = vtk.vtkCardinalSpline()
+    #zspline = vtk.vtkCardinalSpline()
+    xspline = vtk.vtkKochanekSpline()
+    yspline = vtk.vtkKochanekSpline()
+    zspline = vtk.vtkKochanekSpline()
+
+    for s in [xspline, yspline, zspline]:
+        s.SetDefaultTension(tension)
+        s.SetDefaultContinuity(continuitiy)
 
     numberOfStartCellPoints = startCell.GetNumberOfPoints()
     numberOfEndCellPoints = endCell.GetNumberOfPoints()
@@ -4153,7 +4167,7 @@ def interpolate_voronoi_diagram(interpolatedCenterlines, patchCenterlines,
     completeVoronoiDiagram = vtk.vtkPolyData()
     completeVoronoiDiagram.DeepCopy(clippedVoronoi)
 
-    for j in range(1, patchCenterlines.GetNumberOfLines()):
+    for j in range(1, 3): #patchCenterlines.GetNumberOfLines()):
         interpolationCellId = j - 1
         startId = 0
         endId = j
@@ -4252,14 +4266,12 @@ def interpolate_voronoi_diagram(interpolatedCenterlines, patchCenterlines,
                                                                                    id1, id2, startInterpolationDataset,
                                                                                    endHalfInterpolationDataset,
                                                                                    bif_, 1, clippingPoints)
-
             completeVoronoiDiagram = insert_new_voronoi_points(completeVoronoiDiagram, newVoronoiPoints,
                                                                newVoronoiPointsMISR)
             newVoronoiPoints, newVoronoiPointsMISR = voronoi_diagram_interpolation(interpolationCellId,
                                                                                    id2, id1, endInterpolationDataset,
                                                                                    startHalfInterpolationDataset,
                                                                                    bif_, -1, clippingPoints)
-
             completeVoronoiDiagram = insert_new_voronoi_points(completeVoronoiDiagram, newVoronoiPoints,
                                                                newVoronoiPointsMISR)
 
