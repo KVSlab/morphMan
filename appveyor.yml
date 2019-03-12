@@ -60,7 +60,7 @@ test_script:
   - "%CMD_IN_ENV% conda create -n morphman_env morphman pytest"
 
 # Activate environment
-  - "%CMD_IN_ENV% conda activate morphman_env"
+  - "%CMD_IN_ENV% activate morphman_env"
 
 # Useful for debugging any issues with conda
   - "%CMD_IN_ENV% conda info -a"
