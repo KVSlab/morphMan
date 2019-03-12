@@ -33,7 +33,7 @@ install:
   - conda create -n morphman_env morphman pytest
 
   # Activate environment
-  - conda activate morphman_env
+  - source activate morphman_env
 
   # Useful for debugging any issues with conda
   - conda info -a
