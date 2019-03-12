@@ -49,6 +49,7 @@ build: false
 
 test_script:
   # Start building
+  - "%CMD_IN_ENV% conda init powershell"
   - "%CMD_IN_ENV% conda config --set always_yes yes"
   - "%CMD_IN_ENV% conda config --add channels vmtk"
   - "%CMD_IN_ENV% conda install pytest vtk vmtk scipy numpy"
