@@ -4,13 +4,13 @@
    contain the root `toctree` directive.
 
 
-.. title:: morpMan
+.. title:: morphMan
 
 ========
 morphMan
 ========
 
-Documentation for `morphMan <https://github.com/kvslab/morphman>`_.
+Documentation for `morphMan <https://github.com/KVSlab/morphMan>`_.
 
 .. toctree::
    :maxdepth: 2
