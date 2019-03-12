@@ -49,12 +49,10 @@ build: false
 
 test_script:
   # Start building
-  #- "%CMD_IN_ENV% conda init powershell"
   - "%CMD_IN_ENV% conda config --set always_yes yes"
   - "%CMD_IN_ENV% conda config --add channels vmtk"
   - "%CMD_IN_ENV% conda config --add channels morphman"
   - "%CMD_IN_ENV% conda install pytest vtk vmtk scipy numpy"
-  #- "%CMD_IN_ENV% conda build --python %APP_CONDA_PY% ."
 
 # Set up environment
   - "%CMD_IN_ENV% conda create -n morphman_env morphman pytest"
@@ -66,8 +64,6 @@ test_script:
   - "%CMD_IN_ENV% conda info -a"
 
   # Search and replace in vmtkcenterlines.py for / to //
-  - "%CMD_IN_END% dir"
-
   - '%CMD_IN_ENV% sed -i "s/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g" C:\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtkcenterlines.py'
   - '%CMD_IN_ENV% sed -i "s/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g" C:\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtkcenterlines.py'
 
