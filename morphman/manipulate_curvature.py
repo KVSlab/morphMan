@@ -285,9 +285,15 @@ def move_all_centerlines(old_cl, new_cl, diverging_id, diverging_centerlines, sm
     return centerline
 
 
-def read_command_line():
+def read_command_line_curvature(input_path=None, output_path=None):
     """
-    Read arguments from commandline
+    Read arguments from commandline and return all values in a dictionary.
+    If input_path and output_path are not None, then do not parse command line, but
+    only return default values.
+
+    Args:
+        input_path (str): Input file path, positional argument with default None.
+        output_path (str): Output file path, positional argument with default None.
     """
     # Description of the script
     description = "Manipulates a selected part of a tubular geometry" + \
@@ -297,7 +303,8 @@ def read_command_line():
     parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
 
     # Add common arguments
-    add_common_arguments(parser)
+    required = not (input_path is not None and output_path is not None)
+    add_common_arguments(parser, required=required)
 
     # Set region of interest:
     parser.add_argument("-r", "--region-of-interest", type=str, default="manual",
@@ -323,8 +330,11 @@ def read_command_line():
     parser.add_argument("-sl", "--smooth-line", type=str2bool, default=True,
                         help="Smooths centerline if True, anti-smooths if False")
 
-    # Parse
-    args = parser.parse_args()
+    # Parse paths to get default values
+    if required:
+        args = parser.parse_args()
+    else:
+        args = parser.parse_args(["-i" + input_path, "-o" + output_path])
 
     return dict(input_filepath=args.ifile, smooth=args.smooth,
                 smooth_factor=args.smooth_factor, smooth_factor_line=args.smooth_factor_line,

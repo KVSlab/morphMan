@@ -23,8 +23,9 @@ from the Aneurisk database. For the commands below we assume that there
 is a file `./C0005/surface/model.vtp`, relative to where you execute the command.
 Performing the manipulation can be achieved by running ``morphman-bifurcation`` in the terminal, followed by the
 respective command line arguments. Alternatively, you can execute the Python script directly,
-located in the ``morphman`` subfolder, by typing ``python manipulate_bifurcation.py``.
-
+located in the ``morphman`` subfolder, by typing ``python manipulate_bifurcation.py``. We have also created a 
+demo folder where we show how to run this tutorial from a python script, please checkout the code from github to
+run the demos.
 
 Shown in Figure 2 is the result of rotating the two daughter branches with both
 a positive and negative angle.
@@ -47,7 +48,7 @@ which will output a smoother bifurcation, as shown on the right side in Figure 3
 The results shown in Figure 3 can reproduced by
 running the command::
 
-    morphman-bifurcation --ifile C0005/surface/model.vtp --ofile C0005/surface/rotate_no_notch.vtp --angle -20 --bif True --lower True  --region-of-interest commandline --region-points 43.2 70.5 26.4 84.4 60.6 50.6 --poly-ball-size 250 250 250
+    morphman-bifurcation --ifile C0005/surface/model.vtp --ofile C0005/surface/rotate_no_notch.vtp --angle -20 --bif True --lower True --region-of-interest commandline --region-points 43.2 70.5 26.4 84.4 60.6 50.6 --poly-ball-size 250 250 250
 
 Using both flags have proven to give an improved surface,
 and when used for computational fluid dynamics, a more physiological plausible wall shear stress [2]_.
