@@ -43,18 +43,18 @@ install:
   # Installs the appropriate Miniconda (Py2/Py3, 32/64 bit),
   - powershell .\\continuous-integration\\appveyor\\install.ps1
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
-  - "set PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
+  - "SET PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
 
 build: false
 
 test_script:
   # Start building
-  - "%CMD_IN_ENV% conda init powershell"
-  - "%CMD_IN_ENV% . $Profile"
+  #- "%CMD_IN_ENV% conda init powershell"
   - "%CMD_IN_ENV% conda config --set always_yes yes"
   - "%CMD_IN_ENV% conda config --add channels vmtk"
   - "%CMD_IN_ENV% conda install pytest vtk vmtk scipy numpy"
-  - "%CMD_IN_ENV% conda build --python %APP_CONDA_PY% ."
+  #- "%CMD_IN_ENV% conda build --python %APP_CONDA_PY% ."
+
   
   # Search and replace in vmtkcenterlines.py for / to //
   - '%CMD_IN_ENV% sed -i "s/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g" ..\\..\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtkcenterlines.py'
