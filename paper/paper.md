@@ -57,7 +57,7 @@ have based the algorithms on the centerlines and Voronoi diagram of the surface,
 diagram are not connected, and therefore easier to manipulate. As a result, only the region of interest is manipulated, and the rest of the geometry is left unchanged. Using the Voronoi diagram to alter the surface was first presented in 
 [@Piccinelli2011]; moreover, a subset of the algorithms are presented in [@Bergersen2016] and [@kjeldsberg2018investigating].
 
-In *morphMan v0.1* you can alter cross-sectional area, bifurcation angles, 
+In *morphMan v0.2* you can alter cross-sectional area, bifurcation angles, 
 overall curvature in a segment, and the shape of specific bends. 
 For each category, there is a wide range of options, thus providing the users with many degrees of
 freedom for manipulating the geometries. 

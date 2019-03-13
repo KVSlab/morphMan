@@ -559,18 +559,23 @@ def merge_cl(centerline, end_point, div_point):
 
     return merge
 
-
-def read_command_line():
+def read_command_line_bifurcation(input_path=None, output_path=None):
     """
-    Read arguments from commandline
-    """
+    Read arguments from commandline and return all values in a dictionary.
+    If input_path and output_path are not None, then do not parse command line, but
+    only return default values.
 
+    Args:
+        input_path (str): Input file path, positional argument with default None.
+        output_path (str): Output file path, positional argument with default None.
+    """
     description = "Removes the bifurcation (possibly with an aneurysm), after which the" + \
                   " daughter branches can be rotated."
     parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
 
     # Add common arguments
-    add_common_arguments(parser)
+    required = not (input_path is not None and output_path is not None)
+    add_common_arguments(parser, required=required)
 
     # Set region of interest:
     parser.add_argument("-r", "--region-of-interest", type=str, default="manual",

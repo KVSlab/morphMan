@@ -381,9 +381,15 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
     return new_voronoi, new_centerlines
 
 
-def read_command_line():
+def read_command_line_area(input_path=None, output_path=None):
     """
-    Read arguments from commandline
+    Read arguments from commandline and return all values in a dictionary.
+    If input_path and output_path are not None, then do not parse command line, but
+    only return default values.
+
+    Args:
+        input_path (str): Input file path, positional argument with default None.
+        output_path (str): Output file path, positional argument with default None.
     """
     # Description of the script
     description = "Manipulates the area of a tubular geometry. The script changes the area" + \
@@ -394,7 +400,8 @@ def read_command_line():
     parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
 
     # Add common arguments
-    add_common_arguments(parser)
+    required = not (input_path is not None and output_path is not None)
+    add_common_arguments(parser, required=required)
 
     # Mode / method for manipulation
     parser.add_argument("-m", "--method", type=str, default="variation",
@@ -456,8 +463,11 @@ def read_command_line():
                              " area of the geometry is increase/decreased overall or only" +
                              " in stenosis / bulge.")
 
-    # Parse
-    args = parser.parse_args()
+    # Parse paths to get default values
+    if required:
+        args = parser.parse_args()
+    else:
+        args = parser.parse_args(["-i" + input_path, "-o" + output_path])
 
     if args.method in ["stenosis", "bulge", "linear"] and args.region_of_interest == "first_line":
         raise ValueError("Can not set region of interest to 'first_line' for 'stenosis'," + \
@@ -480,7 +490,7 @@ def read_command_line():
                 smooth_factor=args.smooth_factor, beta=args.beta,
                 region_of_interest=args.region_of_interest,
                 region_points=args.region_points, ratio=args.ratio,
-                stenosis_length=args.size,
+                stenosis_length=args.stenosis_length,
                 percentage=args.percentage, output_filepath=args.ofile,
                 poly_ball_size=args.poly_ball_size, no_smooth=args.no_smooth,
                 no_smooth_point=args.no_smooth_point, resampling_step=args.resampling_step)

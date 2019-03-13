@@ -414,9 +414,15 @@ def move_voronoi_vertically(voronoi_clipped, centerline_clipped, id1_0, clip_id,
     return new_dataset
 
 
-def read_command_line():
+def read_command_line_bend(input_path=None, output_path=None):
     """
-    Read arguments from commandline
+    Read arguments from commandline and return all values in a dictionary.
+    If input_path and output_path are not None, then do not parse command line, but
+    only return default values.
+
+    Args:
+        input_path (str): Input file path, positional argument with default None.
+        output_path (str): Output file path, positional argument with default None.
     """
     # Description of the script
     description = "Moves a selected part of a tubular geometry, " + \
@@ -427,7 +433,8 @@ def read_command_line():
     parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
 
     # Add common arguments
-    add_common_arguments(parser)
+    required = not (input_path is not None and output_path is not None)
+    add_common_arguments(parser, required=required)
 
     # Set region of interest:
     parser.add_argument("-r", "--region-of-interest", type=str, default="manual",
@@ -457,7 +464,10 @@ def read_command_line():
                              "ranging from -1.0 to 1.0, defining the magnitude " +
                              "of stretching or compression of the tubular structure.")
     # Output file argument
-    args = parser.parse_args()
+    if required:
+        args = parser.parse_args()
+    else:
+        args = parser.parse_args(["-i" + input_path, "-o" + output_path])
 
     if args.no_smooth_point is not None and len(args.no_smooth_point):
         if len(args.no_smooth_point) % 3 != 0:
