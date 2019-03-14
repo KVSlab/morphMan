@@ -42,7 +42,6 @@ setuptools.setup(
                       ['morphman-area=morphman.manipulate_area:main_area',
                        'morphman-bend=morphman.manipulate_bend:main_bend',
                        'morphman-bifurcation=morphman.manipulate_bifurcation:main_bifurcation',
-                       'morphman-curvature=morphman.manipulate_curvature:main_curvature',
-                       'morphman-branch=morphman.manipulate_branch:main_branch']
+                       'morphman-curvature=morphman.manipulate_curvature:main_curvature']
                   }
 )
