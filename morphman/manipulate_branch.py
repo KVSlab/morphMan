@@ -9,28 +9,45 @@ from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 from common import *
 
+
 # Local import
 
-surfaceNormalsArrayName = 'SurfaceNormalArray'
-frenetTangentArrayName = 'FrenetTangent'
+
+def test_data(capped_surface):
+    branch_point_surface_id = 12728
+    region_points = [[37.119407653808594, 27.06595230102539, 33.817745208740234],
+                     [37.82146072387695, 22.682409286499023, 28.8624267578125]]
+    branch_point = capped_surface.GetPoint(branch_point_surface_id)
+    return branch_point_surface_id, region_points, branch_point
+
+
+def get_new_branch_position(capped_surface):
+    print("\nPlease select point to move branch in the render window.")
+    seed_selector = vmtkPickPointSeedSelector()
+    seed_selector.SetSurface(capped_surface)
+    seed_selector.text = "Press space to select the point where you want to move the branch to, 'u' to undo.\n"
+    seed_selector.Execute()
+    new_branch_pos_id = seed_selector.GetTargetSeedIds().GetId(0)
+    new_branch_pos = capped_surface.GetPoint(new_branch_pos_id)
+
+    return new_branch_pos_id, new_branch_pos
 
 
 def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, region_of_interest, region_points,
                       poly_ball_size, no_smooth, no_smooth_point, resampling_step):
     """
-    Primary script for moving a selected part of any blood vessel.
-    Relies on an input centerline, a surface geometry of a 3D blood vessel network,
-    and the magnitude of movement (alpha, beta) in horizontal and vertical direction respectively.
+    Primary script for moving a selected branch of any blood vessel.
+    Relies on a surface geometry of a 3D blood vessel network.
 
     Defines in- and out-put files, computes voronoi diagram, and
-    moves voronoi diagram in the horizontal direction based on the
-    definitions in "Investigating the Interaction Between Morphology
-    of the Anterior Bend and Aneurysm Initiation" (2018).
+    moves voronoi diagram according to user selected points.
+    Used selects two points defining a diverging branch, and the
+    one point defining the new location on the surface.
+    Moves, and performs rotation of the voronoi diagram, then
+    reconstructs the Voronoi diagram, creating a new surface.
     Proceeds by computing the corresponding centerline in the new
     geometries, used for postprocessing, geometric analysis and
     meshing.
-
-    Continuation in the move_vessel_vertically-method for vertical movement.
 
     Args:
         input_filepath (str): Path to input surface.
@@ -66,19 +83,13 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, re
                                                                   capped_surface, resampling=resampling_step,
                                                                   smooth=False, base_path=base_path)
     if smooth:
+        print("-- Smoothing Voronoi diagram")
         voronoi = prepare_voronoi_diagram(capped_surface, centerlines_complete, base_path,
                                           smooth, smooth_factor, no_smooth,
                                           no_smooth_point, voronoi, pole_ids)
 
-        # FIXME: For testing only:
-        # write_polydata(centerlines_complete, "COMPLETE.vtp")
-        # branch_point = (52.46571350097656, 28.395702362060547, 17.509746551513672)
-
-    # region_points = np.asarray([[34.54340362548828, 7.8101677894592285, 43.735019683837899],
-    #                            [36.73946762084961, 28.79076385498047, 36.41799545288086]])
-    region_points = np.asarray([[38.820396423339844, 20.89110565185547, 28.940338134765625],
-                                [38.287437438964844, 27.811443328857422, 34.812583923339844]])
-    branch_point_surface_id = 6309
+    # TODO: For test only
+    branch_point_surface_id, region_points, branch_point = test_data(capped_surface)
 
     if region_points is None:
         # Get region of interest
@@ -86,23 +97,17 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, re
                                                        region_of_interest, "bend", region_points, 0.0)
         region_points = [[region_points[3 * i], region_points[3 * i + 1], region_points[3 * i + 2]]
                          for i in range(len(region_points) // 3)]
-        # Get place to put branch
-        print("\nPlease select point to move branch in the render window.")
-        seed_selector = vmtkPickPointSeedSelector()
-        seed_selector.SetSurface(capped_surface)
-        seed_selector.text = "Press space to select the point where you want to move the branch to, 'u' to undo.\n"
-        seed_selector.Execute()
-        branch_point_id = seed_selector.GetTargetSeedIds()
-        branch_point = capped_surface.GetPoint(branch_point_id.GetId(0))
-        branch_point_surface_id = branch_point_id.GetId(0)
-        print(branch_point_surface_id)
 
-    # Test branch-extractor
+        # Get new position of branch on model surface
+        new_branch_pos_id, new_branch_pos = get_new_branch_position(capped_surface)
+
+    # Branch-extractor
     Brancher = vmtkscripts.vmtkBranchExtractor()
     Brancher.Centerlines = centerlines_complete
     Brancher.RadiusArrayName = radiusArrayName
     Brancher.Execute()
     centerlines_branched = Brancher.Centerlines
+
     # Set and get clipping points, centerlines and diverging centerlines
     centerlines, diverging_centerlines, region_points, region_points_vtk, diverging_ids = \
         find_region_of_interest_and_diverging_centerlines(centerlines_complete, region_points)
@@ -260,19 +265,25 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, re
         vtk_points.InsertNextPoint(p)
     clipping_points = (vtk_points, np.asarray([p1, p2]))
     patch_cl_upstream_and_branch = merge_data([patch_cl_upstream, centerline_branch_moved])
-    interpolated_voronoi = interpolate_voronoi_diagram(interpolated_cl_upstream, patch_cl_upstream_and_branch,
-                                                       merge_data([voronoi_start, moved_voronoi_branch]),
-                                                       clipping_points,
-                                                       [], cylinder_factor=7.0)
-    write_polydata(interpolated_voronoi, "voroINTER.vtp")
-    # Write a new surface from the new voronoi diagram
-    print("-- Create new surface.")
-    # new_voronoi = merge_data([voronoi_end, merge_data([voronoi_start, moved_voronoi_branch])])
-    new_voronoi = merge_data([voronoi_end, interpolated_voronoi])
+    to_interpolate = False
+    if to_interpolate:
+        interpolated_voronoi = interpolate_voronoi_diagram(interpolated_cl_upstream, patch_cl_upstream_and_branch,
+                                                           merge_data([voronoi_start, moved_voronoi_branch]),
+                                                           clipping_points,
+                                                           [], cylinder_factor=7.0)
+        write_polydata(interpolated_voronoi, "voroINTER.vtp")
+        # Write a new surface from the new voronoi diagram
+        print("-- Create new surface.")
+        # new_voronoi = merge_data([voronoi_end, merge_data([voronoi_start, moved_voronoi_branch])])
+        new_voronoi = merge_data([voronoi_end, interpolated_voronoi])
+    else:
+        new_voronoi = merge_data([voronoi_end, voronoi_start, moved_voronoi_branch])
     write_polydata(new_voronoi, new_voronoi_path)
+    write_polydata(new_voronoi, "merged_voronoi.vtp")
 
     new_surface = create_new_surface(new_voronoi, poly_ball_size=poly_ball_size)
     write_polydata(new_surface, output_filepath)
+    write_polydata(new_surface, "final_model.vtp")
 
     # print("-- Smoothing, clean, and check surface")
     """
@@ -463,15 +474,7 @@ def read_command_line():
                              " which defines the start and end of the region of interest. " +
                              " Example providing the points (1, 5, -1) and (2, -4, 3):" +
                              " --region-points 1 5 -1 2 -4 3")
-    # "Variation" arguments
-    # parser.add_argument("--alpha", type=float, default=0.0,
-    #                    help="Compression factor in vertical direction, " +
-    #                         "ranging from -1.0 to 1.0, defining the magnitude " +
-    #                         "of stretching or compression of the tubular structure.")
-    # parser.add_argument("--beta", type=float, default=0.0,
-    #                    help="Compression factor in vertical direction,  " +
-    #                         "ranging from -1.0 to 1.0, defining the magnitude " +
-    #                         "of stretching or compression of the tubular structure.")
+
     # Output file argument
     args = parser.parse_args()
 

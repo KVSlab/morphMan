@@ -33,6 +33,8 @@ eikonalSolutionArrayName = 'EikonalSolutionArray'
 edgeArrayName = 'EdgeArray'
 edgePCoordArrayName = 'EdgePCoordArray'
 costFunctionArrayName = 'CostFunctionArray'
+surfaceNormalsArrayName = 'SurfaceNormalArray'
+frenetTangentArrayName = 'FrenetTangent'
 
 # Options not available from commandline
 divergingRatioToSpacingTolerance = 2.0
