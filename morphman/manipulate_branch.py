@@ -8,11 +8,16 @@
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 # Local import
+from IPython import embed
+
 from morphman.common import *
+
+surfaceNormalsArrayName = 'SurfaceNormalArray'
+frenetTangentArrayName = 'FrenetTangent'
 
 
 def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, region_of_interest, region_points,
-                       poly_ball_size, no_smooth, no_smooth_point, resampling_step):
+                      poly_ball_size, no_smooth, no_smooth_point, resampling_step):
     """
     Primary script for moving a selected part of any blood vessel.
     Relies on an input centerline, a surface geometry of a 3D blood vessel network,
@@ -66,21 +71,22 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, re
                                           smooth, smooth_factor, no_smooth,
                                           no_smooth_point, voronoi, pole_ids)
 
-    # FIXME: For testing only:
-    #write_polydata(centerlines_complete, "COMPLETE.vtp")
-    #branch_point = (52.46571350097656, 28.395702362060547, 17.509746551513672)
+        # FIXME: For testing only:
+        # write_polydata(centerlines_complete, "COMPLETE.vtp")
+        # branch_point = (52.46571350097656, 28.395702362060547, 17.509746551513672)
 
-    #branch_point_surface_id = 13747
-    #region_points = np.asarray([[48.86489486694336, 30.49808120727539, 19.696435928344727],
-    #                            [47.171661376953125, 33.69294357299805, 28.17209815979004]])
+        # branch_point_surface_id = 13747
+    # region_points = np.asarray([[34.54340362548828, 7.8101677894592285, 43.735019683837899],
+    #                            [36.73946762084961, 28.79076385498047, 36.41799545288086]])
 
     if region_points is None:
         # Get region of interest
-        _, _, _, region_points = get_line_to_change(capped_surface, centerlines_complete,
-                                                    region_of_interest, "bend", region_points, 0)
+        embed()
+
+        _, _, _, region_points, _ = get_line_to_change(capped_surface, centerlines_complete,
+                                                       region_of_interest, "bend", region_points, 0.0)
         region_points = [[region_points[3 * i], region_points[3 * i + 1], region_points[3 * i + 2]]
                          for i in range(len(region_points) // 3)]
-
         # Get place to put branch
         print("\nPlease select point to move branch in the render window.")
         seed_selector = vmtkPickPointSeedSelector()
@@ -89,6 +95,7 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, re
         seed_selector.Execute()
         branch_point_id = seed_selector.GetTargetSeedIds()
         branch_point = capped_surface.GetPoint(branch_point_id.GetId(0))
+        branch_point_surface_id = branch_point_id.GetId(0)
 
     # Test branch-extractor
     Brancher = vmtkscripts.vmtkBranchExtractor()
@@ -96,7 +103,6 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, re
     Brancher.RadiusArrayName = radiusArrayName
     Brancher.Execute()
     centerlines_branched = Brancher.Centerlines
-
     # Set and get clipping points, centerlines and diverging centerlines
     centerlines, diverging_centerlines, region_points, region_points_vtk, diverging_ids = \
         find_region_of_interest_and_diverging_centerlines(centerlines_complete, region_points)
@@ -150,7 +156,8 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, re
     # Get surface normals
     SurfaceNormals = vmtkscripts.vmtkSurfaceNormals()
     SurfaceNormals.Surface = capped_surface
-    SurfaceNormals.NormalsArrayName = surfaceNormalsArrayName
+    # SurfaceNormals.NormalsArrayName = surfaceNormalsArrayName
+    SurfaceNormals.NormalsArrayName = "SurfaceNormalArray"
     SurfaceNormals.Execute()
     capped_surface_with_normals = SurfaceNormals.Surface
     normal = capped_surface_with_normals.GetPointData().GetNormals().GetTuple(branch_point_surface_id)
@@ -260,7 +267,7 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, re
     write_polydata(interpolated_voronoi, "voroINTER.vtp")
     # Write a new surface from the new voronoi diagram
     print("-- Create new surface.")
-    #new_voronoi = merge_data([voronoi_end, merge_data([voronoi_start, moved_voronoi_branch])])
+    # new_voronoi = merge_data([voronoi_end, merge_data([voronoi_start, moved_voronoi_branch])])
     new_voronoi = merge_data([voronoi_end, interpolated_voronoi])
     write_polydata(new_voronoi, new_voronoi_path)
 
@@ -370,8 +377,8 @@ def get_rotation_matrices(n, n_old, id, id_old, centerlines):
     x_new = R_u.dot(x)
 
     theta = np.arccos(x_new.dot(x_prime) / (la.norm(x_new) * la.norm(x_prime)))
-    cos_t = np.cos(theta+np.pi)
-    sin_t = np.sin(theta+np.pi)
+    cos_t = np.cos(theta + np.pi)
+    sin_t = np.sin(theta + np.pi)
 
     R_z = np.asarray([[cos_t, -sin_t, 0],
                       [sin_t, cos_t, 0],
@@ -457,11 +464,11 @@ def read_command_line():
                              " Example providing the points (1, 5, -1) and (2, -4, 3):" +
                              " --region-points 1 5 -1 2 -4 3")
     # "Variation" arguments
-    #parser.add_argument("--alpha", type=float, default=0.0,
+    # parser.add_argument("--alpha", type=float, default=0.0,
     #                    help="Compression factor in vertical direction, " +
     #                         "ranging from -1.0 to 1.0, defining the magnitude " +
     #                         "of stretching or compression of the tubular structure.")
-    #parser.add_argument("--beta", type=float, default=0.0,
+    # parser.add_argument("--beta", type=float, default=0.0,
     #                    help="Compression factor in vertical direction,  " +
     #                         "ranging from -1.0 to 1.0, defining the magnitude " +
     #                         "of stretching or compression of the tubular structure.")
