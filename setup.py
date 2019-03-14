@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 DEPENDENCIES = []  # 'scipy', 'numpy', 'vtk']
 TEST_DEPENDENCIES = []  # 'pytest']
 
-VERSION = "0.1"
+VERSION = "0.2"
 URL = "https://github.com/KVSlab/morphMan.git"
 
 setuptools.setup(
@@ -42,6 +42,7 @@ setuptools.setup(
                       ['morphman-area=morphman.manipulate_area:main_area',
                        'morphman-bend=morphman.manipulate_bend:main_bend',
                        'morphman-bifurcation=morphman.manipulate_bifurcation:main_bifurcation',
-                       'morphman-curvature=morphman.manipulate_curvature:main_curvature']
+                       'morphman-curvature=morphman.manipulate_curvature:main_curvature',
+                       'morphman-branch=morphman.manipulate_branch:main_branch']
                   }
 )
