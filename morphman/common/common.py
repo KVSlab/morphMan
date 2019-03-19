@@ -2964,12 +2964,15 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
         # Check if the centerline is going through both or None of the start and end of
         # the region of interest
         if close_start == close_end:
-            if start_id != 0:
-                tmp = extract_single_line(centerline, i, startID=0, endID=start_id - 1)
+            if close_start:
+                if start_id != 0:
+                    tmp = extract_single_line(centerline, i, startID=0, endID=start_id - 1)
+                    remaining_centerlines.append(tmp)
+                tmp = extract_single_line(centerline, i, startID=end_id + 1,
+                                          endID=line.GetNumberOfPoints() - 1)
                 remaining_centerlines.append(tmp)
-            tmp = extract_single_line(centerline, i, startID=end_id + 1,
-                                      endID=line.GetNumberOfPoints() - 1)
-            remaining_centerlines.append(tmp)
+            else:
+                remaining_centerlines.append(line)
         else:
             diverging_centerlines.append(line)
 
