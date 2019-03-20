@@ -14,7 +14,7 @@ from morphman.common import *
 
 def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
                     no_smooth_point, region_of_interest, region_points, beta, ratio,
-                    stenosis_length, percentage, output_filepath, poly_ball_size,
+                    size, percentage, output_filepath, poly_ball_size,
                     resampling_step):
     """
     Objective manipulation of area variation in
@@ -33,7 +33,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
         beta (float): Factor determining how much the geometry will differ.
         ratio (float): Target ratio, A_max / A_min. Beta is ignored (and estimated) if given.
         percentage (float): Percentage the area of the geometry / stenosis is increase/decreased.
-        stenosis_length (float): Length of affected stenosis area. Default is MISR x 2.0 of selected point.
+        size (float): Length of affected stenosis area. Default is MISR x 2.0 of selected point.
         region_of_interest (str): Method for setting the region of interest ['manual' | 'commandline' | 'first_line']
         region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint
         poly_ball_size (list): Resolution of polyballs used to create surface.
@@ -77,7 +77,8 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     centerline_splined, centerline_remaining, \
         centerline_diverging, region_points, diverging_ids = get_line_to_change(capped_surface, centerlines,
                                                                                 region_of_interest, method,
-                                                                                region_points, stenosis_length)
+                                                                                region_points,
+                                                                                size)
 
     write_polydata(centerline_splined, centerline_spline_path)
     write_polydata(centerline_remaining, centerline_remaining_path)
@@ -395,8 +396,9 @@ def read_command_line_area(input_path=None, output_path=None):
     description = "Manipulates the area of a tubular geometry. The script changes the area" + \
                   " in three different ways:" + \
                   "\n1) Increase or decrease the area variation along the region of" + \
-                  " interest. (variation)\n2) Create or remove a local narrowing. (stenosis)" + \
-                  "\n3) Inflate or deflate the entire region of interest. (area)"
+                  " interest. (variation)\n2) Create a local narrowing (stenosis) or widening (bulge)." + \
+                  "\n3) Inflate or deflate the entire region of interest. (area)" + \
+                  "\n4) A linear change in area between two points, for instance to remove a stenosis."
     parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
 
     # Add common arguments
@@ -490,8 +492,7 @@ def read_command_line_area(input_path=None, output_path=None):
                 smooth_factor=args.smooth_factor, beta=args.beta,
                 region_of_interest=args.region_of_interest,
                 region_points=args.region_points, ratio=args.ratio,
-                stenosis_length=args.stenosis_length,
-                percentage=args.percentage, output_filepath=args.ofile,
+                size=args.size, percentage=args.percentage, output_filepath=args.ofile,
                 poly_ball_size=args.poly_ball_size, no_smooth=args.no_smooth,
                 no_smooth_point=args.no_smooth_point, resampling_step=args.resampling_step)
 
