@@ -3,6 +3,7 @@
 [![Documentation Status](https://readthedocs.org/projects/morphman/badge/?version=latest)](https://morphman.readthedocs.io/en/latest/?badge=latest)
 [![Build Status](https://travis-ci.org/KVSlab/morphMan.svg?branch=master)](https://travis-ci.org/KVSlab/morphMan)
 [![Build status](https://ci.appveyor.com/api/projects/status/2k6q32hqg6g5oopc?svg=true)](https://ci.appveyor.com/project/hkjeldsberg/morphman-s1s38)
+[![DOI](http://joss.theoj.org/papers/10.21105/joss.01065/status.svg)](https://doi.org/10.21105/joss.01065)
 
 
 
@@ -43,11 +44,10 @@ Documentation
 -------------
 For an introduction to morphMan, and tutorials, please refer to the [documentation](https://morphman.readthedocs.io/en/latest/).
 
-If you wish to use morphMan for journal publications, please cite the following master theses: 
+If you wish to use morphMan for journal publications, please cite the journal article from JOSS: 
 
-* [Bergersen 2016, Master thesis](https://www.duo.uio.no/bitstream/handle/10852/50515/master-bergersen.pdf?sequence=5&isAllowed=y)
+Kjeldsberg et al., (2019). morphMan: Automated manipulation of vascular geometries. Journal of Open Source Software, 4(35), 1065, https://doi.org/10.21105/joss.01065
 
-* [Kjeldsberg 2018, Master thesis](https://www.duo.uio.no/bitstream/handle/10852/63389/henrikkjeldsberg_master.pdf?sequence=1&isAllowed=y)
 
 Installation
 ------------
