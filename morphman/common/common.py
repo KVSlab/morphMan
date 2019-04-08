@@ -13,7 +13,7 @@ import numpy as np
 import numpy.linalg as la
 import vtk
 from scipy.interpolate import splrep, splev
-from scipy.signal import resample
+from scipy.signal import argrelextrema, resample
 from vmtk import vtkvmtk, vmtkscripts
 from vtk.util import numpy_support
 
