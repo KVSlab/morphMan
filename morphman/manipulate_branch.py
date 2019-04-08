@@ -11,26 +11,6 @@ from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from common import *
 
 
-def test_data(capped_surface):
-    branch_point_surface_id = 12728
-    region_points = [[37.119407653808594, 27.06595230102539, 33.817745208740234],
-                     [37.82146072387695, 22.682409286499023, 28.8624267578125]]
-    branch_point = capped_surface.GetPoint(branch_point_surface_id)
-    return branch_point_surface_id, region_points, branch_point
-
-
-def get_new_branch_position(capped_surface):
-    print("\nPlease select point to move branch in the render window.")
-    seed_selector = vmtkPickPointSeedSelector()
-    seed_selector.SetSurface(capped_surface)
-    seed_selector.text = "Press space to select the point where you want to move the branch to, 'u' to undo.\n"
-    seed_selector.Execute()
-    new_branch_pos_id = seed_selector.GetTargetSeedIds().GetId(0)
-    new_branch_pos = capped_surface.GetPoint(new_branch_pos_id)
-
-    return new_branch_pos_id, new_branch_pos
-
-
 def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, region_of_interest, region_points,
                       poly_ball_size, no_smooth, no_smooth_point, resampling_step, angle):
     """
@@ -61,21 +41,14 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, re
         angle (float): Angle to rotate around new surface normal vector. Default i no rotation.
     """
 
-    # Input filenames
+    # Input and output filenames
     base_path = get_path_names(input_filepath)
-
-    # Centerlines filenames
     centerlines_path = base_path + "_centerline.vtp"
-    diverging_centerline_branch_path = base_path + "_centerlines_branch.vtp"
     new_centerlines_path = base_path + "_centerline_moved_and_rotated.vtp"
-
-    # Voronoi diagrams filenames
     new_voronoi_path = base_path + "_voronoi_moved_and_rotated.vtp"
 
     # Clean and capp / uncapp surface
     surface, capped_surface = prepare_surface(base_path, input_filepath)
-
-    # Compute centerlines
     inlet, outlets = get_centers(surface, base_path)
 
     print("-- Compute centerlines and Voronoi diagram")
@@ -88,9 +61,6 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, re
                                           smooth, smooth_factor, no_smooth,
                                           no_smooth_point, voronoi, pole_ids)
 
-    # TODO: For test only
-    new_branch_pos_id, region_points, new_branch_pos = test_data(capped_surface)
-
     if region_points is None:
         # Get region of interest
         _, _, _, region_points, _ = get_line_to_change(capped_surface, centerlines_complete,
@@ -102,11 +72,7 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, re
         new_branch_pos_id, new_branch_pos = get_new_branch_position(capped_surface)
 
     # Branch-extractor
-    Brancher = vmtkscripts.vmtkBranchExtractor()
-    Brancher.Centerlines = centerlines_complete
-    Brancher.RadiusArrayName = radiusArrayName
-    Brancher.Execute()
-    centerlines_branched = Brancher.Centerlines
+    centerlines_branched = vmtk_branch_extractor(centerlines_complete)
 
     # Set and get clipping points, centerlines and diverging centerlines
     centerlines, diverging_centerlines, region_points, region_points_vtk, diverging_ids = \
@@ -116,27 +82,17 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, re
 
     # Handle diverging centerlines within region of interest
     if diverging_centerline_ispresent:
-        print("-- Clipping a centerline divering in the region of interest.")
-        patch_diverging_line = clip_diverging_line(extract_single_line(diverging_centerlines, 0),
-                                                   region_points[0], diverging_id)
-        diverging_centerline = extract_single_line(patch_diverging_line, 1)
-        diverging_centerline_end = diverging_centerline.GetPoint(diverging_centerline.GetNumberOfPoints() - 1)
+        diverging_centerline_end = get_diverging_centerline_end_point(diverging_centerlines, diverging_id,
+                                                                      region_points)
     else:
         raise RuntimeError("No diverging branch detected! Cannot translate nothing.")
 
-    # Select diverging branch from Brancher and compare with diverging branch found manually
-    for i in range(centerlines_branched.GetNumberOfLines()):
-        centerline_branch = extract_single_line(centerlines_branched, i)
-        if centerline_branch.GetPoint(centerline_branch.GetNumberOfPoints() - 1) == diverging_centerline_end:
-            diverging_centerline_branch = centerline_branch
-            write_polydata(diverging_centerline_branch, diverging_centerline_branch_path)
-            break
+    # Append remaining diverging centerlines back to centerliens
+    if diverging_centerlines.GetNumberOfLines() > 1:
+        centerlines = update_centerlines(centerlines, diverging_centerlines)
 
-    diverging_centerline_branch_start = diverging_centerline_branch.GetPoint(0)
-    radiusArrayDiv = diverging_centerline_branch.GetPointData().GetArray(radiusArrayName)
-    on_div_cl_misr = radiusArrayDiv.GetTuple1(0)
-    end_point, rad, _ = move_past_sphere(diverging_centerline_branch, diverging_centerline_branch_start, on_div_cl_misr,
-                                         start=0, stop=diverging_centerline_branch.GetNumberOfPoints(), step=1, X=0.5)
+    # Select diverging branch from Brancher and compare with diverging branch found manually
+    diverging_centerline_branch = get_diverging_centerline_branch(centerlines_branched, diverging_centerline_end)
 
     # Clip Voronoi diagram into bend and remaining part of geometry
     print("-- Clipping Voronoi diagrams")
@@ -144,18 +100,8 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, re
                                                                        [diverging_centerline_branch,
                                                                         centerlines])
     # Get surface normals
-    SurfaceNormals = vmtkscripts.vmtkSurfaceNormals()
-    SurfaceNormals.Surface = capped_surface
-    SurfaceNormals.NormalsArrayName = surfaceNormalsArrayName
-
-    SurfaceNormals.Execute()
-    capped_surface_with_normals = SurfaceNormals.Surface
-    new_normal = capped_surface_with_normals.GetPointData().GetNormals().GetTuple(new_branch_pos_id)
-    # new_normal = capped_surface_with_normals.GetPointData().GetNormals().GetTuple(branch_point_id.GetId(0))
-    new_normal /= la.norm(new_normal)
-
-    old_normal = get_estimated_normal_vector(diverging_centerline_branch)
-    old_normal /= la.norm(old_normal)
+    old_normal = get_estimated_surface_normal(diverging_centerline_branch)
+    new_normal = get_exact_surface_normal(capped_surface, new_branch_pos_id)
 
     # Define rotation between surface normal vectors
     u, surface_normals_angle = get_rotation_axis_and_angle(new_normal, old_normal)
@@ -165,19 +111,15 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, re
     R_z = get_rotation_matrix(-new_normal, angle)
 
     # Define translation parameters
-    dx = np.asarray(new_branch_pos) - np.asarray(diverging_centerline_branch.GetPoint(0))
-    origo = np.asarray(new_branch_pos)
+    dx, origo = get_translation_parameters(centerlines, diverging_centerline_branch, new_branch_pos)
 
     # Move branch centerline and voronoi diagram
-    moved_voronoi_branch = move_voronoi_branch(voronoi_branch, dx)
-    rotated_voronoi_branch_0 = rotate_voronoi_branch(moved_voronoi_branch, origo, R_u)
-    rotated_voronoi_branch = rotate_voronoi_branch(rotated_voronoi_branch_0, origo, R_z)
-
+    moved_and_rotated_voronoi_branch = move_and_rotate_voronoi_branch(voronoi_branch, dx, R_u, R_z, origo)
     moved_and_rotated_centerline_branch = move_and_rotate_centerline_branch(diverging_centerline_branch, origo, R_u,
                                                                             R_z, dx)
 
     # Create new voronoi diagram and new centerlines
-    new_voronoi = merge_data([voronoi_remaining, rotated_voronoi_branch])
+    new_voronoi = merge_data([voronoi_remaining, moved_and_rotated_voronoi_branch])
     write_polydata(new_voronoi, new_voronoi_path)
 
     new_centerlines = merge_data([centerlines, moved_and_rotated_centerline_branch])
@@ -194,7 +136,65 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, re
     write_polydata(new_surface, output_filepath)
 
 
-def get_estimated_normal_vector(diverging_centerline_branch):
+def get_new_branch_position(capped_surface):
+    print("\nPlease select point to move branch in the render window.")
+    seed_selector = vmtkPickPointSeedSelector()
+    seed_selector.SetSurface(capped_surface)
+    seed_selector.text = "Press space to select the point where you want to move the branch to, 'u' to undo.\n"
+    seed_selector.Execute()
+    new_branch_pos_id = seed_selector.GetTargetSeedIds().GetId(0)
+    new_branch_pos = capped_surface.GetPoint(new_branch_pos_id)
+
+    return new_branch_pos_id, new_branch_pos
+
+
+def get_diverging_centerline_end_point(diverging_centerlines, diverging_id, region_points):
+    print("-- Clipping a centerline divering in the region of interest.")
+    patch_diverging_line = clip_diverging_line(extract_single_line(diverging_centerlines, 0),
+                                               region_points[0], diverging_id)
+    diverging_centerline = extract_single_line(patch_diverging_line, 1)
+    diverging_centerline_end = diverging_centerline.GetPoint(diverging_centerline.GetNumberOfPoints() - 1)
+
+    return diverging_centerline_end
+
+
+def get_translation_parameters(centerlines, diverging_centerline_branch, new_branch_pos):
+    locator = get_locator(centerlines)
+    new_branch_pos_on_cl = centerlines.GetPoint(locator.FindClosestPoint(new_branch_pos))
+    adjusted_branch_pos = (np.asarray(new_branch_pos) - np.asarray(new_branch_pos_on_cl)) * 0.8 + np.asarray(
+        new_branch_pos_on_cl)
+    dx = np.asarray(adjusted_branch_pos) - np.asarray(diverging_centerline_branch.GetPoint(0))
+    origo = np.asarray(adjusted_branch_pos)
+
+    return dx, origo
+
+
+def get_exact_surface_normal(capped_surface, new_branch_pos_id):
+    capped_surface_with_normals = vmtk_surface_normals(capped_surface)
+
+    new_normal = capped_surface_with_normals.GetPointData().GetNormals().GetTuple(new_branch_pos_id)
+    new_normal /= la.norm(new_normal)
+
+    return new_normal
+
+
+def get_diverging_centerline_branch(centerlines_branched, diverging_centerline_end):
+    for i in range(centerlines_branched.GetNumberOfLines()):
+        centerline_branch = extract_single_line(centerlines_branched, i)
+        if centerline_branch.GetPoint(centerline_branch.GetNumberOfPoints() - 1) == diverging_centerline_end:
+            return centerline_branch
+
+
+def update_centerlines(centerlines, diverging_centerlines):
+    remaining_centerlines = [centerlines]
+    for i in range(diverging_centerlines.GetNumberOfLines - 1):
+        remaining_centerlines.append(extract_single_line(diverging_centerlines, i))
+    centerlines = merge_data(remaining_centerlines)
+
+    return centerlines
+
+
+def get_estimated_surface_normal(diverging_centerline_branch):
     line = vmtk_centerline_geometry(diverging_centerline_branch, True);
     curvature = get_array("Curvature", line)
     first_local_maxima_id = argrelextrema(curvature, np.greater)[0][0]
@@ -206,12 +206,10 @@ def get_estimated_normal_vector(diverging_centerline_branch):
     normal_vector = np.asarray(diverging_centerline_branch.GetPoint(end_point)) - np.asarray(
         diverging_centerline_branch.GetPoint(start_point))
 
-    return normal_vector
+    return normal_vector / la.norm(normal_vector)
 
 
 def move_and_rotate_centerline_branch(centerline_branch, origo, R_u, R_z, dx):
-    origo = np.asarray(origo)
-
     # Locator to find closest point on centerline
     number_of_points = centerline_branch.GetNumberOfPoints()
 
@@ -267,9 +265,7 @@ def get_rotation_matrix(u, angle):
     return R
 
 
-def rotate_voronoi_branch(voronoi, origo, R):
-    origo = np.asarray(origo)
-
+def move_and_rotate_voronoi_branch(voronoi, dx, R_u, R_z, origo):
     # Voronoi diagram
     n = voronoi.GetNumberOfPoints()
     new_voronoi = vtk.vtkPolyData()
@@ -278,54 +274,25 @@ def rotate_voronoi_branch(voronoi, origo, R):
     radius_array = get_vtk_array(radiusArrayName, 1, n)
 
     # Iterate through Voronoi diagram and manipulate
-    k = 0
     for i in range(n):
         point = voronoi.GetPoint(i)
         point_radius = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
 
-        # Rotate
-        point = np.dot(R, point - origo) + origo
-
-        # Change radius
-        radius_array.SetTuple1(k, point_radius)
-        voronoi_points.InsertNextPoint(point)
-        cell_array.InsertNextCell(1)
-        cell_array.InsertCellPoint(k)
-        k += 1
-
-    new_voronoi.SetPoints(voronoi_points)
-    new_voronoi.SetVerts(cell_array)
-    new_voronoi.GetPointData().AddArray(radius_array)
-    return new_voronoi
-
-
-def move_voronoi_branch(voronoi, dx):
-    # Voronoi diagram
-    n = voronoi.GetNumberOfPoints()
-    new_voronoi = vtk.vtkPolyData()
-    voronoi_points = vtk.vtkPoints()
-    cell_array = vtk.vtkCellArray()
-    radius_array = get_vtk_array(radiusArrayName, 1, n)
-
-    # Iterate through Voronoi diagram and manipulate
-    k = 0
-    for i in range(n):
-        point = voronoi.GetPoint(i)
-        point_radius = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
-
-        # Translate
+        # Translate and rotate
         point = np.asarray(point) + dx
+        point = np.dot(R_u, point - origo) + origo
+        point = np.dot(R_z, point - origo) + origo
 
         # Change radius
-        radius_array.SetTuple1(k, point_radius)
+        radius_array.SetTuple1(i, point_radius)
         voronoi_points.InsertNextPoint(point)
         cell_array.InsertNextCell(1)
-        cell_array.InsertCellPoint(k)
-        k += 1
+        cell_array.InsertCellPoint(i)
 
     new_voronoi.SetPoints(voronoi_points)
     new_voronoi.SetVerts(cell_array)
     new_voronoi.GetPointData().AddArray(radius_array)
+
     return new_voronoi
 
 
