@@ -71,7 +71,7 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, re
         # Get new position of branch on model surface
         new_branch_pos_id, new_branch_pos = get_new_branch_position(capped_surface)
 
-    # Branch-extractor
+    # Get branches from vmtk-branch-extractor
     centerlines_branched = vmtk_branch_extractor(centerlines_complete)
 
     # Set and get clipping points, centerlines and diverging centerlines
@@ -82,8 +82,7 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, re
 
     # Handle diverging centerlines within region of interest
     if diverging_centerline_ispresent:
-        diverging_centerline_end = get_diverging_centerline_end_point(diverging_centerlines, diverging_id,
-                                                                      region_points)
+        diverging_centerline_end = get_diverging_centerline_end(diverging_centerlines, diverging_id, region_points)
     else:
         raise RuntimeError("No diverging branch detected! Cannot translate nothing.")
 
@@ -117,7 +116,6 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, re
     moved_and_rotated_voronoi_branch = move_and_rotate_voronoi_branch(voronoi_branch, dx, R_u, R_z, origo)
     moved_and_rotated_centerline_branch = move_and_rotate_centerline_branch(diverging_centerline_branch, origo, R_u,
                                                                             R_z, dx)
-
     # Create new voronoi diagram and new centerlines
     new_voronoi = merge_data([voronoi_remaining, moved_and_rotated_voronoi_branch])
     write_polydata(new_voronoi, new_voronoi_path)
@@ -148,7 +146,7 @@ def get_new_branch_position(capped_surface):
     return new_branch_pos_id, new_branch_pos
 
 
-def get_diverging_centerline_end_point(diverging_centerlines, diverging_id, region_points):
+def get_diverging_centerline_end(diverging_centerlines, diverging_id, region_points):
     print("-- Clipping a centerline divering in the region of interest.")
     patch_diverging_line = clip_diverging_line(extract_single_line(diverging_centerlines, 0),
                                                region_points[0], diverging_id)
