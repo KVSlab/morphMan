@@ -13,7 +13,7 @@ import numpy as np
 import numpy.linalg as la
 import vtk
 from scipy.interpolate import splrep, splev
-from scipy.signal import argrelextrema, resample
+from scipy.signal import resample
 from vmtk import vtkvmtk, vmtkscripts
 from vtk.util import numpy_support
 
@@ -1775,6 +1775,25 @@ def vmtk_centerline_resampling(line, length):
     return line
 
 
+def vmtk_branch_extractor(centerlines_complete):
+    Brancher = vmtkscripts.vmtkBranchExtractor()
+    Brancher.Centerlines = centerlines_complete
+    Brancher.RadiusArrayName = radiusArrayName
+    Brancher.Execute()
+    centerlines_branched = Brancher.Centerlines
+
+    return centerlines_branched
+
+
+def vmtk_surface_normals(capped_surface):
+    SurfaceNormals = vmtkscripts.vmtkSurfaceNormals()
+    SurfaceNormals.Surface = capped_surface
+    SurfaceNormals.NormalsArrayName = surfaceNormalsArrayName
+    SurfaceNormals.Execute()
+    capped_surface_with_normals = SurfaceNormals.Surface
+
+    return capped_surface_with_normals
+
 
 def vmtk_centerline_geometry(line, smooth, outputsmoothed=False, factor=1.0, iterations=100):
     """Wrapper for vmtk centerline geometry.
@@ -2380,7 +2399,6 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
 
         # Get Center
         center = np.mean(tmp_points, axis=0)
-
         # Get corresponding centerline to in/outlet
         if np.sqrt(np.sum((np.array(inlet_point) - center) ** 2)) < 0.5:
             line = lines[0]
@@ -2389,7 +2407,6 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
         else:
             line_id = np.argmin(np.sqrt(np.sum((np.array(outlets) - center) ** 2, axis=1)))
             line = lines[line_id]
-
         # Set correct direction of normal
         if inlet:
             in_dir = np.array(line.GetPoint(5)) - \
