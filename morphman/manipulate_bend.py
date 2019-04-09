@@ -482,8 +482,8 @@ def read_command_line_bend(input_path=None, output_path=None):
 
 
 def main_bend():
-    manipulate_bend(**read_command_line())
+    manipulate_bend(**read_command_line_bend())
 
 
 if __name__ == "__main__":
-    manipulate_bend(**read_command_line())
+    manipulate_bend(**read_command_line_bend())

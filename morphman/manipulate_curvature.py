@@ -357,8 +357,8 @@ def read_command_line_curvature(input_path=None, output_path=None):
 
 
 def main_curvature():
-    manipulate_curvature(**read_command_line())
+    manipulate_curvature(**read_command_line_curvature())
 
 
 if __name__ == "__main__":
-    manipulate_curvature(**read_command_line())
+    manipulate_curvature(**read_command_line_curvature())

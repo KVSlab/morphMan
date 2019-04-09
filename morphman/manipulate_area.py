@@ -498,8 +498,8 @@ def read_command_line_area(input_path=None, output_path=None):
 
 
 def main_area():
-    manipulate_area(**read_command_line())
+    manipulate_area(**read_command_line_area())
 
 
 if __name__ == '__main__':
-    manipulate_area(**read_command_line())
+    manipulate_area(**read_command_line_area())
