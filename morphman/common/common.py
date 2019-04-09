@@ -110,7 +110,7 @@ def read_polydata(filename, datatype=None):
     return polydata
 
 
-def write_polydata(input_data, filename, datatype=None):
+def write_polydata(input_data, filename, datatype=None, file_type="ascii"):
     """
     Write the given input data based on the file name extension.
 
@@ -129,8 +129,28 @@ def write_polydata(input_data, filename, datatype=None):
     # Get writer
     if fileType == 'stl':
         writer = vtk.vtkSTLWriter()
+
     elif fileType == 'vtk':
-        writer = vtk.vtkPolyDataWriter()
+        # Set reader based on data type
+        if isinstance(input_data, vtk.vtkUnstructuredGrid):
+            writer = vtk.vtkUnstructuredGridWriter()
+        elif isinstance(input_data, vtk.vtkStructuredGrid):
+            writer = vtk.vtkStructuredGridWriter()
+        elif isinstance(input_data, vtk.vtkRectilinearGrid):
+            writer = vtk.vtkRectilinearGridWriter()
+        elif isinstance(input_data, vtk.vtkStructuredPoints) or \
+                isinstance(input_data, vtk.vtkImageData):
+            writer = vtk.vtkStructuredPointsWriter()
+        elif isinstance(input_data, vtk.vtkPolyData):
+            writer = vtk.vtkPolyDataWriter()
+
+        if file_type.lower() == "ascii":
+            writer.SetFileType(1)
+        elif file_type.lower() == "binary":
+            writer.SetFileType(0)
+        else:
+            raise ValueError("Invalid file type, can only be ascii or binary")
+
     elif fileType == 'vts':
         writer = vtk.vtkXMLStructuredGridWriter()
     elif fileType == 'vtr':
