@@ -56,7 +56,7 @@ def map_landmarks(landmarks, centerline):
     Returns:
         landmarks (dict): Contains landmarks mapped to centerline.
     """
-    locator = get_vtk_point_locator(centerline)
+    locator = vtk_point_locator(centerline)
     for key in landmarks:
         landmark = landmarks[key]
         landmark_id = locator.FindClosestPoint(landmark)
@@ -436,7 +436,7 @@ def spline_and_geometry(line, smooth, nknots):
     max_point_ids = list(argrelextrema(curvature_, np.greater)[0])
     min_point_ids = list(argrelextrema(curvature_, np.less)[0])
 
-    locator = get_vtk_point_locator(line)
+    locator = vtk_point_locator(line)
 
     min_points = [[fx_[i], fy_[i], fz_[i]] for i in min_point_ids]
     max_points = [[fx_[i], fy_[i], fz_[i]] for i in max_point_ids]

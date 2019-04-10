@@ -84,7 +84,7 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
 
     # Clip centerline
     print("-- Clipping centerlines.")
-    locator = get_vtk_point_locator(extract_single_line(centerlines_complete, 0))
+    locator = vtk_point_locator(extract_single_line(centerlines_complete, 0))
     id1 = locator.FindClosestPoint(region_points[0])
     id2 = locator.FindClosestPoint(region_points[1])
     centerline_remaining = create_parent_artery_patches(centerlines_complete,
@@ -164,7 +164,7 @@ def make_voronoi_smooth(voronoi, old_cl, new_cl, smooth_line, div=False, div_poi
     Returns:
         new_dataset (vtkPolyData): Manipulated voronoi diagram.
     """
-    locator = get_vtk_point_locator(old_cl)
+    locator = vtk_point_locator(old_cl)
     n = voronoi.GetNumberOfPoints()
     new_dataset = vtk.vtkPolyData()
     points = vtk.vtkPoints()
@@ -245,7 +245,7 @@ def move_all_centerlines(old_cl, new_cl, diverging_id, diverging_centerlines, sm
     # Iterate through voronoi points
     for i in range(number_of_cells):
         line = extract_single_line(old_cl, i)
-        locator = get_vtk_point_locator(line)
+        locator = vtk_point_locator(line)
         id1 = locator.FindClosestPoint(p1)
         if i == (number_of_cells - 1) and diverging_id is not None:
             id2 = diverging_id

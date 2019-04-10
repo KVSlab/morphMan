@@ -101,7 +101,7 @@ def manipulate_bend(input_filepath, output_filepath, smooth, smooth_factor, regi
 
     # Clip centerline
     print("-- Clipping centerlines.")
-    locator = get_vtk_point_locator(extract_single_line(centerlines, 0))
+    locator = vtk_point_locator(extract_single_line(centerlines, 0))
     id1 = locator.FindClosestPoint(region_points[0])
     id2 = locator.FindClosestPoint(region_points[1])
     p1 = centerlines.GetPoint(id1)
@@ -165,7 +165,7 @@ def manipulate_bend(input_filepath, output_filepath, smooth, smooth_factor, regi
 
     elif alpha != 0.0:
         # Update the region points
-        locator = get_vtk_point_locator(new_centerlines)
+        locator = vtk_point_locator(new_centerlines)
         region_points[0] = new_centerlines.GetPoint(locator.FindClosestPoint(region_points[0]))
         region_points[1] = new_centerlines.GetPoint(locator.FindClosestPoint(region_points[1]))
 
@@ -218,7 +218,7 @@ def manipulate_bend_vertically(alpha, voronoi_remaining, voronoi_bend, centerlin
 
     # Get clipped curve
     print("-- Clipping centerlines.")
-    locator = get_vtk_point_locator(extract_single_line(centerlines, 0))
+    locator = vtk_point_locator(extract_single_line(centerlines, 0))
     id1 = locator.FindClosestPoint(region_points[0])
     id2 = locator.FindClosestPoint(region_points[1])
     p1 = centerlines.GetPoint(id1)
@@ -272,7 +272,7 @@ def move_voronoi_horizontally(dx_p1, voronoi_clipped, centerline_clipped, id1, i
         new_dataset (vtkPolyData): Manipulated Voronoi diagram.
     """
 
-    centerline_loc = get_vtk_point_locator(centerline_clipped)
+    centerline_loc = vtk_point_locator(centerline_clipped)
     new_dataset = vtk.vtkPolyData()
     points = vtk.vtkPoints()
     verts = vtk.vtkCellArray()
@@ -369,7 +369,7 @@ def move_voronoi_vertically(voronoi_clipped, centerline_clipped, id1_0, clip_id,
         new_dataset (vtkPolyData): Manipulated Voronoi diagram.
     """
 
-    centerline_loc = get_vtk_point_locator(centerline_clipped)
+    centerline_loc = vtk_point_locator(centerline_clipped)
     new_dataset = vtk.vtkPolyData()
     points = vtk.vtkPoints()
     verts = vtk.vtkCellArray()

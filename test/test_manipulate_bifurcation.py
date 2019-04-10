@@ -9,7 +9,7 @@ import pytest
 import numpy as np
 
 from .fixtures import common_input
-from morphman.common import get_path_names, read_polydata, get_vtk_point_locator, get_tolerance, \
+from morphman.common import get_path_names, read_polydata, vtk_point_locator, get_tolerance, \
                             extract_single_line, get_distance
 from morphman import manipulate_bifurcation
 
@@ -48,8 +48,8 @@ def test_bifurcation_angle(common_input, angle):
         line_old = extract_single_line(old_centerlines, i)
         line_new = extract_single_line(new_centerlines, i)
 
-        loc_old = get_vtk_point_locator(line_old)
-        loc_new = get_vtk_point_locator(line_new)
+        loc_old = vtk_point_locator(line_old)
+        loc_new = vtk_point_locator(line_new)
 
         id1_old = loc_old.FindClosestPoint(start_point1)
         id2_old = loc_old.FindClosestPoint(start_point2)

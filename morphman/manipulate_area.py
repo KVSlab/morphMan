@@ -215,7 +215,7 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
                         region_of_interest, region_points)
 
     # Locator to find closest point on centerline
-    locator = get_vtk_point_locator(line_to_change)
+    locator = vtk_point_locator(line_to_change)
 
     # Voronoi diagram
     n = voronoi.GetNumberOfPoints()
