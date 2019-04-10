@@ -9,7 +9,7 @@ import pytest
 import numpy as np
 
 from .fixtures import common_input
-from morphman.common import get_path_names, read_polydata, vtk_point_locator, get_tolerance, \
+from morphman.common import get_path_names, read_polydata, vtk_point_locator, get_centerline_tolerance, \
                             extract_single_line, get_distance
 from morphman import manipulate_bifurcation
 
@@ -42,7 +42,7 @@ def test_bifurcation_angle(common_input, angle):
     cl_old_2 = -1
     cl_new_1 = -1
     cl_new_2 = -1
-    tol = get_tolerance(old_centerlines)
+    tol = get_centerline_tolerance(old_centerlines)
 
     for i in range(old_centerlines.GetNumberOfLines()):
         line_old = extract_single_line(old_centerlines, i)

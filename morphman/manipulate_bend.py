@@ -64,7 +64,7 @@ def manipulate_bend(input_filepath, output_filepath, smooth, smooth_factor, regi
     surface, capped_surface = prepare_surface(base_path, input_filepath)
 
     # Compute centerlines
-    inlet, outlets = get_centers(surface, base_path)
+    inlet, outlets = get_inlet_and_outlet_centers(surface, base_path)
 
     print("-- Compute centerlines and Voronoi diagram")
     centerlines, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path,
@@ -89,15 +89,15 @@ def manipulate_bend(input_filepath, output_filepath, smooth, smooth_factor, regi
 
     # Set and get clipping points, centerlines and diverging centerlines
     centerlines, diverging_centerlines, region_points, region_points_vtk, diverging_ids = \
-        find_region_of_interest_and_diverging_centerlines(centerlines, region_points)
+        get_region_of_interest_and_diverging_centerlines(centerlines, region_points)
     diverging_centerline_ispresent = diverging_centerlines is not None
     diverging_id = None if len(diverging_ids) == 0 else diverging_ids[0]
 
     # Handle diverging centerlines within region of interest
     if diverging_centerline_ispresent:
         print("-- Clipping a centerline divering in the region of interest.")
-        patch_diverging_line = clip_diverging_line(extract_single_line(diverging_centerlines, 0),
-                                                   region_points[0], diverging_id)
+        patch_diverging_line = get_clipped_diverging_centerline(extract_single_line(diverging_centerlines, 0),
+                                                                region_points[0], diverging_id)
 
     # Clip centerline
     print("-- Clipping centerlines.")
@@ -120,8 +120,8 @@ def manipulate_bend(input_filepath, output_filepath, smooth, smooth_factor, regi
     # Clip Voronoi diagram into
     # bend and remaining part of geometry
     print("-- Clipping Voronoi diagrams")
-    voronoi_bend, voronoi_remaining = split_voronoi_with_centerlines(voronoi,
-                                                                     [centerline_bend,
+    voronoi_bend, voronoi_remaining = get_split_voronoi_diagram(voronoi,
+                                                                [centerline_bend,
                                                                       centerline_remaining])
     write_polydata(voronoi_bend, voronoi_bend_path)
     write_polydata(voronoi_remaining, voronoi_remaining_path)
@@ -129,15 +129,15 @@ def manipulate_bend(input_filepath, output_filepath, smooth, smooth_factor, regi
     # Extract translation vectors
     print("-- Computing translation directions.")
     direction = "horizont"
-    middle_points, middle_ids = get_spline_points(centerlines, beta, direction, region_points_vtk)
+    middle_points, middle_ids = get_direction_parameters(centerlines, beta, direction, region_points_vtk)
     dx_p1 = middle_points[0] - p1
 
     # Move centerline manually for updating inlet
     # and outlet positions used to compute
     # new centerlines
     if beta != 0.0:
-        new_centerlines = move_centerlines(centerlines, dx_p1, p1, p2, diverging_id,
-                                           diverging_centerlines, direction)
+        new_centerlines = get_manipulated_centerlines(centerlines, dx_p1, p1, p2, diverging_id,
+                                                      diverging_centerlines, direction)
 
         # Move anterior bend horizontally.
         # Iterate over points P from Voronoi diagram and manipulate
@@ -176,7 +176,7 @@ def manipulate_bend(input_filepath, output_filepath, smooth, smooth_factor, regi
                                                               new_centerlines, region_points, poly_ball_size)
 
     print("-- Smoothing, clean, and check surface")
-    new_surface = prepare_surface_output(new_surface, surface,
+    new_surface = prepare_output_surface(new_surface, surface,
                                          new_centerlines, output_filepath,
                                          test_merge=True, changed=True,
                                          old_centerline=vtk_append_polydata([centerlines,
@@ -207,14 +207,14 @@ def manipulate_bend_vertically(alpha, voronoi_remaining, voronoi_bend, centerlin
 
     # Set and get clipping points, centerlines and diverging centerlines
     centerlines, diverging_centerlines, region_points, region_points_vtk, diverging_ids = \
-        find_region_of_interest_and_diverging_centerlines(centerlines, region_points)
+        get_region_of_interest_and_diverging_centerlines(centerlines, region_points)
     diverging_centerline_ispresent = diverging_centerlines is not None
     diverging_id = None if len(diverging_ids) == 0 else diverging_ids[0]
 
     # Special cases including the diverging centerline
     if diverging_centerline_ispresent:
-        patch_diverging_line = clip_diverging_line(extract_single_line(diverging_centerlines, 0),
-                                                   region_points[0], diverging_id)
+        patch_diverging_line = get_clipped_diverging_centerline(extract_single_line(diverging_centerlines, 0),
+                                                                region_points[0], diverging_id)
 
     # Get clipped curve
     print("-- Clipping centerlines.")
@@ -230,10 +230,10 @@ def manipulate_bend_vertically(alpha, voronoi_remaining, voronoi_bend, centerlin
         centerline_bend = vtk_append_polydata([centerline_bend, diverging_centerline_end])
 
     # Find ID of middle point:
-    print("-- Finding points to spline through.")
+    print("-- Finding horizontal direction parameters.")
     direction = "vertical"
-    middle_points, middle_ids, dx = get_spline_points(extract_single_line(centerlines, 0), alpha, direction,
-                                                      region_points_vtk)
+    middle_points, middle_ids, dx = get_direction_parameters(extract_single_line(centerlines, 0), alpha, direction,
+                                                             region_points_vtk)
 
     # Iterate over points P from Voronoi diagram and manipulate
     print("-- Adjust Voronoi diagram")
@@ -242,7 +242,7 @@ def manipulate_bend_vertically(alpha, voronoi_remaining, voronoi_bend, centerlin
     new_voronoi = vtk_append_polydata([voronoi_remaining, voronoi_bend])
 
     # Move centerline manually for postprocessing
-    new_centerlines = move_centerlines(centerlines, dx, p1, p2, diverging_id, diverging_centerlines, direction)
+    new_centerlines = get_manipulated_centerlines(centerlines, dx, p1, p2, diverging_id, diverging_centerlines, direction)
 
     # Write a new surface from the new voronoi diagram
     print("-- Creating new surface.")

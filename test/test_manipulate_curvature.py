@@ -11,7 +11,7 @@ import numpy as np
 from .fixtures import common_input
 from morphman import manipulate_curvature
 from morphman.common import get_path_names, extract_single_line, \
-                            read_polydata, vtk_point_locator, discrete_geometry
+                            read_polydata, vtk_point_locator, compute_discrete_derivatives
 
 
 @pytest.mark.parametrize("smooth_line", [True, False])
@@ -56,8 +56,8 @@ def test_decrease_curvature(common_input, smooth_line):
                                          endID=new_id2)
 
     # Comute curvature and assert
-    _, old_curvature = discrete_geometry(old_centerline, neigh=20)
-    _, new_curvature = discrete_geometry(new_centerline, neigh=20)
+    _, old_curvature = compute_discrete_derivatives(old_centerline, neigh=20)
+    _, new_curvature = compute_discrete_derivatives(new_centerline, neigh=20)
     old_mean_curv = np.mean(old_curvature)
     new_mean_curv = np.mean(new_curvature)
     if smooth_line:

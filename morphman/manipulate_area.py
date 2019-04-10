@@ -55,7 +55,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     surface, capped_surface = prepare_surface(base_path, input_filepath)
 
     # Create centerline and voronoi diagram
-    inlet, outlets = get_centers(surface, base_path)
+    inlet, outlets = get_inlet_and_outlet_centers(surface, base_path)
     centerlines, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path,
                                                          capped_surface, resampling=resampling_step,
                                                          smooth=False, base_path=base_path)
@@ -91,7 +91,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     else:
         centerline_regions += [None]
 
-    voronoi_regions = split_voronoi_with_centerlines(voronoi, centerline_regions)
+    voronoi_regions = get_split_voronoi_diagram(voronoi, centerline_regions)
 
     new_voronoi = change_area(voronoi_regions[0], centerline_area, method, beta, ratio, percentage,
                               region_of_interest, region_points, centerline_diverging,
@@ -105,7 +105,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     new_surface = create_new_surface(new_voronoi, poly_ball_size=poly_ball_size)
 
     print("-- Smoothing, clean, and check surface.")
-    new_surface = prepare_surface_output(new_surface, surface, centerlines,
+    new_surface = prepare_output_surface(new_surface, surface, centerlines,
                                          output_filepath, test_merge=True)
     write_polydata(new_surface, output_filepath)
 

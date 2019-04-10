@@ -107,7 +107,7 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
         neigh = 20
         line = vmtk_compute_centerline_attributes(centerline)
         line = vmtk_compute_geometric_features(line, smooth_line, factor=smoothing_factor, iterations=iterations)
-        line, curvature__ = discrete_geometry(line, neigh=neigh)
+        line, curvature__ = compute_discrete_derivatives(line, neigh=neigh)
         curvature = []
         for c in curvature__:
             curvature.append([c])

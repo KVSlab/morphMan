@@ -51,7 +51,7 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
     voronoi_diverging_path = base_path + "_voronoi_diverging.vtp"
 
     # Compute centerlines
-    inlet, outlets = get_centers(surface, base_path)
+    inlet, outlets = get_inlet_and_outlet_centers(surface, base_path)
     centerlines, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path,
                                                          capped_surface, resampling=resampling_step,
                                                          smooth=False, base_path=base_path)
@@ -67,7 +67,7 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
 
     # Set and get clipping points, centerlines and diverging centerlines
     centerlines_complete, diverging_centerlines, region_points, region_points_vtk, diverging_ids = \
-        find_region_of_interest_and_diverging_centerlines(centerlines, region_points)
+        get_region_of_interest_and_diverging_centerlines(centerlines, region_points)
     diverging_centerline_ispresent = diverging_centerlines is not None
     diverging_id = None if len(diverging_ids) == 0 else diverging_ids[0]
 
@@ -77,8 +77,8 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
         print("-- Clipping a centerline divering in the region of interest.")
         for i in range(diverging_centerlines.GetNumberOfCells()):
             diverging_centerline = extract_single_line(diverging_centerlines, i)
-            patch_diverging_centerline = clip_diverging_line(diverging_centerline,
-                                                             region_points[0], diverging_id)
+            patch_diverging_centerline = get_clipped_diverging_centerline(diverging_centerline,
+                                                                          region_points[0], diverging_id)
             diverging_centerlines_patch.append(extract_single_line(patch_diverging_centerline, 1))
         diverging_centerlines_patch = vtk_append_polydata(diverging_centerlines_patch)
 
@@ -97,14 +97,14 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
     # Clip Voronoi diagram into
     # bend and remaining part of geometry
     print("-- Clipping Voronoi diagrams")
-    voronoi_region, voronoi_remaining = split_voronoi_with_centerlines(voronoi,
-                                                                       [centerline_region,
+    voronoi_region, voronoi_remaining = get_split_voronoi_diagram(voronoi,
+                                                                  [centerline_region,
                                                                         centerline_remaining])
     # Separate diverging parts and main region
     if diverging_centerline_ispresent:
         centerlines_complete_patch = extract_single_line(centerlines_complete, 0, startID=id1, endID=id2)
-        voronoi_region, voronoi_diverging = split_voronoi_with_centerlines(voronoi_region, [centerlines_complete_patch,
-                                                                                            diverging_centerlines_patch])
+        voronoi_region, voronoi_diverging = get_split_voronoi_diagram(voronoi_region, [centerlines_complete_patch,
+                                                                                       diverging_centerlines_patch])
         write_polydata(voronoi_diverging, voronoi_diverging_path)
 
     write_polydata(voronoi_region, voronoi_region_path)
@@ -138,7 +138,7 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
     new_surface = create_new_surface(new_voronoi, poly_ball_size=poly_ball_size)
 
     print("-- Smoothing, clean, and check surface")
-    new_surface = prepare_surface_output(new_surface, surface,
+    new_surface = prepare_output_surface(new_surface, surface,
                                          new_centerlines, output_filepath,
                                          test_merge=True, changed=True,
                                          old_centerline=centerlines_complete)

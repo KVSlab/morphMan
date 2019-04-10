@@ -72,7 +72,7 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
     surface, capped_surface = prepare_surface(base_path, input_filepath)
 
     # Get inlet and outlets
-    inlet, outlets = get_centers(surface, base_path)
+    inlet, outlets = get_inlet_and_outlet_centers(surface, base_path)
     if region_of_interest == "manual":
         outlet1, outlet2 = get_relevant_outlets(capped_surface, base_path)
     else:
@@ -101,10 +101,10 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
                                                resampling=resampling_step, voronoi=voronoi, pole_ids=pole_ids)
 
     # Create a tolerance for diverging
-    tolerance = get_tolerance(centerline_par)
+    tolerance = get_centerline_tolerance(centerline_par)
 
     # Get data from centerlines and rotation matrix
-    data = get_data(centerline_relevant_outlets, centerline_bif, tolerance)
+    data = get_bifurcating_and_diverging_point_data(centerline_relevant_outlets, centerline_bif, tolerance)
     R, m = rotation_matrix(data, angle, keep_fixed_1, keep_fixed_2)
     write_parameters(data, base_path)
 
@@ -123,8 +123,8 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
     end_points = get_points(data, key, bif=False)
     end_points_bif = get_points(data, key, bif=True)
 
-    write_points(div_points[0], points_div_path)
-    write_points(end_points[0], points_clipp_path)
+    write_vtk_points(div_points[0], points_div_path)
+    write_vtk_points(end_points[0], points_clipp_path)
 
     # Clip centerlines
     print("-- Clipping centerlines.")
@@ -132,7 +132,7 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
     write_polydata(patch_cl, centerline_clipped_path)
 
     # Get the centerline which was clipped away
-    clipped_centerline = get_clipped_centerline(centerline_relevant_outlets, data)
+    clipped_centerline = get_centerline_between_clipping_points(centerline_relevant_outlets, data)
     write_polydata(clipped_centerline, centerline_bif_clipped_path)
 
     if lower or bif:
@@ -141,8 +141,8 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
 
     # Clip the voronoi diagram
     print("-- Clipping the Voronoi diagram")
-    voronoi_clipped, _ = split_voronoi_with_centerlines(voronoi, [patch_cl,
-                                                                  clipped_centerline])
+    voronoi_clipped, _ = get_split_voronoi_diagram(voronoi, [patch_cl,
+                                                             clipped_centerline])
     write_polydata(voronoi_clipped, voronoi_clipped_path)
 
     # Rotate branches (Centerline and Voronoi diagram)
@@ -204,7 +204,7 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
     new_surface = create_new_surface(interpolated_voronoi, poly_ball_size)
 
     print("-- Preparing surface for output.")
-    new_surface = prepare_surface_output(new_surface, surface, interpolated_cl,
+    new_surface = prepare_output_surface(new_surface, surface, interpolated_cl,
                                          output_filepath, test_merge=True, changed=True,
                                          old_centerline=centerline_par)
 
@@ -506,7 +506,7 @@ def merge_cl(centerline, end_point, div_point):
         div_id = loc.FindClosestPoint(div_point[0])
         clipp_dist = get_distance(line.GetPoint(clipp_id), end_point[0])
         div_dist = get_distance(line.GetPoint(div_id), div_point[0])
-        tol = get_tolerance(line) * 3
+        tol = get_centerline_tolerance(line) * 3
         merge_bool = True
         if clipp_dist > tol or div_dist > tol:
             merge_bool = False
