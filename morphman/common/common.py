@@ -87,25 +87,6 @@ def make_voronoi_diagram(surface, filename):
     return new_voronoi
 
 
-def get_tolerance(centerline, n=50):
-    """
-    Finds tolerance based on
-    average length between first N points
-    along the input centerline.
-
-    Args:
-        centerline (vtkPolyData): Centerline data.
-        n (int): Number of points
-
-    Returns:
-        tolerance (float): Tolerance value.
-    """
-    line = extract_single_line(centerline, 0)
-    length = get_curvilinear_coordinate(line)
-    tolerance = np.mean(length[1:n] - length[:n - 1]) / divergingRatioToSpacingTolerance
-
-    return tolerance
-
 
 def get_relevant_outlets(surface, base_path):
     """
