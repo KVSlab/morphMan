@@ -556,26 +556,26 @@ def get_number_of_arrays(line):
     return count, names
 
 
-def extract_single_line(centerlines, id, startID=0, endID=None):
+def extract_single_line(centerlines, line_id, start_id=0, end_id=None):
     """Extract one line from multiple centerlines.
     If startID and endID is set then only a segment of the centerline is extracted.
 
     Args:
         centerlines (vtkPolyData): Centerline to extract.
-        id (int): The line ID to extract.
-        startID (int):
-        endID (int):
+        line_id (int): The line ID to extract.
+        start_id (int):
+        end_id (int):
 
     Returns:
         centerline (vtkPolyData): The single line extracted
     """
     cell = vtk.vtkGenericCell()
-    centerlines.GetCell(id, cell)
-    n = cell.GetNumberOfPoints() if endID is None else endID + 1
+    centerlines.GetCell(line_id, cell)
+    n = cell.GetNumberOfPoints() if end_id is None else end_id + 1
 
     line = vtk.vtkPolyData()
     cell_array = vtk.vtkCellArray()
-    cell_array.InsertNextCell(n - startID)
+    cell_array.InsertNextCell(n - start_id)
     line_points = vtk.vtkPoints()
 
     arrays = []
@@ -583,7 +583,7 @@ def extract_single_line(centerlines, id, startID=0, endID=None):
     for i in range(n_):
         tmp = centerlines.GetPointData().GetArray(names[i])
         tmp_comp = tmp.GetNumberOfComponents()
-        radius_array = get_vtk_array(names[i], tmp_comp, n - startID)
+        radius_array = get_vtk_array(names[i], tmp_comp, n - start_id)
         arrays.append(radius_array)
 
     point_array = []
@@ -591,7 +591,7 @@ def extract_single_line(centerlines, id, startID=0, endID=None):
         point_array.append(centerlines.GetPointData().GetArray(names[i]))
 
     count = 0
-    for i in range(startID, n):
+    for i in range(start_id, n):
         cell_array.InsertCellPoint(count)
         line_points.InsertNextPoint(cell.GetPoints().GetPoint(i))
 
@@ -620,7 +620,7 @@ def extract_single_line(centerlines, id, startID=0, endID=None):
     return line
 
 
-def move_past_sphere(centerline, center, r, start, step=-1, stop=0, X=0.8):
+def move_past_sphere(centerline, center, r, start, step=-1, stop=0, scale_factor=0.8):
     """Moves a point along the centerline until it as outside the a sphere with radius (r)
     and a center (center).
 
@@ -631,7 +631,7 @@ def move_past_sphere(centerline, center, r, start, step=-1, stop=0, X=0.8):
         start (int): id of the point along the centerline where to start.
         step (int): direction along the centerline.
         stop (int): ID along centerline, for when to stop searching.
-        X (float): Scale of radius with a factor X.
+        scale_factor (float): Scale the radius with this factor.
 
     Returns:
         tmp_point (list): The first point on the centerline outside the sphere
@@ -641,7 +641,7 @@ def move_past_sphere(centerline, center, r, start, step=-1, stop=0, X=0.8):
     # Create the minimal inscribed sphere
     misr_sphere = vtk.vtkSphere()
     misr_sphere.SetCenter(center)
-    misr_sphere.SetRadius(r * X)
+    misr_sphere.SetRadius(r * scale_factor)
     tmp_point = [0.0, 0.0, 0.0]
 
     # Go the length of one MISR backwards
@@ -755,8 +755,8 @@ def extract_ica_centerline(base_path, resampling_step, relevant_outlets=None):
     tmp_line_1 = extract_single_line(centerline_relevant_outlets[0], 0)
     tmp_line_2 = extract_single_line(centerline_relevant_outlets[0], 1)
     tolerance = get_centerline_tolerance(tmp_line_1)
-    line = extract_single_line(tmp_line_1, 0, startID=0,
-                               endID=get_diverging_point_id(tmp_line_1, tmp_line_2, tolerance))
+    line = extract_single_line(tmp_line_1, 0, start_id=0,
+                               end_id=get_diverging_point_id(tmp_line_1, tmp_line_2, tolerance))
     write_polydata(line, ica_centerline_path)
 
     return line
@@ -1245,11 +1245,8 @@ def prepare_voronoi_diagram(capped_surface, centerlines, base_path, smooth, smoo
             write_parameters(parameters)
 
             # Create the centerline
-            no_smooth_centerlines, _, _ = compute_centerlines(inlet, outlets,
-                                                              None, capped_surface,
-                                                              resampling=0.1,
-                                                              smooth=False, voronoi=voronoi,
-                                                              pole_ids=pole_ids)
+            no_smooth_centerlines, _, _ = compute_centerlines(inlet, outlets, None, capped_surface, resampling=0.1,
+                                                              smooth=False, voronoi=voronoi, pole_ids=pole_ids)
 
             # Extract the centerline region which diverges from the existing centerlines
             no_smooth_segments = []
@@ -1259,7 +1256,7 @@ def prepare_voronoi_diagram(capped_surface, centerlines, base_path, smooth, smoo
                 for j in range(centerlines.GetNumberOfLines()):
                     div_ids.append(get_diverging_point_id(tmp_line, extract_single_line(centerlines, j), tol))
                 div_id = max(div_ids)
-                no_smooth_segments.append(extract_single_line(tmp_line, 0, startID=div_id))
+                no_smooth_segments.append(extract_single_line(tmp_line, 0, start_id=div_id))
 
             no_smooth_cl = vtk_append_polydata(no_smooth_segments)
             write_polydata(no_smooth_cl, no_smooth_path)
@@ -1988,7 +1985,7 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
             end_id = max(ids1[cl_id], ids2[cl_id])
 
     # Extract and spline a single line
-    line_to_change = extract_single_line(centerline, cl_id, startID=start_id, endID=end_id)
+    line_to_change = extract_single_line(centerline, cl_id, start_id=start_id, end_id=end_id)
 
     remaining_centerlines = []
     diverging_centerlines = []
@@ -2010,10 +2007,10 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
         if close_start == close_end:
             if close_start:
                 if start_id != 0:
-                    tmp = extract_single_line(centerline, i, startID=0, endID=start_id - 1)
+                    tmp = extract_single_line(centerline, i, start_id=0, end_id=start_id - 1)
                     remaining_centerlines.append(tmp)
-                tmp = extract_single_line(centerline, i, startID=end_id + 1,
-                                          endID=line.GetNumberOfPoints() - 1)
+                tmp = extract_single_line(centerline, i, start_id=end_id + 1,
+                                          end_id=line.GetNumberOfPoints() - 1)
                 remaining_centerlines.append(tmp)
             else:
                 remaining_centerlines.append(line)
@@ -2266,7 +2263,7 @@ def get_centerline_between_clipping_points(centerline_relevant_outlets, data):
         loc = vtk_point_locator(line)
         tmp_id_dau = loc.FindClosestPoint(data[i]["end_point"])
         tmp_id_bif = loc.FindClosestPoint(data["bif"]["end_point"])
-        lines.append(extract_single_line(line, 0, startID=tmp_id_bif, endID=tmp_id_dau))
+        lines.append(extract_single_line(line, 0, start_id=tmp_id_bif, end_id=tmp_id_dau))
 
     centerline = vtk_append_polydata(lines)
 
@@ -3363,7 +3360,7 @@ def get_uncapped_surface(surface, gradients_limit=0.15, area_limit=0.3, circlene
     gradients = vtk_compute_normal_gradients(cell_normals)
 
     # Compute the magnitude of the gradient
-    gradients_array = get_vtk_cell_locator("Gradients", gradients, k=9)
+    gradients_array = get_vtk_array("Gradients", gradients, 9)
     gradients_magnitude = np.sqrt(np.sum(gradients_array ** 2, axis=1))
 
     # Mark all cells with a gradient magnitude less then gradient_limit
@@ -3705,33 +3702,33 @@ def write_polydata(input_data, filename, datatype=None):
         datatype (str): Additional parameter for vtkIdList objects.
     """
     # Check filename format
-    fileType = filename.split(".")[-1]
-    if fileType == '':
+    file_type = filename.split(".")[-1]
+    if file_type == '':
         raise RuntimeError('The file does not have an extension')
 
     # Get writer
-    if fileType == 'stl':
+    if file_type == 'stl':
         writer = vtk.vtkSTLWriter()
-    elif fileType == 'vtk':
+    elif file_type == 'vtk':
         writer = vtk.vtkPolyDataWriter()
-    elif fileType == 'vts':
+    elif file_type == 'vts':
         writer = vtk.vtkXMLStructuredGridWriter()
-    elif fileType == 'vtr':
+    elif file_type == 'vtr':
         writer = vtk.vtkXMLRectilinearGridWriter()
-    elif fileType == 'vtp':
+    elif file_type == 'vtp':
         writer = vtk.vtkXMLPolyDataWriter()
-    elif fileType == 'vtu':
+    elif file_type == 'vtu':
         writer = vtk.vtkXMLUnstructuredGridWriter()
-    elif fileType == "vti":
+    elif file_type == "vti":
         writer = vtk.vtkXMLImageDataWriter()
-    elif fileType == "np" and datatype == "vtkIdList":
+    elif file_type == "np" and datatype == "vtkIdList":
         output_data = np.zeros(input_data.GetNumberOfIds())
         for i in range(input_data.GetNumberOfIds()):
             output_data[i] = input_data.GetId(i)
         output_data.dump(filename)
         return
     else:
-        raise RuntimeError('Unknown file type %s' % fileType)
+        raise RuntimeError('Unknown file type %s' % file_type)
 
     # Set filename and input
     writer.SetFileName(filename)
@@ -4099,7 +4096,7 @@ def get_bifurcating_and_diverging_point_data(centerline, centerline_bif, tol):
                 break
 
         end, r_end, id_end = move_past_sphere(cl, center, r, i, step=1,
-                                              stop=i * 100, X=1)
+                                              stop=i * 100, scale_factor=1)
         data[counter]["end_point"] = end
         data[counter]["div_point"] = center
 

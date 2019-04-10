@@ -108,7 +108,7 @@ def manipulate_bend(input_filepath, output_filepath, smooth, smooth_factor, regi
     p2 = centerlines.GetPoint(id2)
     centerline_remaining = create_parent_artery_patches(centerlines,
                                                         region_points_vtk, siphon=True)
-    centerline_bend = extract_single_line(centerlines, 0, startID=id1, endID=id2)
+    centerline_bend = extract_single_line(centerlines, 0, start_id=id1, end_id=id2)
 
     if diverging_centerline_ispresent:
         diverging_centerline_end = extract_single_line(patch_diverging_line, 1)
@@ -223,7 +223,7 @@ def manipulate_bend_vertically(alpha, voronoi_remaining, voronoi_bend, centerlin
     id2 = locator.FindClosestPoint(region_points[1])
     p1 = centerlines.GetPoint(id1)
     p2 = centerlines.GetPoint(id2)
-    centerline_bend = extract_single_line(centerlines, 0, startID=id1, endID=id2)
+    centerline_bend = extract_single_line(centerlines, 0, start_id=id1, end_id=id2)
 
     if diverging_centerline_ispresent:
         diverging_centerline_end = extract_single_line(patch_diverging_line, 1)

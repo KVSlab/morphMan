@@ -86,7 +86,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     print("-- Change Voronoi diagram")
     centerline_regions = [centerline_splined, centerline_remaining]
     if centerline_diverging is not None:
-        centerline_diverging = [extract_single_line(centerline_diverging[0], 0, startID=diverging_ids[0])]
+        centerline_diverging = [extract_single_line(centerline_diverging[0], 0, start_id=diverging_ids[0])]
         centerline_regions += centerline_diverging
     else:
         centerline_regions += [None]

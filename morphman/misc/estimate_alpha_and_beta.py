@@ -240,8 +240,8 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
     id1, id2, moved_id1, moved_id2, moved_p1, moved_p2 = get_moved_siphon(new_centerlines, centerlines, p1, p2)
 
     # Extract region of interest
-    siphon = extract_single_line(centerlines, 1, startID=id1, endID=id2)
-    moved_siphon = extract_single_line(new_centerlines, 0, startID=moved_id1, endID=moved_id2)
+    siphon = extract_single_line(centerlines, 1, start_id=id1, end_id=id2)
+    moved_siphon = extract_single_line(new_centerlines, 0, start_id=moved_id1, end_id=moved_id2)
     id1, id2 = 0, siphon.GetNumberOfPoints() - 1
     moved_id1, moved_id2 = 0, moved_siphon.GetNumberOfPoints() - 1
 
@@ -266,7 +266,7 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
 
     if method == "MISR":
         # Map MISR values to old and new splined anterior bend
-        anterior_bend = extract_single_line(centerlines, 0, startID=id1, endID=id2)
+        anterior_bend = extract_single_line(centerlines, 0, start_id=id1, end_id=id2)
         m = anterior_bend.GetNumberOfPoints()
         m1 = moved_siphon.GetNumberOfPoints()
         misr_array = get_vtk_array(radiusArrayName, 1, m)
@@ -397,10 +397,10 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
         newrad1 = moved_siphon.GetPointData().GetArray(radiusArrayName).GetTuple1(0)
         newrad2 = moved_siphon.GetPointData().GetArray(radiusArrayName).GetTuple1(n2 - 1)
 
-        pa, ra = move_past_sphere(siphon, p1, rad1, 0, step=1, stop=n1 - 1, X=multiplier)
-        pb, rb = move_past_sphere(siphon, p2, rad2, n1 - 1, step=-1, stop=0, X=multiplier)
-        new_pa, ra = move_past_sphere(moved_siphon, moved_p1, newrad1, 0, step=1, stop=n2 - 1, X=multiplier)
-        new_pb, rb = move_past_sphere(moved_siphon, moved_p2, newrad2, n2 - 1, step=-1, stop=0, X=multiplier)
+        pa, ra = move_past_sphere(siphon, p1, rad1, 0, step=1, stop=n1 - 1, scale_factor=multiplier)
+        pb, rb = move_past_sphere(siphon, p2, rad2, n1 - 1, step=-1, stop=0, scale_factor=multiplier)
+        new_pa, ra = move_past_sphere(moved_siphon, moved_p1, newrad1, 0, step=1, stop=n2 - 1, scale_factor=multiplier)
+        new_pb, rb = move_past_sphere(moved_siphon, moved_p2, newrad2, n2 - 1, step=-1, stop=0, scale_factor=multiplier)
 
         deg, l1, l2 = find_angle(pa, pb, p1, p2, projection)
         new_deg, nl1, nl2 = find_angle(new_pa, new_pb, moved_p1, moved_p2, projection)

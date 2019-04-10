@@ -89,7 +89,7 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
     id2 = locator.FindClosestPoint(region_points[1])
     centerline_remaining = create_parent_artery_patches(centerlines_complete,
                                                         region_points_vtk, siphon=True)
-    centerline_region = extract_single_line(centerlines_complete, 0, startID=id1, endID=id2)
+    centerline_region = extract_single_line(centerlines_complete, 0, start_id=id1, end_id=id2)
 
     if diverging_centerline_ispresent:
         centerline_region = vtk_append_polydata([centerline_region, diverging_centerlines_patch])
@@ -102,7 +102,7 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
                                                                         centerline_remaining])
     # Separate diverging parts and main region
     if diverging_centerline_ispresent:
-        centerlines_complete_patch = extract_single_line(centerlines_complete, 0, startID=id1, endID=id2)
+        centerlines_complete_patch = extract_single_line(centerlines_complete, 0, start_id=id1, end_id=id2)
         voronoi_region, voronoi_diverging = get_split_voronoi_diagram(voronoi_region, [centerlines_complete_patch,
                                                                                        diverging_centerlines_patch])
         write_polydata(voronoi_diverging, voronoi_diverging_path)

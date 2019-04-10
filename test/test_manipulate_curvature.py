@@ -43,8 +43,8 @@ def test_decrease_curvature(common_input, smooth_line):
     old_locator = vtk_point_locator(extract_single_line(old_centerlines, 0))
     old_id1 = old_locator.FindClosestPoint(p1)
     old_id2 = old_locator.FindClosestPoint(p2)
-    old_centerline = extract_single_line(old_centerlines, 0, startID=old_id1,
-                                         endID=old_id2)
+    old_centerline = extract_single_line(old_centerlines, 0, start_id=old_id1,
+                                         end_id=old_id2)
 
     direction = "smoothed" if smooth_line else "extended"
     new_centerlines_path = base_path + "_centerline_new_%s.vtp" % direction
@@ -52,8 +52,8 @@ def test_decrease_curvature(common_input, smooth_line):
     new_locator = vtk_point_locator(extract_single_line(new_centerlines, 0))
     new_id1 = new_locator.FindClosestPoint(p1)
     new_id2 = new_locator.FindClosestPoint(p2)
-    new_centerline = extract_single_line(new_centerlines, 0, startID=new_id1,
-                                         endID=new_id2)
+    new_centerline = extract_single_line(new_centerlines, 0, start_id=new_id1,
+                                         end_id=new_id2)
 
     # Comute curvature and assert
     _, old_curvature = compute_discrete_derivatives(old_centerline, neigh=20)
