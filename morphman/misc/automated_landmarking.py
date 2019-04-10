@@ -91,11 +91,11 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
     """
 
     if resampling_step is not None:
-        centerline = vmtk_centerline_resampling(centerline, length=resampling_step)
+        centerline = vmtk_resample_centerline(centerline, length=resampling_step)
 
     if curv_method == "vmtk":
         line = vmtk_centerline_attributes(centerline)
-        line = vmtk_centerline_geometry(line, smooth_line, factor=smoothing_factor, iterations=iterations)
+        line = vmtk_compute_geometric_features(line, smooth_line, factor=smoothing_factor, iterations=iterations)
         curvature_ = get_point_data_array("Curvature", line)
         curvature__ = gaussian_filter(curvature_, 5)
         curvature = []
@@ -106,7 +106,7 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
     elif curv_method == "disc":
         neigh = 20
         line = vmtk_centerline_attributes(centerline)
-        line = vmtk_centerline_geometry(line, smooth_line, factor=smoothing_factor, iterations=iterations)
+        line = vmtk_compute_geometric_features(line, smooth_line, factor=smoothing_factor, iterations=iterations)
         line, curvature__ = discrete_geometry(line, neigh=neigh)
         curvature = []
         for c in curvature__:
@@ -267,7 +267,7 @@ def landmarking_piccinelli(centerline, base_path, curv_method, algorithm, resamp
     """
 
     if resampling_step is not None:
-        centerline = vmtk_centerline_resampling(centerline, resampling_step)
+        centerline = vmtk_resample_centerline(centerline, resampling_step)
 
     if curv_method == "spline":
         line, max_point_ids, min_point_ids = spline_and_geometry(centerline, smooth_line, nknots)
@@ -279,10 +279,10 @@ def landmarking_piccinelli(centerline, base_path, curv_method, algorithm, resamp
         max_point_tor_ids = list(argrelextrema(abs(torsion_smooth), np.greater)[0])
 
     elif curv_method == "vmtk":
-        line = vmtk_centerline_geometry(centerline, True, outputsmoothed=False,
-                                        factor=smoothing_factor_curv, iterations=iterations)
-        line_tor = vmtk_centerline_geometry(centerline, True, outputsmoothed=False,
-                                            factor=smoothing_factor_torsion, iterations=iterations)
+        line = vmtk_compute_geometric_features(centerline, True, outputsmoothed=False,
+                                               factor=smoothing_factor_curv, iterations=iterations)
+        line_tor = vmtk_compute_geometric_features(centerline, True, outputsmoothed=False,
+                                                   factor=smoothing_factor_torsion, iterations=iterations)
         # Get curvature and torsion, find peaks
         curvature = get_point_data_array("Curvature", line)
         torsion = get_point_data_array("Torsion", line_tor)
@@ -410,11 +410,11 @@ def spline_and_geometry(line, smooth, nknots):
     data[:, 2] = fz_
 
     header = ["X", "Y", "Z"]
-    line = data_to_vtk_polydata(data, header)
+    line = convert_numpy_data_to_polydata(data, header)
 
     # Let vmtk compute curve attributes
     line = vmtk_centerline_attributes(line)
-    line = vmtk_centerline_geometry(line, smooth)
+    line = vmtk_compute_geometric_features(line, smooth)
 
     # Compute curvature from the 'exact' spline to get a robust way of
     # finding max / min points on the centerline

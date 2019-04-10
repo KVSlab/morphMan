@@ -301,7 +301,7 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
         max_p, max_id = find_furthest_points(dx, siphon)
         newmax_p, newmax_id = find_furthest_points(dx, moved_siphon)
 
-        siphon = vmtk_centerline_geometry(siphon, False)
+        siphon = vmtk_compute_geometric_features(siphon, False)
 
         frenet_t1 = get_point_data_array("FrenetTangent", siphon, k=3)
         frenet_t2 = get_point_data_array("FrenetTangent", moved_siphon, k=3)
@@ -550,24 +550,24 @@ def compute_curvature(input_filepath, alpha, beta, method, new_centerlines, comp
     # 1) VMTK - Factor variance
     if method == "vmtkfactor":
         factor = 0.5
-        line_fac = vmtk_centerline_geometry(new_centerline, smooth=True, iterations=100, factor=factor)
+        line_fac = vmtk_compute_geometric_features(new_centerline, smooth=True, iterations=100, factor=factor)
         curv_fac = get_point_data_array("Curvature", line_fac)
         new_curvature = gaussian_filter(curv_fac, 5)
 
         if compute_original:
-            line_fac = vmtk_centerline_geometry(centerline, smooth=True, iterations=100, factor=factor)
+            line_fac = vmtk_compute_geometric_features(centerline, smooth=True, iterations=100, factor=factor)
             curv_fac = get_point_data_array("Curvature", line_fac)
             curvature = gaussian_filter(curv_fac, 5)
 
     # 2) VMTK - Iteration variance
     elif method == "vmtkit":
         it = 150
-        line_it = vmtk_centerline_geometry(new_centerline, smooth=True, iterations=it, factor=1.0)
+        line_it = vmtk_compute_geometric_features(new_centerline, smooth=True, iterations=it, factor=1.0)
         curv_it = get_point_data_array("Curvature", line_it)
         new_curvature = gaussian_filter(curv_it, 5)
 
         if compute_original:
-            line_it = vmtk_centerline_geometry(centerline, smooth=True, iterations=it, factor=1.0)
+            line_it = vmtk_compute_geometric_features(centerline, smooth=True, iterations=it, factor=1.0)
             curv_it = get_point_data_array("Curvature", line_it)
             curvature = gaussian_filter(curv_it, 5)
 

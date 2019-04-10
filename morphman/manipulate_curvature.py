@@ -111,8 +111,8 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
     write_polydata(voronoi_remaining, voronoi_remaining_path)
 
     print("-- Smooth / sharpen centerline")
-    smoothed_centerline_region = vmtk_centerline_geometry(centerline_region, True, True,
-                                                          factor=smooth_factor_line, iterations=iterations)
+    smoothed_centerline_region = vmtk_compute_geometric_features(centerline_region, True, True,
+                                                                 factor=smooth_factor_line, iterations=iterations)
     write_polydata(smoothed_centerline_region, centerline_smooth_path)
 
     print("-- Smooth / sharpen Voronoi diagram")

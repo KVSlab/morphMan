@@ -311,11 +311,11 @@ def compute_centerlines(inlet, outlet, filepath, surface, resampling=1.0, smooth
 
         return read_polydata(filepath), voronoi, pole_ids
 
-    centerlines, centerlines_output = vmtk_centerlines(endPoint, inlet, method, outlet, pole_ids, resampling, surface,
-                                                       voronoi)
+    centerlines, centerlines_output = vmtk_compute_centerlines(endPoint, inlet, method, outlet, pole_ids, resampling, surface,
+                                                               voronoi)
 
     if smooth:
-        centerlines_output = vmtk_centerline_smoothing(centerlines_output, num_iter, smooth_factor)
+        centerlines_output = vmtk_smooth_centerline(centerlines_output, num_iter, smooth_factor)
 
     # Save the computed centerline.
     if filepath is not None:
@@ -330,7 +330,7 @@ def compute_centerlines(inlet, outlet, filepath, surface, resampling=1.0, smooth
     return centerlines_output, voronoi, pole_ids
 
 
-def vmtk_centerline_smoothing(centerlines_output, num_iter, smooth_factor):
+def vmtk_smooth_centerline(centerlines_output, num_iter, smooth_factor):
     centerline_smoothing = vmtkscripts.vmtkCenterlineSmoothing()
     centerline_smoothing.SetInputData(centerlines_output)
     centerline_smoothing.SetNumberOfSmoothingIterations(num_iter)
@@ -341,7 +341,7 @@ def vmtk_centerline_smoothing(centerlines_output, num_iter, smooth_factor):
     return centerlines_output
 
 
-def vmtk_centerlines(endPoint, inlet, method, outlet, pole_ids, resampling, surface, voronoi):
+def vmtk_compute_centerlines(endPoint, inlet, method, outlet, pole_ids, resampling, surface, voronoi):
     centerlines = vmtkscripts.vmtkCenterlines()
     centerlines.Surface = surface
     centerlines.SeedSelectorName = method
@@ -476,7 +476,7 @@ def write_parameters(data, folder):
     f.close()
 
 
-def data_to_vtk_polydata(data, header, TNB=None, PT=None):
+def convert_numpy_data_to_polydata(data, header, TNB=None, PT=None):
     """Converting a range of data to a vtk array.
 
     Args:
@@ -658,7 +658,7 @@ def move_past_sphere(centerline, center, r, start, step=-1, stop=0, X=0.8):
     return tmp_point, r, i
 
 
-def vmtk_polydata_capper(surface):
+def vmtk_cap_polydata(surface):
     """Wrapper for vmtkCapPolyData
 
     Args:
@@ -676,7 +676,7 @@ def vmtk_polydata_capper(surface):
     return surface_capper.GetOutput()
 
 
-def vmtk_surface_smoother(surface, method, iterations=800, passband=1.0, relaxation=0.01):
+def vmtk_smooth_surface(surface, method, iterations=800, passband=1.0, relaxation=0.01):
     """Wrapper for a vmtksurfacesmoothing.
 
     Args:
@@ -735,7 +735,7 @@ def extract_ica_centerline(base_path, resampling_step, relevant_outlets=None):
         outlet2 = capped_surface.GetPoint(id2)
     else:
         outlet1, outlet2 = get_relevant_outlets(capped_surface, base_path)
-    outlets, outlet1, outlet2 = sort_outlets(outlets, outlet1, outlet2, base_path)
+    outlets, outlet1, outlet2 = get_sorted_outlets(outlets, outlet1, outlet2, base_path)
 
     # Compute / import centerlines
     centerlines, _, _ = compute_centerlines(inlet, outlets, centerlines_path,
@@ -758,7 +758,7 @@ def extract_ica_centerline(base_path, resampling_step, relevant_outlets=None):
     return line
 
 
-def sort_outlets(outlets, outlet1, outlet2, dirpath):
+def get_sorted_outlets(outlets, outlet1, outlet2, dirpath):
     """
     Sort all outlets of the geometry given the two relevant outlets
 
@@ -793,7 +793,7 @@ def sort_outlets(outlets, outlet1, outlet2, dirpath):
     return outlets, outlet1, outlet2
 
 
-def vmtk_centerline_resampling(line, length):
+def vmtk_resample_centerline(line, length):
     """Wrapper for vmtkcenterlineresampling
 
     Args:
@@ -814,7 +814,7 @@ def vmtk_centerline_resampling(line, length):
 
 
 
-def vmtk_centerline_geometry(line, smooth, outputsmoothed=False, factor=1.0, iterations=100):
+def vmtk_compute_geometric_features(line, smooth, outputsmoothed=False, factor=1.0, iterations=100):
     """Wrapper for vmtk centerline geometry.
 
     Args:
@@ -1093,11 +1093,11 @@ def spline_centerline(line, get_curv=False, isline=False,
     data[:, 1] = fy_
     data[:, 2] = fz_
 
-    line = data_to_vtk_polydata(data, header)
+    line = convert_numpy_data_to_polydata(data, header)
 
     # Let vmtk compute curve attributes
     if get_stats:
-        line = vmtk_centerline_geometry(line, smooth=False)
+        line = vmtk_compute_geometric_features(line, smooth=False)
 
     if get_curv:
         # Analytical curvature
@@ -1174,7 +1174,7 @@ def prepare_surface(base_path, surface_path):
         if path.exists(surface_capped_path):
             capped_surface = read_polydata(surface_capped_path)
         else:
-            capped_surface = vmtk_polydata_capper(surface)
+            capped_surface = vmtk_cap_polydata(surface)
             write_polydata(capped_surface, surface_capped_path)
 
     return open_surface, capped_surface
@@ -1476,14 +1476,14 @@ def prepare_surface_output(surface, original_surface, new_centerline, output_fil
         inlet = False
 
     # Perform a 'light' smoothing to obtain a nicer surface
-    surface = vmtk_surface_smoother(surface, method="laplace", iterations=100)
+    surface = vmtk_smooth_surface(surface, method="laplace", iterations=100)
 
     # Clean surface
     surface = vtk_clean_polydata(surface)
     surface = triangulate_surface(surface)
 
     # Capped surface
-    capped_surface = vmtk_polydata_capper(surface)
+    capped_surface = vmtk_cap_polydata(surface)
     if test_merge:
         check_if_surface_is_merged(capped_surface, new_centerline, output_filepath)
 
@@ -1501,7 +1501,7 @@ def check_if_surface_is_merged(surface, centerlines, output_filepath):
     """
     # Check if the manipulated centerline and the centerline from the new surface
     # significantly differ, if so it is likely that part of the surface is now merged
-    centerlines = vmtk_centerline_resampling(centerlines, length=0.1)
+    centerlines = vmtk_resample_centerline(centerlines, length=0.1)
     inlet = centerlines.GetPoint(0)
     outlets = []
     lines_to_compare = []
@@ -1512,8 +1512,8 @@ def check_if_surface_is_merged(surface, centerlines, output_filepath):
                                                resampling=0.1, recompute=True)
 
     for i in range(centerlines.GetNumberOfLines()):
-        line_to_compare = vmtk_centerline_resampling(lines_to_compare[i], length=0.1)
-        line_to_check = vmtk_centerline_resampling(extract_single_line(lines_to_check, i), length=0.1)
+        line_to_compare = vmtk_resample_centerline(lines_to_compare[i], length=0.1)
+        line_to_check = vmtk_resample_centerline(extract_single_line(lines_to_check, i), length=0.1)
         # Compare distance between points along both centerliens
         n = min([line_to_check.GetNumberOfPoints(), line_to_compare.GetNumberOfPoints()])
         tolerance = get_tolerance(line_to_compare) * 500
@@ -4030,7 +4030,7 @@ def get_data(centerline, centerline_bif, tol):
     for i in range(0, n_points):
         point_0 = cl1.GetPoint(i)
         point_1 = cl2.GetPoint(i)
-        distance_between_points = distance(point_0, point_1)
+        distance_between_points = get_distance(point_0, point_1)
         if distance_between_points > tol:
             center = cl1.GetPoint(i)
             r = cl1.GetPointData().GetArray(radiusArrayName).GetTuple1(i)

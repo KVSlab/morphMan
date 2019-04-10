@@ -86,7 +86,7 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
     print("-- Region of interest is defined by the region points: \nOutlet 1: %s \nOutlet 2: %s" % (outlet1, outlet2))
 
     # Sort outlets
-    outlets, outlet1, outlet2 = sort_outlets(outlets, outlet1, outlet2, base_path)
+    outlets, outlet1, outlet2 = get_sorted_outlets(outlets, outlet1, outlet2, base_path)
 
     # Compute parent artery and aneurysm centerline
     centerline_par, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerline_par_path, capped_surface,
