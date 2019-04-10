@@ -104,7 +104,7 @@ def write_polydata(input_data, filename, datatype=None):
     writer.Write()
 
 
-def merge_data(inputs):
+def vtk_append_polydata(inputs):
     """
     Appends one or more polygonal
     datates together into a single
@@ -125,7 +125,7 @@ def merge_data(inputs):
     return merged_data
 
 
-def get_array(array_name, line, k=1):
+def get_point_data_array(array_name, line, k=1):
     """
     Get data array from centerline object (Point data).
 
@@ -153,38 +153,6 @@ def get_array(array_name, line, k=1):
 
     return array
 
-
-def get_array_cell(array_name, line, k=1):
-    """
-    Get data array from centerline object (Cell data).
-
-    Args:
-        array_name (str): Name of array.
-        line (vtkPolyData): Centerline object.
-        k (int): Dimension.
-
-    Returns:
-        array (ndarray): Array containing data points.
-    """
-    # vtk_array = line.GetCellData().GetArray(arrayName)
-    # array = numpy_support.vtk_to_numpy(vtk_array)
-    array = np.zeros((line.GetNumberOfCells(), k))
-    if k == 1:
-        data_array = line.GetCellData().GetArray(array_name).GetTuple1
-    elif k == 2:
-        data_array = line.GetCellData().GetArray(array_name).GetTuple2
-    elif k == 3:
-        data_array = line.GetCellData().GetArray(array_name).GetTuple3
-    elif k == 9:
-        data_array = line.GetCellData().GetArray(array_name).GetTuple9
-
-    for i in range(line.GetNumberOfCells()):
-        array[i, :] = data_array(i)
-
-    return array
-
-
-
 def write_points(points, filename):
     """
     Writes input points to file.
@@ -204,4 +172,169 @@ def write_points(points, filename):
     point_set.SetVerts(cell_array)
 
     write_polydata(point_set, filename)
+
+
+def vtk_clean_polydata(surface):
+    """
+    Clean surface by merging
+    duplicate points, and/or
+    removing unused points
+    and/or removing degenerate cells.
+
+    Args:
+        surface (vtkPolyData): Surface model.
+
+    Returns:
+        cleanSurface (vtkPolyData): Cleaned surface model.
+    """
+    # Clean surface
+    surface_cleaner = vtk.vtkCleanPolyData()
+    surface_cleaner.SetInputData(surface)
+    surface_cleaner.Update()
+    cleaned_surface = surface_cleaner.GetOutput()
+
+    return cleaned_surface
+
+
+
+def vtk_compute_connectivity(surface, mode="All", closest_point=None):
+    """Wrapper of vtkPolyDataConnectivityFilter. Compute connectivity.
+
+    Args:
+        surface (vtkPolyData): Input surface data.
+        mode (str): Type of connectivity filter.
+        closest_point (list): Point to be used for mode='Closest'"""
+    connectivity = vtk.vtkPolyDataConnectivityFilter()
+    connectivity.SetInputData(surface)
+
+    # Mark each region with "RegionId"
+    if mode == "All":
+        connectivity.SetExtractionModeToAllRegions()
+    elif mode == "Largest":
+        connectivity.SetExtractionModeToLargestRegion()
+    elif mode == "Closest":
+        if closest_point is None:
+            print("ERROR: point not set for extracting closest region")
+            sys.exit(0)
+        connectivity.SetExtractionModeToClosestPointRegion()
+        connectivity.SetClosestPoint(closest_point)
+    connectivity.ColorRegionsOn()
+    connectivity.Update()
+    output = connectivity.GetOutput()
+
+    return output
+
+
+def vtk_convert_unstructured_grid_to_polydata(unstructured_grid):
+    """Wrapper for vtkGeometryFilter, which converts an unstructured grid into a polydata.
+
+    Args:
+        unstructured_grid (vtkUnstructuredGrid): An unstructured grid.
+
+    Returns:
+        surface (vtkPolyData): A vtkPolyData object from the unstrutured grid.
+    """
+    # Convert unstructured grid to polydata
+    geo_filter = vtk.vtkGeometryFilter()
+    geo_filter.SetInputData(unstructured_grid)
+    geo_filter.Update()
+    polydata = geo_filter.GetOutput()
+
+    return polydata
+
+
+def vtk_compute_threshold(surface, name, lower=0, upper=1, threshold_type="between", source=1):
+    """Wrapper for vtkThreshold. Extract a section of a surface given a criteria.
+
+    Args:
+        surface (vtkPolyData): The input data to be extracted.
+        name (str): Name of scalar array.
+        lower (float): Lower bound.
+        upper (float): Upper bound.
+        threshold_type (str): Type of threshold (lower, upper, between)
+        source (int): PointData or CellData.
+
+    Returns:
+        surface (vtkPolyData): The extracted surface based on the lower and upper limit.
+    """
+    # source = 1 uses cell data as input
+    # source = 0 uses point data as input
+
+    # Apply threshold
+    vtk_threshold = vtk.vtkThreshold()
+    vtk_threshold.SetInputData(surface)
+    if threshold_type == "between":
+        vtk_threshold.ThresholdBetween(lower, upper)
+    elif threshold_type == "lower":
+        vtk_threshold.ThresholdByLower(lower)
+    elif threshold_type == "upper":
+        vtk_threshold.ThresholdByUpper(upper)
+    else:
+        print((("%s is not a threshold type. Pleace chose from: upper, lower" +
+                ", or between") % threshold_type))
+        sys.exit(0)
+
+    vtk_threshold.SetInputArrayToProcess(0, 0, 0, source, name)
+    vtk_threshold.Update()
+    surface = vtk_threshold.GetOutput()
+
+    # Convert to polydata
+    surface = vtk_convert_unstructured_grid_to_polydata(surface)
+
+    return surface
+
+
+def vtk_extract_feature_edges(polydata):
+    """Wrapper for vtkFeatureedges. Extracts the edges of the cells that are open.
+
+    Args:
+        polydata (vtkPolyData): surface to extract the openings from.
+
+    Returns:
+        feature_edges (vtkPolyData): The boundary edges of the surface.
+    """
+    feature_edges = vtk.vtkFeatureEdges()
+    feature_edges.FeatureEdgesOff()
+    feature_edges.BoundaryEdgesOn()
+    feature_edges.NonManifoldEdgesOff()
+    feature_edges.SetInputData(polydata)
+    feature_edges.Update()
+
+    return feature_edges.GetOutput()
+
+
+def get_vtk_array(name, comp, num):
+    """An empty vtkDoubleArray.
+
+    Args:
+        name (str): Name of array.
+        comp (int): Number of components
+        num (int): Number of tuples.
+
+    Returns:
+        array (vtkDoubleArray): An empty vtk array.
+    """
+    array = vtk.vtkDoubleArray()
+    array.SetNumberOfComponents(comp)
+    array.SetNumberOfTuples(num)
+    for i in range(comp):
+        array.FillComponent(i, 0.0)
+    array.SetName(name)
+
+    return array
+
+def get_vtk_cell_locator(surface):
+    """Wrapper for vtkCellLocator
+
+    Args:
+        surface (vtkPolyData): input surface
+
+    Returns:
+        return (vtkCellLocator): Cell locator of the input surface.
+    """
+    locator = vtk.vtkCellLocator()
+    locator.SetDataSet(surface)
+    locator.BuildLocator()
+
+    return locator
 

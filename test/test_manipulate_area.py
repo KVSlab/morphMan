@@ -9,7 +9,7 @@ import pytest
 import numpy as np
 
 from .fixtures import common_input
-from morphman.common import read_polydata, vmtk_compute_centerline_sections, get_array, \
+from morphman.common import read_polydata, vmtk_compute_centerline_sections, get_point_data_array, \
                             get_path_names, extract_single_line
 from morphman import manipulate_area
 
@@ -38,7 +38,7 @@ def test_area_variation(ratio, common_input):
     new_centerline_area, _ = vmtk_compute_centerline_sections(surface,
                                                               centerline_spline)
 
-    new_area = get_array("CenterlineSectionArea", new_centerline_area)
+    new_area = get_point_data_array("CenterlineSectionArea", new_centerline_area)
 
     # Check if the new ratio holds
     print("Target ratio", ratio, "New ratio", new_area.max() / new_area.min())
@@ -75,8 +75,8 @@ def test_create_stenosis(common_input):
     centerline_spline = read_polydata(centerline_spline_path)
     new_centerline_area, _ = vmtk_compute_centerline_sections(surface,
                                                               centerline_spline)
-    old_area = get_array("CenterlineSectionArea", centerline_area)
-    new_area = get_array("CenterlineSectionArea", new_centerline_area)
+    old_area = get_point_data_array("CenterlineSectionArea", centerline_area)
+    new_area = get_point_data_array("CenterlineSectionArea", new_centerline_area)
 
     # Check if there is a 50 % narrowing
     assert (np.sqrt(new_area / old_area)).min() - 0.5 < 0.05
@@ -104,8 +104,8 @@ def test_inflation_and_deflation_of_area(common_input, percentage):
     centerline_spline = read_polydata(centerline_spline_path)
     new_centerline_area, _ = vmtk_compute_centerline_sections(surface,
                                                               centerline_spline)
-    old_area = get_array("CenterlineSectionArea", centerline_area)
-    new_area = get_array("CenterlineSectionArea", new_centerline_area)
+    old_area = get_point_data_array("CenterlineSectionArea", centerline_area)
+    new_area = get_point_data_array("CenterlineSectionArea", new_centerline_area)
 
     # Exclude first 5 %
     old_area = old_area[int(0.1*old_area.shape[0]):]

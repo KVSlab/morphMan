@@ -303,8 +303,8 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
 
         siphon = vmtk_centerline_geometry(siphon, False)
 
-        frenet_t1 = get_array("FrenetTangent", siphon, k=3)
-        frenet_t2 = get_array("FrenetTangent", moved_siphon, k=3)
+        frenet_t1 = get_point_data_array("FrenetTangent", siphon, k=3)
+        frenet_t2 = get_point_data_array("FrenetTangent", moved_siphon, k=3)
 
         p1_1, p1_id = find_closest_point(frenet_t1[-1], 0, max_id, p2, siphon)
         p2_2, p2_id = find_closest_point(frenet_t1[0], max_id, siphon.GetNumberOfPoints(), p1, siphon)
@@ -314,8 +314,8 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
                                            moved_siphon.GetNumberOfPoints(), moved_p1,
                                            moved_siphon)
 
-        n1 = get_array("FrenetBinormal", siphon, k=3)[p1_id]
-        n2 = get_array("FrenetBinormal", moved_siphon, k=3)[np1_id]
+        n1 = get_point_data_array("FrenetBinormal", siphon, k=3)[p1_id]
+        n2 = get_point_data_array("FrenetBinormal", moved_siphon, k=3)[np1_id]
 
         dp = p1_1 - p2_2
         dnewp = newp1 - newp2
@@ -540,8 +540,8 @@ def compute_curvature(input_filepath, alpha, beta, method, new_centerlines, comp
     # Extract centerline points and ids
     new_centerline = extract_single_line(new_centerlines, 0)
     centerline = extract_single_line(centerlines, 0)
-    new_locator = get_locator(new_centerline)
-    old_locator = get_locator(centerline)
+    new_locator = get_vtk_point_locator(new_centerline)
+    old_locator = get_vtk_point_locator(centerline)
     id1 = old_locator.FindClosestPoint(p1)
     id2 = old_locator.FindClosestPoint(p2)
     id1_new = new_locator.FindClosestPoint(p1)
@@ -551,24 +551,24 @@ def compute_curvature(input_filepath, alpha, beta, method, new_centerlines, comp
     if method == "vmtkfactor":
         factor = 0.5
         line_fac = vmtk_centerline_geometry(new_centerline, smooth=True, iterations=100, factor=factor)
-        curv_fac = get_array("Curvature", line_fac)
+        curv_fac = get_point_data_array("Curvature", line_fac)
         new_curvature = gaussian_filter(curv_fac, 5)
 
         if compute_original:
             line_fac = vmtk_centerline_geometry(centerline, smooth=True, iterations=100, factor=factor)
-            curv_fac = get_array("Curvature", line_fac)
+            curv_fac = get_point_data_array("Curvature", line_fac)
             curvature = gaussian_filter(curv_fac, 5)
 
     # 2) VMTK - Iteration variance
     elif method == "vmtkit":
         it = 150
         line_it = vmtk_centerline_geometry(new_centerline, smooth=True, iterations=it, factor=1.0)
-        curv_it = get_array("Curvature", line_it)
+        curv_it = get_point_data_array("Curvature", line_it)
         new_curvature = gaussian_filter(curv_it, 5)
 
         if compute_original:
             line_it = vmtk_centerline_geometry(centerline, smooth=True, iterations=it, factor=1.0)
-            curv_it = get_array("Curvature", line_it)
+            curv_it = get_point_data_array("Curvature", line_it)
             curvature = gaussian_filter(curv_it, 5)
 
     # 3) Splines
@@ -763,7 +763,7 @@ def odr_line(id1, id2, line, curvature, limit):
 
         curv_lines_split.append(line_)
 
-    curvlines = merge_data(curv_lines_split)
+    curvlines = vtk_append_polydata(curv_lines_split)
 
     return d1, d2, curvlines
 
@@ -793,8 +793,8 @@ def get_moved_siphon(new_centerlines, centerlines, p1, p2):
         moved_p2 (ndarray): New position of second ipping point.
     """
     # Extract new siphon and prepare
-    new_locator = get_locator(extract_single_line(new_centerlines, 0))
-    old_locator = get_locator(extract_single_line(centerlines, 0))
+    new_locator = get_vtk_point_locator(extract_single_line(new_centerlines, 0))
+    old_locator = get_vtk_point_locator(extract_single_line(centerlines, 0))
     id1 = old_locator.FindClosestPoint(p1)
     id2 = old_locator.FindClosestPoint(p2)
 

@@ -74,7 +74,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     write_polydata(centerline_splined, centerline_spline_path)
     write_polydata(centerline_remaining, centerline_remaining_path)
     if centerline_diverging is not None:
-        write_polydata(merge_data(centerline_diverging), centerline_diverging_path)
+        write_polydata(vtk_append_polydata(centerline_diverging), centerline_diverging_path)
 
     # Compute area
     centerline_area, centerline_area_sections = vmtk_compute_centerline_sections(surface,
@@ -97,7 +97,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
                               region_of_interest, region_points, centerline_diverging,
                               voronoi_regions[2:])
 
-    new_voronoi = merge_data([new_voronoi, voronoi_regions[1]])
+    new_voronoi = vtk_append_polydata([new_voronoi, voronoi_regions[1]])
     write_polydata(new_voronoi, voronoi_new_path)
 
     # Make new surface
@@ -130,7 +130,7 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
         factor (float): Factor determining the change in radius.
     """
     # Array to change the radius
-    area = get_array("CenterlineSectionArea", line_to_change)
+    area = get_point_data_array("CenterlineSectionArea", line_to_change)
 
     # Safety smoothing, section area does not always work perfectly
     for i in range(2):
@@ -215,7 +215,7 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
                         region_of_interest, region_points)
 
     # Locator to find closest point on centerline
-    locator = get_locator(line_to_change)
+    locator = get_vtk_point_locator(line_to_change)
 
     # Voronoi diagram
     n = voronoi.GetNumberOfPoints()
