@@ -843,7 +843,7 @@ def vmtk_compute_geometric_features(line, smooth, outputsmoothed=False, factor=1
     return geometry.Centerlines
 
 
-def vmtk_centerline_attributes(line):
+def vmtk_compute_centerline_attributes(line):
     """ Wrapper for centerline attributes.
 
     Args:
@@ -857,9 +857,9 @@ def vmtk_centerline_attributes(line):
     attributes.NormalsArrayName = parallelTransportNormalsArrayName
     attributes.AbscissaArrayName = abscissasArrayName
     attributes.Execute()
+    centerlines = attributes.Centerlines
 
-    line = attributes.Centerlines
-    return line
+    return centerlines
 
 
 def discrete_geometry(line, neigh=10):

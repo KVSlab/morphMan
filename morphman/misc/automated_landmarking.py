@@ -94,7 +94,7 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
         centerline = vmtk_resample_centerline(centerline, length=resampling_step)
 
     if curv_method == "vmtk":
-        line = vmtk_centerline_attributes(centerline)
+        line = vmtk_compute_centerline_attributes(centerline)
         line = vmtk_compute_geometric_features(line, smooth_line, factor=smoothing_factor, iterations=iterations)
         curvature_ = get_point_data_array("Curvature", line)
         curvature__ = gaussian_filter(curvature_, 5)
@@ -105,7 +105,7 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
 
     elif curv_method == "disc":
         neigh = 20
-        line = vmtk_centerline_attributes(centerline)
+        line = vmtk_compute_centerline_attributes(centerline)
         line = vmtk_compute_geometric_features(line, smooth_line, factor=smoothing_factor, iterations=iterations)
         line, curvature__ = discrete_geometry(line, neigh=neigh)
         curvature = []
@@ -413,7 +413,7 @@ def spline_and_geometry(line, smooth, nknots):
     line = convert_numpy_data_to_polydata(data, header)
 
     # Let vmtk compute curve attributes
-    line = vmtk_centerline_attributes(line)
+    line = vmtk_compute_centerline_attributes(line)
     line = vmtk_compute_geometric_features(line, smooth)
 
     # Compute curvature from the 'exact' spline to get a robust way of
