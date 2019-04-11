@@ -1,9 +1,8 @@
 import math
+from vtk.util import numpy_support
 from os import makedirs
 
-from vtk.util import numpy_support
-
-from morphman.common.vmtk_wrapper import *
+from morphman.common.voronoi_operations import *
 from morphman.common.vtk_wrapper import *
 
 
