@@ -3077,6 +3077,7 @@ def find_region_of_interest_and_diverging_centerlines(centerlines_complete, regi
 
     centerlines = merge_data(centerlines)
     diverging_centerlines = merge_data(diverging_centerlines) if len(diverging_centerlines) > 0 else None
+    print(diverging_ids)
     return centerlines, diverging_centerlines, region_points, region_points_vtk, diverging_ids
 
 

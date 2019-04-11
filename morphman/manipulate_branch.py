@@ -7,8 +7,42 @@
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
+from scipy.signal import argrelextrema
+
 # Local import
 from common import *
+
+
+def get_longest_centerline(centerlines_complete):
+    longest = extract_single_line(centerlines_complete, 0)
+    for i in range(1, centerlines_complete.GetNumberOfLines()):
+        current_line = extract_single_line(centerlines_complete, i)
+        longest_length = len(get_curvilinear_coordinate(longest))
+        current_length = len(get_curvilinear_coordinate(current_line))
+        if current_length > longest_length:
+            longest = current_line
+
+    return longest
+
+
+def get_branch(branch_to_manipulate_number, centerlines_complete, longest_centerline):
+    break_points = dict()
+    for i in range(centerlines_complete.GetNumberOfLines()):
+        current_line = extract_single_line(centerlines_complete, i)
+        tolerance = get_tolerance(current_line)
+        for j in range(current_line.GetNumberOfPoints()):
+            p1 = np.asarray(current_line.GetPoint(j))
+            p2 = np.asarray(longest_centerline.GetPoint(j))
+            if distance(p1, p2) > tolerance:
+                break_points[j] = i
+                break
+
+    break_points_keys = sorted(break_points.keys())
+    print(break_points_keys)
+    selected_branch_id = break_points[break_points_keys[branch_to_manipulate_number]]
+    selected_branch = extract_single_line(centerlines_complete, selected_branch_id)
+
+    return selected_branch
 
 
 def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, region_of_interest, region_points,
@@ -46,6 +80,7 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, re
     centerlines_path = base_path + "_centerline.vtp"
     new_centerlines_path = base_path + "_centerline_moved_and_rotated.vtp"
     new_voronoi_path = base_path + "_voronoi_moved_and_rotated.vtp"
+    unprepared_output_filepath = base_path + "_unprepared_output.vtp"
 
     # Clean and capp / uncapp surface
     surface, capped_surface = prepare_surface(base_path, input_filepath)
@@ -60,6 +95,15 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, re
         voronoi = prepare_voronoi_diagram(capped_surface, centerlines_complete, base_path,
                                           smooth, smooth_factor, no_smooth,
                                           no_smooth_point, voronoi, pole_ids)
+
+    # Define longest centerline as "main branch"
+    # If branch number is not none: sort centerlines -> select line n -> get branch
+    # Else -> click on branch -> get-diverging branch closest to point
+    # Then click / select place to put
+    branch_to_manipulate_number = 1
+    longest_centerline = get_longest_centerline(centerlines_complete)
+    branch_to_manipulate = get_branch(branch_to_manipulate_number, centerlines_complete, longest_centerline)
+    write_polydata(longest_centerline, "longest.vtp")
 
     if region_points is None:
         # Get region of interest
@@ -85,19 +129,19 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, re
         diverging_centerline_end = get_diverging_centerline_end(diverging_centerlines, diverging_id, region_points)
     else:
         raise RuntimeError("No diverging branch detected! Cannot translate nothing.")
-
-    # Append remaining diverging centerlines back to centerliens
-    if diverging_centerlines.GetNumberOfLines() > 1:
-        centerlines = update_centerlines(centerlines, diverging_centerlines)
+    diverging_centerline_end = branch_to_manipulate.GetPoint(branch_to_manipulate.GetNumberOfPoints() - 1)
 
     # Select diverging branch from Brancher and compare with diverging branch found manually
     diverging_centerline_branch = get_diverging_centerline_branch(centerlines_branched, diverging_centerline_end)
 
+    # Append remaining diverging centerlines back to centerliens
+    if diverging_centerlines.GetNumberOfLines() > 1:
+        centerlines = update_centerlines(centerlines, diverging_centerlines, diverging_centerline_end)
+
     # Clip Voronoi diagram into bend and remaining part of geometry
     print("-- Clipping Voronoi diagrams")
-    voronoi_branch, voronoi_remaining = split_voronoi_with_centerlines(voronoi,
-                                                                       [diverging_centerline_branch,
-                                                                        centerlines])
+    voronoi_branch, voronoi_remaining = split_voronoi_with_centerlines(voronoi, [diverging_centerline_branch,
+                                                                                 centerlines])
     # Get surface normals
     old_normal = get_estimated_surface_normal(diverging_centerline_branch)
     new_normal = get_exact_surface_normal(capped_surface, new_branch_pos_id)
@@ -120,10 +164,14 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, re
     new_voronoi = merge_data([voronoi_remaining, moved_and_rotated_voronoi_branch])
     write_polydata(new_voronoi, new_voronoi_path)
 
+    write_polydata(centerlines, "cl_.vtp")
+    write_polydata(moved_and_rotated_centerline_branch, "moved_cl_.vtp")
+
     new_centerlines = merge_data([centerlines, moved_and_rotated_centerline_branch])
     write_polydata(new_centerlines, new_centerlines_path)
 
     new_surface = create_new_surface(new_voronoi, poly_ball_size=poly_ball_size)
+    write_polydata(new_surface, unprepared_output_filepath)
 
     print("-- Smoothing, clean, and check surface")
     new_surface = prepare_surface_output(new_surface, surface,
@@ -183,10 +231,13 @@ def get_diverging_centerline_branch(centerlines_branched, diverging_centerline_e
             return centerline_branch
 
 
-def update_centerlines(centerlines, diverging_centerlines):
+def update_centerlines(centerlines, diverging_centerlines, diverging_centerline_end):
     remaining_centerlines = [centerlines]
-    for i in range(diverging_centerlines.GetNumberOfLines - 1):
-        remaining_centerlines.append(extract_single_line(diverging_centerlines, i))
+    for i in range(diverging_centerlines.GetNumberOfLines()):
+        diverging_centerline = extract_single_line(diverging_centerlines, i)
+        if diverging_centerline.GetPoint(diverging_centerline.GetNumberOfPoints() - 1) != diverging_centerline_end:
+            remaining_centerlines.append(diverging_centerline)
+
     centerlines = merge_data(remaining_centerlines)
 
     return centerlines
