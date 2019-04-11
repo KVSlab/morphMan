@@ -10,16 +10,9 @@ from os import path
 import numpy as np
 import numpy.linalg as la
 import vtk
-from scipy.interpolate import splrep, splev
-from scipy.signal import resample
 
 # Local import
-from morphman.common.vmtkpointselector import *
-from .centerline_operations import *
-from .surface_operations import *
-from .voronoi_operations import *
-from .vmtk_wrapper import *
-from .vtk_wrapper import *
+from morphman.common.vtk_wrapper import get_vtk_array, vtk_point_locator
 
 # Global array names
 radiusArrayName = 'MaximumInscribedSphereRadius'
@@ -257,7 +250,6 @@ def get_sorted_outlets(outlets, outlet1, outlet2, dirpath):
     write_parameters(data, dirpath)
 
     return outlets, outlet1, outlet2
-
 
 
 def get_vertical_direction_parameters(n, region_points, cl_points, alpha):

@@ -1,10 +1,10 @@
-from os import path, makedirs
-from vtk.util import numpy_support
 import math
+from os import makedirs
 
-import vtk
+from vtk.util import numpy_support
 
-from .common import *
+from morphman.common.vmtk_wrapper import *
+from morphman.common.vtk_wrapper import *
 
 
 def get_relevant_outlets(surface, base_path):

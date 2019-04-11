@@ -1,5 +1,10 @@
 import sys
-from morphman.common.common import *
+from os import path
+
+import numpy as np
+import vtk
+
+from morphman.common.common import radiusArrayName
 
 
 def read_polydata(filename, datatype=None):

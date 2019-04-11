@@ -1,3 +1,8 @@
+from morphman.common.centerline_operations import *
+from morphman.common.vmtk_wrapper import *
+from morphman.common.vtk_wrapper import *
+
+
 def remove_distant_voronoi_points(voronoi, centerline):
     """Take a voronoi diagram and a centerline remove points that are far away.
 
@@ -22,8 +27,8 @@ def remove_distant_voronoi_points(voronoi, centerline):
     count = 0
     for i in range(n):
         point = voronoi.GetPoint(i)
-        id = locator.FindClosestPoint(point)
-        cl_point = centerline.GetPoint(id)
+        cl_point_id = locator.FindClosestPoint(point)
+        cl_point = centerline.GetPoint(cl_point_id)
         dist = get_distance(point, cl_point)
         if dist / 3 > radius_array_data(i) or radius_array_data(i) > limit:
             count += 1

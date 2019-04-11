@@ -1,3 +1,8 @@
+from vmtk import vtkvmtk, vmtkscripts
+
+from morphman.common.common import *
+from morphman.common.vtk_wrapper import *
+
 
 def vmtk_smooth_centerline(centerlines_output, num_iter, smooth_factor):
     centerline_smoothing = vmtkscripts.vmtkCenterlineSmoothing()
@@ -26,6 +31,7 @@ def vmtk_compute_centerlines(end_point, inlet, method, outlet, pole_ids, resampl
     centerlines_output = centerlines.Centerlines
 
     return centerlines, centerlines_output
+
 
 def vmtk_compute_centerline_sections(surface, centerline):
     """
@@ -124,8 +130,6 @@ def vmtk_resample_centerline(line, length):
     return line
 
 
-
-
 def vmtk_cap_polydata(surface):
     """Wrapper for vmtkCapPolyData
 
@@ -200,7 +204,6 @@ def vmtk_compute_voronoi_diagram(surface, filename):
     return new_voronoi
 
 
-
 def vmtk_polyball_modeller(complete_voronoi_diagram, poly_ball_size):
     modeller = vtkvmtk.vtkvmtkPolyBallModeller()
     modeller.SetInputData(complete_voronoi_diagram)
@@ -209,6 +212,7 @@ def vmtk_polyball_modeller(complete_voronoi_diagram, poly_ball_size):
     modeller.SetSampleDimensions(poly_ball_size)
     modeller.Update()
     return modeller
+
 
 def vmtk_surface_connectivity(surface):
     connector = vmtkscripts.vmtkSurfaceConnectivity()
@@ -241,4 +245,3 @@ def vmtk_endpoint_extractor(centerlines, clipspheres):
     extractor.Execute()
 
     return extractor
-

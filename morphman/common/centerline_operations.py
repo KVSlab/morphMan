@@ -1,7 +1,6 @@
 import vtk
 
-from .common import *
-from .vessel_reconstruction_tools import *
+from morphman.common.common import *
 
 
 def extract_single_line(centerlines, line_id, start_id=0, end_id=None):
