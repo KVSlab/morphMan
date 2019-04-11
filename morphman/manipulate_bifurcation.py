@@ -480,6 +480,7 @@ def merge_cl(centerline, end_point, div_point):
     # Find lines to merge
     lines = [extract_single_line(centerline, i) for i in range(n_lines)]
     locators = [vtk_point_locator(lines[i]) for i in range(n_lines)]
+    div_id = [locators[i].FindClosestPoint(div_point[0]) for i in range(n_lines)]
     end_id = [locators[i].FindClosestPoint(end_point[0]) for i in range(n_lines)]
 
     # Find the direction of each line
@@ -503,10 +504,10 @@ def merge_cl(centerline, end_point, div_point):
 
         # Check if it should be merged
         loc = vtk_point_locator(line)
-        clipp_id = loc.FindClosestPoint(end_point[0])
-        div_id = loc.FindClosestPoint(div_point[0])
-        clipp_dist = get_distance(line.GetPoint(clipp_id), end_point[0])
-        div_dist = get_distance(line.GetPoint(div_id), div_point[0])
+        end_point_id = loc.FindClosestPoint(end_point[0])
+        div_point_id = loc.FindClosestPoint(div_point[0])
+        clipp_dist = get_distance(line.GetPoint(end_point_id), end_point[0])
+        div_dist = get_distance(line.GetPoint(div_point_id), div_point[0])
         tol = get_centerline_tolerance(line) * 3
         merge_bool = True
         if clipp_dist > tol or div_dist > tol:
