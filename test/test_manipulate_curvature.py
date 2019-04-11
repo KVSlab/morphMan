@@ -10,7 +10,7 @@ import pytest
 
 from .fixtures import common_input
 from morphman import manipulate_curvature
-from morphman.common.morphman_operations import compute_discrete_derivatives
+from morphman.common.surface_operations import compute_discrete_derivatives
 from morphman.common.common import get_path_names
 from morphman.common.vtk_wrapper import extract_single_line, read_polydata, vtk_point_locator
 

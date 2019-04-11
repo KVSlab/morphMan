@@ -10,7 +10,7 @@ import pytest
 
 from .fixtures import common_input
 from morphman import manipulate_bifurcation
-from morphman.common.morphman_operations import get_centerline_tolerance
+from morphman.common.surface_operations import get_centerline_tolerance
 from morphman.common.common import get_path_names, get_distance
 from morphman.common.vtk_wrapper import read_polydata, vtk_point_locator, extract_single_line
 
