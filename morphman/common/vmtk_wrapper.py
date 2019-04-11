@@ -1,7 +1,15 @@
+from os import path
+
 from vmtk import vtkvmtk, vmtkscripts
 
-from morphman.common.common import *
-from morphman.common.vtk_wrapper import *
+# Global array names
+from morphman.common import read_polydata, write_polydata
+
+radiusArrayName = 'MaximumInscribedSphereRadius'
+parallelTransportNormalsArrayName = 'ParallelTransportNormals'
+groupIDsArrayName = "GroupIds"
+abscissasArrayName = 'Abscissas'
+branchClippingArrayName = 'BranchClippingArray'
 
 
 def vmtk_smooth_centerline(centerlines_output, num_iter, smooth_factor):

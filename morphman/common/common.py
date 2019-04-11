@@ -14,20 +14,6 @@ import vtk
 # Local import
 from morphman.common.vtk_wrapper import get_vtk_array, vtk_point_locator
 
-# Global array names
-radiusArrayName = 'MaximumInscribedSphereRadius'
-parallelTransportNormalsArrayName = 'ParallelTransportNormals'
-groupIDsArrayName = "GroupIds"
-abscissasArrayName = 'Abscissas'
-clippingArrayName = 'ClippingArray'
-branchClippingArrayName = 'BranchClippingArray'
-distanceToTubeArrayName = 'DistanceToTubeFunction'
-closedArrayName = 'ClosedSection'
-eikonalSolutionArrayName = 'EikonalSolutionArray'
-edgeArrayName = 'EdgeArray'
-edgePCoordArrayName = 'EdgePCoordArray'
-costFunctionArrayName = 'CostFunctionArray'
-
 # Options not available from commandline
 divergingRatioToSpacingTolerance = 2.0
 interpolationHalfSize = 3
@@ -68,7 +54,7 @@ def get_distance(point1, point2):
     return np.sqrt(np.sum((np.asarray(point1) - np.asarray(point2)) ** 2))
 
 
-def get_gram_schmidt(V):
+def gram_schmidt(V):
     """Gram schmidt process of each column
 
     Args:

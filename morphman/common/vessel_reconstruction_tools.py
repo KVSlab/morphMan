@@ -1,10 +1,10 @@
 import math
 
 from scipy.interpolate import splrep, splev
-from vmtk import vtkvmtk
 
-from morphman.common.centerline_operations import *
-from morphman.common.common import *
+from morphman.common import extract_single_line, get_distance, interpolationHalfSize
+from morphman.common.vmtk_wrapper import *
+from morphman.common.vtk_wrapper import *
 
 
 ### The following code is adapted from:

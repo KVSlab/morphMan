@@ -1,11 +1,13 @@
+import numpy.linalg as la
 import vtk
 from scipy.interpolate import splrep, splev
 from scipy.signal import resample
 
-from morphman.common.surface_operations import *
-from morphman.common.common import *
-from morphman.common.vessel_reconstruction_tools import create_parent_artery_patches
-from morphman.common.vmtkpointselector import vmtkPickPointSeedSelector
+from morphman.common import prepare_surface, get_relevant_outlets, get_sorted_outlets, compute_centerlines, \
+    get_distance, get_inlet_and_outlet_centers, divergingRatioToSpacingTolerance, create_parent_artery_patches, \
+    vmtkPickPointSeedSelector, gram_schmidt, convert_numpy_data_to_polydata
+from morphman.common.vmtk_wrapper import *
+from morphman.common.vtk_wrapper import *
 
 
 def extract_single_line(centerlines, line_id, start_id=0, end_id=None):
@@ -491,8 +493,7 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
             # Get ids of start and stop
             centerline_length = get_curvilinear_coordinate(line)
             center = centerline_length[tmp_id]
-            region_of_interest_id = (center - length <= centerline_length) \
-                                    * (centerline_length <= center + length)
+            region_of_interest_id = (center - length <= centerline_length) * (centerline_length <= center + length)
             start_id = np.argmax(region_of_interest_id)
             end_id = region_of_interest_id.shape[0] - 1 - np.argmax(region_of_interest_id[::-1])
 
@@ -811,7 +812,7 @@ def get_k1k2_basis(curvature, line):
         V = np.eye(3)
         V[:, 0] = T[i, :]
         V[:, 1] = E1[i, :]
-        V = get_gram_schmidt(V)
+        V = gram_schmidt(V)
 
         E1[i, :] = V[:, 1]
         E2[i, :] = V[:, 2]
@@ -920,8 +921,7 @@ def compute_splined_centerline(line, get_curv=False, isline=False, nknots=50, ge
         c1xc2_2 = ddlsfx * dlsfz - ddlsfz * dlsfx
         c1xc2_3 = ddlsfy * dlsfx - ddlsfx * dlsfy
 
-        curvature = np.sqrt(c1xc2_1 ** 2 + c1xc2_2 ** 2 + c1xc2_3 ** 2) / \
-                    (dlsfx ** 2 + dlsfy ** 2 + dlsfz ** 2) ** 1.5
+        curvature = np.sqrt(c1xc2_1 ** 2 + c1xc2_2 ** 2 + c1xc2_3 ** 2) / (dlsfx ** 2 + dlsfy ** 2 + dlsfz ** 2) ** 1.5
 
         return line, curvature
     else:

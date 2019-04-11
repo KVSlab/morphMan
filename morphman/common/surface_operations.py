@@ -1,8 +1,11 @@
 import math
-from vtk.util import numpy_support
 from os import makedirs
 
-from morphman.common.voronoi_operations import *
+from vtk.util import numpy_support
+
+from morphman.common import get_parameters, write_parameters, extract_single_line, vmtkPickPointSeedSelector, \
+    get_centerline_tolerance, get_distance, smooth_voronoi_diagram, get_diverging_point_id, create_new_surface
+from morphman.common.vmtk_wrapper import *
 from morphman.common.vtk_wrapper import *
 
 
