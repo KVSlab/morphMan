@@ -5,9 +5,11 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
 ##      PURPOSE.  See the above copyright notices for more information.
 
-import pytest
 from os import system, path
 from sys import platform
+
+import pytest
+
 
 def download_testdata(test_path, outputfile):
     if platform == "darwin":
@@ -22,6 +24,7 @@ def download_testdata(test_path, outputfile):
         system("bitsadmin /transfer download_model /download /priority high {} {}".format(test_path, outputfile))
         system("tar -zxvf {}".format(outputfile))
         system("del /f {}".format(outputfile))
+
 
 @pytest.fixture(scope="module")
 def common_input():
@@ -41,13 +44,13 @@ def common_input():
                             + " test folder")
 
     # Define parameters shared by all functions
-    a = dict(input_filepath = path.join(abs_path, "C0001", "surface", "model.vtp"),
-             output_filepath = path.join(abs_path, "C0001", "surface", "model_output.vtp"),
-             smooth_factor = 0.25,
-             poly_ball_size = [180, 180, 180],
-             smooth = True,
-             resampling_step = 0.1,
-             no_smooth = False,
-             no_smooth_point = None)
+    a = dict(input_filepath=path.join(abs_path, "C0001", "surface", "model.vtp"),
+             output_filepath=path.join(abs_path, "C0001", "surface", "model_output.vtp"),
+             smooth_factor=0.25,
+             poly_ball_size=[180, 180, 180],
+             smooth=True,
+             resampling_step=0.1,
+             no_smooth=False,
+             no_smooth_point=None)
 
     return a

@@ -8,16 +8,17 @@
 import pytest
 
 from .fixtures import common_input
-from morphman.common import read_polydata, get_path_names
-from morphman.misc import compute_angle, compute_curvature
 from morphman import manipulate_bend
+from morphman.common import read_polydata, get_path_names
+from morphman.misc import compute_angle
+
 
 @pytest.mark.parametrize("alpha,beta",
-                         [(-0.2,  0.0),
-                          ( 0.2,  0.0),
-                          ( 0.0,  0.2),
-                          ( 0.0, -0.2),
-                          ( 0.2, -0.2)])
+                         [(-0.2, 0.0),
+                          (0.2, 0.0),
+                          (0.0, 0.2),
+                          (0.0, -0.2),
+                          (0.2, -0.2)])
 def test_siphon(common_input, alpha, beta):
     # Set problem specific parameters
     common_input.update(dict(alpha=alpha,
@@ -30,7 +31,7 @@ def test_siphon(common_input, alpha, beta):
                                             43.242130279541016,
                                             42.68572235107422,
                                             38.65191650390625],
-                             resampling_step = 0.1))
+                             resampling_step=0.1))
 
     # Perform manipulation
     manipulate_bend(**common_input)

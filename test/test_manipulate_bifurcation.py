@@ -5,25 +5,25 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
 ##      PURPOSE.  See the above copyright notices for more information.
 
-import pytest
 import numpy as np
+import pytest
 
 from .fixtures import common_input
-from morphman.common import get_path_names, read_polydata, vtk_point_locator, get_centerline_tolerance, \
-                            extract_single_line, get_distance
 from morphman import manipulate_bifurcation
+from morphman.common import get_path_names, read_polydata, vtk_point_locator, get_centerline_tolerance, \
+    extract_single_line, get_distance
 
 
 @pytest.mark.parametrize("angle", [20 / 180 * np.pi, -20 / 180 * np.pi])
 def test_bifurcation_angle(common_input, angle):
-    common_input.update(dict(keep_fixed_1 = False,
-                             keep_fixed_2 = False,
-                             bif = False,
-                             lower = False,
-                             cylinder_factor = 7,
-                             angle = angle,
-                             region_of_interest = "commandline",
-                             region_points = [35.8, 59.8, 39.7, 76.8, 54.7, 53.2]))
+    common_input.update(dict(keep_fixed_1=False,
+                             keep_fixed_2=False,
+                             bif=False,
+                             lower=False,
+                             cylinder_factor=7,
+                             angle=angle,
+                             region_of_interest="commandline",
+                             region_points=[35.8, 59.8, 39.7, 76.8, 54.7, 53.2]))
 
     manipulate_bifurcation(**common_input)
 
@@ -86,10 +86,10 @@ def test_bifurcation_angle(common_input, angle):
     v2_new = end_point2_new - np.array(start_point2)
 
     # Normalize
-    v1_old = v1_old / np.sqrt(np.sum(v1_old**2))
-    v2_old = v2_old / np.sqrt(np.sum(v2_old**2))
-    v1_new = v1_new / np.sqrt(np.sum(v1_new**2))
-    v2_new = v2_new / np.sqrt(np.sum(v2_new**2))
+    v1_old = v1_old / np.sqrt(np.sum(v1_old ** 2))
+    v2_old = v2_old / np.sqrt(np.sum(v2_old ** 2))
+    v1_new = v1_new / np.sqrt(np.sum(v1_new ** 2))
+    v2_new = v2_new / np.sqrt(np.sum(v2_new ** 2))
 
     # Angle
     first_daughter_branch_angle_change = np.arccos(np.dot(v1_old, v1_new))
