@@ -87,7 +87,7 @@ def get_manipulated_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_ce
         centerline (vtkPolyData): Manipulated centerline.
     """
     if diverging_id is not None and merge_lines:
-        patch_cl = vtk_append_polydata([patch_cl, diverging_centerlines])
+        patch_cl = vtk_merge_polydata([patch_cl, diverging_centerlines])
 
     number_of_points = patch_cl.GetNumberOfPoints()
     number_of_cells = patch_cl.GetNumberOfCells()
@@ -171,7 +171,7 @@ def get_centerline_between_clipping_points(centerline_relevant_outlets, data):
         tmp_id_bif = loc.FindClosestPoint(data["bif"]["end_point"])
         lines.append(extract_single_line(line, 0, start_id=tmp_id_bif, end_id=tmp_id_dau))
 
-    centerline = vtk_append_polydata(lines)
+    centerline = vtk_merge_polydata(lines)
 
     return centerline
 
@@ -457,7 +457,7 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
 
     if len(diverging_centerlines) == 0:
         diverging_centerlines = None
-    remaining_centerlines = vtk_append_polydata(remaining_centerlines)
+    remaining_centerlines = vtk_merge_polydata(remaining_centerlines)
 
     return line_to_change, remaining_centerlines, diverging_centerlines, region_points, diverging_ids
 
@@ -519,8 +519,8 @@ def get_region_of_interest_and_diverging_centerlines(centerlines_complete, regio
                 diverging_ids.append(i)
                 break
 
-    centerlines = vtk_append_polydata(centerlines)
-    diverging_centerlines = vtk_append_polydata(diverging_centerlines) if len(diverging_centerlines) > 0 else None
+    centerlines = vtk_merge_polydata(centerlines)
+    diverging_centerlines = vtk_merge_polydata(diverging_centerlines) if len(diverging_centerlines) > 0 else None
 
     return centerlines, diverging_centerlines, region_points, region_points_vtk, diverging_ids
 

@@ -763,7 +763,7 @@ def odr_line(id1, id2, line, curvature, limit):
 
         curv_lines_split.append(line_)
 
-    curvlines = vtk_append_polydata(curv_lines_split)
+    curvlines = vtk_merge_polydata(curv_lines_split)
 
     return d1, d2, curvlines
 

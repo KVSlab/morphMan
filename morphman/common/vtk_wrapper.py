@@ -199,7 +199,7 @@ def write_polydata(input_data, filename, datatype=None):
     writer.Write()
 
 
-def vtk_append_polydata(inputs):
+def vtk_merge_polydata(inputs):
     """
     Appends one or more polygonal
     datates together into a single

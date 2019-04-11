@@ -73,6 +73,15 @@ argparse_common.py
     :undoc-members:
     :show-inheritance:
 
+voronoi_operations.py
+---------------------
+
+.. automodule:: voronoi_operations
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
 centerline_operations.py
 ------------------------
 
@@ -109,14 +118,6 @@ vtk_wrapper.py
 --------------
 
 .. automodule:: vtk_wrapper
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-voronoi_operations.py
----------------------
-
-.. automodule:: voronoi_operations
     :members:
     :undoc-members:
     :show-inheritance:

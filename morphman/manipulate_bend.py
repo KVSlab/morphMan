@@ -113,7 +113,7 @@ def manipulate_bend(input_filepath, output_filepath, smooth, smooth_factor, regi
 
     if diverging_centerline_ispresent:
         diverging_centerline_end = extract_single_line(patch_diverging_line, 1)
-        centerline_bend = vtk_append_polydata([centerline_bend, diverging_centerline_end])
+        centerline_bend = vtk_merge_polydata([centerline_bend, diverging_centerline_end])
 
     write_polydata(centerline_remaining, centerline_clipped_path)
     write_polydata(centerline_bend, centerline_clipped_part_path)
@@ -121,9 +121,7 @@ def manipulate_bend(input_filepath, output_filepath, smooth, smooth_factor, regi
     # Clip Voronoi diagram into
     # bend and remaining part of geometry
     print("-- Clipping Voronoi diagrams")
-    voronoi_bend, voronoi_remaining = get_split_voronoi_diagram(voronoi,
-                                                                [centerline_bend,
-                                                                 centerline_remaining])
+    voronoi_bend, voronoi_remaining = get_split_voronoi_diagram(voronoi, [centerline_bend, centerline_remaining])
     write_polydata(voronoi_bend, voronoi_bend_path)
     write_polydata(voronoi_remaining, voronoi_remaining_path)
 
@@ -152,7 +150,7 @@ def manipulate_bend(input_filepath, output_filepath, smooth, smooth_factor, regi
                                                  diverging_centerline_ispresent=diverging_centerline_ispresent)
     else:
         if diverging_centerline_ispresent:
-            new_centerlines = vtk_append_polydata([centerlines, extract_single_line(diverging_centerlines, 0)])
+            new_centerlines = vtk_merge_polydata([centerlines, extract_single_line(diverging_centerlines, 0)])
         else:
             new_centerlines = centerlines
 
@@ -161,7 +159,7 @@ def manipulate_bend(input_filepath, output_filepath, smooth, smooth_factor, regi
 
     if alpha == 0.0 and beta != 0.0:
         print("-- Creating new surface.")
-        new_voronoi = vtk_append_polydata([voronoi_remaining, voronoi_bend])
+        new_voronoi = vtk_merge_polydata([voronoi_remaining, voronoi_bend])
         new_surface = create_new_surface(new_voronoi, poly_ball_size=poly_ball_size)
 
     elif alpha != 0.0:
@@ -180,8 +178,8 @@ def manipulate_bend(input_filepath, output_filepath, smooth, smooth_factor, regi
     new_surface = prepare_output_surface(new_surface, surface,
                                          new_centerlines, output_filepath,
                                          test_merge=True, changed=True,
-                                         old_centerline=vtk_append_polydata([centerlines,
-                                                                             diverging_centerlines]))
+                                         old_centerline=vtk_merge_polydata([centerlines,
+                                                                            diverging_centerlines]))
     write_polydata(new_centerlines, new_centerlines_path)
     write_polydata(new_surface, output_filepath)
 
@@ -228,7 +226,7 @@ def manipulate_bend_vertically(alpha, voronoi_remaining, voronoi_bend, centerlin
 
     if diverging_centerline_ispresent:
         diverging_centerline_end = extract_single_line(patch_diverging_line, 1)
-        centerline_bend = vtk_append_polydata([centerline_bend, diverging_centerline_end])
+        centerline_bend = vtk_merge_polydata([centerline_bend, diverging_centerline_end])
 
     # Find ID of middle point:
     print("-- Finding horizontal direction parameters.")
@@ -240,7 +238,7 @@ def manipulate_bend_vertically(alpha, voronoi_remaining, voronoi_bend, centerlin
     print("-- Adjust Voronoi diagram")
     voronoi_bend = move_voronoi_vertically(voronoi_bend, centerline_bend, id1,
                                            diverging_id, dx, diverging_centerline_ispresent)
-    new_voronoi = vtk_append_polydata([voronoi_remaining, voronoi_bend])
+    new_voronoi = vtk_merge_polydata([voronoi_remaining, voronoi_bend])
 
     # Move centerline manually for postprocessing
     new_centerlines = get_manipulated_centerlines(centerlines, dx, p1, p2, diverging_id, diverging_centerlines,

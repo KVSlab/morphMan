@@ -64,8 +64,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
 
     # Smooth voronoi diagram
     if smooth:
-        voronoi = prepare_voronoi_diagram(capped_surface, centerlines, base_path,
-                                          smooth, smooth_factor, no_smooth,
+        voronoi = prepare_voronoi_diagram(capped_surface, centerlines, base_path, smooth, smooth_factor, no_smooth,
                                           no_smooth_point, voronoi, pole_ids)
 
     # Spline centerline and compute cross-sectional areas along line
@@ -76,7 +75,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     write_polydata(centerline_splined, centerline_spline_path)
     write_polydata(centerline_remaining, centerline_remaining_path)
     if centerline_diverging is not None:
-        write_polydata(vtk_append_polydata(centerline_diverging), centerline_diverging_path)
+        write_polydata(vtk_merge_polydata(centerline_diverging), centerline_diverging_path)
 
     # Compute area
     centerline_area, centerline_area_sections = vmtk_compute_centerline_sections(surface,
@@ -99,7 +98,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
                               region_of_interest, region_points, centerline_diverging,
                               voronoi_regions[2:])
 
-    new_voronoi = vtk_append_polydata([new_voronoi, voronoi_regions[1]])
+    new_voronoi = vtk_merge_polydata([new_voronoi, voronoi_regions[1]])
     write_polydata(new_voronoi, voronoi_new_path)
 
     # Make new surface
@@ -112,8 +111,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     write_polydata(new_surface, output_filepath)
 
 
-def get_factor(line_to_change, method, beta, ratio, percentage, region_of_interest,
-               region_points):
+def get_factor(line_to_change, method, beta, ratio, percentage, region_of_interest, region_points):
     """
     Compute the factor determining
     the change in radius, used to

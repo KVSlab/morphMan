@@ -568,7 +568,7 @@ def attach_clipped_regions_to_surface(surface, clipped, center):
     regions.pop(distances.index(min(distances)))
 
     # Add the other regions back to the surface
-    surface = vtk_append_polydata(regions + [surface])
+    surface = vtk_merge_polydata(regions + [surface])
     surface = vtk_clean_polydata(surface)
     surface = vtk_triangulate_surface(surface)
 
@@ -647,7 +647,7 @@ def prepare_voronoi_diagram(capped_surface, centerlines, base_path, smooth, smoo
                 div_id = max(div_ids)
                 no_smooth_segments.append(extract_single_line(tmp_line, 0, start_id=div_id))
 
-            no_smooth_cl = vtk_append_polydata(no_smooth_segments)
+            no_smooth_cl = vtk_merge_polydata(no_smooth_segments)
             write_polydata(no_smooth_cl, no_smooth_path)
         else:
             no_smooth_cl = read_polydata(no_smooth_path)
