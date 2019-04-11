@@ -286,7 +286,7 @@ def move_all_centerlines(old_cl, new_cl, diverging_id, diverging_centerlines, sm
     return centerline
 
 
-def read_command_line(input_path=None, output_path=None):
+def read_command_line_curvature(input_path=None, output_path=None):
     """
     Read arguments from commandline and return all values in a dictionary.
     If input_path and output_path are not None, then do not parse command line, but
@@ -346,8 +346,8 @@ def read_command_line(input_path=None, output_path=None):
 
 
 def main_curvature():
-    manipulate_curvature(**read_command_line())
+    manipulate_curvature(**read_command_line_curvature())
 
 
 if __name__ == "__main__":
-    manipulate_curvature(**read_command_line())
+    manipulate_curvature(**read_command_line_curvature())

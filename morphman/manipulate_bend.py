@@ -414,7 +414,7 @@ def move_voronoi_vertically(voronoi_clipped, centerline_clipped, id1_0, clip_id,
     return new_dataset
 
 
-def read_command_line(input_path=None, output_path=None):
+def read_command_line_bend(input_path=None, output_path=None):
     """
     Read arguments from commandline and return all values in a dictionary.
     If input_path and output_path are not None, then do not parse command line, but
@@ -482,8 +482,8 @@ def read_command_line(input_path=None, output_path=None):
 
 
 def main_bend():
-    manipulate_bend(**read_command_line())
+    manipulate_bend(**read_command_line_bend())
 
 
 if __name__ == "__main__":
-    manipulate_bend(**read_command_line())
+    manipulate_bend(**read_command_line_bend())
