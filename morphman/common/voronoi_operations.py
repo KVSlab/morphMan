@@ -1,4 +1,5 @@
-from morphman.common import get_distance, extract_single_line, get_curvilinear_coordinate
+from morphman.common.centerline_operations import extract_single_line, get_curvilinear_coordinate
+from morphman.common.common import get_distance
 from morphman.common.vmtk_wrapper import *
 from morphman.common.vtk_wrapper import *
 

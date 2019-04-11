@@ -418,7 +418,7 @@ def rotation_matrix(data, angle, leave1, leave2):
         vec[:, i] = tmp / length
 
     # Expand basis to 3D
-    R = get_gram_schmidt(vec)
+    R = gram_schmidt(vec)
 
     # Set up rotation matrices
     cos_a = math.cos(angle)

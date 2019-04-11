@@ -3,10 +3,13 @@ import vtk
 from scipy.interpolate import splrep, splev
 from scipy.signal import resample
 
-from morphman.common import prepare_surface, get_relevant_outlets, get_sorted_outlets, compute_centerlines, \
-    get_distance, get_inlet_and_outlet_centers, divergingRatioToSpacingTolerance, create_parent_artery_patches, \
-    vmtkPickPointSeedSelector, gram_schmidt, convert_numpy_data_to_polydata
+from morphman.common.common import get_sorted_outlets, get_distance, divergingRatioToSpacingTolerance, \
+    convert_numpy_data_to_polydata, gram_schmidt
+from morphman.common.surface_operations import prepare_surface, get_relevant_outlets, get_inlet_and_outlet_centers, \
+    compute_centerlines
+from morphman.common.vessel_reconstruction_tools import create_parent_artery_patches
 from morphman.common.vmtk_wrapper import *
+from morphman.common.vmtkpointselector import vmtkPickPointSeedSelector
 from morphman.common.vtk_wrapper import *
 
 

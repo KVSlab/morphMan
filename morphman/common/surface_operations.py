@@ -3,9 +3,11 @@ from os import makedirs
 
 from vtk.util import numpy_support
 
-from morphman.common import get_parameters, write_parameters, extract_single_line, vmtkPickPointSeedSelector, \
-    get_centerline_tolerance, get_distance, smooth_voronoi_diagram, get_diverging_point_id, create_new_surface
+from morphman.common.centerline_operations import extract_single_line, get_centerline_tolerance, get_diverging_point_id
+from morphman.common.common import get_parameters, write_parameters, get_distance
 from morphman.common.vmtk_wrapper import *
+from morphman.common.vmtkpointselector import vmtkPickPointSeedSelector
+from morphman.common.voronoi_operations import smooth_voronoi_diagram, create_new_surface
 from morphman.common.vtk_wrapper import *
 
 
