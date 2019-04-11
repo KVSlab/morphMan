@@ -9,10 +9,8 @@ from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 # Local import
 from morphman.common.argparse_common import *
-from morphman.common.centerline_operations import *
-from morphman.common.surface_operations import *
+from morphman.common.morphman_operations import *
 from morphman.common.vessel_reconstruction_tools import *
-from morphman.common.voronoi_operations import *
 
 
 def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_factor, angle,

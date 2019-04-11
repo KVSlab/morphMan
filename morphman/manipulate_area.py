@@ -11,9 +11,7 @@ from scipy.ndimage.filters import gaussian_filter
 
 # Local import
 from morphman.common.argparse_common import *
-from morphman.common.centerline_operations import *
-from morphman.common.surface_operations import *
-from morphman.common.voronoi_operations import *
+from morphman.common.morphman_operations import *
 
 
 def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,

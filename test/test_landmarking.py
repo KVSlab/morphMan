@@ -10,7 +10,7 @@ import pytest
 
 from .fixtures import common_input
 from morphman.common.common import get_path_names
-from morphman.common.centerline_operations import extract_ica_centerline
+from morphman.common.morphman_operations import extract_ica_centerline
 from morphman.misc import landmarking_bogunovic, landmarking_piccinelli
 
 

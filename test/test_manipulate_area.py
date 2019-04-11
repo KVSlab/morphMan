@@ -10,7 +10,7 @@ import pytest
 
 from .fixtures import common_input
 from morphman import manipulate_area
-from morphman.common.centerline_operations import read_polydata, vmtk_compute_centerline_sections, get_point_data_array, \
+from morphman.common.morphman_operations import read_polydata, vmtk_compute_centerline_sections, get_point_data_array, \
     extract_single_line
 from morphman.common.common import get_path_names
 

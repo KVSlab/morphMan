@@ -9,9 +9,7 @@ from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 # Local import
 from morphman.common.argparse_common import *
-from morphman.common.centerline_operations import *
-from morphman.common.surface_operations import *
-from morphman.common.voronoi_operations import *
+from morphman.common.morphman_operations import *
 
 
 def manipulate_bend(input_filepath, output_filepath, smooth, smooth_factor, region_of_interest, region_points,

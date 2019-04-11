@@ -9,9 +9,7 @@ from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 # Local import
 from morphman.common.argparse_common import *
-from morphman.common.centerline_operations import *
-from morphman.common.surface_operations import *
-from morphman.common.voronoi_operations import *
+from morphman.common.morphman_operations import *
 
 
 def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_line, iterations,
