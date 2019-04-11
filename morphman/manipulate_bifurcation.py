@@ -12,9 +12,9 @@ from morphman.common import *
 
 
 def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_factor, angle,
-                    keep_fixed_1, keep_fixed_2, bif, lower, no_smooth, no_smooth_point,
-                    poly_ball_size, cylinder_factor, resampling_step,
-                    region_of_interest, region_points):
+                           keep_fixed_1, keep_fixed_2, bif, lower, no_smooth, no_smooth_point,
+                           poly_ball_size, cylinder_factor, resampling_step,
+                           region_of_interest, region_points):
     """
     Objective rotation of daughter branches, by rotating
     centerlines and Voronoi diagram about the bifurcation center.
@@ -465,35 +465,34 @@ def merge_cl(centerline, end_point, div_point):
     merge = vtk.vtkPolyData()
     points = vtk.vtkPoints()
     cell_array = vtk.vtkCellArray()
-    N_lines = centerline.GetNumberOfLines()
+    n_lines = centerline.GetNumberOfLines()
 
     arrays = []
-    N_, names = get_number_of_arrays(centerline)
-    for i in range(N_):
+    n_arrays, names = get_number_of_arrays(centerline)
+    for i in range(n_arrays):
         tmp = centerline.GetPointData().GetArray(names[i])
         tmp_comp = tmp.GetNumberOfComponents()
         array = get_vtk_array(names[i], tmp_comp, centerline.GetNumberOfPoints())
         arrays.append(array)
 
     # Find lines to merge
-    lines = [extract_single_line(centerline, i) for i in range(N_lines)]
-    locators = [vtk_point_locator(lines[i]) for i in range(N_lines)]
-    div_ID = [locators[i].FindClosestPoint(div_point[0]) for i in range(N_lines)]
-    end_ID = [locators[i].FindClosestPoint(end_point[0]) for i in range(N_lines)]
+    lines = [extract_single_line(centerline, i) for i in range(n_lines)]
+    locators = [vtk_point_locator(lines[i]) for i in range(n_lines)]
+    end_id = [locators[i].FindClosestPoint(end_point[0]) for i in range(n_lines)]
 
     # Find the direction of each line
     map_other = {0: 1, 1: 0}
-    ID0 = locators[0].FindClosestPoint(end_point[1])
-    ID1 = locators[1].FindClosestPoint(end_point[1])
-    dist0 = math.sqrt(np.sum((np.asarray(lines[0].GetPoint(ID0)) - end_point[1]) ** 2))
-    dist1 = math.sqrt(np.sum((np.asarray(lines[1].GetPoint(ID1)) - end_point[1]) ** 2))
+    id_0 = locators[0].FindClosestPoint(end_point[1])
+    id_1 = locators[1].FindClosestPoint(end_point[1])
+    dist0 = math.sqrt(np.sum((np.asarray(lines[0].GetPoint(id_0)) - end_point[1]) ** 2))
+    dist1 = math.sqrt(np.sum((np.asarray(lines[1].GetPoint(id_1)) - end_point[1]) ** 2))
     end1 = 0 if dist0 < dist1 else 1
     end2 = int(not end1)
-    for i in range(2, N_lines):
-        ID1 = locators[i].FindClosestPoint(end_point[1])
-        ID2 = locators[i].FindClosestPoint(end_point[2])
-        dist1 = math.sqrt(np.sum((np.asarray(lines[i].GetPoint(ID1)) - end_point[1]) ** 2))
-        dist2 = math.sqrt(np.sum((np.asarray(lines[i].GetPoint(ID2)) - end_point[2]) ** 2))
+    for i in range(2, n_lines):
+        id_1 = locators[i].FindClosestPoint(end_point[1])
+        id_2 = locators[i].FindClosestPoint(end_point[2])
+        dist1 = math.sqrt(np.sum((np.asarray(lines[i].GetPoint(id_1)) - end_point[1]) ** 2))
+        dist2 = math.sqrt(np.sum((np.asarray(lines[i].GetPoint(id_2)) - end_point[2]) ** 2))
         map_other[i] = end1 if dist1 > dist2 else end2
 
     counter = 0
@@ -513,12 +512,12 @@ def merge_cl(centerline, end_point, div_point):
 
         # Get the other line
         other = lines[map_other[i]]
-        N = line.GetNumberOfPoints()
-        cell_array.InsertNextCell(N)
+        n_points = line.GetNumberOfPoints()
+        cell_array.InsertNextCell(n_points)
 
-        for j in range(N):
+        for j in range(n_points):
             # Add point
-            if div_ID[i] < j < end_ID[i] and merge_bool:
+            if div_id[i] < j < end_id[i] and merge_bool:
                 new = (np.asarray(other.GetPoint(j)) +
                        np.asarray(line.GetPoint(j))) / 2.
                 points.InsertNextPoint(new)
@@ -528,7 +527,7 @@ def merge_cl(centerline, end_point, div_point):
             cell_array.InsertCellPoint(counter)
 
             # Add array
-            for k in range(N_):
+            for k in range(n_arrays):
                 num = arrays[k].GetNumberOfComponents()
                 if num == 1:
                     tmp = line.GetPointData().GetArray(names[k]).GetTuple1(j)
@@ -545,12 +544,13 @@ def merge_cl(centerline, end_point, div_point):
     # Insert points, lines and arrays
     merge.SetPoints(points)
     merge.SetLines(cell_array)
-    for i in range(N_):
+    for i in range(n_arrays):
         merge.GetPointData().AddArray(arrays[i])
 
     return merge
 
-def read_command_line_bifurcation(input_path=None, output_path=None):
+
+def read_command_line(input_path=None, output_path=None):
     """
     Read arguments from commandline and return all values in a dictionary.
     If input_path and output_path are not None, then do not parse command line, but

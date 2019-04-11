@@ -12,7 +12,7 @@ from morphman.common import *
 
 
 def manipulate_bend(input_filepath, output_filepath, smooth, smooth_factor, region_of_interest, region_points,
-                alpha, beta, poly_ball_size, no_smooth, no_smooth_point, resampling_step):
+                    alpha, beta, poly_ball_size, no_smooth, no_smooth_point, resampling_step):
     """
     Primary script for moving a selected part of any blood vessel.
     Relies on an input centerline, a surface geometry of a 3D blood vessel network,
@@ -83,7 +83,7 @@ def manipulate_bend(input_filepath, output_filepath, smooth, smooth_factor, regi
         region_points = np.loadtxt(point_path)
     else:
         _, _, _, region_points, _ = get_line_to_change(capped_surface, centerlines,
-                                                    region_of_interest, "bend", region_points, 0)
+                                                       region_of_interest, "bend", region_points, 0)
         region_points = [[region_points[3 * i], region_points[3 * i + 1], region_points[3 * i + 2]]
                          for i in range(len(region_points) // 3)]
 
@@ -122,7 +122,7 @@ def manipulate_bend(input_filepath, output_filepath, smooth, smooth_factor, regi
     print("-- Clipping Voronoi diagrams")
     voronoi_bend, voronoi_remaining = get_split_voronoi_diagram(voronoi,
                                                                 [centerline_bend,
-                                                                      centerline_remaining])
+                                                                 centerline_remaining])
     write_polydata(voronoi_bend, voronoi_bend_path)
     write_polydata(voronoi_remaining, voronoi_remaining_path)
 
@@ -172,8 +172,8 @@ def manipulate_bend(input_filepath, output_filepath, smooth, smooth_factor, regi
         # Vertical movement
         print("-- Moving geometry vertically")
         new_surface, new_centerlines = manipulate_bend_vertically(alpha, voronoi_remaining,
-                                                              voronoi_bend,
-                                                              new_centerlines, region_points, poly_ball_size)
+                                                                  voronoi_bend,
+                                                                  new_centerlines, region_points, poly_ball_size)
 
     print("-- Smoothing, clean, and check surface")
     new_surface = prepare_output_surface(new_surface, surface,
@@ -242,7 +242,8 @@ def manipulate_bend_vertically(alpha, voronoi_remaining, voronoi_bend, centerlin
     new_voronoi = vtk_append_polydata([voronoi_remaining, voronoi_bend])
 
     # Move centerline manually for postprocessing
-    new_centerlines = get_manipulated_centerlines(centerlines, dx, p1, p2, diverging_id, diverging_centerlines, direction)
+    new_centerlines = get_manipulated_centerlines(centerlines, dx, p1, p2, diverging_id, diverging_centerlines,
+                                                  direction)
 
     # Write a new surface from the new voronoi diagram
     print("-- Creating new surface.")
@@ -414,7 +415,7 @@ def move_voronoi_vertically(voronoi_clipped, centerline_clipped, id1_0, clip_id,
     return new_dataset
 
 
-def read_command_line_bend(input_path=None, output_path=None):
+def read_command_line(input_path=None, output_path=None):
     """
     Read arguments from commandline and return all values in a dictionary.
     If input_path and output_path are not None, then do not parse command line, but

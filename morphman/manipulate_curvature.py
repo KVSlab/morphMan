@@ -61,7 +61,7 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
                                           no_smooth_point, voronoi, pole_ids)
     # Get region of interest
     _, _, _, region_points, _ = get_line_to_change(capped_surface, centerlines,
-                                                region_of_interest, "variation", region_points, 0)
+                                                   region_of_interest, "variation", region_points, 0)
     region_points = [[region_points[3 * i], region_points[3 * i + 1], region_points[3 * i + 2]]
                      for i in range(len(region_points) // 3)]
 
@@ -99,7 +99,7 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
     print("-- Clipping Voronoi diagrams")
     voronoi_region, voronoi_remaining = get_split_voronoi_diagram(voronoi,
                                                                   [centerline_region,
-                                                                        centerline_remaining])
+                                                                   centerline_remaining])
     # Separate diverging parts and main region
     if diverging_centerline_ispresent:
         centerlines_complete_patch = extract_single_line(centerlines_complete, 0, start_id=id1, end_id=id2)
@@ -285,7 +285,7 @@ def move_all_centerlines(old_cl, new_cl, diverging_id, diverging_centerlines, sm
     return centerline
 
 
-def read_command_line_curvature(input_path=None, output_path=None):
+def read_command_line(input_path=None, output_path=None):
     """
     Read arguments from commandline and return all values in a dictionary.
     If input_path and output_path are not None, then do not parse command line, but

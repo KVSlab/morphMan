@@ -5,8 +5,9 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 ##      PURPOSE.  See the above copyright notices for more information.
 
-from scipy.ndimage.filters import gaussian_filter
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
+
+from scipy.ndimage.filters import gaussian_filter
 
 # Local import
 from morphman.common import *
@@ -67,10 +68,10 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
                                           no_smooth_point, voronoi, pole_ids)
 
     # Spline centerline and compute cross-sectional areas along line
-    centerline_splined, centerline_remaining, \
-        centerline_diverging, region_points, diverging_ids = get_line_to_change(capped_surface, centerlines,
-                                                                                region_of_interest, method,
-                                                                                region_points, stenosis_length)
+    centerline_splined, centerline_remaining, centerline_diverging, region_points, diverging_ids = get_line_to_change(
+        capped_surface, centerlines,
+        region_of_interest, method,
+        region_points, stenosis_length)
     write_polydata(centerline_splined, centerline_spline_path)
     write_polydata(centerline_remaining, centerline_remaining_path)
     if centerline_diverging is not None:
@@ -250,7 +251,7 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
 
     # Offset Voronoi diagram along "diverging" centerlines
     if diverging_centerline is not None:
-        count = i+1
+        count = i + 1
         for j in range(len(diverging_voronoi)):
             # Get offset for Voronoi diagram
             point = diverging_centerline[j].GetPoint(0)
@@ -278,7 +279,7 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
     return new_voronoi
 
 
-def read_command_line_area(input_path=None, output_path=None):
+def read_command_line(input_path=None, output_path=None):
     """
     Read arguments from commandline and return all values in a dictionary.
     If input_path and output_path are not None, then do not parse command line, but
