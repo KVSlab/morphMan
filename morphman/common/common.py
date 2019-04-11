@@ -525,3 +525,5 @@ def get_direction_parameters(line, param, direction, clip_points):
     elif direction == "horizont":
         dz, zp, zm = get_horizontal_direction_parameters(n, region_points, points, param)
         return dz, ids
+
+

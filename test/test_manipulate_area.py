@@ -10,8 +10,9 @@ import pytest
 
 from .fixtures import common_input
 from morphman import manipulate_area
-from morphman.common import read_polydata, vmtk_compute_centerline_sections, get_point_data_array, \
-    get_path_names, extract_single_line
+from morphman.common.centerline_operations import read_polydata, vmtk_compute_centerline_sections, get_point_data_array, \
+    extract_single_line
+from morphman.common.common import get_path_names
 
 
 @pytest.mark.parametrize("ratio", [1.5, 3.0])

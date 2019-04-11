@@ -1,80 +1,13 @@
-import numpy.linalg as la
 import vtk
 from scipy.interpolate import splrep, splev
 from scipy.signal import resample
 
-from morphman.common.common import get_sorted_outlets, get_distance, divergingRatioToSpacingTolerance, \
-    convert_numpy_data_to_polydata, gram_schmidt
-from morphman.common.surface_operations import prepare_surface, get_relevant_outlets, get_inlet_and_outlet_centers, \
-    compute_centerlines
+import morphman.common.surface_operations as surface_operations
+from morphman.common.common import *
 from morphman.common.vessel_reconstruction_tools import create_parent_artery_patches
 from morphman.common.vmtk_wrapper import *
 from morphman.common.vmtkpointselector import vmtkPickPointSeedSelector
 from morphman.common.vtk_wrapper import *
-
-
-def extract_single_line(centerlines, line_id, start_id=0, end_id=None):
-    """Extract one line from multiple centerlines.
-    If startID and endID is set then only a segment of the centerline is extracted.
-
-    Args:
-        centerlines (vtkPolyData): Centerline to extract.
-        line_id (int): The line ID to extract.
-        start_id (int):
-        end_id (int):
-
-    Returns:
-        centerline (vtkPolyData): The single line extracted
-    """
-    cell = vtk.vtkGenericCell()
-    centerlines.GetCell(line_id, cell)
-    n = cell.GetNumberOfPoints() if end_id is None else end_id + 1
-
-    line = vtk.vtkPolyData()
-    cell_array = vtk.vtkCellArray()
-    cell_array.InsertNextCell(n - start_id)
-    line_points = vtk.vtkPoints()
-
-    arrays = []
-    n_, names = get_number_of_arrays(centerlines)
-    for i in range(n_):
-        tmp = centerlines.GetPointData().GetArray(names[i])
-        tmp_comp = tmp.GetNumberOfComponents()
-        radius_array = get_vtk_array(names[i], tmp_comp, n - start_id)
-        arrays.append(radius_array)
-
-    point_array = []
-    for i in range(n_):
-        point_array.append(centerlines.GetPointData().GetArray(names[i]))
-
-    count = 0
-    for i in range(start_id, n):
-        cell_array.InsertCellPoint(count)
-        line_points.InsertNextPoint(cell.GetPoints().GetPoint(i))
-
-        for j in range(n_):
-            num = point_array[j].GetNumberOfComponents()
-            if num == 1:
-                tmp = point_array[j].GetTuple1(i)
-                arrays[j].SetTuple1(count, tmp)
-            elif num == 2:
-                tmp = point_array[j].GetTuple2(i)
-                arrays[j].SetTuple2(count, tmp[0], tmp[1])
-            elif num == 3:
-                tmp = point_array[j].GetTuple3(i)
-                arrays[j].SetTuple3(count, tmp[0], tmp[1], tmp[2])
-            elif num == 9:
-                tmp = point_array[j].GetTuple9(i)
-                arrays[j].SetTuple9(count, tmp[0], tmp[1], tmp[2], tmp[3], tmp[4],
-                                    tmp[5], tmp[6], tmp[7], tmp[8])
-        count += 1
-
-    line.SetPoints(line_points)
-    line.SetLines(cell_array)
-    for j in range(n_):
-        line.GetPointData().AddArray(arrays[j])
-
-    return line
 
 
 def extract_ica_centerline(base_path, resampling_step, relevant_outlets=None):
@@ -99,8 +32,8 @@ def extract_ica_centerline(base_path, resampling_step, relevant_outlets=None):
         return read_polydata(ica_centerline_path)
 
     # Prepare surface and identify in/outlets
-    surface, capped_surface = prepare_surface(base_path, input_filepath)
-    inlet, outlets = get_inlet_and_outlet_centers(surface, base_path)
+    surface, capped_surface = surface_operations.prepare_surface(base_path, input_filepath)
+    inlet, outlets = surface_operations.get_inlet_and_outlet_centers(surface, base_path)
 
     if relevant_outlets is not None:
         outlet1, outlet2 = relevant_outlets[:3], relevant_outlets[3:]
@@ -110,19 +43,20 @@ def extract_ica_centerline(base_path, resampling_step, relevant_outlets=None):
         outlet1 = capped_surface.GetPoint(id1)
         outlet2 = capped_surface.GetPoint(id2)
     else:
-        outlet1, outlet2 = get_relevant_outlets(capped_surface, base_path)
+        outlet1, outlet2 = surface_operations.get_relevant_outlets(capped_surface, base_path)
     outlets, outlet1, outlet2 = get_sorted_outlets(outlets, outlet1, outlet2, base_path)
 
     # Compute / import centerlines
-    centerlines, _, _ = compute_centerlines(inlet, outlets, centerlines_path,
-                                            capped_surface, resampling=resampling_step,
-                                            smooth=False, base_path=base_path)
+    centerlines, _, _ = surface_operations.compute_centerlines(inlet, outlets, centerlines_path,
+                                                               capped_surface,
+                                                               resampling=resampling_step,
+                                                               smooth=False, base_path=base_path)
 
     # Get relevant centerlines
-    centerline_relevant_outlets = compute_centerlines(inlet, outlet1 + outlet2,
-                                                      centerline_relevant_outlets_path,
-                                                      capped_surface,
-                                                      resampling=resampling_step)
+    centerline_relevant_outlets = surface_operations.compute_centerlines(inlet, outlet1 + outlet2,
+                                                                         centerline_relevant_outlets_path,
+                                                                         capped_surface,
+                                                                         resampling=resampling_step)
 
     # Extract ICA centerline
     tmp_line_1 = extract_single_line(centerline_relevant_outlets[0], 0)
@@ -650,28 +584,6 @@ def get_region_of_interest_and_diverging_centerlines(centerlines_complete, regio
     diverging_centerlines = vtk_append_polydata(diverging_centerlines) if len(diverging_centerlines) > 0 else None
 
     return centerlines, diverging_centerlines, region_points, region_points_vtk, diverging_ids
-
-
-def get_number_of_arrays(line):
-    """Returns the names and number of arrays for a vtkPolyData object
-
-    Args:
-        line (vtkPolyData): line to investigate the array.
-
-    Returns:
-        count (int): Number of arrays in the line.
-        names (list): A list of names of the arrays.
-    """
-    count = 0
-    names = []
-    name = 0
-    while name is not None:
-        name = line.GetPointData().GetArrayName(count)
-        if name is not None:
-            names.append(name)
-            count += 1
-
-    return count, names
 
 
 def compute_discrete_derivatives(line, neigh=10):

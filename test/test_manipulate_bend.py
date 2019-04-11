@@ -9,7 +9,8 @@ import pytest
 
 from .fixtures import common_input
 from morphman import manipulate_bend
-from morphman.common import read_polydata, get_path_names
+from morphman.common.common import get_path_names
+from morphman.common.vtk_wrapper import read_polydata
 from morphman.misc import compute_angle
 
 

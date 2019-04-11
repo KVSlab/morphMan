@@ -1,5 +1,5 @@
-from morphman.common.centerline_operations import extract_single_line, get_curvilinear_coordinate
-from morphman.common.common import get_distance
+import morphman.common.centerline_operations as centerline_operations
+from morphman.common.common import *
 from morphman.common.vmtk_wrapper import *
 from morphman.common.vtk_wrapper import *
 
@@ -77,7 +77,7 @@ def smooth_voronoi_diagram(voronoi, centerlines, smoothing_factor, no_smooth_cl=
     end = 0
     for i in range(centerlines.GetNumberOfLines()):
         line = extract_single_line(centerlines, i)
-        length = get_curvilinear_coordinate(line)
+        length = centerline_operations.get_curvilinear_coordinate(line)
         end_ = line.GetNumberOfPoints() - 1
         end += end_
 

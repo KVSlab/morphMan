@@ -2,7 +2,6 @@ import math
 
 from scipy.interpolate import splrep, splev
 
-from morphman.common.centerline_operations import extract_single_line
 from morphman.common.common import get_distance, interpolationHalfSize
 from morphman.common.vmtk_wrapper import *
 from morphman.common.vtk_wrapper import *

@@ -3,11 +3,11 @@ from os import makedirs
 
 from vtk.util import numpy_support
 
-from morphman.common.centerline_operations import extract_single_line, get_centerline_tolerance, get_diverging_point_id
-from morphman.common.common import get_parameters, write_parameters, get_distance
+import morphman.common.centerline_operations as centerline_operations
+import morphman.common.voronoi_operations as voronoi_operations
+from morphman.common.common import *
 from morphman.common.vmtk_wrapper import *
 from morphman.common.vmtkpointselector import vmtkPickPointSeedSelector
-from morphman.common.voronoi_operations import smooth_voronoi_diagram, create_new_surface
 from morphman.common.vtk_wrapper import *
 
 
@@ -401,7 +401,7 @@ def check_if_surface_is_merged(surface, centerlines, output_filepath):
         line_to_check = vmtk_resample_centerline(extract_single_line(lines_to_check, i), length=0.1)
         # Compare distance between points along both centerliens
         n = min([line_to_check.GetNumberOfPoints(), line_to_compare.GetNumberOfPoints()])
-        tolerance = get_centerline_tolerance(line_to_compare) * 500
+        tolerance = centerline_operations.get_centerline_tolerance(line_to_compare) * 500
         for j in range(n):
             p1 = np.asarray(line_to_check.GetPoint(j))
             p2 = np.asarray(line_to_compare.GetPoint(j))
@@ -605,7 +605,7 @@ def prepare_voronoi_diagram(capped_surface, centerlines, base_path, smooth, smoo
 
         if not path.exists(no_smooth_path):
             # Get inlet and outlets
-            tol = get_centerline_tolerance(centerlines)
+            tol = centerline_operations.get_centerline_tolerance(centerlines)
             inlet = extract_single_line(centerlines, 0)
             inlet = inlet.GetPoint(0)  # inlet.GetNumberOfPoints() - 1)
             outlets = []
@@ -648,7 +648,10 @@ def prepare_voronoi_diagram(capped_surface, centerlines, base_path, smooth, smoo
                 tmp_line = extract_single_line(no_smooth_centerlines, i)
                 div_ids = []
                 for j in range(centerlines.GetNumberOfLines()):
-                    div_ids.append(get_diverging_point_id(tmp_line, extract_single_line(centerlines, j), tol))
+                    div_ids.append(centerline_operations.get_diverging_point_id(tmp_line,
+                                                                                extract_single_line(
+                                                                                    centerlines, j),
+                                                                                tol))
                 div_id = max(div_ids)
                 no_smooth_segments.append(extract_single_line(tmp_line, 0, start_id=div_id))
 
@@ -667,11 +670,11 @@ def prepare_voronoi_diagram(capped_surface, centerlines, base_path, smooth, smoo
     voronoi_smoothed_path = base_path + "_voronoi_smoothed.vtp"
     surface_smoothed_path = base_path + "_smoothed.vtp"
     if not path.exists(voronoi_smoothed_path) and smooth:
-        voronoi = smooth_voronoi_diagram(voronoi, centerlines, smooth_factor, no_smooth_cl)
+        voronoi = voronoi_operations.smooth_voronoi_diagram(voronoi, centerlines, smooth_factor, no_smooth_cl)
         write_polydata(voronoi, voronoi_smoothed_path)
 
         # Create new surface from the smoothed Voronoi
-        surface_smoothed = create_new_surface(voronoi)
+        surface_smoothed = voronoi_operations.create_new_surface(voronoi)
         write_polydata(surface_smoothed, surface_smoothed_path)
     elif smooth:
         voronoi = read_polydata(voronoi_smoothed_path)
