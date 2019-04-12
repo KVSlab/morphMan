@@ -56,7 +56,7 @@ def map_landmarks(landmarks, centerline):
     Returns:
         landmarks (dict): Contains landmarks mapped to centerline.
     """
-    locator = get_locator(centerline)
+    locator = vtk_point_locator(centerline)
     for key in landmarks:
         landmark = landmarks[key]
         landmark_id = locator.FindClosestPoint(landmark)
@@ -91,12 +91,12 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
     """
 
     if resampling_step is not None:
-        centerline = vmtk_centerline_resampling(centerline, length=resampling_step)
+        centerline = vmtk_resample_centerline(centerline, length=resampling_step)
 
     if curv_method == "vmtk":
-        line = vmtk_centerline_attributes(centerline)
-        line = vmtk_centerline_geometry(line, smooth_line, factor=smoothing_factor, iterations=iterations)
-        curvature_ = get_array("Curvature", line)
+        line = vmtk_compute_centerline_attributes(centerline)
+        line = vmtk_compute_geometric_features(line, smooth_line, factor=smoothing_factor, iterations=iterations)
+        curvature_ = get_point_data_array("Curvature", line)
         curvature__ = gaussian_filter(curvature_, 5)
         curvature = []
         for c in curvature__:
@@ -105,9 +105,9 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
 
     elif curv_method == "disc":
         neigh = 20
-        line = vmtk_centerline_attributes(centerline)
-        line = vmtk_centerline_geometry(line, smooth_line, factor=smoothing_factor, iterations=iterations)
-        line, curvature__ = discrete_geometry(line, neigh=neigh)
+        line = vmtk_compute_centerline_attributes(centerline)
+        line = vmtk_compute_geometric_features(line, smooth_line, factor=smoothing_factor, iterations=iterations)
+        line, curvature__ = compute_discrete_derivatives(line, neigh=neigh)
         curvature = []
         for c in curvature__:
             curvature.append([c])
@@ -115,7 +115,7 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
 
     elif curv_method == "spline":
         line, max_point_ids, min_point_ids = spline_and_geometry(centerline, smooth_line, nknots)
-        curvature = get_array("Curvature", line)
+        curvature = get_point_data_array("Curvature", line)
 
     if curv_method != "spline":
         max_point_ids = list(argrelextrema(curvature, np.greater)[0])
@@ -123,8 +123,8 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
         get_k1k2_basis(curvature, line)
 
     length = get_curvilinear_coordinate(line)
-    k1 = get_array("k1", line)
-    k2 = get_array("k2", line)
+    k1 = get_point_data_array("k1", line)
+    k2 = get_point_data_array("k2", line)
 
     # Remove a min / max point that is in reality a saddle point
     for i in min_point_ids:
@@ -267,25 +267,25 @@ def landmarking_piccinelli(centerline, base_path, curv_method, algorithm, resamp
     """
 
     if resampling_step is not None:
-        centerline = vmtk_centerline_resampling(centerline, resampling_step)
+        centerline = vmtk_resample_centerline(centerline, resampling_step)
 
     if curv_method == "spline":
         line, max_point_ids, min_point_ids = spline_and_geometry(centerline, smooth_line, nknots)
 
         # Get curvature and torsion, find peaks
-        curvature = get_array("Curvature", line)
-        torsion = get_array("Torsion", line)
+        curvature = get_point_data_array("Curvature", line)
+        torsion = get_point_data_array("Torsion", line)
         torsion_smooth = gaussian_filter(torsion, 10)
         max_point_tor_ids = list(argrelextrema(abs(torsion_smooth), np.greater)[0])
 
     elif curv_method == "vmtk":
-        line = vmtk_centerline_geometry(centerline, True, outputsmoothed=False,
-                                        factor=smoothing_factor_curv, iterations=iterations)
-        line_tor = vmtk_centerline_geometry(centerline, True, outputsmoothed=False,
-                                            factor=smoothing_factor_torsion, iterations=iterations)
+        line = vmtk_compute_geometric_features(centerline, True, outputsmoothed=False,
+                                               factor=smoothing_factor_curv, iterations=iterations)
+        line_tor = vmtk_compute_geometric_features(centerline, True, outputsmoothed=False,
+                                                   factor=smoothing_factor_torsion, iterations=iterations)
         # Get curvature and torsion, find peaks
-        curvature = get_array("Curvature", line)
-        torsion = get_array("Torsion", line_tor)
+        curvature = get_point_data_array("Curvature", line)
+        torsion = get_point_data_array("Torsion", line_tor)
         torsion_smooth = gaussian_filter(torsion, 10)
         curvature_smooth = gaussian_filter(curvature, 10)
         max_point_ids = list(argrelextrema(curvature_smooth, np.greater)[0])
@@ -410,11 +410,11 @@ def spline_and_geometry(line, smooth, nknots):
     data[:, 2] = fz_
 
     header = ["X", "Y", "Z"]
-    line = data_to_vtkPolyData(data, header)
+    line = convert_numpy_data_to_polydata(data, header)
 
     # Let vmtk compute curve attributes
-    line = vmtk_centerline_attributes(line)
-    line = vmtk_centerline_geometry(line, smooth)
+    line = vmtk_compute_centerline_attributes(line)
+    line = vmtk_compute_geometric_features(line, smooth)
 
     # Compute curvature from the 'exact' spline to get a robust way of
     # finding max / min points on the centerline
@@ -436,7 +436,7 @@ def spline_and_geometry(line, smooth, nknots):
     max_point_ids = list(argrelextrema(curvature_, np.greater)[0])
     min_point_ids = list(argrelextrema(curvature_, np.less)[0])
 
-    locator = get_locator(line)
+    locator = vtk_point_locator(line)
 
     min_points = [[fx_[i], fy_[i], fz_[i]] for i in min_point_ids]
     max_points = [[fx_[i], fy_[i], fz_[i]] for i in max_point_ids]
@@ -447,7 +447,7 @@ def spline_and_geometry(line, smooth, nknots):
         min_point_ids.append(locator.FindClosestPoint(point_min))
         max_point_ids.append(locator.FindClosestPoint(point_max))
 
-    curvature = get_array("Curvature", line)
+    curvature = get_point_data_array("Curvature", line)
     line = get_k1k2_basis(curvature, line)
 
     length = get_curvilinear_coordinate(line)

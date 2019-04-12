@@ -8,9 +8,10 @@
 
 import pytest
 
-from morphman.common import get_path_names, extract_ica_centerline
-from morphman.misc import landmarking_bogunovic, landmarking_piccinelli
 from .fixtures import common_input
+from morphman.common.common import get_path_names
+from morphman.common.surface_operations import extract_ica_centerline
+from morphman.misc import landmarking_bogunovic, landmarking_piccinelli
 
 
 @pytest.mark.parametrize("algorithm", ["bogunovic", "piccinelli"])
@@ -33,4 +34,3 @@ def test_landmarking(common_input, algorithm):
         landmark_input.update(smoothing_factor_torsion=1.0, smoothing_factor_curv=1.0)
         landmarks = landmarking_piccinelli(**landmark_input)
         assert len(landmarks) > 0
-

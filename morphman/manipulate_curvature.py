@@ -8,7 +8,8 @@
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 # Local import
-from morphman.common import *
+from morphman.common.argparse_common import *
+from morphman.common.surface_operations import *
 
 
 def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_line, iterations,
@@ -51,7 +52,7 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
     voronoi_diverging_path = base_path + "_voronoi_diverging.vtp"
 
     # Compute centerlines
-    inlet, outlets = get_centers(surface, base_path)
+    inlet, outlets = get_inlet_and_outlet_centers(surface, base_path)
     centerlines, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path,
                                                          capped_surface, resampling=resampling_step,
                                                          smooth=False, base_path=base_path)
@@ -61,13 +62,13 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
                                           no_smooth_point, voronoi, pole_ids)
     # Get region of interest
     _, _, _, region_points, _ = get_line_to_change(capped_surface, centerlines,
-                                                region_of_interest, "variation", region_points, 0)
+                                                   region_of_interest, "variation", region_points, 0)
     region_points = [[region_points[3 * i], region_points[3 * i + 1], region_points[3 * i + 2]]
                      for i in range(len(region_points) // 3)]
 
     # Set and get clipping points, centerlines and diverging centerlines
     centerlines_complete, diverging_centerlines, region_points, region_points_vtk, diverging_ids = \
-        find_region_of_interest_and_diverging_centerlines(centerlines, region_points)
+        get_region_of_interest_and_diverging_centerlines(centerlines, region_points)
     diverging_centerline_ispresent = diverging_centerlines is not None
     diverging_id = None if len(diverging_ids) == 0 else diverging_ids[0]
 
@@ -77,42 +78,42 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
         print("-- Clipping a centerline divering in the region of interest.")
         for i in range(diverging_centerlines.GetNumberOfCells()):
             diverging_centerline = extract_single_line(diverging_centerlines, i)
-            patch_diverging_centerline = clip_diverging_line(diverging_centerline,
-                                                             region_points[0], diverging_id)
+            patch_diverging_centerline = get_clipped_diverging_centerline(diverging_centerline,
+                                                                          region_points[0], diverging_id)
             diverging_centerlines_patch.append(extract_single_line(patch_diverging_centerline, 1))
-        diverging_centerlines_patch = merge_data(diverging_centerlines_patch)
+        diverging_centerlines_patch = vtk_merge_polydata(diverging_centerlines_patch)
 
     # Clip centerline
     print("-- Clipping centerlines.")
-    locator = get_locator(extract_single_line(centerlines_complete, 0))
+    locator = vtk_point_locator(extract_single_line(centerlines_complete, 0))
     id1 = locator.FindClosestPoint(region_points[0])
     id2 = locator.FindClosestPoint(region_points[1])
     centerline_remaining = create_parent_artery_patches(centerlines_complete,
                                                         region_points_vtk, siphon=True)
-    centerline_region = extract_single_line(centerlines_complete, 0, startID=id1, endID=id2)
+    centerline_region = extract_single_line(centerlines_complete, 0, start_id=id1, end_id=id2)
 
     if diverging_centerline_ispresent:
-        centerline_region = merge_data([centerline_region, diverging_centerlines_patch])
+        centerline_region = vtk_merge_polydata([centerline_region, diverging_centerlines_patch])
 
     # Clip Voronoi diagram into
     # bend and remaining part of geometry
     print("-- Clipping Voronoi diagrams")
-    voronoi_region, voronoi_remaining = split_voronoi_with_centerlines(voronoi,
-                                                                       [centerline_region,
-                                                                        centerline_remaining])
+    voronoi_region, voronoi_remaining = get_split_voronoi_diagram(voronoi,
+                                                                  [centerline_region,
+                                                                   centerline_remaining])
     # Separate diverging parts and main region
     if diverging_centerline_ispresent:
-        centerlines_complete_patch = extract_single_line(centerlines_complete, 0, startID=id1, endID=id2)
-        voronoi_region, voronoi_diverging = split_voronoi_with_centerlines(voronoi_region, [centerlines_complete_patch,
-                                                                                            diverging_centerlines_patch])
+        centerlines_complete_patch = extract_single_line(centerlines_complete, 0, start_id=id1, end_id=id2)
+        voronoi_region, voronoi_diverging = get_split_voronoi_diagram(voronoi_region, [centerlines_complete_patch,
+                                                                                       diverging_centerlines_patch])
         write_polydata(voronoi_diverging, voronoi_diverging_path)
 
     write_polydata(voronoi_region, voronoi_region_path)
     write_polydata(voronoi_remaining, voronoi_remaining_path)
 
     print("-- Smooth / sharpen centerline")
-    smoothed_centerline_region = vmtk_centerline_geometry(centerline_region, True, True,
-                                                          factor=smooth_factor_line, iterations=iterations)
+    smoothed_centerline_region = vmtk_compute_geometric_features(centerline_region, True, True,
+                                                                 factor=smooth_factor_line, iterations=iterations)
     write_polydata(smoothed_centerline_region, centerline_smooth_path)
 
     print("-- Smooth / sharpen Voronoi diagram")
@@ -125,9 +126,9 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
         moved_voronoi_diverging = make_voronoi_smooth(voronoi_diverging, centerline_region_siphon,
                                                       smoothed_centerline_region_siphon, smooth_line,
                                                       div=True, div_point=diverging_centerlines.GetPoint(diverging_id))
-        new_voronoi = merge_data([moved_voronoi_region, moved_voronoi_diverging, voronoi_remaining])
+        new_voronoi = vtk_merge_polydata([moved_voronoi_region, moved_voronoi_diverging, voronoi_remaining])
     else:
-        new_voronoi = merge_data([moved_voronoi_region, voronoi_remaining])
+        new_voronoi = vtk_merge_polydata([moved_voronoi_region, voronoi_remaining])
 
     print("-- Moving centerlines")
     new_centerlines = move_all_centerlines(centerlines_complete, smoothed_centerline_region_siphon, diverging_id,
@@ -138,7 +139,7 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
     new_surface = create_new_surface(new_voronoi, poly_ball_size=poly_ball_size)
 
     print("-- Smoothing, clean, and check surface")
-    new_surface = prepare_surface_output(new_surface, surface,
+    new_surface = prepare_output_surface(new_surface, surface,
                                          new_centerlines, output_filepath,
                                          test_merge=True, changed=True,
                                          old_centerline=centerlines_complete)
@@ -164,7 +165,7 @@ def make_voronoi_smooth(voronoi, old_cl, new_cl, smooth_line, div=False, div_poi
     Returns:
         new_dataset (vtkPolyData): Manipulated voronoi diagram.
     """
-    locator = get_locator(old_cl)
+    locator = vtk_point_locator(old_cl)
     n = voronoi.GetNumberOfPoints()
     new_dataset = vtk.vtkPolyData()
     points = vtk.vtkPoints()
@@ -227,7 +228,7 @@ def move_all_centerlines(old_cl, new_cl, diverging_id, diverging_centerlines, sm
         centerline (vtkPolyData): Manipulated centerline.
     """
     if diverging_id is not None:
-        old_cl = merge_data([old_cl, diverging_centerlines])
+        old_cl = vtk_merge_polydata([old_cl, diverging_centerlines])
 
     number_of_points = old_cl.GetNumberOfPoints()
     number_of_cells = old_cl.GetNumberOfCells()
@@ -245,7 +246,7 @@ def move_all_centerlines(old_cl, new_cl, diverging_id, diverging_centerlines, sm
     # Iterate through voronoi points
     for i in range(number_of_cells):
         line = extract_single_line(old_cl, i)
-        locator = get_locator(line)
+        locator = vtk_point_locator(line)
         id1 = locator.FindClosestPoint(p1)
         if i == (number_of_cells - 1) and diverging_id is not None:
             id2 = diverging_id
@@ -345,8 +346,8 @@ def read_command_line_curvature(input_path=None, output_path=None):
 
 
 def main_curvature():
-    manipulate_curvature(**read_command_line())
+    manipulate_curvature(**read_command_line_curvature())
 
 
 if __name__ == "__main__":
-    manipulate_curvature(**read_command_line())
+    manipulate_curvature(**read_command_line_curvature())

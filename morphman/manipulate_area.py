@@ -5,11 +5,13 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 ##      PURPOSE.  See the above copyright notices for more information.
 
-from scipy.ndimage.filters import gaussian_filter
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
+from scipy.ndimage.filters import gaussian_filter
+
 # Local import
-from morphman.common import *
+from morphman.common.argparse_common import *
+from morphman.common.surface_operations import *
 
 
 def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
@@ -55,26 +57,25 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     surface, capped_surface = prepare_surface(base_path, input_filepath)
 
     # Create centerline and voronoi diagram
-    inlet, outlets = get_centers(surface, base_path)
+    inlet, outlets = get_inlet_and_outlet_centers(surface, base_path)
     centerlines, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path,
                                                          capped_surface, resampling=resampling_step,
                                                          smooth=False, base_path=base_path)
 
     # Smooth voronoi diagram
     if smooth:
-        voronoi = prepare_voronoi_diagram(capped_surface, centerlines, base_path,
-                                          smooth, smooth_factor, no_smooth,
+        voronoi = prepare_voronoi_diagram(capped_surface, centerlines, base_path, smooth, smooth_factor, no_smooth,
                                           no_smooth_point, voronoi, pole_ids)
 
     # Spline centerline and compute cross-sectional areas along line
-    centerline_splined, centerline_remaining, \
-        centerline_diverging, region_points, diverging_ids = get_line_to_change(capped_surface, centerlines,
-                                                                                region_of_interest, method,
-                                                                                region_points, stenosis_length)
+    centerline_splined, centerline_remaining, centerline_diverging, region_points, diverging_ids = get_line_to_change(
+        capped_surface, centerlines,
+        region_of_interest, method,
+        region_points, stenosis_length)
     write_polydata(centerline_splined, centerline_spline_path)
     write_polydata(centerline_remaining, centerline_remaining_path)
     if centerline_diverging is not None:
-        write_polydata(merge_data(centerline_diverging), centerline_diverging_path)
+        write_polydata(vtk_merge_polydata(centerline_diverging), centerline_diverging_path)
 
     # Compute area
     centerline_area, centerline_area_sections = vmtk_compute_centerline_sections(surface,
@@ -86,18 +87,18 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     print("-- Change Voronoi diagram")
     centerline_regions = [centerline_splined, centerline_remaining]
     if centerline_diverging is not None:
-        centerline_diverging = [extract_single_line(centerline_diverging[0], 0, startID=diverging_ids[0])]
+        centerline_diverging = [extract_single_line(centerline_diverging[0], 0, start_id=diverging_ids[0])]
         centerline_regions += centerline_diverging
     else:
         centerline_regions += [None]
 
-    voronoi_regions = split_voronoi_with_centerlines(voronoi, centerline_regions)
+    voronoi_regions = get_split_voronoi_diagram(voronoi, centerline_regions)
 
     new_voronoi = change_area(voronoi_regions[0], centerline_area, method, beta, ratio, percentage,
                               region_of_interest, region_points, centerline_diverging,
                               voronoi_regions[2:])
 
-    new_voronoi = merge_data([new_voronoi, voronoi_regions[1]])
+    new_voronoi = vtk_merge_polydata([new_voronoi, voronoi_regions[1]])
     write_polydata(new_voronoi, voronoi_new_path)
 
     # Make new surface
@@ -105,13 +106,12 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     new_surface = create_new_surface(new_voronoi, poly_ball_size=poly_ball_size)
 
     print("-- Smoothing, clean, and check surface.")
-    new_surface = prepare_surface_output(new_surface, surface, centerlines,
+    new_surface = prepare_output_surface(new_surface, surface, centerlines,
                                          output_filepath, test_merge=True)
     write_polydata(new_surface, output_filepath)
 
 
-def get_factor(line_to_change, method, beta, ratio, percentage, region_of_interest,
-               region_points):
+def get_factor(line_to_change, method, beta, ratio, percentage, region_of_interest, region_points):
     """
     Compute the factor determining
     the change in radius, used to
@@ -130,7 +130,7 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
         factor (float): Factor determining the change in radius.
     """
     # Array to change the radius
-    area = get_array("CenterlineSectionArea", line_to_change)
+    area = get_point_data_array("CenterlineSectionArea", line_to_change)
 
     # Safety smoothing, section area does not always work perfectly
     for i in range(2):
@@ -215,7 +215,7 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
                         region_of_interest, region_points)
 
     # Locator to find closest point on centerline
-    locator = get_locator(line_to_change)
+    locator = vtk_point_locator(line_to_change)
 
     # Voronoi diagram
     n = voronoi.GetNumberOfPoints()
@@ -250,7 +250,7 @@ def change_area(voronoi, line_to_change, method, beta, ratio, percentage,
 
     # Offset Voronoi diagram along "diverging" centerlines
     if diverging_centerline is not None:
-        count = i+1
+        count = i + 1
         for j in range(len(diverging_voronoi)):
             # Get offset for Voronoi diagram
             point = diverging_centerline[j].GetPoint(0)
@@ -394,8 +394,8 @@ def read_command_line_area(input_path=None, output_path=None):
 
 
 def main_area():
-    manipulate_area(**read_command_line())
+    manipulate_area(**read_command_line_area())
 
 
 if __name__ == '__main__':
-    manipulate_area(**read_command_line())
+    manipulate_area(**read_command_line_area())
