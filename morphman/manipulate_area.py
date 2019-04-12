@@ -5,11 +5,13 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 ##      PURPOSE.  See the above copyright notices for more information.
 
-from scipy.ndimage.filters import gaussian_filter
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
+from scipy.ndimage.filters import gaussian_filter
+
 # Local import
-from morphman.common import *
+from morphman.common.argparse_common import *
+from morphman.common.surface_operations import *
 
 
 def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
@@ -62,28 +64,25 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     surface, capped_surface = prepare_surface(base_path, input_filepath)
 
     # Create centerline and voronoi diagram
-    inlet, outlets = get_centers(surface, base_path)
+    inlet, outlets = get_inlet_and_outlet_centers(surface, base_path)
     centerlines, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path,
                                                          capped_surface, resampling=resampling_step,
                                                          smooth=False, base_path=base_path)
 
     # Smooth voronoi diagram
     if smooth:
-        voronoi = prepare_voronoi_diagram(capped_surface, centerlines, base_path,
-                                          smooth, smooth_factor, no_smooth,
+        voronoi = prepare_voronoi_diagram(capped_surface, centerlines, base_path, smooth, smooth_factor, no_smooth,
                                           no_smooth_point, voronoi, pole_ids)
 
-    # Spline centerline
-    centerline_splined, centerline_remaining, \
-        centerline_diverging, region_points, diverging_ids = get_line_to_change(capped_surface, centerlines,
-                                                                                region_of_interest, method,
-                                                                                region_points,
-                                                                                size)
-
+    # Spline centerline and compute cross-sectional areas along line
+    centerline_splined, centerline_remaining, centerline_diverging, region_points, diverging_ids = get_line_to_change(
+        capped_surface, centerlines,
+        region_of_interest, method,
+        region_points, stenosis_length)
     write_polydata(centerline_splined, centerline_spline_path)
     write_polydata(centerline_remaining, centerline_remaining_path)
     if centerline_diverging is not None:
-        write_polydata(merge_data(centerline_diverging), centerline_diverging_path)
+        write_polydata(vtk_merge_polydata(centerline_diverging), centerline_diverging_path)
 
     # Split the Voronoi diagram
     print("-- Change Voronoi diagram")
@@ -124,16 +123,12 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     new_surface = create_new_surface(new_voronoi, poly_ball_size=poly_ball_size)
 
     print("-- Smoothing, clean, and check surface.")
-    changed = True if centerline_diverging is not None else False
-    new_surface = prepare_surface_output(new_surface, surface, new_centerlines,
-                                         output_filepath, changed=changed,
-                                         old_centerline=centerlines, test_merge=True)
-    write_polydata(new_centerlines, output_filepath.replace(".vtp", "_centerline.vtp"))
+    new_surface = prepare_output_surface(new_surface, surface, centerlines,
+                                         output_filepath, test_merge=True)
     write_polydata(new_surface, output_filepath)
 
 
-def get_factor(line_to_change, method, beta, ratio, percentage, region_of_interest,
-               region_points):
+def get_factor(line_to_change, method, beta, ratio, percentage, region_of_interest, region_points):
     """
     Compute the factor determining
     the change in radius, used to
@@ -152,7 +147,7 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
         factor (float): Factor determining the change in radius.
     """
     # Array to change the radius
-    area = get_array("CenterlineSectionArea", line_to_change)
+    area = get_point_data_array("CenterlineSectionArea", line_to_change)
     mean_area = np.mean(area)
 
     # Linear transition first and last 10 % for some combinations of method an region_of_interest
@@ -233,7 +228,7 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
         new_voronoi (vtkPolyData): Manipulated Voronoi diagram.
     """
     # Locator to find closest point on centerline
-    locator = get_locator(line_to_change)
+    locator = vtk_point_locator(line_to_change)
 
     # Voronoi diagram
     n = voronoi.GetNumberOfPoints()

@@ -5,13 +5,14 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
 ##      PURPOSE.  See the above copyright notices for more information.
 
-import pytest
 import numpy as np
+import pytest
 
 from .fixtures import common_input
-from morphman.common import read_polydata, vmtk_compute_centerline_sections, get_array, \
-                            get_path_names, extract_single_line, get_curvilinear_coordinate
 from morphman import manipulate_area
+from morphman.common.surface_operations import (read_polydata,
+    vmtk_compute_centerline_sections, get_point_data_array, extract_single_line)
+from morphman.common.common import get_path_names
 
 def test_area_linear(common_input):
     base_path = get_path_names(common_input['input_filepath'])
@@ -53,13 +54,13 @@ def test_area_linear(common_input):
 
 @pytest.mark.parametrize("ratio", [1.5, 3.0])
 def test_area_variation(ratio, common_input):
-    common_input.update(dict(method = "variation",
-                             region_points = None,               # Inactive
-                             region_of_interest = "first_line",
-                             stenosis_length = 0,                # Inactive
-                             percentage = 0,                     # Inactive
-                             ratio = ratio,
-                             beta = None))
+    common_input.update(dict(method="variation",
+                             region_points=None,  # Inactive
+                             region_of_interest="first_line",
+                             stenosis_length=0,  # Inactive
+                             percentage=0,  # Inactive
+                             ratio=ratio,
+                             beta=None))
 
     # Run area variation
     manipulate_area(**common_input)
@@ -75,7 +76,7 @@ def test_area_variation(ratio, common_input):
     new_centerline_area, _ = vmtk_compute_centerline_sections(surface,
                                                               centerline_spline)
 
-    new_area = get_array("CenterlineSectionArea", new_centerline_area)
+    new_area = get_point_data_array("CenterlineSectionArea", new_centerline_area)
 
     # Check if the new ratio holds
     assert abs(ratio - new_area.max() / new_area.min()) < 0.1
@@ -91,11 +92,11 @@ def test_create_stenosis(common_input):
     common_input['region_points'] = region_point
 
     # Set problem specific parameters
-    common_input.update(dict(method = "stenosis",
-                             stenosis_length = 1.0,
-                             percentage = 50,
-                             ratio = None,   # Inactive
-                             beta = None))   # Inactive
+    common_input.update(dict(method="stenosis",
+                             stenosis_length=1.0,
+                             percentage=50,
+                             ratio=None,  # Inactive
+                             beta=None))  # Inactive
 
     # Create a stenosis
     manipulate_area(**common_input)
@@ -110,8 +111,8 @@ def test_create_stenosis(common_input):
     centerline_spline = read_polydata(centerline_spline_path)
     new_centerline_area, _ = vmtk_compute_centerline_sections(surface,
                                                               centerline_spline)
-    old_area = get_array("CenterlineSectionArea", centerline_area)
-    new_area = get_array("CenterlineSectionArea", new_centerline_area)
+    old_area = get_point_data_array("CenterlineSectionArea", centerline_area)
+    new_area = get_point_data_array("CenterlineSectionArea", new_centerline_area)
 
     # Check if there is a 50 % narrowing
     assert abs((np.sqrt(new_area / old_area)).min() - 0.5) < 0.05
@@ -154,15 +155,15 @@ def test_create_bulge(common_input):
 
 
 
-@pytest.mark.parametrize("percentage",[-15, 15])
+@pytest.mark.parametrize("percentage", [-15, 15])
 def test_inflation_and_deflation_of_area(common_input, percentage):
-    common_input.update(dict(method = "area",
-                             region_points = None,               # Inactive
-                             region_of_interest = "first_line",
-                             stenosis_length = 0,                # Inactive
-                             percentage = percentage,
-                             ratio = None,                       # Inactive
-                             beta = None))                       # Inactive
+    common_input.update(dict(method="area",
+                             region_points=None,  # Inactive
+                             region_of_interest="first_line",
+                             stenosis_length=0,  # Inactive
+                             percentage=percentage,
+                             ratio=None,  # Inactive
+                             beta=None))  # Inactive
 
     # Perform area manipulation
     manipulate_area(**common_input)
@@ -176,12 +177,12 @@ def test_inflation_and_deflation_of_area(common_input, percentage):
     centerline_spline = read_polydata(centerline_spline_path)
     new_centerline_area, _ = vmtk_compute_centerline_sections(surface,
                                                               centerline_spline)
-    old_area = get_array("CenterlineSectionArea", centerline_area)
-    new_area = get_array("CenterlineSectionArea", new_centerline_area)
+    old_area = get_point_data_array("CenterlineSectionArea", centerline_area)
+    new_area = get_point_data_array("CenterlineSectionArea", new_centerline_area)
 
     # Exclude first 5 %
-    old_area = old_area[int(0.1*old_area.shape[0]):]
-    new_area = new_area[int(0.1*new_area.shape[0]):]
+    old_area = old_area[int(0.1 * old_area.shape[0]):]
+    new_area = new_area[int(0.1 * new_area.shape[0]):]
 
     # Change in radius
     ratio = np.sqrt(new_area / old_area)

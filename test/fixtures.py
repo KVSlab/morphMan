@@ -5,10 +5,12 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
 ##      PURPOSE.  See the above copyright notices for more information.
 
-import pytest
 from os import system, path
 from sys import platform
 from morphman.common import get_centers, get_path_names, prepare_surface, compute_centerlines
+
+import pytest
+
 
 def download_testdata(test_path, outputfile):
     if platform == "darwin":
@@ -55,7 +57,7 @@ def common_input():
 
     # Define parameters shared by all functions
     a = dict(input_filepath = input_filepath,
-             output_filepath = path.join(abs_path, "C0001", "surface", "model_output.vtp"),
+             output_filepath = input_filepath.replace(".vtp", "_output.vtp")
              smooth_factor = 0.25,
              poly_ball_size = [180, 180, 180],
              smooth = True,

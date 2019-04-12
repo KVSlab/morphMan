@@ -29,18 +29,18 @@ not to the mention the personal tragedy for those affected [@gage1996effect].
 Systemic risk factors are well known to correlate with cardiovascular diseases in general,
 but, for instance, arterial plaques and brain aneurysms are focalized, highlighting
 the role of local hemodynamics. Furthermore, blood-flow induced wall shear stress (WSS) is
-known to contribute to vessel wall adaption and remodeling [@Malek1999b, @morbiducci2016atherosclerosis],
+known to contribute to vessel wall adaption and remodeling [@Malek1999b; @morbiducci2016atherosclerosis],
 but is challenging to measure *in-vivo*. On the other hand, medical images are routinely available and have
 been extensively used in combination with computational fluid dynamics to
 study the initiation, progression, and outcome of vascular pathologies [@taylor2010image].
 
 We know that the morphological features of, for instance, the internal
-carotid artery is statistically associated with the presence of aneurysms [@Schimansky01122013, @ingebrigtsen2004bifurcation].
+carotid artery is statistically associated with the presence of aneurysms [@Schimansky01122013; @ingebrigtsen2004bifurcation].
 Therefore, understanding how the local hemodynamics change with morphology is of great interest and
 is typically investigated with parameterized idealized geometric models [@lauric2018proximal], however at the cost of
 oversimplified results. To use realistic geometries we could instead correlate the shape and computed
 stresses based on hundreds of patient-specific models, but this is very labor intensive and
-error-prone [@valen2018real, @berg2018multiple].
+error-prone [@valen2018real; @berg2018multiple].
 
 Our goal was to take the best from both approaches and create a tool which could parametrize patient-specific
 geometries to mimic the natural variability of morphological features in the population. We here present a framework,

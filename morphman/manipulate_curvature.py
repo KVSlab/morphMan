@@ -8,7 +8,8 @@
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 # Local import
-from morphman.common import *
+from morphman.common.argparse_common import *
+from morphman.common.surface_operations import *
 
 
 def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_line, iterations,
@@ -54,7 +55,7 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
     voronoi_div_path = base_path + "_voronoi_diverging_{}.vtp"
 
     # Compute centerlines
-    inlet, outlets = get_centers(surface, base_path)
+    inlet, outlets = get_inlet_and_outlet_centers(surface, base_path)
     centerlines, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path,
                                                          capped_surface, resampling=resampling_step,
                                                          smooth=False, base_path=base_path)
@@ -112,7 +113,7 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
     new_surface = create_new_surface(new_voronoi, poly_ball_size=poly_ball_size)
 
     print("-- Smoothing, clean, and check surface")
-    new_surface = prepare_surface_output(new_surface, surface,
+    new_surface = prepare_output_surface(new_surface, surface,
                                          new_centerlines, output_filepath,
                                          test_merge=True, changed=True,
                                          old_centerline=centerlines)
@@ -137,7 +138,7 @@ def make_voronoi_smooth(voronoi, old_cl, new_cl, smooth_line, div_voronoi, div_p
     Returns:
         new_dataset (vtkPolyData): Manipulated voronoi diagram.
     """
-    locator = get_locator(old_cl)
+    locator = vtk_point_locator(old_cl)
     n = voronoi.GetNumberOfPoints()
     new_dataset = vtk.vtkPolyData()
     points = vtk.vtkPoints()
@@ -212,6 +213,9 @@ def move_all_centerlines(old_cl, new_cl, diverging_id, diverging_centerlines, sm
     Returns:
         centerline (vtkPolyData): Manipulated centerline.
     """
+    if diverging_id is not None:
+        old_cl = vtk_merge_polydata([old_cl, diverging_centerlines])
+
     number_of_points = old_cl.GetNumberOfPoints()
     number_of_cells = old_cl.GetNumberOfCells()
 
@@ -231,9 +235,9 @@ def move_all_centerlines(old_cl, new_cl, diverging_id, diverging_centerlines, sm
     div_count = -1
     for i in range(number_of_cells):
         line = extract_single_line(old_cl, i)
-        locator = get_locator(line)
 
         # Check if line goes through the region of interest
+        locator = vtk_point_locator(line)
         id1 = locator.FindClosestPoint(p1)
         id2 = locator.FindClosestPoint(p2)
         in_p1 = distance(line.GetPoint(id1), p1) < tol * 3
