@@ -2,17 +2,9 @@ import math
 
 from scipy.interpolate import splrep, splev
 
-from morphman.common.common import get_distance, interpolationHalfSize
+from morphman.common.common import get_distance
 from morphman.common.vmtk_wrapper import *
 from morphman.common.vtk_wrapper import *
-
-# Options not available from commandline
-divergingRatioToSpacingTolerance = 2.0
-interpolationHalfSize = 3
-voronoiCoreCutOffThreshold = 0.75
-numberOfSplineAnalyzedPoints = 40
-phiValues = [float(i) for i in range(2, 43, 2)]
-thetaStep = 2.0
 
 
 ### The following code is adapted from:
@@ -371,7 +363,8 @@ def interpolate_two_cells(startCell, endCell, numberOfSplinePoints, additionalPo
 
 
 def extract_cylindric_interpolation_voronoi_diagram(cellId, pointId, cylinderRadius,
-                                                    voronoi, centerlines):
+                                                    voronoi, centerlines,
+                                                    interpolationHalfSize=3):
     """Extract the voronoi diagram within a cylinder to be used for extrapolation.
 
     Args:

@@ -61,7 +61,7 @@ def gram_schmidt(V):
     def proj(u, v):
         return u * np.dot(v, u) / np.dot(u, u)
 
-   for i in range(1, V.shape[1]):
+    for i in range(1, V.shape[1]):
         for j in range(i):
             U[:, i] -= proj(U[:, j], V[:, i])
 

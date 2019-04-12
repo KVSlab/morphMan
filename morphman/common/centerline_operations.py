@@ -238,7 +238,7 @@ def get_centerline_tolerance(centerline, n=50):
     """
     line = extract_single_line(centerline, 0)
     length = get_curvilinear_coordinate(line)
-    tolerance = np.mean(length[1:n] - length[:n - 1]) / divergingRatioToSpacingTolerance
+    tolerance = np.mean(length[1:n] - length[:n - 1]) / 2.0
 
     return tolerance
 
