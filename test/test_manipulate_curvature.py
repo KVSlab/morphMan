@@ -8,15 +8,18 @@
 import numpy as np
 import pytest
 
-from .fixtures import common_input
-from morphman import manipulate_curvature
+from .fixtures import surface_paths
+from morphman import manipulate_curvature, read_command_line_curvature
 from morphman.common.surface_operations import compute_discrete_derivatives
 from morphman.common.common import get_path_names
 from morphman.common.vtk_wrapper import extract_single_line, read_polydata, vtk_point_locator
 
 
 @pytest.mark.parametrize("smooth_line", [True, False])
-def test_decrease_curvature(common_input, smooth_line):
+def test_decrease_curvature(surface_paths, smooth_line):
+    # Get default inputs
+    common_input = read_command_line_curvature(surface_paths[0], surface_paths[1])
+
     # Get region points
     base_path = get_path_names(common_input["input_filepath"])
     centerline = extract_single_line(read_polydata(base_path + "_centerline.vtp"), 1)
@@ -24,8 +27,7 @@ def test_decrease_curvature(common_input, smooth_line):
     region_points = list(centerline.GetPoint(int(n * 0.1))) + list(centerline.GetPoint(int(n * 0.4)))
 
     # Set problem specific parameters
-    common_input.update(dict(resampling_step=0.1,
-                             smooth_factor_line=1.5,
+    common_input.update(dict(smooth_factor_line=1.5,
                              iterations=200,
                              region_of_interest="commandline",
                              region_points=region_points,
