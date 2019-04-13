@@ -78,7 +78,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     centerline_splined, centerline_remaining, centerline_diverging, region_points, diverging_ids = get_line_to_change(
         capped_surface, centerlines,
         region_of_interest, method,
-        region_points, stenosis_length)
+        region_points, size)
     write_polydata(centerline_splined, centerline_spline_path)
     write_polydata(centerline_remaining, centerline_remaining_path)
     if centerline_diverging is not None:
@@ -90,7 +90,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     if centerline_diverging is not None:
         for i, div_cl in enumerate(centerline_diverging):
             centerline_regions += [extract_single_line(div_cl, 0, startID=diverging_ids[i][1])]
-    voronoi_regions = split_voronoi_with_centerlines(voronoi, centerline_regions)
+    voronoi_regions = get_split_voronoi_diagram(voronoi, centerline_regions)
 
     # Write the seperate segments
     write_polydata(voronoi_regions[0], voronoi_roi_path)
@@ -115,7 +115,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     new_voronoi, new_centerlines = change_area(voronoi_regions[0], factor, centerline_area,
                                                centerline_diverging, voronoi_regions[2:],
                                                surface_area, centerlines)
-    new_voronoi = merge_data([new_voronoi, voronoi_regions[1]])
+    new_voronoi = vtk_merge_polydata([new_voronoi, voronoi_regions[1]])
     write_polydata(new_voronoi, voronoi_new_path)
 
     # Make new surface

@@ -168,7 +168,8 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
 
     # Interpolate the centerline
     print("-- Interpolate centerlines.")
-    interpolated_cl = interpolate_patch_centerlines(rotated_cl, centerline_par, div_points[0].GetPoint(0),
+    interpolated_cl = interpolate_patch_centerlines(rotated_cl, centerline_par,
+                                                    div_points[0].GetPoint(0),
                                                     True, tension, continuity)
     write_polydata(interpolated_cl, centerline_new_path.replace(".vtp", "1.vtp"))
 
@@ -266,10 +267,9 @@ def rotate_voronoi(clipped_voronoi, patch_cl, div_points, m, R):
         masked_voronoi (vtkPolyData): Rotated voronoi diagram.
     """
     number_of_points = clipped_voronoi.GetNumberOfPoints()
-    vtk_distance = vtk.vtkMath.Distance2BetweenPoints
     I = np.eye(3)
     R_inv = np.linalg.inv(R)
-    tolerance = get_tolerance(patch_cl)
+    tolerance = get_centerline_tolerance(patch_cl)
 
     locator = []
     cell_line = []
@@ -282,7 +282,7 @@ def rotate_voronoi(clipped_voronoi, patch_cl, div_points, m, R):
     for i in range(1, patch_cl.GetNumberOfCells()):
         pnt = cell_line[i].GetPoints().GetPoint(0)
         new = cell_line[0].GetPoints().GetPoint(locator[0].FindClosestPoint(pnt))
-        if distance(pnt, new) < tolerance*10:
+        if get_distance(pnt, new) < tolerance*10:
             not_rotate.append(i)
 
     def check_rotate(point):
@@ -290,12 +290,11 @@ def rotate_voronoi(clipped_voronoi, patch_cl, div_points, m, R):
         for i in range(len(locator)):
             tmp_id = locator[i].FindClosestPoint(point)
             tmp = cell_line[i].GetPoints().GetPoint(tmp_id)
-            dist.append(math.sqrt(vtk_distance(tmp, point)))
+            dist.append(get_distance(tmp, point))
 
         if dist.index(min(dist)) not in not_rotate:
             pnt = cell_line[dist.index(min(dist))].GetPoints().GetPoint(0)
-            if math.sqrt(vtk_distance(pnt, div_points[1])) > \
-                    math.sqrt(vtk_distance(pnt, div_points[2])):
+            if get_distance(pnt, div_points[1]) > get_distance(pnt, div_points[2]):
                 m_ = m[2]
                 div = div_points[2]
             else:
@@ -346,10 +345,9 @@ def rotate_cl(patch_cl, div_points, rotation_matrices, R):
     Returns:
         centerline (vtkPolyData): Rotated centerline.
     """
-    distance = vtk.vtkMath.Distance2BetweenPoints
     I = np.eye(3)
     R_inv = np.linalg.inv(R)
-    tolerance = get_tolerance(patch_cl)
+    tolerance = get_centerline_tolerance(patch_cl)
 
     number_of_points = patch_cl.GetNumberOfPoints()
 
@@ -369,14 +367,14 @@ def rotate_cl(patch_cl, div_points, rotation_matrices, R):
 
         start = cell.GetPoint(0)
         dist = line0.GetPoint(locator0.FindClosestPoint(start))
-        test = distance(start, dist) > tolerance*10
+        test = get_distance(start, dist) > tolerance*10
 
         if test or len(div_points) == 2:
             locator = vtk_point_locator(cell)
             pnt1 = cell.GetPoint(locator.FindClosestPoint(div_points[-2]))
             pnt2 = cell.GetPoint(locator.FindClosestPoint(div_points[-1]))
-            dist1 = math.sqrt(distance(pnt1, div_points[-2]))
-            dist2 = math.sqrt(distance(pnt2, div_points[-1]))
+            dist1 = get_distance(pnt1, div_points[-2])
+            dist2 = get_distance(pnt2, div_points[-1])
             k = -2 if dist1 < dist2 else -1
             origo = div_points[k]
             m = rotation_matrices[k + 3]
@@ -625,7 +623,11 @@ def read_command_line_bifurcation(input_path=None, output_path=None):
     parser.add_argument("--cylinder-factor", type=float, default=7.0,
                         help="Factor for choosing the smaller cylinder")
 
-    args = parser.parse_args()
+    # Output file argument
+    if required:
+        args = parser.parse_args()
+    else:
+        args = parser.parse_args(["-i" + input_path, "-o" + output_path])
     ang_ = args.angle * math.pi / 180  # Convert from deg to rad
 
     return dict(input_filepath=args.ifile, smooth=args.smooth, output_filepath=args.ofile,

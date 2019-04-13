@@ -6,6 +6,9 @@
 ##      PURPOSE.  See the above copyright notices for more information.
 
 
+from argparse import ArgumentTypeError
+
+
 def str2bool(boolean):
     """Convert a string to boolean.
 
@@ -21,6 +24,13 @@ def str2bool(boolean):
         return False
     else:
         raise ValueError('Boolean value expected.')
+
+
+def restricted_float(x):
+    x = float(x)
+    if x <= 0.0 or x >= 1.0:
+        raise ArgumentTypeError("{} not in range [0.0, 1.0]".format(x))
+    return x
 
 
 def add_common_arguments(parser, required=True):
