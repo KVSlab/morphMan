@@ -453,7 +453,8 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
                 break
 
     # Spline the single line
-    line_to_change = compute_splined_centerline(line_to_change, nknots=25, isline=True)
+    nknots = min(line_to_change.GetNumberOfPoints() // 2, 25)
+    line_to_change = compute_splined_centerline(line_to_change, nknots=nknots, isline=True)
 
     if len(diverging_centerlines) == 0:
         diverging_centerlines = None
