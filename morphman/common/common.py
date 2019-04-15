@@ -10,6 +10,7 @@ from os import path
 import numpy as np
 import numpy.linalg as la
 import vtk
+import json
 
 # Local import
 from morphman.common.vtk_wrapper import get_vtk_array, vtk_point_locator
