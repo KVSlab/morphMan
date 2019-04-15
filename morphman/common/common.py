@@ -88,7 +88,7 @@ def get_parameters(folder):
 
     # Get dictionary
     with open(folder + "_info.txt", "r") as infile:
-        data = json.loads(infile)
+        data = json.load(infile)
 
     return data
 
