@@ -68,10 +68,10 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
 
     # Select branch to manipulate
     if branch_to_manipulate_number > 0:
+        check_branch_number(branch_to_manipulate_number, centerlines_complete)
         longest_centerline = get_sorted_lines(centerlines_complete)[-1]
         branch_to_manipulate = get_branch(branch_to_manipulate_number, centerlines_complete, longest_centerline)
     else:
-
         shortest_centerlines = get_sorted_lines(centerlines_complete)[:-1]
         branch_to_manipulate = pick_branch(capped_surface, shortest_centerlines)
 
@@ -128,6 +128,13 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
                                          old_centerline=centerlines_complete)
 
     write_polydata(new_surface, output_filepath)
+
+
+def check_branch_number(branch_to_manipulate_number, centerlines_complete):
+    num_lines = centerlines_complete.GetNumberOfLines() - 1
+    if branch_to_manipulate_number > num_lines:
+        raise RuntimeError("\nERROR: Branch number cannot exceed number of centerlines." +
+                           " Number of selectable centerlines for this model is {}.".format(num_lines))
 
 
 def get_new_branch_position(branch_location, capped_surface):
@@ -414,7 +421,7 @@ def read_command_line():
                 output_filepath=args.ofile, poly_ball_size=args.poly_ball_size,
                 no_smooth=args.no_smooth, no_smooth_point=args.no_smooth_point,
                 resampling_step=args.resampling_step, angle=angle_to_radians,
-                branch_to_manipulate_number=args.branch_number, branch_location=args.branch_location)
+                branch_to_manipulate_number=args.branch_number, branch_location=args.branch_loc)
 
 
 def main_branch():
