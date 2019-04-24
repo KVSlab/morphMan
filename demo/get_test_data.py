@@ -8,6 +8,7 @@
 from os import system, path
 from sys import platform
 
+
 def download_case(case):
     abs_path = path.dirname(path.abspath(__file__))
     output_file = path.join(abs_path, "{}_models.tar.gz".format(case))
@@ -30,9 +31,10 @@ def download_case(case):
             system("del /f {}".format(output_file))
 
     except:
-        raise RuntimeError("Problem downloading the testdata, please do it manually from " \
-                           + adress + " and extract the compressed tarball in the" \
+        raise RuntimeError("Problem downloading the testdata, please do it manually from "
+                           + adress + " and extract the compressed tarball in the"
                            + " test folder")
+
 
 if __name__ == "__main__":
     download_case("C0001")

@@ -8,13 +8,15 @@
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 # Local import
-from morphman.common import *
+from morphman.common.argparse_common import *
+from morphman.common.surface_operations import *
+from morphman.common.vessel_reconstruction_tools import *
 
 
 def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_factor, angle,
-                    keep_fixed_1, keep_fixed_2, bif, lower, no_smooth, no_smooth_point,
-                    poly_ball_size, cylinder_factor, resampling_step,
-                    region_of_interest, region_points):
+                           keep_fixed_1, keep_fixed_2, bif, lower, no_smooth, no_smooth_point,
+                           poly_ball_size, cylinder_factor, resampling_step,
+                           region_of_interest, region_points):
     """
     Objective rotation of daughter branches, by rotating
     centerlines and Voronoi diagram about the bifurcation center.
@@ -72,12 +74,12 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
     surface, capped_surface = prepare_surface(base_path, input_filepath)
 
     # Get inlet and outlets
-    inlet, outlets = get_centers(surface, base_path)
+    inlet, outlets = get_inlet_and_outlet_centers(surface, base_path)
     if region_of_interest == "manual":
         outlet1, outlet2 = get_relevant_outlets(capped_surface, base_path)
     else:
         outlet1, outlet2 = region_points[:3], region_points[3:]
-        surface_locator = get_locator(capped_surface)
+        surface_locator = vtk_point_locator(capped_surface)
         id1 = surface_locator.FindClosestPoint(outlet1)
         id2 = surface_locator.FindClosestPoint(outlet2)
         outlet1 = capped_surface.GetPoint(id1)
@@ -86,7 +88,7 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
     print("-- Region of interest is defined by the region points: \nOutlet 1: %s \nOutlet 2: %s" % (outlet1, outlet2))
 
     # Sort outlets
-    outlets, outlet1, outlet2 = sort_outlets(outlets, outlet1, outlet2, base_path)
+    outlets, outlet1, outlet2 = get_sorted_outlets(outlets, outlet1, outlet2, base_path)
 
     # Compute parent artery and aneurysm centerline
     centerline_par, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerline_par_path, capped_surface,
@@ -101,10 +103,10 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
                                                resampling=resampling_step, voronoi=voronoi, pole_ids=pole_ids)
 
     # Create a tolerance for diverging
-    tolerance = get_tolerance(centerline_par)
+    tolerance = get_centerline_tolerance(centerline_par)
 
     # Get data from centerlines and rotation matrix
-    data = get_data(centerline_relevant_outlets, centerline_bif, tolerance)
+    data = get_bifurcating_and_diverging_point_data(centerline_relevant_outlets, centerline_bif, tolerance)
     R, m = rotation_matrix(data, angle, keep_fixed_1, keep_fixed_2)
     write_parameters(data, base_path)
 
@@ -123,8 +125,8 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
     end_points = get_points(data, key, bif=False)
     end_points_bif = get_points(data, key, bif=True)
 
-    write_points(div_points[0], points_div_path)
-    write_points(end_points[0], points_clipp_path)
+    write_vtk_points(div_points[0], points_div_path)
+    write_vtk_points(end_points[0], points_clipp_path)
 
     # Clip centerlines
     print("-- Clipping centerlines.")
@@ -132,7 +134,7 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
     write_polydata(patch_cl, centerline_clipped_path)
 
     # Get the centerline which was clipped away
-    clipped_centerline = get_clipped_centerline(centerline_relevant_outlets, data)
+    clipped_centerline = get_centerline_between_clipping_points(centerline_relevant_outlets, data)
     write_polydata(clipped_centerline, centerline_bif_clipped_path)
 
     if lower or bif:
@@ -141,8 +143,8 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
 
     # Clip the voronoi diagram
     print("-- Clipping the Voronoi diagram")
-    voronoi_clipped, _ = split_voronoi_with_centerlines(voronoi, [patch_cl,
-                                                                  clipped_centerline])
+    voronoi_clipped, _ = get_split_voronoi_diagram(voronoi, [patch_cl,
+                                                             clipped_centerline])
     write_polydata(voronoi_clipped, voronoi_clipped_path)
 
     # Rotate branches (Centerline and Voronoi diagram)
@@ -196,7 +198,7 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
                                                        end_points,
                                                        bif_, cylinder_factor)
     # Note: This function is slow, and can be commented, but at the cost of robustness.
-    interpolated_voronoi = remove_distant_points(interpolated_voronoi, interpolated_cl)
+    interpolated_voronoi = remove_distant_voronoi_points(interpolated_voronoi, interpolated_cl)
     write_polydata(interpolated_voronoi, voronoi_ang_path)
 
     # Write a new surface from the new voronoi diagram
@@ -204,7 +206,7 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
     new_surface = create_new_surface(interpolated_voronoi, poly_ball_size)
 
     print("-- Preparing surface for output.")
-    new_surface = prepare_surface_output(new_surface, surface, interpolated_cl,
+    new_surface = prepare_output_surface(new_surface, surface, interpolated_cl,
                                          output_filepath, test_merge=True, changed=True,
                                          old_centerline=centerline_par)
 
@@ -265,7 +267,7 @@ def rotate_voronoi(clipped_voronoi, patch_cl, div_points, m, R):
     not_rotate = [0]
     for i in range(patch_cl.GetNumberOfCells()):
         cell_line.append(extract_single_line(patch_cl, i))
-        tmp_locator = get_locator(cell_line[-1])
+        tmp_locator = vtk_point_locator(cell_line[-1])
         locator.append(tmp_locator)
 
     for i in range(1, patch_cl.GetNumberOfCells()):
@@ -348,7 +350,7 @@ def rotate_cl(patch_cl, div_points, rotation_matrices, R):
     radius_array = get_vtk_array(radiusArrayName, 1, number_of_points)
 
     line0 = extract_single_line(patch_cl, 0)
-    locator0 = get_locator(line0)
+    locator0 = vtk_point_locator(line0)
 
     # Iterate through points along the centerline
     count = 0
@@ -361,7 +363,7 @@ def rotate_cl(patch_cl, div_points, rotation_matrices, R):
         test = math.sqrt(distance(start, dist)) > divergingRatioToSpacingTolerance
 
         if test or len(div_points) == 2:
-            locator = get_locator(cell)
+            locator = vtk_point_locator(cell)
             pnt1 = cell.GetPoint(locator.FindClosestPoint(div_points[-2]))
             pnt2 = cell.GetPoint(locator.FindClosestPoint(div_points[-1]))
             dist1 = math.sqrt(distance(pnt1, div_points[-2]))
@@ -465,35 +467,35 @@ def merge_cl(centerline, end_point, div_point):
     merge = vtk.vtkPolyData()
     points = vtk.vtkPoints()
     cell_array = vtk.vtkCellArray()
-    N_lines = centerline.GetNumberOfLines()
+    n_lines = centerline.GetNumberOfLines()
 
     arrays = []
-    N_, names = get_number_of_arrays(centerline)
-    for i in range(N_):
+    n_arrays, names = get_number_of_arrays(centerline)
+    for i in range(n_arrays):
         tmp = centerline.GetPointData().GetArray(names[i])
         tmp_comp = tmp.GetNumberOfComponents()
         array = get_vtk_array(names[i], tmp_comp, centerline.GetNumberOfPoints())
         arrays.append(array)
 
     # Find lines to merge
-    lines = [extract_single_line(centerline, i) for i in range(N_lines)]
-    locators = [get_locator(lines[i]) for i in range(N_lines)]
-    div_ID = [locators[i].FindClosestPoint(div_point[0]) for i in range(N_lines)]
-    end_ID = [locators[i].FindClosestPoint(end_point[0]) for i in range(N_lines)]
+    lines = [extract_single_line(centerline, i) for i in range(n_lines)]
+    locators = [vtk_point_locator(lines[i]) for i in range(n_lines)]
+    div_id = [locators[i].FindClosestPoint(div_point[0]) for i in range(n_lines)]
+    end_id = [locators[i].FindClosestPoint(end_point[0]) for i in range(n_lines)]
 
     # Find the direction of each line
     map_other = {0: 1, 1: 0}
-    ID0 = locators[0].FindClosestPoint(end_point[1])
-    ID1 = locators[1].FindClosestPoint(end_point[1])
-    dist0 = math.sqrt(np.sum((np.asarray(lines[0].GetPoint(ID0)) - end_point[1]) ** 2))
-    dist1 = math.sqrt(np.sum((np.asarray(lines[1].GetPoint(ID1)) - end_point[1]) ** 2))
+    id_0 = locators[0].FindClosestPoint(end_point[1])
+    id_1 = locators[1].FindClosestPoint(end_point[1])
+    dist0 = math.sqrt(np.sum((np.asarray(lines[0].GetPoint(id_0)) - end_point[1]) ** 2))
+    dist1 = math.sqrt(np.sum((np.asarray(lines[1].GetPoint(id_1)) - end_point[1]) ** 2))
     end1 = 0 if dist0 < dist1 else 1
     end2 = int(not end1)
-    for i in range(2, N_lines):
-        ID1 = locators[i].FindClosestPoint(end_point[1])
-        ID2 = locators[i].FindClosestPoint(end_point[2])
-        dist1 = math.sqrt(np.sum((np.asarray(lines[i].GetPoint(ID1)) - end_point[1]) ** 2))
-        dist2 = math.sqrt(np.sum((np.asarray(lines[i].GetPoint(ID2)) - end_point[2]) ** 2))
+    for i in range(2, n_lines):
+        id_1 = locators[i].FindClosestPoint(end_point[1])
+        id_2 = locators[i].FindClosestPoint(end_point[2])
+        dist1 = math.sqrt(np.sum((np.asarray(lines[i].GetPoint(id_1)) - end_point[1]) ** 2))
+        dist2 = math.sqrt(np.sum((np.asarray(lines[i].GetPoint(id_2)) - end_point[2]) ** 2))
         map_other[i] = end1 if dist1 > dist2 else end2
 
     counter = 0
@@ -501,24 +503,24 @@ def merge_cl(centerline, end_point, div_point):
         line = lines[i]
 
         # Check if it should be merged
-        loc = get_locator(line)
-        clipp_id = loc.FindClosestPoint(end_point[0])
-        div_id = loc.FindClosestPoint(div_point[0])
-        clipp_dist = distance(line.GetPoint(clipp_id), end_point[0])
-        div_dist = distance(line.GetPoint(div_id), div_point[0])
-        tol = get_tolerance(line) * 3
+        loc = vtk_point_locator(line)
+        end_point_id = loc.FindClosestPoint(end_point[0])
+        div_point_id = loc.FindClosestPoint(div_point[0])
+        clipp_dist = get_distance(line.GetPoint(end_point_id), end_point[0])
+        div_dist = get_distance(line.GetPoint(div_point_id), div_point[0])
+        tol = get_centerline_tolerance(line) * 3
         merge_bool = True
         if clipp_dist > tol or div_dist > tol:
             merge_bool = False
 
         # Get the other line
         other = lines[map_other[i]]
-        N = line.GetNumberOfPoints()
-        cell_array.InsertNextCell(N)
+        n_points = line.GetNumberOfPoints()
+        cell_array.InsertNextCell(n_points)
 
-        for j in range(N):
+        for j in range(n_points):
             # Add point
-            if div_ID[i] < j < end_ID[i] and merge_bool:
+            if div_id[i] < j < end_id[i] and merge_bool:
                 new = (np.asarray(other.GetPoint(j)) +
                        np.asarray(line.GetPoint(j))) / 2.
                 points.InsertNextPoint(new)
@@ -528,7 +530,7 @@ def merge_cl(centerline, end_point, div_point):
             cell_array.InsertCellPoint(counter)
 
             # Add array
-            for k in range(N_):
+            for k in range(n_arrays):
                 num = arrays[k].GetNumberOfComponents()
                 if num == 1:
                     tmp = line.GetPointData().GetArray(names[k]).GetTuple1(j)
@@ -545,10 +547,11 @@ def merge_cl(centerline, end_point, div_point):
     # Insert points, lines and arrays
     merge.SetPoints(points)
     merge.SetLines(cell_array)
-    for i in range(N_):
+    for i in range(n_arrays):
         merge.GetPointData().AddArray(arrays[i])
 
     return merge
+
 
 def read_command_line_bifurcation(input_path=None, output_path=None):
     """
@@ -624,8 +627,8 @@ def read_command_line_bifurcation(input_path=None, output_path=None):
 
 
 def main_bifurcation():
-    manipulate_bifurcation(**read_command_line())
+    manipulate_bifurcation(**read_command_line_bifurcation())
 
 
 if __name__ == "__main__":
-    manipulate_bifurcation(**read_command_line())
+    manipulate_bifurcation(**read_command_line_bifurcation())
