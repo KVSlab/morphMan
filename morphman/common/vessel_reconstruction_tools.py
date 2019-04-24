@@ -2,7 +2,7 @@ import math
 
 from scipy.interpolate import splrep, splev
 
-from morphman.common.common import get_distance, interpolationHalfSize
+from morphman.common.common import get_distance
 from morphman.common.vmtk_wrapper import *
 from morphman.common.vtk_wrapper import *
 
@@ -176,7 +176,8 @@ def extract_patches_ids(parentCl, clipPts):
 
 
 def interpolate_patch_centerlines(patchCenterlines, parentCenterlines,
-                                  additionalPoint, lower, version):
+                                  additionalPoint, lower, version, tension=0,
+                                  continuity=0):
     """Interpolate new centerlines between end and starting points. Given
     additionalPoiint, lower, and version, then number and method for interpolation varies.
 
@@ -186,6 +187,8 @@ def interpolate_patch_centerlines(patchCenterlines, parentCenterlines,
         additionalPoint (vtkPoints): Additional point to interpolate through.
         lower (str): None / 'lower' / 'bif' to indicate how to interpolate.
         version (bool): Method for interpolation.
+        tension (float): Variable for the Kochanek spline
+        continuity (float): Variable for the Kochanek spline
 
     Returns:
         centerline (vtkPolyData): The new centerline, including the new interpolated
@@ -218,8 +221,10 @@ def interpolate_patch_centerlines(patchCenterlines, parentCenterlines,
         if version:
             splinePoints = interpolate_spline(startingCell, endingCell, additionalPoint)
         else:
-            splinePoints = interpolate_two_cells(startingCell, endingCell, numberOfInterpolationPoints,
-                                                 additionalPointIds[i], additionalPoint)
+            splinePoints = interpolate_two_cells(startingCell, endingCell,
+                                                 numberOfInterpolationPoints,
+                                                 additionalPointIds[i], additionalPoint,
+                                                 tension, continuity)
 
         interpolatedCellArray.InsertNextCell(splinePoints.GetNumberOfPoints())
         for j in range(splinePoints.GetNumberOfPoints()):
@@ -311,7 +316,7 @@ def interpolate_spline(startCell, endCell, additionalPoint):
 
 
 def interpolate_two_cells(startCell, endCell, numberOfSplinePoints, additionalPointId,
-                          additionalPoint):
+                          additionalPoint, tension, continuitiy):
     """Interpolate between two lines using vtkCardinalSpline from vtk, potentially with an
     additional point (additionalPoint).
 
@@ -321,14 +326,23 @@ def interpolate_two_cells(startCell, endCell, numberOfSplinePoints, additionalPo
         numberOfSplinePoints (int): Number of spline point.
         additionalPointId (int): Id of the additional point.
         additionalPoint (list): A list with the coordinates to the additional point.
+        tension (float): Variable for the Kochanek spline
+        continuity (float): Variable for the Kochanek spline
 
     Returns:
         centerline (vtkPolyData): The new interpolated centerline.
     """
     points = vtk.vtkPoints()
-    xspline = vtk.vtkCardinalSpline()
-    yspline = vtk.vtkCardinalSpline()
-    zspline = vtk.vtkCardinalSpline()
+    #xspline = vtk.vtkCardinalSpline()
+    #yspline = vtk.vtkCardinalSpline()
+    #zspline = vtk.vtkCardinalSpline()
+    xspline = vtk.vtkKochanekSpline()
+    yspline = vtk.vtkKochanekSpline()
+    zspline = vtk.vtkKochanekSpline()
+
+    for s in [xspline, yspline, zspline]:
+        s.SetDefaultTension(tension)
+        s.SetDefaultContinuity(continuitiy)
 
     numberOfStartCellPoints = startCell.GetNumberOfPoints()
     numberOfEndCellPoints = endCell.GetNumberOfPoints()
@@ -363,7 +377,8 @@ def interpolate_two_cells(startCell, endCell, numberOfSplinePoints, additionalPo
 
 
 def extract_cylindric_interpolation_voronoi_diagram(cellId, pointId, cylinderRadius,
-                                                    voronoi, centerlines):
+                                                    voronoi, centerlines,
+                                                    interpolationHalfSize=3):
     """Extract the voronoi diagram within a cylinder to be used for extrapolation.
 
     Args:

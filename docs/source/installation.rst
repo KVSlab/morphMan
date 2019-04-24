@@ -42,14 +42,14 @@ followed by the command line arguments for the selected method. A detailed expla
 .. WARNING:: The vmtk version 1.4, the one currently distributed with anaconda, has a python3 bug in `vmtkcenterlines`. As a workaround you have to change this file. To find out where it is located please execute::
   
     $ which vmtkcenterlines
-    /Users/[Name]/miniconda3/envs/[your_environment]/bin/vmtkcenterlines
+    /Users/[Name]/anaconda3/envs/[your_environment]/bin/vmtkcenterlines
     $ python -V
     Python 3.6.2 :: Continuum Analytics, Inc.
   
-  Now copy the  path up until ``[your_environment]`` and add ``lib/python3.6/site-packages/vmtk/vmtkcenterlines.py``. Please change the path seperation symbol to match your operating system and change ``python3.6`` to the python version you are using. Using this path you can run the two following lines::
+  Now copy the path up until ``[your_environment]`` and add ``lib/python3.6/site-packages/vmtk/vmtkcenterlines.py``. Please change the path seperation symbol to match your operating system and change ``python3.6`` to the python version you are using. If using you are using Miniconda, replace `anaconda3` with `miniconda3`. Using this path you can run the two following lines::
 
-    $ sed -i -e 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' /Users/[Name]/miniconda3/envs/[your_environment]/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
-    $ sed -i -e 's/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g' /Users/[Name]/miniconda3/envs/[your_environment]/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
+    $ sed -i -e 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' /Users/[Name]/anaconda3/envs/[your_environment]/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
+    $ sed -i -e 's/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g' /Users/[Name]/anaconda3/envs/[your_environment]/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
 
 
 Development version

@@ -7,7 +7,7 @@
 
 from os import system, path
 from sys import platform
-
+from morphman.common import get_centers, get_path_names, compute_centerlines, prepare_surface
 import pytest
 
 
@@ -27,7 +27,7 @@ def download_testdata(test_path, outputfile):
 
 
 @pytest.fixture(scope="module")
-def common_input():
+def surface_paths():
     abs_path = path.dirname(path.abspath(__file__))
 
     # Path to test data
@@ -43,14 +43,15 @@ def common_input():
                             + test_path + " and extract the compressed tarball in the" \
                             + " test folder")
 
-    # Define parameters shared by all functions
-    a = dict(input_filepath=path.join(abs_path, "C0001", "surface", "model.vtp"),
-             output_filepath=path.join(abs_path, "C0001", "surface", "model_output.vtp"),
-             smooth_factor=0.25,
-             poly_ball_size=[180, 180, 180],
-             smooth=True,
-             resampling_step=0.1,
-             no_smooth=False,
-             no_smooth_point=None)
+    # Create centerline
+    input_filepath = path.join(abs_path, "C0001", "surface", "model.vtp")
+    base_path = get_path_names(input_filepath)
+    centerlines_path = base_path + "_centerline.vtp"
+    if not path.exists(centerlines_path):
+        surface, capped_surface = prepare_surface(base_path, input_filepath)
+        inlet, outlets = get_centers(surface, base_path)
+        centerlines, _, _ = compute_centerlines(inlet, outlets, centerlines_path,
+                                                capped_surface, resampling=0.1,
+                                                smooth=False, base_path=base_path)
 
-    return a
+    return [input_filepath, input_filepath.replace(".vtp", "_output.vtp")]

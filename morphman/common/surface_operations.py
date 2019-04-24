@@ -19,7 +19,7 @@ def get_relevant_outlets(surface, base_path):
         relevant_outlets (list): List of relevant outlet IDs.
     """
     # Check if info exists
-    if not path.isfile(base_path + "_info.txt"):
+    if not path.isfile(base_path + "_info.json"):
         provide_relevant_outlets(surface, base_path)
 
     # Open info
@@ -33,6 +33,42 @@ def get_relevant_outlets(surface, base_path):
         relevant_outlets = provide_relevant_outlets(surface, base_path)
 
     return relevant_outlets
+
+
+def get_centers(surface, base_path, flowext=False):
+    """Get the centers of the inlet and outlets.
+    Args:
+        surface (vtkPolyData): An open surface.
+        base_path (str): Path to the case file.
+        flowext (bool): Turn on/off flow extension.
+    Returns:
+        inlet (list): A flatt list with the point of the inlet
+        outlet (list): A flatt list with the points of all the outlets.
+    """
+    # Check if info exists
+    if flowext or not path.isfile(base_path + "_info.json"):
+        compute_centers(surface, base_path)
+
+    # Open info
+    parameters = get_parameters(base_path)
+    outlets = []
+    inlet = []
+    for key, value in list(parameters.items()):
+        if str(key) == "inlet":
+            inlet = value
+        elif "outlet" in str(key) and "area" not in str(key) and "relevant" not in str(key):
+            outlets += value
+
+    num_outlets = len(outlets) // 3
+    if num_outlets != 0:
+        outlets = []
+        for i in range(num_outlets):
+            outlets += parameters["outlet%d" % i]
+
+    if inlet == [] and outlets == []:
+        inlet, outlets = compute_centers(surface, base_path)
+
+    return inlet, outlets
 
 
 def compute_centers(polydata, case_path=None):
@@ -117,7 +153,7 @@ def provide_relevant_outlets(surface, dir_path=None):
 
     Args:
         surface (vtkPolyData): Surface model.
-        dir_path (str): Location of into.txt file
+        dir_path (str): Location of info.json file
 
     Returns:
         points (list): List of relevant outlet IDs
@@ -160,7 +196,7 @@ def get_inlet_and_outlet_centers(surface, base_path, flowext=False):
         outlet (list): A flatt list with the points of all the outlets.
     """
     # Check if info exists
-    if flowext or not path.isfile(base_path + "_info.txt"):
+    if flowext or not path.isfile(base_path + "_info.json"):
         compute_centers(surface, base_path)
 
     # Open info

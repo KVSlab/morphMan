@@ -241,7 +241,7 @@ def get_centerline_tolerance(centerline, n=50):
     """
     line = extract_single_line(centerline, 0)
     length = get_curvilinear_coordinate(line)
-    tolerance = np.mean(length[1:n] - length[:n - 1]) / divergingRatioToSpacingTolerance
+    tolerance = np.mean(length[1:n] - length[:n - 1]) / 2.0
 
     return tolerance
 
@@ -456,7 +456,8 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
                 break
 
     # Spline the single line
-    line_to_change = compute_splined_centerline(line_to_change, nknots=25, isline=True)
+    nknots = min(line_to_change.GetNumberOfPoints() // 2, 25)
+    line_to_change = compute_splined_centerline(line_to_change, nknots=nknots, isline=True)
 
     if len(diverging_centerlines) == 0:
         diverging_centerlines = None

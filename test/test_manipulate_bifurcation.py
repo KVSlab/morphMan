@@ -8,21 +8,17 @@
 import numpy as np
 import pytest
 
-from .fixtures import common_input
-from morphman import manipulate_bifurcation
+from .fixtures import surface_paths
+from morphman import manipulate_bifurcation, read_command_line_bifurcation
 from morphman.common.surface_operations import get_centerline_tolerance
 from morphman.common.common import get_path_names, get_distance
 from morphman.common.vtk_wrapper import read_polydata, vtk_point_locator, extract_single_line
 
 
 @pytest.mark.parametrize("angle", [20 / 180 * np.pi, -20 / 180 * np.pi])
-def test_bifurcation_angle(common_input, angle):
-    common_input.update(dict(keep_fixed_1=False,
-                             keep_fixed_2=False,
-                             bif=False,
-                             lower=False,
-                             cylinder_factor=7,
-                             angle=angle,
+def test_bifurcation_angle(surface_paths, angle):
+    common_input = read_command_line_bifurcation(surface_paths[0], surface_paths[1])
+    common_input.update(dict(angle=angle,
                              region_of_interest="commandline",
                              region_points=[35.8, 59.8, 39.7, 76.8, 54.7, 53.2]))
 
