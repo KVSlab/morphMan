@@ -82,12 +82,12 @@ def get_parameters(folder):
     Returns:
         data (dict): The data in the info file.
     """
-    # If info.txt does not exists, return an empty dict
-    if not path.isfile(folder + "_info.txt"):
+    # If info.json does not exists, return an empty dict
+    if not path.isfile(folder + "_info.json"):
         return {}
 
     # Get dictionary
-    with open(folder + "_info.txt", "r") as infile:
+    with open(folder + "_info.json", "r") as infile:
         data = json.load(infile)
 
     return data
@@ -107,7 +107,7 @@ def write_parameters(data, folder):
     parameters.update(data)
 
     # Write data
-    with open(folder + "_info.txt", "w") as outfile:
+    with open(folder + "_info.json", "w") as outfile:
         json.dump(parameters, outfile)
 
 
