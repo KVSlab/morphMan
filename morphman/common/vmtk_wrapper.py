@@ -24,25 +24,6 @@ def vmtk_smooth_centerline(centerlines_output, num_iter, smooth_factor):
     return centerlines_output
 
 
-def vmtk_compute_surface_normals(capped_surface):
-    surface_normals = vmtkscripts.vmtkSurfaceNormals()
-    surface_normals.Surface = capped_surface
-    surface_normals.NormalsArrayName = surfaceNormalsArrayName
-    surface_normals.Execute()
-    capped_surface_with_normals = surface_normals.Surface
-
-    return capped_surface_with_normals
-
-
-def vmtk_compute_branch_extractor(centerlines_complete):
-    brancher = vmtkscripts.vmtkBranchExtractor()
-    brancher.Centerlines = centerlines_complete
-    brancher.RadiusArrayName = radiusArrayName
-    brancher.Execute()
-    centerlines_branched = brancher.Centerlines
-
-    return centerlines_branched
-
 
 def vmtk_compute_centerlines(end_point, inlet, method, outlet, pole_ids, resampling, surface, voronoi):
     centerlines = vmtkscripts.vmtkCenterlines()

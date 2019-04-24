@@ -5,8 +5,10 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
 ##      PURPOSE.  See the above copyright notices for more information.
 
-from argparse import ArgumentParser, RawDescriptionHelpFormatter
+from vmtk import vmtkscripts
 
+import functools
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from scipy.signal import argrelextrema
 
 # Local import
@@ -145,6 +147,30 @@ def check_branch_number(branch_to_manipulate_number, centerlines_complete):
                            " Number of selectable centerlines for this model is {}.".format(num_lines))
 
 
+surfaceNormalsArrayName = 'SurfaceNormalArray'
+radiusArrayName = 'MaximumInscribedSphereRadius'
+
+
+def vmtk_compute_surface_normals(capped_surface):
+    surface_normals = vmtkscripts.vmtkSurfaceNormals()
+    surface_normals.Surface = capped_surface
+    surface_normals.NormalsArrayName = surfaceNormalsArrayName
+    surface_normals.Execute()
+    capped_surface_with_normals = surface_normals.Surface
+
+    return capped_surface_with_normals
+
+
+def vmtk_compute_branch_extractor(centerlines_complete):
+    brancher = vmtkscripts.vmtkBranchExtractor()
+    brancher.Centerlines = centerlines_complete
+    brancher.RadiusArrayName = radiusArrayName
+    brancher.Execute()
+    centerlines_branched = brancher.Centerlines
+
+    return centerlines_branched
+
+
 def get_new_branch_position(branch_location, capped_surface):
     """
     Get point on surface closest to branch_location. Returns
@@ -158,11 +184,27 @@ def get_new_branch_position(branch_location, capped_surface):
         new_branch_pos_id (int): Point closest to branch location ID on surface.
         new_branch_pos (ndarray): Point closest to branch location on surface.
     """
-    surface_locator = get_vtk_cell_locator(capped_surface)
+    surface_locator = vtk_point_locator(capped_surface)
     new_branch_pos_id = surface_locator.FindClosestPoint(branch_location)
     new_branch_pos = capped_surface.GetPoint(new_branch_pos_id)
 
     return new_branch_pos_id, new_branch_pos
+
+
+def get_end_point(centerline, offset=0):
+    """
+    Get last point of a centerline
+
+    Args:
+        centerline (vtkPolyData): Centerline(s)
+        offset (int): Number of points from the end point to be selected
+
+    Returns:
+        centerline_end_point (vtkPoint): Point corresponding to end of centerline.
+    """
+    centerline_end_point = centerline.GetPoint(centerline.GetNumberOfPoints() - 1 - offset)
+
+    return centerline_end_point
 
 
 def pick_new_branch_position(capped_surface):
@@ -241,7 +283,7 @@ def pick_branch(capped_surface, centerlines):
     closest_dist = 1e9
     branch_to_manipulate = None
     for line_to_compare in centerlines:
-        locator = get_centerline_tolerance(line_to_compare)
+        locator = vtk_point_locator(line_to_compare)
         closest_point_id = locator.FindClosestPoint(surface_point)
         closest_point = line_to_compare.GetPoint(closest_point_id)
         dist = get_distance(closest_point, surface_point)
@@ -266,7 +308,7 @@ def get_translation_parameters(centerlines, diverging_centerline_branch, new_bra
     Returns:
         origo (ndarray): Adjusted origin / position of new branch position
     """
-    locator = get_centerline_tolerance(centerlines)
+    locator = vtk_point_locator(centerlines)
     new_branch_pos_on_cl = centerlines.GetPoint(locator.FindClosestPoint(new_branch_pos))
     adjusted_branch_pos = (np.asarray(new_branch_pos) - np.asarray(new_branch_pos_on_cl)) * 0.8 + np.asarray(
         new_branch_pos_on_cl)
@@ -343,7 +385,7 @@ def get_estimated_surface_normal(diverging_centerline_branch):
         normal_vector (ndarray): Estimated normal vector at diverging centerline
     """
     line = vmtk_compute_geometric_features(diverging_centerline_branch, True)
-    curvature = get_vtk_array("Curvature", line)
+    curvature = get_point_data_array("Curvature", line)
     first_local_maxima_id = argrelextrema(curvature, np.greater)[0][0]
 
     # TODO: Generalize choice of end point factor
@@ -513,7 +555,7 @@ def read_command_line():
     parser.add_argument('-bl', "--branch-loc", nargs="+", type=float, default=None, metavar="branch_location",
                         help="If this parameter is provided, the branch to be manipulated will be moved to the point "
                              "on the surface closest to this point. Example providing the point (1, 5, -1):" +
-                             " --region-points 1 5 -1")
+                             " --branch-loc 1 5 -1")
 
     # Arguments for rotation
     parser.add_argument('-a', '--angle', type=float, default=0,
@@ -544,6 +586,30 @@ def read_command_line():
                 no_smooth=args.no_smooth, no_smooth_point=args.no_smooth_point,
                 resampling_step=args.resampling_step, angle=angle_to_radians,
                 branch_to_manipulate_number=args.branch_number, branch_location=args.branch_loc)
+
+
+def get_sorted_lines(centerlines_complete):
+    """
+    Compares and sorts centerlines from shortest to longest in actual length
+
+    Args:
+        centerlines_complete (vtkPolyData): Centerlines to be sorted
+
+    Returns:
+        sorted_lines (vtkPolyData): Sorted centerlines
+    """
+
+    def compare_lines(line0, line1):
+        len0 = len(get_curvilinear_coordinate(line0))
+        len1 = len(get_curvilinear_coordinate(line1))
+        if len0 > len1:
+            return 1
+        return -1
+
+    lines = [extract_single_line(centerlines_complete, i) for i in range(centerlines_complete.GetNumberOfLines())]
+    sorted_lines = sorted(lines, key=functools.cmp_to_key(compare_lines))
+
+    return sorted_lines
 
 
 def main_branch():
