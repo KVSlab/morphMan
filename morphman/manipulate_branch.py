@@ -53,7 +53,7 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
 
     # Clean and capp / uncapp surface
     surface, capped_surface = prepare_surface(base_path, input_filepath)
-    inlet, outlets = get_centers(surface, base_path)
+    inlet, outlets = compute_centers(surface, base_path)
 
     print("-- Compute centerlines and Voronoi diagram")
     centerlines_complete, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path,
@@ -85,13 +85,13 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
     centerlines = update_centerlines(centerlines_complete, branch_to_manipulate_end_point)
 
     # Select diverging branch from Brancher and compare with diverging branch found manually
-    centerlines_branched = vmtk_branch_extractor(centerlines_complete)
+    centerlines_branched = vmtk_compute_branch_extractor(centerlines_complete)
     diverging_centerline_branch = get_diverging_centerline_branch(centerlines_branched, branch_to_manipulate_end_point)
 
     # Clip Voronoi diagram into bend and remaining part of geometry
     print("-- Clipping Voronoi diagrams")
-    voronoi_branch, voronoi_remaining = split_voronoi_with_centerlines(voronoi, [diverging_centerline_branch,
-                                                                                 centerlines])
+    voronoi_branch, voronoi_remaining = get_split_voronoi_diagram(voronoi, [diverging_centerline_branch,
+                                                                            centerlines])
 
     # Get surface normals
     old_normal = get_estimated_surface_normal(diverging_centerline_branch)
@@ -112,17 +112,17 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
     moved_and_rotated_centerline_branch = move_and_rotate_centerline_branch(diverging_centerline_branch, origo, R_u,
                                                                             R_z, dx)
     # Create new voronoi diagram and new centerlines
-    new_voronoi = merge_data([voronoi_remaining, moved_and_rotated_voronoi_branch])
+    new_voronoi = vtk_merge_polydata([voronoi_remaining, moved_and_rotated_voronoi_branch])
     write_polydata(new_voronoi, new_voronoi_path)
 
-    new_centerlines = merge_data([centerlines, moved_and_rotated_centerline_branch])
+    new_centerlines = vtk_merge_polydata([centerlines, moved_and_rotated_centerline_branch])
     write_polydata(new_centerlines, new_centerlines_path)
 
     new_surface = create_new_surface(new_voronoi, poly_ball_size=poly_ball_size)
     write_polydata(new_surface, unprepared_output_filepath)
 
     print("-- Smoothing, clean, and check surface")
-    new_surface = prepare_surface_output(new_surface, surface,
+    new_surface = prepare_output_surface(new_surface, surface,
                                          new_centerlines, output_filepath,
                                          test_merge=False, changed=True,
                                          old_centerline=centerlines_complete)
@@ -158,7 +158,7 @@ def get_new_branch_position(branch_location, capped_surface):
         new_branch_pos_id (int): Point closest to branch location ID on surface.
         new_branch_pos (ndarray): Point closest to branch location on surface.
     """
-    surface_locator = get_locator(capped_surface)
+    surface_locator = get_vtk_cell_locator(capped_surface)
     new_branch_pos_id = surface_locator.FindClosestPoint(branch_location)
     new_branch_pos = capped_surface.GetPoint(new_branch_pos_id)
 
@@ -202,11 +202,11 @@ def get_branch(branch_to_manipulate_number, centerlines_complete, longest_center
     break_points = dict()
     for i in range(centerlines_complete.GetNumberOfLines()):
         current_line = extract_single_line(centerlines_complete, i)
-        tolerance = get_tolerance(current_line)
+        tolerance = get_centerline_tolerance(current_line)
         for j in range(current_line.GetNumberOfPoints()):
             p1 = np.asarray(current_line.GetPoint(j))
             p2 = np.asarray(longest_centerline.GetPoint(j))
-            if distance(p1, p2) > tolerance:
+            if get_distance(p1, p2) > tolerance:
                 break_points[j] = i
                 break
 
@@ -242,10 +242,10 @@ def pick_branch(capped_surface, centerlines):
     closest_dist = 1e9
     branch_to_manipulate = None
     for line_to_compare in centerlines:
-        locator = get_locator(line_to_compare)
+        locator = get_centerline_tolerance(line_to_compare)
         closest_point_id = locator.FindClosestPoint(surface_point)
         closest_point = line_to_compare.GetPoint(closest_point_id)
-        dist = distance(closest_point, surface_point)
+        dist = get_distance(closest_point, surface_point)
         if dist < closest_dist:
             closest_dist = dist
             branch_to_manipulate = line_to_compare
@@ -280,7 +280,7 @@ def get_translation_parameters(centerlines, diverging_centerline_branch, new_bra
     Returns:
 
     """
-    locator = get_locator(centerlines)
+    locator = get_centerline_tolerance(centerlines)
     new_branch_pos_on_cl = centerlines.GetPoint(locator.FindClosestPoint(new_branch_pos))
     adjusted_branch_pos = (np.asarray(new_branch_pos) - np.asarray(new_branch_pos_on_cl)) * 0.8 + np.asarray(
         new_branch_pos_on_cl)
@@ -300,7 +300,7 @@ def get_exact_surface_normal(capped_surface, new_branch_pos_id):
     Returns:
 
     """
-    capped_surface_with_normals = vmtk_surface_normals(capped_surface)
+    capped_surface_with_normals = vmtk_compute_surface_normals(capped_surface)
 
     new_normal = capped_surface_with_normals.GetPointData().GetNormals().GetTuple(new_branch_pos_id)
     new_normal /= la.norm(new_normal)
@@ -340,7 +340,7 @@ def update_centerlines(centerlines, diverging_centerline_end):
         if get_end_point(diverging_centerline) != diverging_centerline_end:
             remaining_centerlines.append(diverging_centerline)
 
-    centerlines = merge_data(remaining_centerlines)
+    centerlines = vtk_merge_polydata(remaining_centerlines)
 
     return centerlines
 
@@ -354,8 +354,8 @@ def get_estimated_surface_normal(diverging_centerline_branch):
     Returns:
 
     """
-    line = vmtk_centerline_geometry(diverging_centerline_branch, True);
-    curvature = get_array("Curvature", line)
+    line = vmtk_compute_geometric_features(diverging_centerline_branch, True);
+    curvature = get_vtk_array("Curvature", line)
     first_local_maxima_id = argrelextrema(curvature, np.greater)[0][0]
 
     # TODO: Generalize choice of end point factor

@@ -14,9 +14,6 @@ import vtk
 # Local import
 from morphman.common.vtk_wrapper import get_vtk_array, vtk_point_locator
 
-surfaceNormalsArrayName = 'SurfaceNormalArray'
-frenetTangentArrayName = 'FrenetTangent'
-
 # Options not available from commandline
 divergingRatioToSpacingTolerance = 2.0
 interpolationHalfSize = 3
@@ -528,5 +525,3 @@ def get_direction_parameters(line, param, direction, clip_points):
     elif direction == "horizont":
         dz, zp, zm = get_horizontal_direction_parameters(n, region_points, points, param)
         return dz, ids
-
-
