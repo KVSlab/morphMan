@@ -131,6 +131,14 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
 
 
 def check_branch_number(branch_to_manipulate_number, centerlines_complete):
+    """
+    Check if branch number provided by user is larger than number of centerlines.
+    Rises RuntimeError if number exceeds limit.
+
+    Args:
+        branch_to_manipulate_number (int): Input number, supplied by user
+        centerlines_complete (vtkPolyData): All centerlines
+    """
     num_lines = centerlines_complete.GetNumberOfLines() - 1
     if branch_to_manipulate_number > num_lines:
         raise RuntimeError("\nERROR: Branch number cannot exceed number of centerlines." +
@@ -138,6 +146,18 @@ def check_branch_number(branch_to_manipulate_number, centerlines_complete):
 
 
 def get_new_branch_position(branch_location, capped_surface):
+    """
+    Get point on surface closest to branch_location. Returns
+    both the point on the surface and it's ID.
+
+    Args:
+        branch_location (ndarray): User selected point.
+        capped_surface (vtkPolyData): Input surface
+
+    Returns:
+        new_branch_pos_id (int): Point closest to branch location ID on surface.
+        new_branch_pos (ndarray): Point closest to branch location on surface.
+    """
     surface_locator = get_locator(capped_surface)
     new_branch_pos_id = surface_locator.FindClosestPoint(branch_location)
     new_branch_pos = capped_surface.GetPoint(new_branch_pos_id)
@@ -146,6 +166,16 @@ def get_new_branch_position(branch_location, capped_surface):
 
 
 def pick_new_branch_position(capped_surface):
+    """
+    Select (by manually chosing) where branch is translated to on the surface.
+
+    Args:
+        capped_surface (vtkPolyData): Input surface
+
+    Returns:
+        new_branch_pos_id (int): Point closest to branch location ID on surface.
+        new_branch_pos (ndarray): Point closest to branch location on surface.
+    """
     print("\nPlease select new point to move branch in the render window.")
     seed_selector = vmtkPickPointSeedSelector()
     seed_selector.SetSurface(capped_surface)
@@ -157,23 +187,99 @@ def pick_new_branch_position(capped_surface):
     return new_branch_pos_id, new_branch_pos
 
 
-def get_diverging_centerline_end(diverging_centerlines, diverging_id, region_points):
-    print("-- Clipping a centerline divering in the region of interest.")
-    patch_diverging_line = clip_diverging_line(extract_single_line(diverging_centerlines, 0),
-                                               region_points[0], diverging_id)
-    diverging_centerline = extract_single_line(patch_diverging_line, 1)
-    diverging_centerline_end = get_end_point(diverging_centerline)
+def get_branch(branch_to_manipulate_number, centerlines_complete, longest_centerline):
+    """
+    Select branch number n, counting up- to down-stream.
 
-    return diverging_centerline_end
+    Args:
+        branch_to_manipulate_number (int): Branch number
+        centerlines_complete (vtkPolyData): All centerlines
+        longest_centerline (vtkPolyData): Longest centerline
+
+    Returns:
+        selected_branch (vtkPolyData): Branch n, selected by user as input
+    """
+    break_points = dict()
+    for i in range(centerlines_complete.GetNumberOfLines()):
+        current_line = extract_single_line(centerlines_complete, i)
+        tolerance = get_tolerance(current_line)
+        for j in range(current_line.GetNumberOfPoints()):
+            p1 = np.asarray(current_line.GetPoint(j))
+            p2 = np.asarray(longest_centerline.GetPoint(j))
+            if distance(p1, p2) > tolerance:
+                break_points[j] = i
+                break
+
+    break_points_keys = sorted(break_points.keys())
+    selected_branch_id = break_points[break_points_keys[branch_to_manipulate_number - 1]]
+    selected_branch = extract_single_line(centerlines_complete, selected_branch_id)
+
+    return selected_branch
+
+
+def pick_branch(capped_surface, centerlines):
+    """
+    Select (by manually chosing) which branch is translated to on the surface.
+
+    Args:
+        capped_surface (vtkPolyData): Input surface
+        centerlines (vtkPolyData): Set of centerlines throughout model
+
+    Returns:
+          branch_to_manipulate (vtkPolyData): Branch selected to be manipulated
+
+    """
+    print("\nPlease select the branch you with to move in the render window.")
+    # Select point on surface
+    seed_selector = vmtkPickPointSeedSelector()
+    seed_selector.SetSurface(capped_surface)
+    seed_selector.text = "Press space to select the branch you want to move, 'u' to undo.\n"
+    seed_selector.Execute()
+    branch_surface_point_id = seed_selector.GetTargetSeedIds().GetId(0)
+    surface_point = capped_surface.GetPoint(branch_surface_point_id)
+
+    # Find closest centerline
+    closest_dist = 1e9
+    branch_to_manipulate = None
+    for line_to_compare in centerlines:
+        locator = get_locator(line_to_compare)
+        closest_point_id = locator.FindClosestPoint(surface_point)
+        closest_point = line_to_compare.GetPoint(closest_point_id)
+        dist = distance(closest_point, surface_point)
+        if dist < closest_dist:
+            closest_dist = dist
+            branch_to_manipulate = line_to_compare
+
+    return branch_to_manipulate
 
 
 def get_end_point(centerline):
+    """
+    Get last point of a centerline
+
+    Args:
+        centerline (vtkPolyData): Centerline(s)
+
+    Returns:
+        centerline_end_point (vtkPoint): Point corresponding to end of centerline.
+
+    """
     centerline_end_point = centerline.GetPoint(centerline.GetNumberOfPoints() - 1)
 
     return centerline_end_point
 
 
 def get_translation_parameters(centerlines, diverging_centerline_branch, new_branch_pos):
+    """
+
+    Args:
+        centerlines:
+        diverging_centerline_branch:
+        new_branch_pos:
+
+    Returns:
+
+    """
     locator = get_locator(centerlines)
     new_branch_pos_on_cl = centerlines.GetPoint(locator.FindClosestPoint(new_branch_pos))
     adjusted_branch_pos = (np.asarray(new_branch_pos) - np.asarray(new_branch_pos_on_cl)) * 0.8 + np.asarray(
@@ -185,6 +291,15 @@ def get_translation_parameters(centerlines, diverging_centerline_branch, new_bra
 
 
 def get_exact_surface_normal(capped_surface, new_branch_pos_id):
+    """
+
+    Args:
+        capped_surface:
+        new_branch_pos_id:
+
+    Returns:
+
+    """
     capped_surface_with_normals = vmtk_surface_normals(capped_surface)
 
     new_normal = capped_surface_with_normals.GetPointData().GetNormals().GetTuple(new_branch_pos_id)
@@ -194,6 +309,15 @@ def get_exact_surface_normal(capped_surface, new_branch_pos_id):
 
 
 def get_diverging_centerline_branch(centerlines_branched, diverging_centerline_end):
+    """
+
+    Args:
+        centerlines_branched:
+        diverging_centerline_end:
+
+    Returns:
+
+    """
     for i in range(centerlines_branched.GetNumberOfLines()):
         centerline_branch = extract_single_line(centerlines_branched, i)
         if get_end_point(centerline_branch) == diverging_centerline_end:
@@ -201,6 +325,15 @@ def get_diverging_centerline_branch(centerlines_branched, diverging_centerline_e
 
 
 def update_centerlines(centerlines, diverging_centerline_end):
+    """
+
+    Args:
+        centerlines:
+        diverging_centerline_end:
+
+    Returns:
+
+    """
     remaining_centerlines = []
     for i in range(centerlines.GetNumberOfLines()):
         diverging_centerline = extract_single_line(centerlines, i)
@@ -213,6 +346,14 @@ def update_centerlines(centerlines, diverging_centerline_end):
 
 
 def get_estimated_surface_normal(diverging_centerline_branch):
+    """
+
+    Args:
+        diverging_centerline_branch:
+
+    Returns:
+
+    """
     line = vmtk_centerline_geometry(diverging_centerline_branch, True);
     curvature = get_array("Curvature", line)
     first_local_maxima_id = argrelextrema(curvature, np.greater)[0][0]
@@ -228,6 +369,18 @@ def get_estimated_surface_normal(diverging_centerline_branch):
 
 
 def move_and_rotate_centerline_branch(centerline_branch, origo, R_u, R_z, dx):
+    """
+
+    Args:
+        centerline_branch:
+        origo:
+        R_u:
+        R_z:
+        dx:
+
+    Returns:
+
+    """
     # Locator to find closest point on centerline
     number_of_points = centerline_branch.GetNumberOfPoints()
 
@@ -261,6 +414,15 @@ def move_and_rotate_centerline_branch(centerline_branch, origo, R_u, R_z, dx):
 
 
 def get_rotation_axis_and_angle(n_new, n_old):
+    """
+
+    Args:
+        n_new:
+        n_old:
+
+    Returns:
+
+    """
     z = np.asarray(n_old)
     z_prime = np.asarray(n_new)
 
@@ -273,6 +435,15 @@ def get_rotation_axis_and_angle(n_new, n_old):
 
 
 def get_rotation_matrix(u, angle):
+    """
+
+    Args:
+        u:
+        angle:
+
+    Returns:
+
+    """
     # Set up rotation matrix using Euler–Rodrigues formula
     u_cross_matrix = np.asarray([[0, -u[2], u[1]],
                                  [u[2], 0, -u[0]],
@@ -284,6 +455,20 @@ def get_rotation_matrix(u, angle):
 
 
 def move_and_rotate_voronoi_branch(voronoi, dx, R_u, R_z, origo):
+    """
+    Translate and rotate the selected branch, represented
+    as a Voronoi diagram.
+
+    Args:
+        voronoi (vtkPolyData): Voronoi diagram of surface
+        dx (float): Distance to translate branch
+        R_u (ndarray): Rotation matrix, rotation from old to new surface normal
+        R_z (ndarray): Rotation matrix, rotation around new surface normal
+        origo (ndarray): Adjusted origin / position of new branch position
+
+    Returns:
+        new_voronoi (vtkPolyData): Manipulated Voronoi diagram
+    """
     # Voronoi diagram
     n = voronoi.GetNumberOfPoints()
     new_voronoi = vtk.vtkPolyData()
@@ -310,67 +495,31 @@ def move_and_rotate_voronoi_branch(voronoi, dx, R_u, R_z, origo):
     new_voronoi.SetPoints(voronoi_points)
     new_voronoi.SetVerts(cell_array)
     new_voronoi.GetPointData().AddArray(radius_array)
-
     return new_voronoi
 
 
 def get_sorted_lines(centerlines_complete):
+    """
+    Compares and sorts centerlines from shortest to longest in actual length
+
+    Args:
+        centerlines_complete (vtkPolyData): Centerlines to be sorted
+
+    Returns:
+        sorted_lines (vtkPolyData): Sorted centerlines
+    """
+
+    def compare_lines(line0, line1):
+        len0 = len(get_curvilinear_coordinate(line0))
+        len1 = len(get_curvilinear_coordinate(line1))
+        if len0 > len1:
+            return 1
+        return -1
+
     lines = [extract_single_line(centerlines_complete, i) for i in range(centerlines_complete.GetNumberOfLines())]
-    sorted_lines = sorted(lines, key=functools.cmp_to_key(compare_to))
+    sorted_lines = sorted(lines, key=functools.cmp_to_key(compare_lines))
 
     return sorted_lines
-
-
-def get_branch(branch_to_manipulate_number, centerlines_complete, longest_centerline):
-    break_points = dict()
-    for i in range(centerlines_complete.GetNumberOfLines()):
-        current_line = extract_single_line(centerlines_complete, i)
-        tolerance = get_tolerance(current_line)
-        for j in range(current_line.GetNumberOfPoints()):
-            p1 = np.asarray(current_line.GetPoint(j))
-            p2 = np.asarray(longest_centerline.GetPoint(j))
-            if distance(p1, p2) > tolerance:
-                break_points[j] = i
-                break
-
-    break_points_keys = sorted(break_points.keys())
-    selected_branch_id = break_points[break_points_keys[branch_to_manipulate_number - 1]]
-    selected_branch = extract_single_line(centerlines_complete, selected_branch_id)
-
-    return selected_branch
-
-
-def compare_to(line0, line1):
-    len0 = len(get_curvilinear_coordinate(line0))
-    len1 = len(get_curvilinear_coordinate(line1))
-    if len0 > len1:
-        return 1
-    return -1
-
-
-def pick_branch(capped_surface, centerlines):
-    print("\nPlease select the branch you with to move in the render window.")
-    # Select point on surface
-    seed_selector = vmtkPickPointSeedSelector()
-    seed_selector.SetSurface(capped_surface)
-    seed_selector.text = "Press space to select the branch you want to move, 'u' to undo.\n"
-    seed_selector.Execute()
-    branch_surface_point_id = seed_selector.GetTargetSeedIds().GetId(0)
-    surface_point = capped_surface.GetPoint(branch_surface_point_id)
-
-    # Find closest centerline
-    closest_dist = 1e9
-    branch_to_manipulate = None
-    for line_to_compare in centerlines:
-        locator = get_locator(line_to_compare)
-        closest_point_id = locator.FindClosestPoint(surface_point)
-        closest_point = line_to_compare.GetPoint(closest_point_id)
-        dist = distance(closest_point, surface_point)
-        if dist < closest_dist:
-            closest_dist = dist
-            branch_to_manipulate = line_to_compare
-
-    return branch_to_manipulate
 
 
 def read_command_line():
