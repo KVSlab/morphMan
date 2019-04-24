@@ -1,3 +1,5 @@
+import functools
+
 from scipy.interpolate import splrep, splev
 from scipy.signal import resample
 
@@ -176,6 +178,22 @@ def get_centerline_between_clipping_points(centerline_relevant_outlets, data):
     return centerline
 
 
+def get_end_point(centerline, offset=0):
+    """
+    Get last point of a centerline
+
+    Args:
+        centerline (vtkPolyData): Centerline(s)
+        offset (int): Number of points from the end point to be selected
+
+    Returns:
+        centerline_end_point (vtkPoint): Point corresponding to end of centerline.
+    """
+    centerline_end_point = centerline.GetPoint(centerline.GetNumberOfPoints() - 1 - offset)
+
+    return centerline_end_point
+
+
 def get_diverging_point_id(centerline1, centerline2, tol):
     """
     Find ID of diverging point;
@@ -201,6 +219,30 @@ def get_diverging_point_id(centerline1, centerline2, tol):
             break
 
     return i
+
+
+def get_sorted_lines(centerlines_complete):
+    """
+    Compares and sorts centerlines from shortest to longest in actual length
+
+    Args:
+        centerlines_complete (vtkPolyData): Centerlines to be sorted
+
+    Returns:
+        sorted_lines (vtkPolyData): Sorted centerlines
+    """
+
+    def compare_lines(line0, line1):
+        len0 = len(get_curvilinear_coordinate(line0))
+        len1 = len(get_curvilinear_coordinate(line1))
+        if len0 > len1:
+            return 1
+        return -1
+
+    lines = [extract_single_line(centerlines_complete, i) for i in range(centerlines_complete.GetNumberOfLines())]
+    sorted_lines = sorted(lines, key=functools.cmp_to_key(compare_lines))
+
+    return sorted_lines
 
 
 def get_curvilinear_coordinate(line):

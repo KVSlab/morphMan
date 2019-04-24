@@ -5,13 +5,13 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
 ##      PURPOSE.  See the above copyright notices for more information.
 
-import functools
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 from scipy.signal import argrelextrema
 
 # Local import
-from common import *
+from morphman.common.argparse_common import *
+from morphman.common.surface_operations import *
 
 
 def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, poly_ball_size, no_smooth,
@@ -82,7 +82,7 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
         new_branch_pos_id, new_branch_pos = get_new_branch_position(branch_location, capped_surface)
 
     branch_to_manipulate_end_point = get_end_point(branch_to_manipulate)
-    centerlines = update_centerlines(centerlines_complete, branch_to_manipulate_end_point)
+    centerlines = filter_centerlines(centerlines_complete, branch_to_manipulate_end_point)
 
     # Select diverging branch from Brancher and compare with diverging branch found manually
     centerlines_branched = vmtk_compute_branch_extractor(centerlines_complete)
@@ -227,7 +227,6 @@ def pick_branch(capped_surface, centerlines):
 
     Returns:
           branch_to_manipulate (vtkPolyData): Branch selected to be manipulated
-
     """
     print("\nPlease select the branch you with to move in the render window.")
     # Select point on surface
@@ -253,32 +252,19 @@ def pick_branch(capped_surface, centerlines):
     return branch_to_manipulate
 
 
-def get_end_point(centerline):
-    """
-    Get last point of a centerline
-
-    Args:
-        centerline (vtkPolyData): Centerline(s)
-
-    Returns:
-        centerline_end_point (vtkPoint): Point corresponding to end of centerline.
-
-    """
-    centerline_end_point = centerline.GetPoint(centerline.GetNumberOfPoints() - 1)
-
-    return centerline_end_point
-
-
 def get_translation_parameters(centerlines, diverging_centerline_branch, new_branch_pos):
     """
+    Get distance to translate branch, and the new position location for branch
 
     Args:
-        centerlines:
-        diverging_centerline_branch:
-        new_branch_pos:
+        centerlines (vtkPolyData): Relevant centerlines
+        diverging_centerline_branch (vtkPolyData): Diverging centerline
+        new_branch_pos (vtkPoint):  Position where branch is moved.
 
     Returns:
-
+        dx (float): Distance to translate branch
+    Returns:
+        origo (ndarray): Adjusted origin / position of new branch position
     """
     locator = get_centerline_tolerance(centerlines)
     new_branch_pos_on_cl = centerlines.GetPoint(locator.FindClosestPoint(new_branch_pos))
@@ -292,13 +278,14 @@ def get_translation_parameters(centerlines, diverging_centerline_branch, new_bra
 
 def get_exact_surface_normal(capped_surface, new_branch_pos_id):
     """
+    Compute normal out of surface at given point.
 
     Args:
-        capped_surface:
-        new_branch_pos_id:
+        capped_surface (vtkPolyData): Capped surface model
+        new_branch_pos_id (int): ID of point where branch is moved, on surface
 
     Returns:
-
+        new_normal (ndarray): Normal vector out of surface
     """
     capped_surface_with_normals = vmtk_compute_surface_normals(capped_surface)
 
@@ -310,13 +297,13 @@ def get_exact_surface_normal(capped_surface, new_branch_pos_id):
 
 def get_diverging_centerline_branch(centerlines_branched, diverging_centerline_end):
     """
+    Extract diverging centerline branch, comparing it to diverging centerline end point
 
     Args:
-        centerlines_branched:
-        diverging_centerline_end:
-
+        centerlines_branched (vktPolyData): Branched centerlines, from vmtkBrancher
+        diverging_centerline_end (vktPoint): End point of diverging centerline
     Returns:
-
+        centerline_branch (vtkPolyDat): Branch extracted centerline branch
     """
     for i in range(centerlines_branched.GetNumberOfLines()):
         centerline_branch = extract_single_line(centerlines_branched, i)
@@ -324,15 +311,15 @@ def get_diverging_centerline_branch(centerlines_branched, diverging_centerline_e
             return centerline_branch
 
 
-def update_centerlines(centerlines, diverging_centerline_end):
+def filter_centerlines(centerlines, diverging_centerline_end):
     """
+    Filters out diverging centerline from all centerline
 
     Args:
-        centerlines:
-        diverging_centerline_end:
-
+        centerlines (vtkPolyData): Complete set of centerlines
+        diverging_centerline_end (vtkPoint): End point of diverging centerline
     Returns:
-
+        filtered_centerlines (vtkPolyData): Complete set of centerlines, except diverging centerline
     """
     remaining_centerlines = []
     for i in range(centerlines.GetNumberOfLines()):
@@ -340,21 +327,22 @@ def update_centerlines(centerlines, diverging_centerline_end):
         if get_end_point(diverging_centerline) != diverging_centerline_end:
             remaining_centerlines.append(diverging_centerline)
 
-    centerlines = vtk_merge_polydata(remaining_centerlines)
+    filtered_centerlines = vtk_merge_polydata(remaining_centerlines)
 
-    return centerlines
+    return filtered_centerlines
 
 
 def get_estimated_surface_normal(diverging_centerline_branch):
     """
+    Estimate the surface normal at initial diverging centerline branch.
 
     Args:
-        diverging_centerline_branch:
+        diverging_centerline_branch (vtkPolyData): Diverging centerline to be moved.
 
     Returns:
-
+        normal_vector (ndarray): Estimated normal vector at diverging centerline
     """
-    line = vmtk_compute_geometric_features(diverging_centerline_branch, True);
+    line = vmtk_compute_geometric_features(diverging_centerline_branch, True)
     curvature = get_vtk_array("Curvature", line)
     first_local_maxima_id = argrelextrema(curvature, np.greater)[0][0]
 
@@ -365,21 +353,27 @@ def get_estimated_surface_normal(diverging_centerline_branch):
     normal_vector = np.asarray(diverging_centerline_branch.GetPoint(end_point)) - np.asarray(
         diverging_centerline_branch.GetPoint(start_point))
 
-    return normal_vector / la.norm(normal_vector)
+    normal_vector /= la.norm(normal_vector)
+
+    return normal_vector
 
 
 def move_and_rotate_centerline_branch(centerline_branch, origo, R_u, R_z, dx):
     """
+    Translate and rotate the selected branch, represented
+    as a Voronoi diagram.
 
     Args:
-        centerline_branch:
-        origo:
-        R_u:
-        R_z:
-        dx:
+        centerline_branch (vtkPolyData): Centerline through surface
+
+    Args:
+        dx (float): Distance to translate branch
+        R_u (ndarray): Rotation matrix, rotation from old to new surface normal
+        R_z (ndarray): Rotation matrix, rotation around new surface normal
+        origo (ndarray): Adjusted origin / position of new branch position
 
     Returns:
-
+        centerline (vtkPolyData): Manipulated centerline
     """
     # Locator to find closest point on centerline
     number_of_points = centerline_branch.GetNumberOfPoints()
@@ -415,13 +409,16 @@ def move_and_rotate_centerline_branch(centerline_branch, origo, R_u, R_z, dx):
 
 def get_rotation_axis_and_angle(n_new, n_old):
     """
+    Compute axis vector and angle between normal vectors (input)
 
     Args:
-        n_new:
-        n_old:
+        n_old (ndarray): Normal vector at initial position
+        n_new (ndarray): Normal vector at new position
 
     Returns:
-
+        u (ndarray): Normal vector corresponding to rotation axis
+    Returns:
+        angle (float): Angle between normal vectors
     """
     z = np.asarray(n_old)
     z_prime = np.asarray(n_new)
@@ -436,15 +433,15 @@ def get_rotation_axis_and_angle(n_new, n_old):
 
 def get_rotation_matrix(u, angle):
     """
+    Get three dimensional rotation matrix based on Euler-Rodrigues formula
 
     Args:
-        u:
-        angle:
+        u (ndarray): Normal vector corresponding to rotation axis
+        angle (float): Angle between normal vectors
 
     Returns:
-
+        R (ndarray): Rotation matrix
     """
-    # Set up rotation matrix using Euler–Rodrigues formula
     u_cross_matrix = np.asarray([[0, -u[2], u[1]],
                                  [u[2], 0, -u[0]],
                                  [-u[1], u[0], 0]])
@@ -496,30 +493,6 @@ def move_and_rotate_voronoi_branch(voronoi, dx, R_u, R_z, origo):
     new_voronoi.SetVerts(cell_array)
     new_voronoi.GetPointData().AddArray(radius_array)
     return new_voronoi
-
-
-def get_sorted_lines(centerlines_complete):
-    """
-    Compares and sorts centerlines from shortest to longest in actual length
-
-    Args:
-        centerlines_complete (vtkPolyData): Centerlines to be sorted
-
-    Returns:
-        sorted_lines (vtkPolyData): Sorted centerlines
-    """
-
-    def compare_lines(line0, line1):
-        len0 = len(get_curvilinear_coordinate(line0))
-        len1 = len(get_curvilinear_coordinate(line1))
-        if len0 > len1:
-            return 1
-        return -1
-
-    lines = [extract_single_line(centerlines_complete, i) for i in range(centerlines_complete.GetNumberOfLines())]
-    sorted_lines = sorted(lines, key=functools.cmp_to_key(compare_lines))
-
-    return sorted_lines
 
 
 def read_command_line():

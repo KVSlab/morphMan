@@ -483,8 +483,8 @@ def prepare_output_surface(surface, original_surface, new_centerline, output_fil
             in_dir = np.array(line.GetPoint(5)) - \
                      np.array(line.GetPoint(0))
         else:
-            in_dir = np.array(line.GetPoint(line.GetNumberOfPoints() - 5)) - \
-                     np.array(line.GetPoint(line.GetNumberOfPoints() - 1))
+            in_dir = np.array(get_end_point(line, offset=4)) - \
+                     np.array(get_end_point(line))
 
         in_dir = in_dir / np.sqrt(np.sum(in_dir ** 2))
         angle = np.arccos(np.dot(in_dir, normal)) * 180 / np.pi
@@ -500,8 +500,8 @@ def prepare_output_surface(surface, original_surface, new_centerline, output_fil
                 in_dir_new = np.array(new_line.GetPoint(5)) - new_outlet
                 translation = new_outlet - np.array(inlet_point)
             else:
-                new_outlet = np.array(new_line.GetPoint(new_line.GetNumberOfPoints() - 1))
-                in_dir_new = np.array(new_line.GetPoint(new_line.GetNumberOfPoints() - 5)) - new_outlet
+                new_outlet = np.array(get_end_point(new_line))
+                in_dir_new = np.array(get_end_point(new_line, 4)) - new_outlet
                 translation = new_outlet - np.array(outlets[line_id])
 
             center += translation
