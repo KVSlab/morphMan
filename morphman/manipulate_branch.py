@@ -15,6 +15,9 @@ from scipy.signal import argrelextrema
 from morphman.common.argparse_common import *
 from morphman.common.surface_operations import *
 
+surfaceNormalsArrayName = 'SurfaceNormalArray'
+radiusArrayName = 'MaximumInscribedSphereRadius'
+
 
 def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, poly_ball_size, no_smooth,
                       no_smooth_point, resampling_step, angle, branch_to_manipulate_number, branch_location):
@@ -145,10 +148,6 @@ def check_branch_number(branch_to_manipulate_number, centerlines_complete):
     if branch_to_manipulate_number > num_lines:
         raise RuntimeError("\nERROR: Branch number cannot exceed number of centerlines." +
                            " Number of selectable centerlines for this model is {}.".format(num_lines))
-
-
-surfaceNormalsArrayName = 'SurfaceNormalArray'
-radiusArrayName = 'MaximumInscribedSphereRadius'
 
 
 def vmtk_compute_surface_normals(capped_surface):

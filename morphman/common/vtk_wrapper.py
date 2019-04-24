@@ -1,8 +1,8 @@
 import sys
-from os import path
 
 import numpy as np
 import vtk
+from os import path
 
 radiusArrayName = 'MaximumInscribedSphereRadius'
 

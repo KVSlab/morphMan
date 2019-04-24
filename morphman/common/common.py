@@ -5,12 +5,11 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
 ##      PURPOSE.  See the above copyright notices for more information.
 
-from os import path
-
+import json
 import numpy as np
 import numpy.linalg as la
 import vtk
-import json
+from os import path
 
 # Local import
 from morphman.common.vtk_wrapper import get_vtk_array, vtk_point_locator

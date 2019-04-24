@@ -1,4 +1,3 @@
-
 from scipy.interpolate import splrep, splev
 from scipy.signal import resample
 
@@ -177,7 +176,6 @@ def get_centerline_between_clipping_points(centerline_relevant_outlets, data):
     return centerline
 
 
-
 def get_diverging_point_id(centerline1, centerline2, tol):
     """
     Find ID of diverging point;
@@ -203,7 +201,6 @@ def get_diverging_point_id(centerline1, centerline2, tol):
             break
 
     return i
-
 
 
 def get_curvilinear_coordinate(line):

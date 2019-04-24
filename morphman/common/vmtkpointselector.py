@@ -13,8 +13,9 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
 ##      PURPOSE.  See the above copyright notices for more information.
 
-import vtk
 from vmtk import vmtkrenderer
+
+import vtk
 
 
 class VtkText:

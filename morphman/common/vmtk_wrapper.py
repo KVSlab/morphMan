@@ -5,7 +5,6 @@ from vmtk import vtkvmtk, vmtkscripts
 # Global array names
 from morphman.common.vtk_wrapper import read_polydata, write_polydata
 
-surfaceNormalsArrayName = 'SurfaceNormalArray'
 radiusArrayName = 'MaximumInscribedSphereRadius'
 parallelTransportNormalsArrayName = 'ParallelTransportNormals'
 groupIDsArrayName = "GroupIds"
