@@ -19,7 +19,7 @@ def get_relevant_outlets(surface, base_path):
         relevant_outlets (list): List of relevant outlet IDs.
     """
     # Check if info exists
-    if not path.isfile(base_path + "_info.txt"):
+    if not path.isfile(base_path + "_info.json"):
         provide_relevant_outlets(surface, base_path)
 
     # Open info
@@ -46,7 +46,7 @@ def get_centers(surface, base_path, flowext=False):
         outlet (list): A flatt list with the points of all the outlets.
     """
     # Check if info exists
-    if flowext or not path.isfile(base_path + "_info.txt"):
+    if flowext or not path.isfile(base_path + "_info.json"):
         compute_centers(surface, base_path)
 
     # Open info
@@ -153,7 +153,7 @@ def provide_relevant_outlets(surface, dir_path=None):
 
     Args:
         surface (vtkPolyData): Surface model.
-        dir_path (str): Location of into.txt file
+        dir_path (str): Location of info.json file
 
     Returns:
         points (list): List of relevant outlet IDs
@@ -196,7 +196,7 @@ def get_inlet_and_outlet_centers(surface, base_path, flowext=False):
         outlet (list): A flatt list with the points of all the outlets.
     """
     # Check if info exists
-    if flowext or not path.isfile(base_path + "_info.txt"):
+    if flowext or not path.isfile(base_path + "_info.json"):
         compute_centers(surface, base_path)
 
     # Open info

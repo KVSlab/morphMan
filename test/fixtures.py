@@ -7,8 +7,7 @@
 
 from os import system, path
 from sys import platform
-from morphman.common import get_centers, get_path_names, prepare_surface, compute_centerlines
-
+from morphman.common import get_centers, get_path_names, compute_centerlines, prepare_surface
 import pytest
 
 

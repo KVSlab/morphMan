@@ -10,6 +10,7 @@ from os import path
 import numpy as np
 import numpy.linalg as la
 import vtk
+import json
 
 # Local import
 from morphman.common.vtk_wrapper import get_vtk_array, vtk_point_locator
@@ -81,30 +82,14 @@ def get_parameters(folder):
     Returns:
         data (dict): The data in the info file.
     """
-    # If info.txt file, return an empty dict
-    if not path.isfile(folder + "_info.txt"):
+    # If info.json does not exists, return an empty dict
+    if not path.isfile(folder + "_info.json"):
         return {}
 
-    # Get text
-    f = open(folder + "_info.txt", "r")
-    text = f.read()
-    f.close()
-    text = text.split("\n")
+    # Get dictionary
+    with open(folder + "_info.json", "r") as infile:
+        data = json.load(infile)
 
-    # Get values
-    data = {}
-    for par in text:
-        if par != "":
-            split = par.split(": ")
-            if len(split) == 2:
-                key, value = split
-            else:
-                key = split[0]
-                value = ": ".join(split[1:])
-            try:
-                data[key] = eval(value)
-            except:
-                data[key] = value
     return data
 
 
@@ -119,17 +104,11 @@ def write_parameters(data, folder):
     parameters = get_parameters(folder)
 
     # Add new parameters (can overwrite old as well)
-    for key, value in list(data.items()):
-        parameters[key] = value
+    parameters.update(data)
 
-    # Get new text
-    text = ["%s: %s" % (k, v) for k, v in list(parameters.items())]
-    text = "\n".join(text)
-
-    # Write text
-    f = open(folder + "_info.txt", "w")
-    f.write(text)
-    f.close()
+    # Write data
+    with open(folder + "_info.json", "w") as outfile:
+        json.dump(parameters, outfile)
 
 
 def convert_numpy_data_to_polydata(data, header, TNB=None, PT=None):
