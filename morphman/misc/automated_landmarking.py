@@ -482,7 +482,7 @@ def create_particles(base_path, algorithm, method):
         method (str): Method used for computing curvature.
     """
 
-    info_filepath = base_path + "_info.txt"
+    info_filepath = base_path + "_info.json"
     filename_all_landmarks = base_path + "_landmark_%s_%s.particles" % (algorithm, method)
     filename_bend_landmarks = base_path + "_anterior_bend.particles"
 
