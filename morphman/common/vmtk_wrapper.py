@@ -1,6 +1,6 @@
-from os import path
-
 from vmtk import vtkvmtk, vmtkscripts
+
+from os import path
 
 # Global array names
 from morphman.common.vtk_wrapper import read_polydata, write_polydata
@@ -21,7 +21,6 @@ def vmtk_smooth_centerline(centerlines_output, num_iter, smooth_factor):
     centerlines_output = centerline_smoothing.GetOutput()
 
     return centerlines_output
-
 
 
 def vmtk_compute_centerlines(end_point, inlet, method, outlet, pole_ids, resampling, surface, voronoi):
