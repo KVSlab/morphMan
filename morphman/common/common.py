@@ -14,14 +14,6 @@ import vtk
 # Local import
 from morphman.common.vtk_wrapper import get_vtk_array, vtk_point_locator
 
-# Options not available from commandline
-divergingRatioToSpacingTolerance = 2.0
-interpolationHalfSize = 3
-voronoiCoreCutOffThreshold = 0.75
-numberOfSplineAnalyzedPoints = 40
-phiValues = [float(i) for i in range(2, 43, 2)]
-thetaStep = 2.0
-
 
 def get_path_names(input_filepath):
     """Takes the input folder path as argument, and returns the name of the case name, and
@@ -525,5 +517,3 @@ def get_direction_parameters(line, param, direction, clip_points):
     elif direction == "horizont":
         dz, zp, zm = get_horizontal_direction_parameters(n, region_points, points, param)
         return dz, ids
-
-

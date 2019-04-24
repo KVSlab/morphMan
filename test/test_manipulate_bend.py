@@ -7,8 +7,8 @@
 
 import pytest
 
-from .fixtures import common_input
-from morphman import manipulate_bend
+from .fixtures import surface_paths
+from morphman import manipulate_bend, read_command_line_bend
 from morphman.common.common import get_path_names
 from morphman.common.vtk_wrapper import read_polydata
 from morphman.misc import compute_angle
@@ -20,19 +20,18 @@ from morphman.misc import compute_angle
                           (0.0, 0.2),
                           (0.0, -0.2),
                           (0.2, -0.2)])
-def test_siphon(common_input, alpha, beta):
+def test_siphon(surface_paths, alpha, beta):
     # Set problem specific parameters
+    common_input = read_command_line_bend(surface_paths[0], surface_paths[1])
     common_input.update(dict(alpha=alpha,
                              beta=beta,
                              region_of_interest="commandline",
-                             # TODO: Set points
                              region_points=[44.17085266113281,
                                             38.514854431152344,
                                             41.20818328857422,
                                             43.242130279541016,
                                             42.68572235107422,
-                                            38.65191650390625],
-                             resampling_step=0.1))
+                                            38.65191650390625]))
 
     # Perform manipulation
     manipulate_bend(**common_input)

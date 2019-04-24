@@ -8,23 +8,23 @@
 
 import pytest
 
-from .fixtures import common_input
+from .fixtures import surface_paths
 from morphman.common.common import get_path_names
 from morphman.common.surface_operations import extract_ica_centerline
 from morphman.misc import landmarking_bogunovic, landmarking_piccinelli
 
 
 @pytest.mark.parametrize("algorithm", ["bogunovic", "piccinelli"])
-def test_landmarking(common_input, algorithm):
+def test_landmarking(surface_paths, algorithm):
     # Get region points
-    base_path = get_path_names(common_input["input_filepath"])
+    base_path = get_path_names(surface_paths[0])
     relevant_outlets = [35.8, 59.8, 39.7, 76.8, 54.7, 53.2]
-    ica_centerline = extract_ica_centerline(base_path, common_input["resampling_step"],
+    ica_centerline = extract_ica_centerline(base_path, 0.1,
                                             relevant_outlets=relevant_outlets)
 
     landmark_input = dict(
         centerline=ica_centerline, base_path=base_path, curv_method="spline", algorithm=algorithm,
-        resampling_step=common_input["resampling_step"], smooth_line=False, nknots=8, iterations=100)
+        resampling_step=0.1, smooth_line=False, nknots=8, iterations=100)
 
     if algorithm == "bogunovic":
         landmark_input.update(smoothing_factor=1.0)

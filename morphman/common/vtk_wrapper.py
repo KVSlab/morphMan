@@ -112,27 +112,41 @@ def read_polydata(filename, datatype=None):
         raise RuntimeError("Could not find file: %s" % filename)
 
     # Check filename format
-    file_type = filename.split(".")[-1]
-    if file_type == '':
+    fileType = filename.split(".")[-1]
+    if fileType == '':
         raise RuntimeError('The file does not have an extension')
 
     # Get reader
-    if file_type == 'stl':
+    if fileType == 'stl':
         reader = vtk.vtkSTLReader()
         reader.MergingOn()
-    elif file_type == 'vtk':
-        reader = vtk.vtkPolyDataReader()
-    elif file_type == 'vtp':
+    elif fileType == 'vtk':
+        # Read header
+        with open(filename) as myfile:
+            head = "".join(list(islice(myfile, 10))).lower()
+
+        # Set reader based on header
+        if "unstructured_grid" in head:
+            reader = vtk.vtkUnstructuredGridReader()
+        elif "structured_grid" in head:
+            reader = vtk.vtkStructuredGridReader()
+        elif "rectilinear_grid" in head:
+            reader = vtk.vtkRectilinearGridReader()
+        elif "structured_points" in head:
+            reader = vtk.vtkStructuredPointsReader()
+        elif "polydata" in head:
+            reader = vtk.vtkPolyDataReader()
+    elif fileType == 'vtp':
         reader = vtk.vtkXMLPolyDataReader()
-    elif file_type == 'vts':
-        reader = vtk.vtkXMinkorporereLStructuredGridReader()
-    elif file_type == 'vtr':
+    elif fileType == 'vts':
+        reader = vtk.vtkXMLStructuredGridReader()
+    elif fileType == 'vtr':
         reader = vtk.vtkXMLRectilinearGridReader()
-    elif file_type == 'vtu':
+    elif fileType == 'vtu':
         reader = vtk.vtkXMLUnstructuredGridReader()
-    elif file_type == "vti":
+    elif fileType == "vti":
         reader = vtk.vtkXMLImageDataReader()
-    elif file_type == "np" and datatype == "vtkIdList":
+    elif fileType == "np" and datatype == "vtkIdList":
         result = np.load(filename).astype(np.int)
         id_list = vtk.vtkIdList()
         id_list.SetNumberOfIds(result.shape[0])
@@ -140,7 +154,7 @@ def read_polydata(filename, datatype=None):
             id_list.SetId(i, result[i])
         return id_list
     else:
-        raise RuntimeError('Unknown file type %s' % file_type)
+        raise RuntimeError('Unknown file type %s' % fileType)
 
     # Read
     reader.SetFileName(filename)
@@ -150,7 +164,7 @@ def read_polydata(filename, datatype=None):
     return polydata
 
 
-def write_polydata(input_data, filename, datatype=None):
+def write_polydata(input_data, filename, datatype=None, file_type="ascii"):
     """
     Write the given input data based on the file name extension.
 
@@ -162,33 +176,53 @@ def write_polydata(input_data, filename, datatype=None):
         datatype (str): Additional parameter for vtkIdList objects.
     """
     # Check filename format
-    file_type = filename.split(".")[-1]
-    if file_type == '':
+    fileType = filename.split(".")[-1]
+    if fileType == '':
         raise RuntimeError('The file does not have an extension')
 
     # Get writer
-    if file_type == 'stl':
+    if fileType == 'stl':
         writer = vtk.vtkSTLWriter()
-    elif file_type == 'vtk':
-        writer = vtk.vtkPolyDataWriter()
-    elif file_type == 'vts':
+
+    elif fileType == 'vtk':
+        # Set reader based on data type
+        if isinstance(input_data, vtk.vtkUnstructuredGrid):
+            writer = vtk.vtkUnstructuredGridWriter()
+        elif isinstance(input_data, vtk.vtkStructuredGrid):
+            writer = vtk.vtkStructuredGridWriter()
+        elif isinstance(input_data, vtk.vtkRectilinearGrid):
+            writer = vtk.vtkRectilinearGridWriter()
+        elif isinstance(input_data, vtk.vtkStructuredPoints) or \
+                isinstance(input_data, vtk.vtkImageData):
+            writer = vtk.vtkStructuredPointsWriter()
+        elif isinstance(input_data, vtk.vtkPolyData):
+            writer = vtk.vtkPolyDataWriter()
+
+        if file_type.lower() == "ascii":
+            writer.SetFileType(1)
+        elif file_type.lower() == "binary":
+            writer.SetFileType(0)
+        else:
+            raise ValueError("Invalid file type, can only be ascii or binary")
+
+    elif fileType == 'vts':
         writer = vtk.vtkXMLStructuredGridWriter()
-    elif file_type == 'vtr':
+    elif fileType == 'vtr':
         writer = vtk.vtkXMLRectilinearGridWriter()
-    elif file_type == 'vtp':
+    elif fileType == 'vtp':
         writer = vtk.vtkXMLPolyDataWriter()
-    elif file_type == 'vtu':
+    elif fileType == 'vtu':
         writer = vtk.vtkXMLUnstructuredGridWriter()
-    elif file_type == "vti":
+    elif fileType == "vti":
         writer = vtk.vtkXMLImageDataWriter()
-    elif file_type == "np" and datatype == "vtkIdList":
+    elif fileType == "np" and datatype == "vtkIdList":
         output_data = np.zeros(input_data.GetNumberOfIds())
         for i in range(input_data.GetNumberOfIds()):
             output_data[i] = input_data.GetId(i)
         output_data.dump(filename)
         return
     else:
-        raise RuntimeError('Unknown file type %s' % file_type)
+        raise RuntimeError('Unknown file type %s' % fileType)
 
     # Set filename and input
     writer.SetFileName(filename)

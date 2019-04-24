@@ -6,6 +6,9 @@
 ##      PURPOSE.  See the above copyright notices for more information.
 
 
+from argparse import ArgumentTypeError
+
+
 def str2bool(boolean):
     """Convert a string to boolean.
 
@@ -23,6 +26,13 @@ def str2bool(boolean):
         raise ValueError('Boolean value expected.')
 
 
+def restricted_float(x):
+    x = float(x)
+    if x <= 0.0 or x >= 1.0:
+        raise ArgumentTypeError("{} not in range [0.0, 1.0]".format(x))
+    return x
+
+
 def add_common_arguments(parser, required=True):
     # Required arguments
     if required:
@@ -38,7 +48,7 @@ def add_common_arguments(parser, required=True):
                                " parameters.")
 
     # General arguments
-    parser.add_argument('-s', '--smooth', type=str2bool, default=False,
+    parser.add_argument('-s', '--smooth', type=str2bool, default=True,
                         help="Smooth the voronoi diagram, default is False")
     parser.add_argument('-f', '--smooth-factor', type=float, default=0.25,
                         help="If smooth option is true then each voronoi point" +
