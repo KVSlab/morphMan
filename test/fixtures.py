@@ -8,7 +8,6 @@
 from os import system, path
 from sys import platform
 from morphman.common import get_centers, get_path_names, compute_centerlines, prepare_surface
-
 import pytest
 
 
@@ -54,15 +53,5 @@ def surface_paths():
         centerlines, _, _ = compute_centerlines(inlet, outlets, centerlines_path,
                                                 capped_surface, resampling=0.1,
                                                 smooth=False, base_path=base_path)
-
-    # Define parameters shared by all functions
-    #a = dict(input_filepath = input_filepath,
-    #         output_filepath = input_filepath.replace(".vtp", "_output.vtp")) #,
-             #smooth_factor = 0.25,
-             #poly_ball_size = [180, 180, 180],
-             #smooth = True,
-             #resampling_step = 0.1,
-             #no_smooth = False,
-             #no_smooth_point = None)
 
     return [input_filepath, input_filepath.replace(".vtp", "_output.vtp")]
