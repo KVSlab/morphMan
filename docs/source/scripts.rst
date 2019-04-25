@@ -53,6 +53,18 @@ manipulate_bifurcation.py
     :show-inheritance:
 
 
+Manipulation of a branch
+===============================
+
+manipulate_branch.py
+--------------------------------
+
+.. automodule:: manipulate_branch
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
 Miscellaneous
 =============
 Supporting functions to the main algorithms.

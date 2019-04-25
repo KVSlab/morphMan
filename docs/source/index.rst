@@ -21,5 +21,6 @@ Documentation for `morphMan <https://github.com/KVSlab/morphMan>`_.
    manipulate_bend
    manipulate_bifurcation
    manipulate_curvature
+   manipulate_branch
    Miscellaneous
    scripts
