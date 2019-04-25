@@ -536,57 +536,6 @@ def move_and_rotate_voronoi_branch(voronoi, dx, R_u, R_z, origo):
     return new_voronoi
 
 
-def read_command_line():
-    """
-    Read arguments from commandline
-    """
-    # Description of the script
-    description = "Moves a selected part of a tubular geometry, " + \
-                  "in two (horizontal, vertical) geometry-specific directions. " + \
-                  "Magnitude of movement is defined by the parameters alpha and beta" + \
-                  "Primary script used for application in blood vessels."
-
-    parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
-
-    # Add common arguments
-    add_common_arguments(parser)
-
-    parser.add_argument('-bl', "--branch-loc", nargs="+", type=float, default=None, metavar="branch_location",
-                        help="If this parameter is provided, the branch to be manipulated will be moved to the point "
-                             "on the surface closest to this point. Example providing the point (1, 5, -1):" +
-                             " --branch-loc 1 5 -1")
-
-    # Arguments for rotation
-    parser.add_argument('-a', '--angle', type=float, default=0,
-                        help="The manipulated branch is rotated an angle 'a' around the new" +
-                             " surface normal vector. 'a' is assumed to be in degrees," +
-                             " and not radians. Default is no rotation.", metavar="surface_normal_axis_angle")
-    # Argument for selecting branch
-    parser.add_argument('-bn', '--branch-number', type=int, default=0,
-                        help="The number corresponding the branch to manipulate. " +
-                             "The branches are ordered from 1 to N, " +
-                             "from upstream to downstream, relative to the inlet. " +
-                             "If not selected, the user must manually select the branch "
-                             "to manipulate. ", metavar="branch_number")
-
-    # Parse paths to get default values
-    args = parser.parse_args()
-    angle_to_radians = args.angle * math.pi / 180  # Convert from deg to rad
-
-    # Output file argument
-    args = parser.parse_args()
-
-    if args.no_smooth_point is not None and len(args.no_smooth_point):
-        if len(args.no_smooth_point) % 3 != 0:
-            raise ValueError("ERROR: Please provide the no smooth point(s) as a multiple of 3")
-
-    return dict(input_filepath=args.ifile, smooth=args.smooth, smooth_factor=args.smooth_factor,
-                output_filepath=args.ofile, poly_ball_size=args.poly_ball_size,
-                no_smooth=args.no_smooth, no_smooth_point=args.no_smooth_point,
-                resampling_step=args.resampling_step, angle=angle_to_radians,
-                branch_to_manipulate_number=args.branch_number, branch_location=args.branch_loc)
-
-
 def get_sorted_lines(centerlines_complete):
     """
     Compares and sorts centerlines from shortest to longest in actual length
@@ -611,9 +560,68 @@ def get_sorted_lines(centerlines_complete):
     return sorted_lines
 
 
+def read_command_line_branch(input_path=None, output_path=None):
+    """
+    Read arguments from commandline and return all values in a dictionary.
+    If input_path and output_path are not None, then do not parse command line, but
+    only return default values.
+
+    Args:
+        input_path (str): Input file path, positional argument with default None.
+        output_path (str): Output file path, positional argument with default None.
+    """
+    # Description of the script
+    description = "Moves a selected part of a tubular geometry, " + \
+                  "in two (horizontal, vertical) geometry-specific directions. " + \
+                  "Magnitude of movement is defined by the parameters alpha and beta" + \
+                  "Primary script used for application in blood vessels."
+
+    parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
+
+    # Add common arguments
+    required = not (input_path is not None and output_path is not None)
+    add_common_arguments(parser, required=required)
+
+    parser.add_argument('-bl', "--branch-loc", nargs="+", type=float, default=None, metavar="branch_location",
+                        help="If this parameter is provided, the branch to be manipulated will be moved to the point "
+                             "on the surface closest to this point. Example providing the point (1, 5, -1):" +
+                             " --branch-loc 1 5 -1")
+
+    # Arguments for rotation
+    parser.add_argument('-a', '--angle', type=float, default=0,
+                        help="The manipulated branch is rotated an angle 'a' around the new" +
+                             " surface normal vector. 'a' is assumed to be in degrees," +
+                             " and not radians. Default is no rotation.", metavar="surface_normal_axis_angle")
+    # Argument for selecting branch
+    parser.add_argument('-bn', '--branch-number', type=int, default=0,
+                        help="The number corresponding the branch to manipulate. " +
+                             "The branches are ordered from 1 to N, " +
+                             "from upstream to downstream, relative to the inlet. " +
+                             "If not selected, the user must manually select the branch "
+                             "to manipulate. ", metavar="branch_number")
+
+    # Parse paths to get default values
+    if required:
+        args = parser.parse_args()
+    else:
+        args = parser.parse_args(["-i" + input_path, "-o" + output_path])
+
+    angle_to_radians = args.angle * math.pi / 180  # Convert from deg to rad
+
+    if args.no_smooth_point is not None and len(args.no_smooth_point):
+        if len(args.no_smooth_point) % 3 != 0:
+            raise ValueError("ERROR: Please provide the no smooth point(s) as a multiple of 3")
+
+    return dict(input_filepath=args.ifile, smooth=args.smooth, smooth_factor=args.smooth_factor,
+                output_filepath=args.ofile, poly_ball_size=args.poly_ball_size,
+                no_smooth=args.no_smooth, no_smooth_point=args.no_smooth_point,
+                resampling_step=args.resampling_step, angle=angle_to_radians,
+                branch_to_manipulate_number=args.branch_number, branch_location=args.branch_loc)
+
+
 def main_branch():
-    manipulate_branch(**read_command_line())
+    manipulate_branch(**read_command_line_branch())
 
 
 if __name__ == "__main__":
-    manipulate_branch(**read_command_line())
+    manipulate_branch(**read_command_line_branch())

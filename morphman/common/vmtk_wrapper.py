@@ -47,7 +47,7 @@ def vmtk_compute_centerline_sections(surface, centerline):
 
     Args:
         surface (vtkPolyData): Surface to meassure area.
-        centerline (vtkPolyData): centerline to measure are along.
+        centerline (vtkPolyData): centerline to measure along.
 
     Returns:
         line (vtkPolyData): centerline with the attributes
