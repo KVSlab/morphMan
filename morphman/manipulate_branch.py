@@ -5,10 +5,9 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
 ##      PURPOSE.  See the above copyright notices for more information.
 
-from vmtk import vmtkscripts
-
 import functools
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
+
 from scipy.signal import argrelextrema
 
 # Local import
@@ -582,7 +581,7 @@ def read_command_line_branch(input_path=None, output_path=None):
     required = not (input_path is not None and output_path is not None)
     add_common_arguments(parser, required=required)
 
-    parser.add_argument('-bl', "--branch-loc", nargs="+", type=float, default=None, metavar="branch_location",
+    parser.add_argument('-bl', "--branch-location", nargs="+", type=float, default=None, metavar="branch_location",
                         help="If this parameter is provided, the branch to be manipulated will be moved to the point "
                              "on the surface closest to this point. Example providing the point (1, 5, -1):" +
                              " --branch-loc 1 5 -1")
@@ -616,7 +615,7 @@ def read_command_line_branch(input_path=None, output_path=None):
                 output_filepath=args.ofile, poly_ball_size=args.poly_ball_size,
                 no_smooth=args.no_smooth, no_smooth_point=args.no_smooth_point,
                 resampling_step=args.resampling_step, angle=angle_to_radians,
-                branch_to_manipulate_number=args.branch_number, branch_location=args.branch_loc)
+                branch_to_manipulate_number=args.branch_number, branch_location=args.branch_location)
 
 
 def main_branch():
