@@ -22,18 +22,15 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
                       no_smooth_point, resampling_step, angle, remove_branch, branch_to_manipulate_number,
                       branch_location):
     """
-    Primary script for moving a selected branch of any blood vessel.
+    Primary script for moving or removing a selected branch of any blood vessel.
     Relies on a surface geometry of a 3D blood vessel network.
 
     Defines in- and out-put files, computes voronoi diagram, and
     moves voronoi diagram according to user selected points.
     Used selects two points defining a diverging branch, and the
     one point defining the new location on the surface.
-    Moves, and performs rotation of the voronoi diagram, then
-    reconstructs the Voronoi diagram, creating a new surface.
-    Proceeds by computing the corresponding centerline in the new
-    geometries, used for postprocessing, geometric analysis and
-    meshing.
+    Proceedes with either removal of a single branch,
+    or traslationg and rotation of a single branch.
 
     Args:
         remove_branch (bool: If true, removes selected branch completely.
@@ -112,8 +109,26 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
 
 def detach_branch(voronoi_remaining, centerlines, poly_ball_size, unprepared_output_filepath, surface, output_filepath,
                   centerlines_complete, base_path):
+    """
+    Reconstructs the Voronoi diagram, creating a new surface,
+    without the selected branch, utimatley removing it.
+    Proceeds by computing the corresponding centerline in the new
+    geometries, used for postprocessing, geometric analysis and
+    meshing.
+
+    Args:
+        centerlines (vtkPolyData): Relevant centerlines in new geometry
+        centerlines_complete (vtkPolyData): Complete set of centerlines
+        surface (vtkPolyData): Surface model
+        unprepared_output_filepath (string): Path to save unprepared surface
+        voronoi_remaining (vtkPolyData): Voronoi diagram of remaining surface model
+        base_path (string): Path to save location
+        output_filepath (str): Path to output the manipulated surface.
+        poly_ball_size (list): Resolution of polyballs used to create surface.
+    """
     new_centerlines_path = base_path + "_centerline_removed_branch.vtp"
     new_voronoi_path = base_path + "_voronoi_removed_branch.vtp"
+
     # Create new voronoi diagram and new centerlines
     write_polydata(voronoi_remaining, new_voronoi_path)
 
@@ -134,8 +149,32 @@ def detach_branch(voronoi_remaining, centerlines, poly_ball_size, unprepared_out
 def move_and_rotate_branch(angle, capped_surface, centerlines, centerlines_complete, diverging_centerline_branch,
                            new_branch_pos, new_branch_pos_id, output_filepath, poly_ball_size, surface,
                            unprepared_output_filepath, voronoi_branch, voronoi_remaining, base_path):
+    """
+    Moves, and performs rotation of the voronoi diagram, then
+    reconstructs the Voronoi diagram, creating a new surface.
+    Proceeds by computing the corresponding centerline in the new
+    geometries, used for postprocessing, geometric analysis and
+    meshing.
+
+    Args:
+        capped_surface (vtkPolyData): Capped surface model
+        centerlines (vtkPolyData): Relevant centerlines in new geometry
+        centerlines_complete (vtkPolyData): Complete set of centerlines
+        diverging_centerline_branch (vtkPolyData): Diverging centerline
+        new_branch_pos (vtkPoint): Point where branch is moved
+        new_branch_pos_id (int): ID of point where branch is moved
+        surface (vtkPolyData): Surface model
+        unprepared_output_filepath (string): Path to save unprepared surface
+        voronoi_branch (vtkPolyData): Voronoi diagram of branch
+        voronoi_remaining (vtkPolyData): Voronoi diagram of remaining surface model
+        base_path (string): Path to save location
+        output_filepath (str): Path to output the manipulated surface.
+        poly_ball_size (list): Resolution of polyballs used to create surface.
+        angle (float): Angle to rotate around new surface normal vector. Default i no rotation.
+    """
     new_centerlines_path = base_path + "_centerline_moved_and_rotated.vtp"
     new_voronoi_path = base_path + "_voronoi_moved_and_rotated.vtp"
+
     # Get surface normals
     old_normal = get_estimated_surface_normal(diverging_centerline_branch)
     new_normal = get_exact_surface_normal(capped_surface, new_branch_pos_id)
