@@ -28,13 +28,13 @@ file `./C0002/surface/model.vtp`, relative to where you execute the command.
 When using ``morphman-branch``, there are four main settings which can be provided by the user:
 
  * ``branch_number``: With branches ordered from 1 to N from upstream to downstream relative to the inlet, this number determines which branch is to be manipulated.
- * ``branch_loc``: The point on / closes to the surface, where the selected branch will be placed.
+ * ``branch_loc``: The point on / closest to the surface, where the selected branch will be placed.
  * ``angle``: How many degrees the manipulated branch will be rotated around the new surface normal vector.
- * ``remove_branch``: Either `True` or `False`, which determines whether to remove the selected branch or not.
+ * ``remove_branch``: Either `True` or `False`, determining whether or not to remove the selected branch.
 
 Shown in Figure 2 is the result of moving the opthalmic artery of the vascular model to another part of the surface.
 
-.. figure:: manipulate_opthalmic.png
+.. figure:: branch_moved.png
 
   Figure 2: Translation and rotation of the opthamlic artery,
   causing it to appear elsewhere on the vasular surface model.
@@ -50,7 +50,7 @@ in this case the opthalmic artery of the ICA model.
 Shown in Figure 2 is the result of moving the opthalmic artery of the vascular model to another part of the surface,
 including a second rotation around the new surface normal vector, which ranges of the angle :math:`\theta \in [0, 2 \pi ]`.
 
-.. figure:: manipulate_opthalmic_rotation.png
+.. figure:: branch_move_and_rotate.png
 
   Figure 3: Translation and rotation of the opthamlic artery, followed by rotation around the new surface normal vector.
 
@@ -62,13 +62,13 @@ Notice how the `angle` setting is given in degrees, although converted to radian
 
 Finally, in Figure 4 is the result of removing an arbitrary branch.
 
-.. figure:: manipulate_opthalmic_rotation.png
+.. figure:: branch_removed.png
 
-  Figure 4: Removal of an arbitrary branch, in this case the third branch away from the inlet.
+  Figure 4: Removal of an arbitrary branch, in this case the fourth major branch away from the inlet.
 
 To reproduce the surface model where a branch has been removed, as shown in Figure 4, run::
 
-    morphman-branch --ifile C0002/surface/model.vtp --ofile C0002/surface/removed_branch.vtp --remove-branch True --branch-number 3 --poly-ball-size 250 250 250
+    morphman-branch --ifile C0002/surface/model.vtp --ofile C0002/surface/removed_branch.vtp --remove-branch True --branch-number 4 --poly-ball-size 250 250 250
 
 For additional information, beyond this tutorial, on the script and
 input parameters, please run ``morphman-branch -h`` or confer with

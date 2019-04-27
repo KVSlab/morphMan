@@ -44,7 +44,7 @@ For morphMan to be user friendly, we provide a tutorial for each of the scripts.
 * :ref:`manipulate_bend` (Change the curvature or angle of a bend)
 * :ref:`manipulate_bifurcation` (Change the angle in a bifurcation)
 * :ref:`manipulate_curvature` (Increase or decrease the curvature variation in the a vessel segment)
-* :ref:`manipulate_branch` (Translate and rotate a specific branch anywhere on the surface)
+* :ref:`manipulate_branch` (Translate and rotate or removal of a specific branch anywhere on the surface)
 
 If you have any questions beyond the tutorials, please do not hesitate to get in touch with us.
 
