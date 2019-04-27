@@ -97,6 +97,9 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
     voronoi_branch, voronoi_remaining = get_split_voronoi_diagram(voronoi, [diverging_centerline_branch,
                                                                             centerlines])
 
+    voronoi_branch, voronoi_remaining_2 = filter_voronoi(voronoi_branch, diverging_centerline_branch)
+    voronoi_remaining = vtk_merge_polydata([voronoi_remaining, voronoi_remaining_2])
+
     # Get surface normals
     old_normal = get_estimated_surface_normal(diverging_centerline_branch)
     new_normal = get_exact_surface_normal(capped_surface, new_branch_pos_id)
@@ -290,6 +293,99 @@ def pick_branch(capped_surface, centerlines):
             branch_to_manipulate = line_to_compare
 
     return branch_to_manipulate
+
+
+def filter_voronoi(voronoi, diverging_centerline_branch):
+    """
+    Filter away voronoi points too far away from relevant branch
+
+    Args:
+        voronoi (vtkPolyData): Voronoi diagram to be filtered
+        diverging_centerline_branch (vtkPolyData): Relevant centerlines of the branch
+
+    Returns:
+        vtkPolyData: Voronoi diagram, diverging part
+    Returns:
+        vtkPolyData: Voronoi diagram, remaining part
+    """
+    misr = get_point_data_array(radiusArrayName, diverging_centerline_branch)
+    locator = vtk_point_locator(diverging_centerline_branch)
+
+    n = voronoi.GetNumberOfPoints()
+    diverging_voronoi = vtk.vtkPolyData()
+    remaining_voronoi = vtk.vtkPolyData()
+    div_cell_array = vtk.vtkCellArray()
+    rem_cell_array = vtk.vtkCellArray()
+    div_points = vtk.vtkPoints()
+    div_radius = np.zeros(n)
+    rem_points = vtk.vtkPoints()
+    rem_radius = np.zeros(n)
+
+    radius_array_data = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1
+
+    div_count = 0
+    rem_count = 0
+    for i in range(n):
+        point = voronoi.GetPoint(i)
+        closest_point_id = locator.FindClosestPoint(point)
+        closest_point = diverging_centerline_branch.GetPoint(closest_point_id)
+        if get_distance(closest_point, point) > max(misr):
+            rem_count = set_voronoi_point_data(i, point, radius_array_data, rem_cell_array, rem_count, rem_points,
+                                               rem_radius)
+        else:
+            div_count = set_voronoi_point_data(i, point, radius_array_data, div_cell_array, div_count, div_points,
+                                               div_radius)
+
+    set_voronoi_data(div_cell_array, div_count, div_points, div_radius, diverging_voronoi)
+    set_voronoi_data(rem_cell_array, rem_count, rem_points, rem_radius, remaining_voronoi)
+
+    return diverging_voronoi, remaining_voronoi
+
+
+def set_voronoi_point_data(i, point, radius_array_data, cell_array, count, points, radius):
+    """
+    Set point data to a single Voronoi diagram point
+
+    Args:
+        i (int): Counter
+        point (vtkPoint): Single point of Voronoi diagram
+        radius_array_data (ndarray): MISR Radius array
+        cell_array (vtkCellArray): Cell array
+        count (int): Specific counter
+        points (vtkPoints): Point array
+        radius (ndarray):  Radius array
+
+    Returns:
+        int: Incremented counter
+    """
+    points.InsertNextPoint(point)
+    cell_array.InsertNextCell(1)
+    cell_array.InsertCellPoint(count)
+    value = radius_array_data(i)
+    radius[count] = value
+    count += 1
+
+    return count
+
+
+def set_voronoi_data(cell_array, count, points, radius, voronoi):
+    """
+    Apply points and data to voronoi object
+
+    Args:
+        cell_array (vtkCellArray): Cell array
+        count (int): Specific counter
+        points (vtkPoints): Point array
+        radius (ndarray):  Radius array
+        voronoi (vtkPolyData): Voronoi diagram to be filtered
+    """
+    radius_array = get_vtk_array(radiusArrayName, 1, count)
+    for i in range(count):
+        radius_array.SetTuple(i, [float(radius[i])])
+
+    voronoi.SetPoints(points)
+    voronoi.SetVerts(cell_array)
+    voronoi.GetPointData().AddArray(radius_array)
 
 
 def get_translation_parameters(centerlines, diverging_centerline_branch, new_branch_pos):
