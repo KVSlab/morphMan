@@ -221,7 +221,7 @@ def check_branch_number(branch_to_manipulate_number, centerlines_complete):
         branch_to_manipulate_number (int): Input number, supplied by user
         centerlines_complete (vtkPolyData): All centerlines
     """
-    num_lines = centerlines_complete.GetNumberOfLines() - 1
+    num_lines = centerlines_complete.GetNumberOfLines() - 2
     if branch_to_manipulate_number > num_lines:
         raise RuntimeError("\nERROR: Branch number cannot exceed number of centerlines." +
                            " Number of selectable centerlines for this model is {}.".format(num_lines))
