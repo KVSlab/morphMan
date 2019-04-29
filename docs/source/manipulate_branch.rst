@@ -72,4 +72,4 @@ To reproduce the surface model where a branch has been removed, as shown in Figu
 
 For additional information, beyond this tutorial, on the script and
 input parameters, please run ``morphman-branch -h`` or confer with
-the :meth:`curvature_branch.curvature_branch`.
+the :meth:`manipulate_branch`.
