@@ -23,7 +23,7 @@ from os import path
 
 from get_test_data import download_case
 
-from morphman import manipulate_branch, read_command_line_branch
+from morphman import manipulate_branch, main_branch, read_command_line_branch
 
 # Set absolute path to the demo folder
 absolute_path = path.dirname(path.abspath(__file__))
