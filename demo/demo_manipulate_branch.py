@@ -41,11 +41,14 @@ if not path.exists(path.join(input_filepath)):
 default_values = read_command_line_branch(input_filepath, output_filepath)
 
 # Set region of interest
-default_values["branch_number"] = 1
+default_values["branch_to_manipulate_number"] = 1
 default_values["branch_location"] = [21.7, 18.1, 25.9]
 
 # Parameters for reconstructing the surface
 default_values["poly_ball_size"] = [250, 250, 250]
+
+# Set new output path
+default_values["output_filepath"] = output_filepath
 
 # Run manipulation
 manipulate_branch(**default_values)
@@ -55,18 +58,18 @@ manipulate_branch(**default_values)
 default_values["angle"] = 180
 
 # Set new output path
-output_filepath = path.join(absolute_path, case, "surface", "moved_and_rotated_branch.vtp")
+default_values["output_filepath"] = path.join(absolute_path, case, "surface", "moved_and_rotated_branch.vtp")
 
 # Run manipulation
 manipulate_branch(**default_values)
 
 ### Branch removal
 # Method spesific parameters
-default_values["branch_number"] = 4
+default_values["branch_to_manipulate_number"] = 4
 default_values["remove_branch"] = True
 
 # Set new output path
-output_filepath = path.join(absolute_path, case, "surface", "removed_branch.vtp")
+default_values["output_filepath"] = path.join(absolute_path, case, "surface", "removed_branch.vtp")
 
 # Run manipulation
 manipulate_branch(**default_values)
