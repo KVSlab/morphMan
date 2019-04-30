@@ -10,7 +10,7 @@ The goal of ``morphman-bend``, is to alter one specific bend in the
 vasculature, like shown in Figure 1. This can be performed by running ``morphman-bend`` in the terminal,
 followed by the respective command line arguments. Alternatively, you can execute the Python script directly,
 located in the ``morphman`` subfolder, by typing ``python manipulate_bend.py``. We have also created a 
-demo folder where we show how to run this tutorial from a python script, please checkout the code from github to
+demo folder where we show how to run this tutorial from a Python script, please checkout the code from GitHub to
 run the demos.
 
 .. figure:: Bend_moving.png

@@ -24,7 +24,7 @@ is a file `./C0005/surface/model.vtp`, relative to where you execute the command
 Performing the manipulation can be achieved by running ``morphman-bifurcation`` in the terminal, followed by the
 respective command line arguments. Alternatively, you can execute the Python script directly,
 located in the ``morphman`` subfolder, by typing ``python manipulate_bifurcation.py``. We have also created a 
-demo folder where we show how to run this tutorial from a python script, please checkout the code from github to
+demo folder where we show how to run this tutorial from a Python script, please checkout the code from GitHub to
 run the demos.
 
 Shown in Figure 2 is the result of rotating the two daughter branches with both

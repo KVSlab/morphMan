@@ -333,9 +333,9 @@ def interpolate_two_cells(startCell, endCell, numberOfSplinePoints, additionalPo
         centerline (vtkPolyData): The new interpolated centerline.
     """
     points = vtk.vtkPoints()
-    #xspline = vtk.vtkCardinalSpline()
-    #yspline = vtk.vtkCardinalSpline()
-    #zspline = vtk.vtkCardinalSpline()
+    # xspline = vtk.vtkCardinalSpline()
+    # yspline = vtk.vtkCardinalSpline()
+    # zspline = vtk.vtkCardinalSpline()
     xspline = vtk.vtkKochanekSpline()
     yspline = vtk.vtkKochanekSpline()
     zspline = vtk.vtkKochanekSpline()

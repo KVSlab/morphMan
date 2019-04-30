@@ -1,6 +1,13 @@
-from os import path
+##   Copyright (c) Aslak W. Bergersen, Henrik A. Kjeldsberg. All rights reserved.
+##   See LICENSE file for details.
+
+##      This software is distributed WITHOUT ANY WARRANTY; without even
+##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+##      PURPOSE.  See the above copyright notices for more information.
 
 from vmtk import vtkvmtk, vmtkscripts
+
+from os import path
 
 # Global array names
 from morphman.common.vtk_wrapper import read_polydata, write_polydata
@@ -47,7 +54,7 @@ def vmtk_compute_centerline_sections(surface, centerline):
 
     Args:
         surface (vtkPolyData): Surface to meassure area.
-        centerline (vtkPolyData): centerline to measure are along.
+        centerline (vtkPolyData): centerline to measure along.
 
     Returns:
         line (vtkPolyData): centerline with the attributes
