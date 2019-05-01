@@ -469,7 +469,7 @@ def get_vtk_cell_locator(surface):
     Returns:
         return (vtkCellLocator): Cell locator of the input surface.
     """
-    locator = vtk.vtkCellLocator()
+    locator = vtk.vtkStaticCellLocator()
     locator.SetDataSet(surface)
     locator.BuildLocator()
 
@@ -543,7 +543,7 @@ def move_past_sphere(centerline, center, r, start, step=-1, stop=0, scale_factor
     return tmp_point, r, i
 
 
-def vtk_point_locator(centerline):
+def get_vtk_point_locator(centerline):
     """Wrapper for vtkStaticPointLocator.
 
     Args:

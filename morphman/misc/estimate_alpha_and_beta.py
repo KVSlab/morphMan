@@ -540,8 +540,8 @@ def compute_curvature(input_filepath, alpha, beta, method, new_centerlines, comp
     # Extract centerline points and ids
     new_centerline = extract_single_line(new_centerlines, 0)
     centerline = extract_single_line(centerlines, 0)
-    new_locator = vtk_point_locator(new_centerline)
-    old_locator = vtk_point_locator(centerline)
+    new_locator = get_vtk_point_locator(new_centerline)
+    old_locator = get_vtk_point_locator(centerline)
     id1 = old_locator.FindClosestPoint(p1)
     id2 = old_locator.FindClosestPoint(p2)
     id1_new = new_locator.FindClosestPoint(p1)
@@ -793,8 +793,8 @@ def get_moved_siphon(new_centerlines, centerlines, p1, p2):
         moved_p2 (ndarray): New position of second ipping point.
     """
     # Extract new siphon and prepare
-    new_locator = vtk_point_locator(extract_single_line(new_centerlines, 0))
-    old_locator = vtk_point_locator(extract_single_line(centerlines, 0))
+    new_locator = get_vtk_point_locator(extract_single_line(new_centerlines, 0))
+    old_locator = get_vtk_point_locator(extract_single_line(centerlines, 0))
     id1 = old_locator.FindClosestPoint(p1)
     id2 = old_locator.FindClosestPoint(p2)
 

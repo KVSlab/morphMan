@@ -79,7 +79,7 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
         outlet1, outlet2 = get_relevant_outlets(capped_surface, base_path)
     else:
         outlet1, outlet2 = region_points[:3], region_points[3:]
-        surface_locator = vtk_point_locator(capped_surface)
+        surface_locator = get_vtk_point_locator(capped_surface)
         id1 = surface_locator.FindClosestPoint(outlet1)
         id2 = surface_locator.FindClosestPoint(outlet2)
         outlet1 = capped_surface.GetPoint(id1)
@@ -115,7 +115,7 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
     if smooth:
         voronoi = prepare_voronoi_diagram(capped_surface, centerline_par, base_path, smooth,
                                           smooth_factor, no_smooth, no_smooth_point,
-                                          voronoi, pole_ids)
+                                          voronoi, pole_ids, resampling_step)
 
     # Locate diverging-points and end-points, for bif or lower, rotated or not
     key = "div_point"
@@ -276,7 +276,7 @@ def rotate_voronoi(clipped_voronoi, patch_cl, div_points, m, R):
     not_rotate = [0]
     for i in range(patch_cl.GetNumberOfCells()):
         cell_line.append(extract_single_line(patch_cl, i))
-        tmp_locator = vtk_point_locator(cell_line[-1])
+        tmp_locator = get_vtk_point_locator(cell_line[-1])
         locator.append(tmp_locator)
 
     for i in range(1, patch_cl.GetNumberOfCells()):
@@ -357,7 +357,7 @@ def rotate_cl(patch_cl, div_points, rotation_matrices, R):
     radius_array = get_vtk_array(radiusArrayName, 1, number_of_points)
 
     line0 = extract_single_line(patch_cl, 0)
-    locator0 = vtk_point_locator(line0)
+    locator0 = get_vtk_point_locator(line0)
 
     # Iterate through points along the centerline
     count = 0
@@ -370,7 +370,7 @@ def rotate_cl(patch_cl, div_points, rotation_matrices, R):
         test = get_distance(start, dist) > tolerance*10
 
         if test or len(div_points) == 2:
-            locator = vtk_point_locator(cell)
+            locator = get_vtk_point_locator(cell)
             pnt1 = cell.GetPoint(locator.FindClosestPoint(div_points[-2]))
             pnt2 = cell.GetPoint(locator.FindClosestPoint(div_points[-1]))
             dist1 = get_distance(pnt1, div_points[-2])
@@ -486,7 +486,7 @@ def merge_cl(centerline, end_point, div_point):
 
     # Find lines to merge
     lines = [extract_single_line(centerline, i) for i in range(n_lines)]
-    locators = [vtk_point_locator(lines[i]) for i in range(n_lines)]
+    locators = [get_vtk_point_locator(lines[i]) for i in range(n_lines)]
     div_id = [locators[i].FindClosestPoint(div_point[0]) for i in range(n_lines)]
     end_id = [locators[i].FindClosestPoint(end_point[0]) for i in range(n_lines)]
 
@@ -510,7 +510,7 @@ def merge_cl(centerline, end_point, div_point):
         line = lines[i]
 
         # Check if it should be merged
-        loc = vtk_point_locator(line)
+        loc = get_vtk_point_locator(line)
         end_point_id = loc.FindClosestPoint(end_point[0])
         div_point_id = loc.FindClosestPoint(div_point[0])
         clipp_dist = get_distance(line.GetPoint(end_point_id), end_point[0])

@@ -2,9 +2,9 @@ import math
 
 from scipy.interpolate import splrep, splev
 
-from morphman.common.common import get_distance
-from morphman.common.vmtk_wrapper import *
-from morphman.common.vtk_wrapper import *
+from common.common import get_distance
+from common.vmtk_wrapper import *
+from common.vtk_wrapper import *
 
 
 ### The following code is adapted from:
@@ -97,7 +97,7 @@ def extract_patches_ids_siphon(parentCl, clipPts, clipped=False):
 
     for j in range(parentCl.GetNumberOfCells()):
         cellLine = extract_single_line(parentCl, j)
-        locator = vtk_point_locator(cellLine)
+        locator = get_vtk_point_locator(cellLine)
 
         upId = locator.FindClosestPoint(upstreamPoint)
         downId = locator.FindClosestPoint(downstreamPoint)
@@ -147,7 +147,7 @@ def extract_patches_ids(parentCl, clipPts):
 
     for j in range(parentCl.GetNumberOfCells()):
         cellLine = extract_single_line(parentCl, j)
-        locator = vtk_point_locator(cellLine)
+        locator = get_vtk_point_locator(cellLine)
 
         if j == 0 and N == 3:
             upstreamId = locator.FindClosestPoint(commonPoint)
@@ -545,7 +545,7 @@ def voronoi_diagram_interpolation(interpolationcellid, id0, id1, voronoiDataset0
         voronoiPoint = voronoiDataset0.GetPoint(i)
         voronoiPointRadius = voronoiDataset0.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
 
-        centerlinePointLocator = vtk_point_locator(cellLine)
+        centerlinePointLocator = get_vtk_point_locator(cellLine)
 
         closestPointId = centerlinePointLocator.FindClosestPoint(voronoiPoint)
         closestPoint = cellLine.GetPoint(closestPointId)
@@ -604,14 +604,14 @@ def voronoi_diagram_interpolation(interpolationcellid, id0, id1, voronoiDataset0
 
         lastPTPoint = PTPoints.GetPoint(PTPoints.GetNumberOfPoints() - 1)
 
-        voronoiPointLocator = vtk_point_locator(voronoiDataset1)
+        voronoiPointLocator = get_vtk_point_locator(voronoiDataset1)
 
         arrivalVoronoiPointId = voronoiPointLocator.FindClosestPoint(lastPTPoint)
         arrivalVoronoiPoint = voronoiDataset1.GetPoint(arrivalVoronoiPointId)
         arrivalVoronoiPointRadius = voronoiDataset1.GetPointData().GetArray(radiusArrayName).GetTuple1(
             arrivalVoronoiPointId)
 
-        arrivalCenterlinePointLocator = vtk_point_locator(cellLine)
+        arrivalCenterlinePointLocator = get_vtk_point_locator(cellLine)
 
         arrivalCenterlineClosestPointId = arrivalCenterlinePointLocator.FindClosestPoint(arrivalVoronoiPoint)
         arrivalCenterlineClosestPoint = cellLine.GetPoint(arrivalCenterlineClosestPointId)
@@ -926,14 +926,14 @@ def interpolate_voronoi_diagram(interpolatedCenterlines, patchCenterlines,
             bif_ = bif[i]
 
             startCell = extract_single_line(bif_clipped, startId_)
-            locator = vtk_point_locator(startCell)
+            locator = get_vtk_point_locator(startCell)
             startPoint = clippingPoints.GetPoint(1)
             startId = locator.FindClosestPoint(startPoint)
             startR = startCell.GetPointData().GetArray(radiusArrayName).GetTuple1(startId)
             startRHalf = startR / cylinder_factor
 
             endCell = extract_single_line(bif_clipped, endId_)
-            locator = vtk_point_locator(endCell)
+            locator = get_vtk_point_locator(endCell)
             endPoint = endCell.GetPoint(0)
             endId = locator.FindClosestPoint(endPoint)
             endR = endCell.GetPointData().GetArray(radiusArrayName).GetTuple1(endId)
@@ -985,7 +985,7 @@ def get_start_ids(points, line):
     """
     p1 = points[1]
     p2 = points[2]
-    locator = vtk_point_locator(line)
+    locator = get_vtk_point_locator(line)
     id1 = locator.FindClosestPoint(p1)
     id2 = locator.FindClosestPoint(p2)
     if id1 < id2:

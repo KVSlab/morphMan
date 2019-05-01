@@ -62,7 +62,7 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
     if smooth:
         voronoi = prepare_voronoi_diagram(capped_surface, centerlines, base_path,
                                           smooth, smooth_factor, no_smooth,
-                                          no_smooth_point, voronoi, pole_ids)
+                                          no_smooth_point, voronoi, pole_ids,resampling_step)
     # Get region of interest
     centerline_splined, centerline_remaining, \
             centerline_diverging, region_points, diverging_ids = get_line_to_change(capped_surface, centerlines,
@@ -139,7 +139,7 @@ def make_voronoi_smooth(voronoi, old_cl, new_cl, smooth_line, div_voronoi, div_p
     Returns:
         new_dataset (vtkPolyData): Manipulated voronoi diagram.
     """
-    locator = vtk_point_locator(old_cl)
+    locator = get_vtk_point_locator(old_cl)
     n = voronoi.GetNumberOfPoints()
     new_dataset = vtk.vtkPolyData()
     points = vtk.vtkPoints()
@@ -238,7 +238,7 @@ def move_all_centerlines(old_cl, new_cl, diverging_id, diverging_centerlines, sm
         line = extract_single_line(old_cl, i)
 
         # Check if line goes through the region of interest
-        locator = vtk_point_locator(line)
+        locator = get_vtk_point_locator(line)
         id1 = locator.FindClosestPoint(p1)
         id2 = locator.FindClosestPoint(p2)
         in_p1 = get_distance(line.GetPoint(id1), p1) < tol * 3

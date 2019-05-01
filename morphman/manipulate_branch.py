@@ -260,7 +260,7 @@ def get_new_branch_position(branch_location, capped_surface):
         new_branch_pos_id (int): Point closest to branch location ID on surface.
         new_branch_pos (ndarray): Point closest to branch location on surface.
     """
-    surface_locator = vtk_point_locator(capped_surface)
+    surface_locator = get_vtk_point_locator(capped_surface)
     new_branch_pos_id = surface_locator.FindClosestPoint(branch_location)
     new_branch_pos = capped_surface.GetPoint(new_branch_pos_id)
 
@@ -359,7 +359,7 @@ def pick_branch(capped_surface, centerlines):
     closest_dist = 1e9
     branch_to_manipulate = None
     for line_to_compare in centerlines:
-        locator = vtk_point_locator(line_to_compare)
+        locator = get_vtk_point_locator(line_to_compare)
         closest_point_id = locator.FindClosestPoint(surface_point)
         closest_point = line_to_compare.GetPoint(closest_point_id)
         dist = get_distance(closest_point, surface_point)
@@ -384,7 +384,7 @@ def filter_voronoi(voronoi, diverging_centerline_branch):
         vtkPolyData: Voronoi diagram, remaining part
     """
     misr = get_point_data_array(radiusArrayName, diverging_centerline_branch)
-    locator = vtk_point_locator(diverging_centerline_branch)
+    locator = get_vtk_point_locator(diverging_centerline_branch)
 
     n = voronoi.GetNumberOfPoints()
     diverging_voronoi = vtk.vtkPolyData()
@@ -477,7 +477,7 @@ def get_translation_parameters(centerlines, diverging_centerline_branch, new_bra
     Returns:
         origo (ndarray): Adjusted origin / position of new branch position
     """
-    locator = vtk_point_locator(centerlines)
+    locator = get_vtk_point_locator(centerlines)
     new_branch_pos_on_cl = centerlines.GetPoint(locator.FindClosestPoint(new_branch_pos))
     adjusted_branch_pos = (np.asarray(new_branch_pos) - np.asarray(new_branch_pos_on_cl)) * 0.8 + np.asarray(
         new_branch_pos_on_cl)
