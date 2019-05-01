@@ -2,9 +2,9 @@ import math
 
 from scipy.interpolate import splrep, splev
 
-from common.common import get_distance
-from common.vmtk_wrapper import *
-from common.vtk_wrapper import *
+from morphman.common.common import get_distance
+from morphman.common.vmtk_wrapper import *
+from morphman.common.vtk_wrapper import *
 
 
 ### The following code is adapted from:

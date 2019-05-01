@@ -15,9 +15,9 @@
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 # Local import
-from common.argparse_common import *
-from common.surface_operations import *
-from common.vessel_reconstruction_tools import *
+from morphman.common.argparse_common import *
+from morphman.common.surface_operations import *
+from morphman.common.vessel_reconstruction_tools import *
 
 
 def manipulate_surface(input_filepath, output_filepath, smooth, smooth_factor, no_smooth,
@@ -134,7 +134,10 @@ def add_noise_to_voronoi_diagram(voronoi, centerline, radius_max, frequency, fre
         cell_array.InsertNextCell(1)
         cell_array.InsertCellPoint(i)
         value = radius_array_data(i)
-        radius_array.SetTuple(i, [value * multiplier])
+
+
+        noise = value * multiplier * frequency + frequency_deviation
+        radius_array.SetTuple(i, [noise])
 
     new_voronoi.SetPoints(points)
     new_voronoi.SetVerts(cell_array)
@@ -195,7 +198,7 @@ def read_command_line_surface(input_path=None, output_path=None):
     parser.add_argument("-a", "--absolute", type=str2bool, default=False,
                         metavar="Absolute value", help="Turn on/off setting an absolute" +
                                                        " value for the smoothing criteria")
-    parser.add_argument("-rm", "--radius-max", type=float, default=1.5,
+    parser.add_argument("-rm", "--radius-max", type=float, default=1.25,
                         metavar="Maximum radius", help="Draw a number from 1.0 and" +
                                                        " 'radius-max' and multiply with r to create the noise")
 

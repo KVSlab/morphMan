@@ -10,8 +10,8 @@ import math
 from os import makedirs, path
 from vtk.util import numpy_support
 
-from common.voronoi_operations import *
-from common.surface_operations import *
+from morphman.common.voronoi_operations import *
+from morphman.common.surface_operations import *
 
 
 def get_relevant_outlets(surface, base_path):

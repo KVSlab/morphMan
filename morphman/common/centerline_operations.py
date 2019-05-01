@@ -8,11 +8,11 @@
 from scipy.interpolate import splrep, splev
 from scipy.signal import resample
 
-from common.common import *
-from common.vessel_reconstruction_tools import create_parent_artery_patches
-from common.vmtk_wrapper import *
-from common.vmtkpointselector import vmtkPickPointSeedSelector
-from common.vtk_wrapper import *
+from morphman.common.common import *
+from morphman.common.vessel_reconstruction_tools import create_parent_artery_patches
+from morphman.common.vmtk_wrapper import *
+from morphman.common.vmtkpointselector import vmtkPickPointSeedSelector
+from morphman.common.vtk_wrapper import *
 
 
 def get_bifurcating_and_diverging_point_data(centerline, centerline_bif, tol):

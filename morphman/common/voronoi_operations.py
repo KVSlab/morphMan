@@ -5,7 +5,7 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 ##      PURPOSE.  See the above copyright notices for more information.
 
-from common.centerline_operations import *
+from morphman.common.centerline_operations import *
 
 
 def remove_distant_voronoi_points(voronoi, centerline):

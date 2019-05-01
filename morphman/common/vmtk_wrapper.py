@@ -10,7 +10,7 @@ from vmtk import vtkvmtk, vmtkscripts
 from os import path
 
 # Global array names
-from common.vtk_wrapper import read_polydata, write_polydata
+from morphman.common.vtk_wrapper import read_polydata, write_polydata
 
 radiusArrayName = 'MaximumInscribedSphereRadius'
 parallelTransportNormalsArrayName = 'ParallelTransportNormals'

@@ -12,7 +12,7 @@ import vtk
 from os import path
 
 # Local import
-from common.vtk_wrapper import get_vtk_array, get_vtk_point_locator
+from morphman.common.vtk_wrapper import get_vtk_array, get_vtk_point_locator
 
 
 def get_path_names(input_filepath):
