@@ -487,6 +487,7 @@ def create_vtk_array(values, name, k=1):
     Returns:
         vtk_array (vtkPointArray): vtk point array
     """
+    values = np.asarray(values)
     vtk_array = get_vtk_array(name, k, values.shape[0])
 
     if k == 1:
