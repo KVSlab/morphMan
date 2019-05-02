@@ -156,10 +156,10 @@ def add_noise_to_voronoi_diagram(voronoi, centerline, radius_max, frequency, fre
         cell_array.InsertCellPoint(i)
         value = radius_array_data(i)
 
-        # Introduce noise by adjusting MISR size
-        multiplier = np.random.uniform(1, radius_max)
-        noise = value  # * multiplier * frequency + frequency_deviation
-        radius_array.SetTuple(i, [noise])
+        if noise_method == 'misr_noise':
+            value *= np.random.uniform(1, radius_max)
+
+        radius_array.SetTuple(i, [value])
 
     new_voronoi.SetPoints(points)
     new_voronoi.SetVerts(cell_array)
