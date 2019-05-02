@@ -59,7 +59,7 @@ def remove_distant_voronoi_points(voronoi, centerline):
 
 
 def smooth_voronoi_diagram(voronoi, centerlines, smoothing_factor, no_smooth_cl=None,
-                           absolute=False, upper=None):
+                           absolute=False):
     """
     Smooth voronoi diagram based on a given
     smoothingfactor. Each voronoi point
@@ -72,7 +72,6 @@ def smooth_voronoi_diagram(voronoi, centerlines, smoothing_factor, no_smooth_cl=
         smoothing_factor (float): Smoothing factor: remove points with radius below (1-smoothing_factor)*MISR
         no_smooth_cl (vktPolyData): Section of centerline not to smooth along.
         absolute (bool): Turn on absolute values for smoothing.
-        upper (float): Upper smoothing factor.
 
     Returns:
         smoothedDiagram (vtkPolyData): Smoothed voronoi diagram.
@@ -84,16 +83,6 @@ def smooth_voronoi_diagram(voronoi, centerlines, smoothing_factor, no_smooth_cl=
         threshold_lower[:] = smoothing_factor
     else:
         threshold_lower = get_point_data_array(radiusArrayName, centerlines) * (1 - smoothing_factor)
-
-    if upper is not None:
-        if absolute:
-            threshold_upper = np.zeros(centerlines.GetNumberOfPoints())
-            threshold_upper[:] = upper
-        else:
-            threshold_upper = get_point_data_array(radiusArrayName, centerlines) * (1 - upper)
-    else:
-        threshold_upper = np.zeros(centerlines.GetNumberOfPoints())
-        threshold_upper[:] = 0
 
     # Do not smooth inlet and outlets, set threshold to -1
     start = 0
@@ -110,8 +99,6 @@ def smooth_voronoi_diagram(voronoi, centerlines, smoothing_factor, no_smooth_cl=
 
         threshold_lower[start:start + start_id] = -1
         threshold_lower[end - end_id:end] = -1
-        threshold_upper[start:start + start_id] = -1
-        threshold_upper[end - end_id:end] = -1
 
         thresholds[start:start + start_id] = -1
         thresholds[end - end_id:end] = -1
@@ -156,7 +143,7 @@ def smooth_voronoi_diagram(voronoi, centerlines, smoothing_factor, no_smooth_cl=
                 radius_array_numpy[count] = radius
                 count += 1
             else:
-                if not threshold_upper[id_] <= radius <= threshold_lower[id_]:
+                if radius >= threshold_lower[id_]:
                     points.InsertNextPoint(point)
                     cell_array.InsertNextCell(1)
                     cell_array.InsertCellPoint(count)
@@ -164,7 +151,7 @@ def smooth_voronoi_diagram(voronoi, centerlines, smoothing_factor, no_smooth_cl=
                     count += 1
         # Check threshold
         else:
-            if not threshold_upper[id_] <= radius <= threshold_lower[id_]:
+            if radius >= threshold_lower[id_]:
                 points.InsertNextPoint(point)
                 cell_array.InsertNextCell(1)
                 cell_array.InsertCellPoint(count)
