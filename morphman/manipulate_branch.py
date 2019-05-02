@@ -65,7 +65,7 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
         print("-- Smoothing Voronoi diagram")
         voronoi = prepare_voronoi_diagram(capped_surface, centerlines_complete, base_path,
                                           smooth, smooth_factor, no_smooth,
-                                          no_smooth_point, voronoi, pole_ids)
+                                          no_smooth_point, voronoi, pole_ids, resampling_step)
 
     # Select branch to manipulate
     if branch_to_manipulate_number > 0:
