@@ -83,7 +83,7 @@ def manipulate_surface(input_filepath, output_filepath, smooth, smooth_factor, n
     if noise:
         print("-- Add noise to the Voronoi diagram.")
         voronoi = add_noise_to_voronoi_diagram(voronoi_relevant, vtk_merge_polydata(centerline_regions), radius_max,
-                                               frequency, frequency_deviation, "centerline_noise")
+                                               frequency, frequency_deviation, "percentage_noise")
 
     # Write a new surface from the new voronoi diagram
     print("-- Create new surface.")
@@ -126,18 +126,27 @@ def add_noise_to_voronoi_diagram(voronoi, centerline, radius_max, frequency, fre
     points = vtk.vtkPoints()
 
     noise_factor = 0.2
-    if noise_method == 'centerline_noise':
+
+    # Method 1 - Add random noise to voronoi point based on closest centerline point
+    if noise_method in ['centerline_noise', 'percentage_noise']:
         locator = get_vtk_point_locator(centerline)
         noise_array = [np.random.uniform(-noise_factor, noise_factor, 3) for i in range(m)]
 
+    # Method 2 - Add random noise to voronoi point based on closest centerline point
+    # to a percentage of the centerline
+    if noise_method == 'percentage_noise':
+        max_frequency = 10.0
+        frequency_amount = int(m * (frequency / max_frequency))
+        noise_array[frequency_amount:] = np.zeros((m - frequency_amount, 3))
+        np.random.shuffle(noise_array)
+
     for i in range(n):
         point = voronoi.GetPoint(i)
-        # Method 1 - Add random noise to voronoi point
+        # Method 3 - Add random noise to voronoi point
         if noise_method == 'voronoi_noise':
             point = tuple(np.asarray(point) + np.random.uniform(0, noise_factor))
 
-        # Method 2 - Add random noise to voronoi point based on closest centerline point
-        if noise_method == 'centerline_noise':
+        if noise_method in ['centerline_noise', 'percentage_noise']:
             cl_id = locator.FindClosestPoint(point)
             delta_p = noise_array[cl_id]
             point = tuple(np.asarray(point) + delta_p)
