@@ -99,6 +99,9 @@ def manipulate_surface(input_filepath, output_filepath, smooth, smooth_factor, n
 
 def add_noise_to_voronoi_diagram(voronoi, centerline, radius_max, frequency, frequency_deviation):
     """
+    Add noise to Voronoi diagram by adjusting
+    the MISR size by a factor in [1.0, radius_max],
+    combined with a set frequency + deviation.
 
     Args:
         voronoi (vtkPolyData): Voronoi Diagram to be smoothed
@@ -119,15 +122,14 @@ def add_noise_to_voronoi_diagram(voronoi, centerline, radius_max, frequency, fre
     points = vtk.vtkPoints()
 
     for i in range(n):
-        multiplier = np.random.uniform(1, radius_max)
-
         point = voronoi.GetPoint(i)
-
         points.InsertNextPoint(point)
         cell_array.InsertNextCell(1)
         cell_array.InsertCellPoint(i)
         value = radius_array_data(i)
 
+        # Introduce noise by adjusting MISR size
+        multiplier = np.random.uniform(1, radius_max)
         noise = value * multiplier * frequency + frequency_deviation
         radius_array.SetTuple(i, [noise])
 
