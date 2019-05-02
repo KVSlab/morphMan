@@ -5,13 +5,6 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 ##      PURPOSE.  See the above copyright notices for more information.
 
-##   Copyright (c) Aslak W. Bergersen, Henrik A. Kjeldsberg. All rights reserved.
-##   See LICENSE file for details.
-
-##      This software is distributed WITHOUT ANY WARRANTY; without even
-##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-##      PURPOSE.  See the above copyright notices for more information.
-
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 # Local import
@@ -135,7 +128,6 @@ def add_noise_to_voronoi_diagram(voronoi, centerline, radius_max, frequency, fre
         cell_array.InsertCellPoint(i)
         value = radius_array_data(i)
 
-
         noise = value * multiplier * frequency + frequency_deviation
         radius_array.SetTuple(i, [noise])
 
@@ -220,12 +212,12 @@ def read_command_line_surface(input_path=None, output_path=None):
     # Check smoothing_factor and upper values when not using absolute criteria
     if not args.absolute:
         if not 0 <= args.smooth_factor <= 1:
-            raise ArgumentTypeError("When not using absolute values the 'smooth-factor'" + \
-                                    "limit should be within [0, 1], not" + \
+            raise ArgumentTypeError("When not using absolute values the 'smooth-factor'" +
+                                    "limit should be within [0, 1], not" +
                                     " {}".format(args.smooth_factor()))
         if not 0 <= args.upper <= 1:
-            raise ArgumentTypeError("When not using absolute values, the 'upper'" + \
-                                    "limit should be within [0, 1], not" + \
+            raise ArgumentTypeError("When not using absolute values, the 'upper'" +
+                                    "limit should be within [0, 1], not" +
                                     " {}".format(args.smooth_factor()))
 
     return dict(input_filepath=args.ifile, smooth=args.smooth, output_filepath=args.ofile,
