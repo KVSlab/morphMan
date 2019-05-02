@@ -7,10 +7,12 @@
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
-# Local import
 from morphman.common.argparse_common import *
 from morphman.common.surface_operations import *
 from morphman.common.vessel_reconstruction_tools import *
+
+
+# Local import
 
 
 def manipulate_surface(input_filepath, output_filepath, smooth, smooth_factor, no_smooth,
@@ -80,8 +82,8 @@ def manipulate_surface(input_filepath, output_filepath, smooth, smooth_factor, n
 
     if noise:
         print("-- Add noise to the Voronoi diagram.")
-        voronoi = add_noise_to_voronoi_diagram(voronoi_relevant, centerline_regions, radius_max, frequency,
-                                               frequency_deviation)
+        voronoi = add_noise_to_voronoi_diagram(voronoi_relevant, vtk_merge_polydata(centerline_regions), radius_max,
+                                               frequency, frequency_deviation, "centerline_noise")
 
     # Write a new surface from the new voronoi diagram
     print("-- Create new surface.")
@@ -97,15 +99,16 @@ def manipulate_surface(input_filepath, output_filepath, smooth, smooth_factor, n
     write_polydata(new_surface, output_filepath)
 
 
-def add_noise_to_voronoi_diagram(voronoi, centerline, radius_max, frequency, frequency_deviation):
+def add_noise_to_voronoi_diagram(voronoi, centerline, radius_max, frequency, frequency_deviation, noise_method):
     """
     Add noise to Voronoi diagram by adjusting
     the MISR size by a factor in [1.0, radius_max],
     combined with a set frequency + deviation.
 
     Args:
+        noise_method (string): Noise method which is applied to voronoi diagram
         voronoi (vtkPolyData): Voronoi Diagram to be smoothed
-        centerline (vtkPolyData): Centerline along relevant Voronoi diagram
+        centerline (vtkPolyData): Centerline(s) along relevant Voronoi diagram
         frequency (float): Frequency at which noise is added to the voronoi diagram, based on points along the centerline
         frequency_deviation (float): Standard deviation of frequency
         radius_max (float): Used to pick MISR multiplier to create noise on surface
@@ -113,6 +116,7 @@ def add_noise_to_voronoi_diagram(voronoi, centerline, radius_max, frequency, fre
     Returns:
         vtkPolyData: Noisy Voronoi diagram
     """
+    m = centerline.GetNumberOfPoints()
     n = voronoi.GetNumberOfPoints()
     radius_array = get_vtk_array(radiusArrayName, 1, n)
     radius_array_data = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1
@@ -121,8 +125,23 @@ def add_noise_to_voronoi_diagram(voronoi, centerline, radius_max, frequency, fre
     cell_array = vtk.vtkCellArray()
     points = vtk.vtkPoints()
 
+    noise_factor = 0.2
+    if noise_method == 'centerline_noise':
+        locator = get_vtk_point_locator(centerline)
+        noise_array = [np.random.uniform(-noise_factor, noise_factor, 3) for i in range(m)]
+
     for i in range(n):
         point = voronoi.GetPoint(i)
+        # Method 1 - Add random noise to voronoi point
+        if noise_method == 'voronoi_noise':
+            point = tuple(np.asarray(point) + np.random.uniform(0, noise_factor))
+
+        # Method 2 - Add random noise to voronoi point based on closest centerline point
+        if noise_method == 'centerline_noise':
+            cl_id = locator.FindClosestPoint(point)
+            delta_p = noise_array[cl_id]
+            point = tuple(np.asarray(point) + delta_p)
+
         points.InsertNextPoint(point)
         cell_array.InsertNextCell(1)
         cell_array.InsertCellPoint(i)
@@ -130,7 +149,7 @@ def add_noise_to_voronoi_diagram(voronoi, centerline, radius_max, frequency, fre
 
         # Introduce noise by adjusting MISR size
         multiplier = np.random.uniform(1, radius_max)
-        noise = value * multiplier * frequency + frequency_deviation
+        noise = value  # * multiplier * frequency + frequency_deviation
         radius_array.SetTuple(i, [noise])
 
     new_voronoi.SetPoints(points)
