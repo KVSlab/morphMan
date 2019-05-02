@@ -15,8 +15,9 @@ from morphman.common.vessel_reconstruction_tools import *
 
 def manipulate_surface(input_filepath, output_filepath, smooth, smooth_factor, no_smooth,
                        no_smooth_point, poly_ball_size, resampling_step,
-                       region_of_interest, region_points, upper, frequency,
-                       frequency_deviation, noise, radius_max, absolute):
+                       region_of_interest, region_points, add_noise_lower_limit,
+                       add_noise_upper_limit, frequency, frequency_deviation, noise,
+                       absolute, radius_max):
     """
     Controll the surface roughness by removing or adding points from the Voronoi diagram
     of the surface. A less general version of the smoothing algorithm was first presented
@@ -26,18 +27,19 @@ def manipulate_surface(input_filepath, output_filepath, smooth, smooth_factor, n
         output_filepath (str): Path to output surface.
         smooth (bool): Determine if the voronoi diagram should be smoothed.
         smooth_factor (float): Smoothing factor used for voronoi diagram smoothing.
-        resampling_step (float): Resampling step used to resample centerlines.
         no_smooth (bool): True of part of the model is not to be smoothed.
         no_smooth_point (ndarray): Point which is untouched by smoothing.
-        region_of_interest (str): Method for setting the region of interest ['manual' | 'commandline' ]
-        region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint
         poly_ball_size (list): Resolution of polyballs used to create surface.
-        upper (float): Upper smoothing factor
-        frequency (float): Frequency at which noise is added to the voronoi diagram, based on points along the centerline
+        resampling_step (float): Resampling step used to resample centerlines.
+        region_of_interest (str): Method for setting the region of interest ['manual' | 'commandline' | 'first_line' | 'full_model']
+        region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint
+        add_noise_lower_limit (float): Upper bound for adding noise to the surface.
+        add_noise_upper_limit (float): Upper bound for adding noise to the surface.
+        frequency (float): Mean number of points added to the Voronoi diagram at each centerlinepoint.
         frequency_deviation (float): Standard deviation of frequency
+        noise (bool): Turn on/off adding noise to the surface.
         absolute (bool): Absolute value for the smoothing criteria
         radius_max (float): Used to pick MISR multiplier to create noise on surface
-        noise (bool): Turn on/off adding noise to the surface.
     """
     # Filenames
     base_path = get_path_names(input_filepath)
@@ -45,6 +47,8 @@ def manipulate_surface(input_filepath, output_filepath, smooth, smooth_factor, n
     # Output filepaths
     # Centerliens
     centerlines_path = base_path + "_centerline.vtp"
+    centerline_spline_path = base_path + "_centerline_region_of_interest.vtp"
+    centerline_remaining_path = base_path + "_centerline_remaining.vtp"
 
     # Clean and capp / uncapp surface
     surface, capped_surface = prepare_surface(base_path, input_filepath)
@@ -55,12 +59,14 @@ def manipulate_surface(input_filepath, output_filepath, smooth, smooth_factor, n
                                                          capped_surface, resampling=resampling_step,
                                                          smooth=False, base_path=base_path)
 
-    centerline_splined, centerline_remaining, centerline_diverging, region_points, diverging_ids = get_line_to_change(
+    centerline_splined, centerline_remaining, centerline_diverging, region_points, _ = get_line_to_change(
         capped_surface, centerlines, region_of_interest, "bend", region_points, 0)
+    write_polydata(centerline_splined, centerline_spline_path)
 
     # Split the Voronoi diagram
     if centerline_diverging is not None:
         centerline_remaining = vtk_merge_polydata([centerline_diverging] + centerline_remaining)
+        write_polydata(centerline_remaining, centerline_remaining_path)
 
     centerline_regions = [centerline_splined, centerline_remaining]
     voronoi_relevant, voronoi_rest = get_split_voronoi_diagram(voronoi, centerline_regions)
@@ -75,13 +81,25 @@ def manipulate_surface(input_filepath, output_filepath, smooth, smooth_factor, n
         else:
             no_smooth_cl = None
 
-        voronoi = smooth_voronoi_diagram(voronoi, centerlines, smooth_factor, no_smooth_cl,
-                                         absolute, upper)
+        voronoi_relevant = smooth_voronoi_diagram(voronoi_relevant, centerline_splined,
+                                                  smooth_factor, no_smooth_cl, absolute)
 
     if noise:
         print("-- Add noise to the Voronoi diagram.")
-        voronoi = add_noise_to_voronoi_diagram(voronoi_relevant, centerline_regions, radius_max, frequency,
-                                               frequency_deviation)
+        #voronoi_relevant = add_noise_to_voronoi_diagram(voronoi_relevant,
+        #                                                centerline_regions, radius_max,
+        #                                                frequency, frequency_deviation)
+        voronoi_relevant = add_noise_to_voronoi_diagram_new_points(surface,
+                                                                   voronoi_relevant,
+                                                                   centerline_splined,
+                                                                   radius_max, frequency,
+                                                                   frequency_deviation,
+                                                                   add_noise_lower_limit,
+                                                                   add_noise_upper_limit,
+                                                                   absolute)
+
+    # Merge changed and unchanged Voronoi diagram
+    voronoi = vtk_merge_polydata([voronoi_relevant, voronoi_rest])
 
     # Write a new surface from the new voronoi diagram
     print("-- Create new surface.")
@@ -97,7 +115,8 @@ def manipulate_surface(input_filepath, output_filepath, smooth, smooth_factor, n
     write_polydata(new_surface, output_filepath)
 
 
-def add_noise_to_voronoi_diagram(voronoi, centerline, radius_max, frequency, frequency_deviation):
+def add_noise_to_voronoi_diagram_new_points(surface, voronoi, centerline, radius_max, frequency,
+                                            frequency_deviation, lower, upper, absolute):
     """
     Add noise to Voronoi diagram by adjusting
     the MISR size by a factor in [1.0, radius_max],
@@ -113,29 +132,79 @@ def add_noise_to_voronoi_diagram(voronoi, centerline, radius_max, frequency, fre
     Returns:
         vtkPolyData: Noisy Voronoi diagram
     """
-    n = voronoi.GetNumberOfPoints()
-    radius_array = get_vtk_array(radiusArrayName, 1, n)
-    radius_array_data = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1
+    # Compute local coordinate system for each centerline point
+    centerline = vmtk_compute_geometric_features(centerline, smooth=True)
 
+    # Locator on the surface
+    locator = get_vtk_point_locator(surface)
+
+    # Boundaries
+    boundaries = vtk_extract_feature_edges(surface)
+    locator_boundaries = get_vtk_point_locator(boundaries)
+
+    # Pointers to arrays
+    frenet_tangent_data = centerline.GetPointData().GetArray("FrenetTangent").GetTuple1
+    frenet_normal_data = centerline.GetPointData().GetArray("FrenetNormal").GetTuple1
+    misr_data = centerline.GetPointData().GetArray(radiusArrayName).GetTuple1
+
+    # Number of new points
+    n = centerline.GetNumberOfPoints()
+    new_voronoi_points = np.rint(np.random.normal(frequency, frequency_deviation, n)).astype(int)
+    new_voronoi_points[new_voronoi_points < 0] = 0
+    number_of_new_points = np.sum(new_voronoi_points)
+
+    # Holding the noise
     new_voronoi = vtk.vtkPolyData()
     cell_array = vtk.vtkCellArray()
     points = vtk.vtkPoints()
+    radius_array = []
 
+    # Add noise
+    counter = 0
     for i in range(n):
-        point = voronoi.GetPoint(i)
-        points.InsertNextPoint(point)
-        cell_array.InsertNextCell(1)
-        cell_array.InsertCellPoint(i)
-        value = radius_array_data(i)
+        point = np.array(centerline.GetPoint(i))
+        tangent = centerline.GetPointData().GetArray("FrenetTangent").GetTuple3(i)
+        normal = centerline.GetPointData().GetArray("FrenetNormal").GetTuple3(i)
+        misr = misr_data(i)
 
-        # Introduce noise by adjusting MISR size
-        multiplier = np.random.uniform(1, radius_max)
-        noise = value * multiplier * frequency + frequency_deviation
-        radius_array.SetTuple(i, [noise])
+        for _ in range(new_voronoi_points[i]):
+            # Define location of new point
+            angle = np.random.uniform(0, 360)
+            translation = vtk.vtkTransform()
+            translation.RotateWXYZ(angle, tangent)
+            tmp_normal = [0, 0, 0]
+            translation.TransformNormal(normal, tmp_normal)
+            if absolute:
+                length = np.random.uniform(lower, upper)
+            else:
+                length = misr*np.random.uniform(lower, upper)
+            new_point = point + length*np.array(tmp_normal)
 
+            # Set new r
+            surface_id = locator.FindClosestPoint(new_point)
+            distance_to_surface = get_distance(surface.GetPoint(surface_id), new_point)
+            new_r = distance_to_surface*np.random.uniform(1, radius_max)
+
+            # Check distance to the in- and outlets.
+            boundaries_id = locator_boundaries.FindClosestPoint(new_point)
+            distance_to_inlet = get_distance(boundaries.GetPoint(boundaries_id), new_point)
+            if distance_to_inlet < new_r:
+                continue
+
+            # Add new point
+            points.InsertNextPoint(new_point)
+            cell_array.InsertNextCell(1)
+            cell_array.InsertCellPoint(counter)
+            radius_array.append(new_r)
+
+            counter += 1
+
+    radius_array = create_vtk_array(radius_array, radiusArrayName)
     new_voronoi.SetPoints(points)
     new_voronoi.SetVerts(cell_array)
     new_voronoi.GetPointData().AddArray(radius_array)
+
+    new_voronoi = vtk_merge_polydata([new_voronoi, voronoi])
 
     return new_voronoi
 
@@ -177,24 +246,37 @@ def read_command_line_surface(input_path=None, output_path=None):
                              " Example providing the points (1, 5, -1) and (2, -4, 3):" +
                              " --stenosis-points 1 5 -1 2 -4 3")
 
+    # Variables for both smoothing surface and adding noise
+    parser.add_argument("-a", "--absolute", type=str2bool, default=False,
+                        metavar="Absolute value",
+                        help="Turn on/off setting an absolute value for the smoothing" +
+                             " criteria")
+
+    # Variables for adding noise
     parser.add_argument("-ns", "--noise", type=str2bool, default=False, metavar="Noise",
                         help="Turn on/off adding noise to the surface")
-
-    parser.add_argument("-u", "--upper", type=float, default=1.0,
-                        metavar="Upper smoothing factor",
-                        help="Upper threshold for the smoothing")
-    parser.add_argument("-fq", "--frequency", type=float, default=10, metavar="Frequency",
+    parser.add_argument("-u", "--add-noise-upper-limit", type=float, default=1.0,
+                        metavar="Upper noise limit",
+                        help="When adding noise the center of the added points are" +
+                             " within in [lower, upper] * MISR from the center. A" +
+                             " bandwidth on 0.9 and 1.0 would only provide rather" +
+                             " 'high-frequent' noise on the surface.")
+    parser.add_argument("-l", "--add_noise_lower_limit", type=float, default=0.85,
+                        metavar="Lower noise limit.",
+                        help="When adding noise the center of the added points are" +
+                             " within in [lower, upper] * MISR from the center. A" +
+                             " bandwidth on 0.9 and 1.0 would only provide rather" +
+                             " 'high-frequent' noise on the surface.")
+    parser.add_argument("-fq", "--frequency", type=float, default=5, metavar="Frequency",
                         help="How frequent to add the noise. This number is drawn for each " +
                              " point along the centerline")
-    parser.add_argument("-sd", "--frequency_deviation", type=float, default=2.5,
+    parser.add_argument("-sd", "--frequency_deviation", type=float, default=5,
                         metavar="Standard deviation of frequency",
                         help="Standard deviation of distribution to draw frequency from.")
-    parser.add_argument("-a", "--absolute", type=str2bool, default=False,
-                        metavar="Absolute value", help="Turn on/off setting an absolute" +
-                                                       " value for the smoothing criteria")
-    parser.add_argument("-rm", "--radius-max", type=float, default=1.25,
-                        metavar="Maximum radius", help="Draw a number from 1.0 and" +
-                                                       " 'radius-max' and multiply with r to create the noise")
+    parser.add_argument("-rm", "--radius-max", type=float, default=1.5,
+                        metavar="Maximum radius",
+                        help="Draw a number from 1.0 and 'radius-max' and multiply with r" +
+                             " to create the noise")
 
     # Output file argument
     if required:
@@ -213,21 +295,27 @@ def read_command_line_surface(input_path=None, output_path=None):
 
     # Check smoothing_factor and upper values when not using absolute criteria
     if not args.absolute:
-        if not 0 <= args.smooth_factor <= 1:
+        if not 0 <= args.add_noise_lower_limit <= 1:
             raise ArgumentTypeError("When not using absolute values the 'smooth-factor'" +
-                                    "limit should be within [0, 1], not" +
+                                    " limit should be within [0, 1], not" +
                                     " {}".format(args.smooth_factor()))
-        if not 0 <= args.upper <= 1:
-            raise ArgumentTypeError("When not using absolute values, the 'upper'" +
-                                    "limit should be within [0, 1], not" +
-                                    " {}".format(args.smooth_factor()))
+        if not 0 <= args.add_noise_lower_limit <= 1:
+            raise ArgumentTypeError("When not using absolute values the 'add-noise-lower-limit'" +
+                                    " limit should be within [0, 1], not" +
+                                    " {}".format(args.add_noise_lower_limit()))
+        if not 0 <= args.add_noise_upper_limit <= 1:
+            raise ArgumentTypeError("When not using absolute values, the 'add-noise-lower-limit'" +
+                                    " limit should be within [0, 1], not" +
+                                    " {}".format(args.add_noise_upper_limit()))
 
     return dict(input_filepath=args.ifile, smooth=args.smooth, output_filepath=args.ofile,
                 smooth_factor=args.smooth_factor, resampling_step=args.resampling_step,
                 no_smooth=args.no_smooth, no_smooth_point=args.no_smooth_point,
                 poly_ball_size=args.poly_ball_size,
                 region_of_interest=args.region_of_interest,
-                region_points=args.region_points, upper=args.upper,
+                region_points=args.region_points,
+                add_noise_upper_limit=args.add_noise_upper_limit,
+                add_noise_lower_limit=args.add_noise_lower_limit,
                 frequency=args.frequency, noise=args.noise,
                 frequency_deviation=args.frequency_deviation, absolute=args.absolute,
                 radius_max=args.radius_max)
