@@ -7,10 +7,12 @@
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
-# Local import
 from morphman.common.argparse_common import *
 from morphman.common.surface_operations import *
 from morphman.common.vessel_reconstruction_tools import *
+
+
+# Local import
 
 
 def manipulate_surface(input_filepath, output_filepath, smooth, smooth_factor, no_smooth,
@@ -86,9 +88,6 @@ def manipulate_surface(input_filepath, output_filepath, smooth, smooth_factor, n
 
     if noise:
         print("-- Add noise to the Voronoi diagram.")
-        #voronoi_relevant = add_noise_to_voronoi_diagram(voronoi_relevant,
-        #                                                centerline_regions, radius_max,
-        #                                                frequency, frequency_deviation)
         voronoi_relevant = add_noise_to_voronoi_diagram_new_points(surface,
                                                                    voronoi_relevant,
                                                                    centerline_splined,
@@ -123,8 +122,9 @@ def add_noise_to_voronoi_diagram_new_points(surface, voronoi, centerline, radius
     combined with a set frequency + deviation.
 
     Args:
+        noise_method (string): Noise method which is applied to voronoi diagram
         voronoi (vtkPolyData): Voronoi Diagram to be smoothed
-        centerline (vtkPolyData): Centerline along relevant Voronoi diagram
+        centerline (vtkPolyData): Centerline(s) along relevant Voronoi diagram
         frequency (float): Frequency at which noise is added to the voronoi diagram, based on points along the centerline
         frequency_deviation (float): Standard deviation of frequency
         radius_max (float): Used to pick MISR multiplier to create noise on surface
