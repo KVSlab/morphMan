@@ -333,13 +333,17 @@ def vtk_clean_polydata(surface):
     return cleaned_surface
 
 
-def vtk_compute_connectivity(surface, mode="All", closest_point=None):
+def vtk_compute_connectivity(surface, mode="All", closest_point=None, show_color_regions=True,
+                             mark_visited_points=False):
     """Wrapper of vtkPolyDataConnectivityFilter. Compute connectivity.
 
     Args:
+        show_color_regions (bool): Turn on/off the coloring of connected regions.
+        mark_visited_points (bool): Specify whether to record input point ids that appear in the output.
         surface (vtkPolyData): Input surface data.
         mode (str): Type of connectivity filter.
-        closest_point (list): Point to be used for mode='Closest'"""
+        closest_point (list): Point to be used for mode='Closest'
+    """
     connectivity = vtk.vtkPolyDataConnectivityFilter()
     connectivity.SetInputData(surface)
 
@@ -354,7 +358,13 @@ def vtk_compute_connectivity(surface, mode="All", closest_point=None):
             sys.exit(0)
         connectivity.SetExtractionModeToClosestPointRegion()
         connectivity.SetClosestPoint(closest_point)
-    connectivity.ColorRegionsOn()
+
+    if show_color_regions:
+        connectivity.ColorRegionsOn()
+
+    if mark_visited_points:
+        connectivity.MarkVisitedPointIdsOn()
+
     connectivity.Update()
     output = connectivity.GetOutput()
 
@@ -425,9 +435,9 @@ def vtk_extract_feature_edges(polydata, compute_feature_edges=False, compute_bou
     """Wrapper for vtkFeatureedges. Extracts the edges of the cells that are open.
 
     Args:
-        compute_non_manifold_edges:
-        compute_boundary_edges:
-        compute_feature_edges:
+        compute_non_manifold_edges (bool): Turn on/off the extraction of non-manifold edges.
+        compute_boundary_edges (bool): Turn on/off the extraction of boundary edges.
+        compute_feature_edges (bool): Turn on/off the extraction of feature edges.
         polydata (vtkPolyData): surface to extract the openings from.
 
     Returns:
@@ -519,7 +529,7 @@ def move_past_sphere(centerline, center, r, start, step=-1, stop=0, scale_factor
     and a center (center).
 
     Args:
-        centerline (vtkPolyData):
+        centerline (vtkPolyData): Centerline to move along.
         center (list): point list of the center of the sphere
         r (float): the radius of a sphere
         start (int): id of the point along the centerline where to start.
@@ -566,10 +576,12 @@ def vtk_point_locator(centerline):
     return locator
 
 
-def vtk_triangulate_surface(surface):
+def vtk_triangulate_surface(surface, pass_lines=False, pass_verts=False):
     """Wrapper for vtkTriangleFilter.
 
     Args:
+        pass_lines (bool): Turn on/off passing lines through filter. Default is On
+        pass_verts (bool): Turn on/off passing vertices through filter. Default is On
         surface (vtkPolyData): Surface to triangulate.
 
     Returns:
@@ -577,8 +589,10 @@ def vtk_triangulate_surface(surface):
     """
     surface_triangulator = vtk.vtkTriangleFilter()
     surface_triangulator.SetInputData(surface)
-    surface_triangulator.PassLinesOff()
-    surface_triangulator.PassVertsOff()
+    if not pass_lines:
+        surface_triangulator.PassLinesOff()
+    if not pass_verts:
+        surface_triangulator.PassVertsOff()
     surface_triangulator.Update()
 
     return surface_triangulator.GetOutput()
@@ -608,22 +622,26 @@ def vtk_compute_mass_properties(surface, compute_surface_area=True, compute_volu
         return mass.GetVolume()
 
 
-def vtk_marching_cube(modeller, compute_normals=False, compute_scalars=False):
-    """
+def vtk_marching_cube(modeller, compute_normals=False, compute_scalars=False, compute_gradients=False):
+    """Wrapper for vtkMarchingCube
 
     Args:
-        modeller:
-        compute_normals:
-        compute_scalars:
+        modeller (vtkPolyballModeller): Modeller of a surface model
+        compute_normals (bool): Set/Get the computation of normals.
+        compute_scalars (bool): Set/Get the computation of scalars.
+        compute_gradients (bool): Set/Get the computation of gradients.
 
     Returns:
-
+        vtkMarchingCube: Isosurface generated from surface
     """
     marching_cube = vtk.vtkMarchingCubes()
     if compute_normals:
         marching_cube.ComputeNormalsOn()
     if compute_scalars:
         marching_cube.ComputeScalarsOn()
+    if compute_gradients:
+        marching_cube.ComputeGradientsOn()
+
     marching_cube.SetInputData(modeller.GetOutput())
     marching_cube.SetValue(0, 0.0)
     marching_cube.Update()
@@ -631,36 +649,36 @@ def vtk_marching_cube(modeller, compute_normals=False, compute_scalars=False):
     return marching_cube
 
 
-def vtk_compute_normal_gradients(cell_normals):
+def vtk_compute_normal_gradients(cell_normals, use_faster_approximation=False):
     """
     Compute gradients of the normals
 
     Args:
-        cell_normals:
-
-    Returns:
-
+        cell_normals (vtkPolyData): Surface to compute normals on
+        use_faster_approximation (bool): Use a less accurate algorithm that performs fewer calculations, but faster.
     """
-    gradients_generator = vtk.vtkGradientFilter()
-    gradients_generator.SetInputData(cell_normals)
-    gradients_generator.SetInputArrayToProcess(0, 0, 0, 1, "Normals")
-    gradients_generator.Update()
-    gradients = gradients_generator.GetOutput()
+    gradient_filter = vtk.vtkGradientFilter()
+    gradient_filter.SetInputData(cell_normals)
+    gradient_filter.SetInputArrayToProcess(0, 0, 0, 1, "Normals")
+    if use_faster_approximation:
+        gradient_filter.FasterApproximationOn()
+
+    gradient_filter.Update()
+    gradients = gradient_filter.GetOutput()
 
     return gradients
 
 
 def vtk_compute_polydata_normals(surface, compute_point_normals=False, compute_cell_normals=False):
-    """
-    Get cell normals
+    """ Wrapper for vtkPolyDataNormals
 
     Args:
-        surface:
-        compute_point_normals:
-        compute_cell_normals:
+        surface (vtkPolyData): Surface model
+        compute_point_normals (bool): Turn on/off the computation of point normals.
+        compute_cell_normals (bool): Turn on/off the computation of cell normals.
 
     Returns:
-
+        vtkPolyData: Cell normals of surface model
     """
     normal_generator = vtk.vtkPolyDataNormals()
     normal_generator.SetInputData(surface)
@@ -691,10 +709,12 @@ def vtk_plane(origin, normal):
     return plane
 
 
-def vtk_clip_polydata(surface, cutter=None, value=0):
+def vtk_clip_polydata(surface, cutter=None, value=0, get_inside_out=False, generate_clip_scalars=False):
     """Clip the inpute vtkPolyData object with a cutter function (plane, box, etc)
 
     Args:
+        generate_clip_scalars (bool): If True, output scalar values will be interpolated from implicit function values.
+        get_inside_out (bool): Get inside out, default is False
         surface (vtkPolyData): Input vtkPolyData for clipping
         cutter (vtkBox, vtkPlane): Function for cutting the polydata (default None).
         value (float): Distance to the ImplicteFunction or scalar value to clip.
@@ -708,6 +728,10 @@ def vtk_clip_polydata(surface, cutter=None, value=0):
         clipper.GenerateClipScalarsOff()
     else:
         clipper.SetClipFunction(cutter)
+    if get_inside_out:
+        clipper.InsideOutOn()
+    if generate_clip_scalars and cutter is not None:
+        clipper.GenerateClipScalarsOn()
     clipper.GenerateClippedOutputOn()
     clipper.SetValue(value)
     clipper.Update()
