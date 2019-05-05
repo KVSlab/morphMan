@@ -5,7 +5,6 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
 ##      PURPOSE.  See the above copyright notices for more information.
 
-import functools
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 from scipy.signal import argrelextrema
@@ -13,9 +12,6 @@ from scipy.signal import argrelextrema
 # Local import
 from morphman.common.argparse_common import *
 from morphman.common.surface_operations import *
-
-surfaceNormalsArrayName = 'SurfaceNormalArray'
-radiusArrayName = 'MaximumInscribedSphereRadius'
 
 
 def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, poly_ball_size, no_smooth,
@@ -227,26 +223,6 @@ def check_branch_number(branch_to_manipulate_number, centerlines_complete):
                            " Number of selectable centerlines for this model is {}.".format(num_lines))
 
 
-def vmtk_compute_surface_normals(capped_surface):
-    surface_normals = vmtkscripts.vmtkSurfaceNormals()
-    surface_normals.Surface = capped_surface
-    surface_normals.NormalsArrayName = surfaceNormalsArrayName
-    surface_normals.Execute()
-    capped_surface_with_normals = surface_normals.Surface
-
-    return capped_surface_with_normals
-
-
-def vmtk_compute_branch_extractor(centerlines_complete):
-    brancher = vmtkscripts.vmtkBranchExtractor()
-    brancher.Centerlines = centerlines_complete
-    brancher.RadiusArrayName = radiusArrayName
-    brancher.Execute()
-    centerlines_branched = brancher.Centerlines
-
-    return centerlines_branched
-
-
 def get_new_branch_position(branch_location, capped_surface):
     """
     Get point on surface closest to branch_location. Returns
@@ -265,22 +241,6 @@ def get_new_branch_position(branch_location, capped_surface):
     new_branch_pos = capped_surface.GetPoint(new_branch_pos_id)
 
     return new_branch_pos_id, new_branch_pos
-
-
-def get_end_point(centerline, offset=0):
-    """
-    Get last point of a centerline
-
-    Args:
-        centerline (vtkPolyData): Centerline(s)
-        offset (int): Number of points from the end point to be selected
-
-    Returns:
-        centerline_end_point (vtkPoint): Point corresponding to end of centerline.
-    """
-    centerline_end_point = centerline.GetPoint(centerline.GetNumberOfPoints() - 1 - offset)
-
-    return centerline_end_point
 
 
 def pick_new_branch_position(capped_surface):
@@ -506,43 +466,6 @@ def get_exact_surface_normal(capped_surface, new_branch_pos_id):
     return new_normal
 
 
-def get_diverging_centerline_branch(centerlines_branched, diverging_centerline_end):
-    """
-    Extract diverging centerline branch, comparing it to diverging centerline end point
-
-    Args:
-        centerlines_branched (vktPolyData): Branched centerlines, from vmtkBrancher
-        diverging_centerline_end (vktPoint): End point of diverging centerline
-    Returns:
-        centerline_branch (vtkPolyDat): Branch extracted centerline branch
-    """
-    for i in range(centerlines_branched.GetNumberOfLines()):
-        centerline_branch = extract_single_line(centerlines_branched, i)
-        if get_end_point(centerline_branch) == diverging_centerline_end:
-            return centerline_branch
-
-
-def filter_centerlines(centerlines, diverging_centerline_end):
-    """
-    Filters out diverging centerline from all centerline
-
-    Args:
-        centerlines (vtkPolyData): Complete set of centerlines
-        diverging_centerline_end (vtkPoint): End point of diverging centerline
-    Returns:
-        filtered_centerlines (vtkPolyData): Complete set of centerlines, except diverging centerline
-    """
-    remaining_centerlines = []
-    for i in range(centerlines.GetNumberOfLines()):
-        diverging_centerline = extract_single_line(centerlines, i)
-        if get_end_point(diverging_centerline) != diverging_centerline_end:
-            remaining_centerlines.append(diverging_centerline)
-
-    filtered_centerlines = vtk_merge_polydata(remaining_centerlines)
-
-    return filtered_centerlines
-
-
 def get_estimated_surface_normal(diverging_centerline_branch):
     """
     Estimate the surface normal at initial diverging centerline branch.
@@ -704,30 +627,6 @@ def move_and_rotate_voronoi_branch(voronoi, dx, R_u, R_z, origo):
     new_voronoi.SetVerts(cell_array)
     new_voronoi.GetPointData().AddArray(radius_array)
     return new_voronoi
-
-
-def get_sorted_lines(centerlines_complete):
-    """
-    Compares and sorts centerlines from shortest to longest in actual length
-
-    Args:
-        centerlines_complete (vtkPolyData): Centerlines to be sorted
-
-    Returns:
-        sorted_lines (vtkPolyData): Sorted centerlines
-    """
-
-    def compare_lines(line0, line1):
-        len0 = len(get_curvilinear_coordinate(line0))
-        len1 = len(get_curvilinear_coordinate(line1))
-        if len0 > len1:
-            return 1
-        return -1
-
-    lines = [extract_single_line(centerlines_complete, i) for i in range(centerlines_complete.GetNumberOfLines())]
-    sorted_lines = sorted(lines, key=functools.cmp_to_key(compare_lines))
-
-    return sorted_lines
 
 
 def read_command_line_branch(input_path=None, output_path=None):
