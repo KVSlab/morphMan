@@ -388,8 +388,8 @@ def vmtk_endpoint_extractor(centerlines, number_of_end_point_spheres, number_of_
 
     Args:
         centerlines (vtkPolyData): Input centerlines.
-        number_of_end_point_spheres (int): Number of spheres to skip at endpoint
-        number_of_gap_spheres (int): Number of spheres to skip per gap.
+        number_of_end_point_spheres (float): Number of spheres to skip at endpoint
+        number_of_gap_spheres (float): Number of spheres to skip per gap.
 
     Returns:
         vmtkEndpointExtractor: Endpoint extractor based on centerline
