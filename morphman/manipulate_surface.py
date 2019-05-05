@@ -170,8 +170,8 @@ def add_noise_to_voronoi_diagram_new_points(surface, voronoi, centerline, radius
     locator_boundaries = get_vtk_point_locator(boundaries)
 
     # Pointers to arrays
-    frenet_tangent_data = centerline.GetPointData().GetArray("FrenetTangent").GetTuple1
-    frenet_normal_data = centerline.GetPointData().GetArray("FrenetNormal").GetTuple1
+    frenet_tangent_data = centerline.GetPointData().GetArray("FrenetTangent").GetTuple3
+    frenet_normal_data = centerline.GetPointData().GetArray("FrenetNormal").GetTuple3
     misr_data = centerline.GetPointData().GetArray(radiusArrayName).GetTuple1
 
     # Number of new points
@@ -179,7 +179,6 @@ def add_noise_to_voronoi_diagram_new_points(surface, voronoi, centerline, radius
     new_voronoi_points = np.rint(np.random.normal(frequency, frequency_deviation, number_of_centerline_points)).astype(
         int)
     new_voronoi_points[new_voronoi_points < 0] = 0
-    number_of_new_points = np.sum(new_voronoi_points)
 
     # Holding the noise
     new_voronoi = vtk.vtkPolyData()
@@ -191,8 +190,8 @@ def add_noise_to_voronoi_diagram_new_points(surface, voronoi, centerline, radius
     counter = 0
     for i in range(number_of_centerline_points):
         point = np.array(centerline.GetPoint(i))
-        tangent = centerline.GetPointData().GetArray("FrenetTangent").GetTuple3(i)
-        normal = centerline.GetPointData().GetArray("FrenetNormal").GetTuple3(i)
+        tangent = frenet_tangent_data(i)
+        normal = frenet_normal_data(i)
         misr = misr_data(i)
         for _ in range(new_voronoi_points[i]):
             # Define location of new point
