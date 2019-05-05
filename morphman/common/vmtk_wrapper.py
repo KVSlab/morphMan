@@ -22,14 +22,15 @@ branchClippingArrayName = 'BranchClippingArray'
 
 def vmtk_smooth_centerline(centerlines, num_iter, smooth_factor):
     """
+    Wrapper for vmtkCenterlineSmoothing. Smooth centerlines with a moving average filter.
 
     Args:
-        centerlines:
-        num_iter:
-        smooth_factor:
+        centerlines (vtkPolyDat): Centerline to be smoothed.
+        num_iter (int): Number of smoothing iterations.
+        smooth_factor (float): Smoothing factor
 
     Returns:
-
+        vtkPolyData: Smoothed version of input centerline
     """
     centerline_smoothing = vmtkscripts.vmtkCenterlineSmoothing()
     centerline_smoothing.SetInputData(centerlines)
@@ -41,24 +42,27 @@ def vmtk_smooth_centerline(centerlines, num_iter, smooth_factor):
     return centerlines_smoothed
 
 
-def vmtk_compute_centerlines(end_point, inlet, method, outlet, pole_ids, resampling, surface, voronoi,
+def vmtk_compute_centerlines(end_point, inlet, method, outlet, pole_ids, resampling_step, surface, voronoi,
                              flip_normals=False, cap_displacement=None, delaunay_tolerance=None,
                              simplify_voronoi=False):
     """
+    Wrapper for vmtkCenterlines.
+    compute centerlines from a branching tubular surface. Seed points can be interactively selected on the surface,
+    or specified as the barycenters of the open boundaries of the surface.
 
     Args:
-        end_point:
-        inlet:
-        method:
-        outlet:
-        pole_ids:
-        resampling:
-        surface:
-        voronoi:
-        flip_normals:
-        cap_displacement:
-        delaunay_tolerance:
-        simplify_voronoi:
+        end_point (int): Toggle append open profile barycenters to centerlines
+        surface (vktPolyData): Surface model
+        voronoi (vtkPolyData): Voronoi diagram based on previous centerlines (Optional)
+        inlet (ndarray): List of source point coordinates
+        method (str): Seed point selection method
+        outlet (ndarray): List of target point coordinates
+        pole_ids (ndarray): Pole ID list of Voronoi diagram (Optional)
+        resampling_step (float): Resampling step
+        flip_normals (float): Flip normals after outward normal computation
+        cap_displacement (float): Displacement of the center points of caps at open profiles along their normals
+        delaunay_tolerance (float): Tolerance for evaluating coincident points during Delaunay tessellation
+        simplify_voronoi (bool): Toggle simplification of Voronoi diagram
 
     Returns:
 
@@ -68,7 +72,7 @@ def vmtk_compute_centerlines(end_point, inlet, method, outlet, pole_ids, resampl
     centerlines.SeedSelectorName = method
     centerlines.AppendEndPoints = end_point
     centerlines.Resampling = 1
-    centerlines.ResamplingStepLength = resampling
+    centerlines.ResamplingStepLength = resampling_step
     centerlines.SourcePoints = inlet
     centerlines.TargetPoints = outlet
 
