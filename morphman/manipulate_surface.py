@@ -7,12 +7,10 @@
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
+# Local import
 from morphman.common.argparse_common import *
 from morphman.common.surface_operations import *
 from morphman.common.vessel_reconstruction_tools import *
-
-
-# Local import
 
 
 def manipulate_surface(input_filepath, output_filepath, smooth, smooth_factor, no_smooth,
@@ -240,9 +238,10 @@ def add_noise_to_voronoi_diagram_new_points(surface, voronoi, centerline, radius
 
 def add_noise_to_existing_voronoi_diagram(voronoi, centerline, translation_noise_factor):
     """
-    Add noise to Voronoi diagram by adjusting
-    the MISR size by a factor in [1.0, radius_max],
-    combined with a set frequency + deviation.
+    Add noise to existing Voronoi diagram by adjusting
+    the Voronoi points based on the closest point on the
+    centerline. Each point is translated by a small amount,
+    determined by translation noise factor in [0,1].
 
     Args:
         voronoi (vtkPolyData): Voronoi Diagram to be manipulated
