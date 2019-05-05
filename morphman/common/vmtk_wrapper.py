@@ -5,14 +5,15 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 ##      PURPOSE.  See the above copyright notices for more information.
 
-from vmtk import vtkvmtk, vmtkscripts
-
 from os import path
+
+from vmtk import vtkvmtk, vmtkscripts
 
 # Global array names
 from morphman.common.vtk_wrapper import read_polydata, write_polydata
 
 radiusArrayName = 'MaximumInscribedSphereRadius'
+surfaceNormalsArrayName = 'SurfaceNormalArray'
 parallelTransportNormalsArrayName = 'ParallelTransportNormals'
 groupIDsArrayName = "GroupIds"
 abscissasArrayName = 'Abscissas'
@@ -260,3 +261,23 @@ def vmtk_endpoint_extractor(centerlines, clipspheres):
     extractor.Execute()
 
     return extractor
+
+
+def vmtk_compute_surface_normals(capped_surface):
+    surface_normals = vmtkscripts.vmtkSurfaceNormals()
+    surface_normals.Surface = capped_surface
+    surface_normals.NormalsArrayName = surfaceNormalsArrayName
+    surface_normals.Execute()
+    capped_surface_with_normals = surface_normals.Surface
+
+    return capped_surface_with_normals
+
+
+def vmtk_compute_branch_extractor(centerlines_complete):
+    brancher = vmtkscripts.vmtkBranchExtractor()
+    brancher.Centerlines = centerlines_complete
+    brancher.RadiusArrayName = radiusArrayName
+    brancher.Execute()
+    centerlines_branched = brancher.Centerlines
+
+    return centerlines_branched

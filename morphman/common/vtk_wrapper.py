@@ -6,10 +6,10 @@
 ##      PURPOSE.  See the above copyright notices for more information.
 
 import sys
+from os import path
 
 import numpy as np
 import vtk
-from os import path
 
 radiusArrayName = 'MaximumInscribedSphereRadius'
 
@@ -420,19 +420,26 @@ def vtk_compute_threshold(surface, name, lower=0, upper=1, threshold_type="betwe
     return surface
 
 
-def vtk_extract_feature_edges(polydata):
+def vtk_extract_feature_edges(polydata, compute_feature_edges=False, compute_boundary_edges=True,
+                              compute_non_manifold_edges=False):
     """Wrapper for vtkFeatureedges. Extracts the edges of the cells that are open.
 
     Args:
+        compute_non_manifold_edges:
+        compute_boundary_edges:
+        compute_feature_edges:
         polydata (vtkPolyData): surface to extract the openings from.
 
     Returns:
         feature_edges (vtkPolyData): The boundary edges of the surface.
     """
     feature_edges = vtk.vtkFeatureEdges()
-    feature_edges.FeatureEdgesOff()
-    feature_edges.BoundaryEdgesOn()
-    feature_edges.NonManifoldEdgesOff()
+    if compute_feature_edges:
+        feature_edges.FeatureEdgesOn()
+    if compute_boundary_edges:
+        feature_edges.BoundaryEdgesOn()
+    if compute_non_manifold_edges:
+        feature_edges.NonManifoldEdgesOn()
     feature_edges.SetInputData(polydata)
     feature_edges.Update()
 
@@ -577,32 +584,63 @@ def vtk_triangulate_surface(surface):
     return surface_triangulator.GetOutput()
 
 
-def vtk_compute_surface_area(surface):
+def vtk_compute_mass_properties(surface, compute_surface_area=True, compute_volume=False):
     """
-    Compute area of polydata
+    Calculate the volume from the given polydata
 
     Args:
+        compute_volume (bool): Compute surface volume if True
+        compute_surface_area (bool): Compute surface area if True
         surface (vtkPolyData): Surface to compute are off
 
     Returns:
         area (float): Area of the input surface
+    Returns:
+        volume (float): Volume of the input surface
     """
     mass = vtk.vtkMassProperties()
     mass.SetInputData(surface)
 
-    return mass.GetSurfaceArea()
+    if compute_surface_area:
+        return mass.GetSurfaceArea()
+
+    if compute_volume:
+        return mass.GetVolume()
 
 
-def vtk_marching_cube(modeller):
+def vtk_marching_cube(modeller, compute_normals=False, compute_scalars=False):
+    """
+
+    Args:
+        modeller:
+        compute_normals:
+        compute_scalars:
+
+    Returns:
+
+    """
     marching_cube = vtk.vtkMarchingCubes()
+    if compute_normals:
+        marching_cube.ComputeNormalsOn()
+    if compute_scalars:
+        marching_cube.ComputeScalarsOn()
     marching_cube.SetInputData(modeller.GetOutput())
     marching_cube.SetValue(0, 0.0)
     marching_cube.Update()
+
     return marching_cube
 
 
 def vtk_compute_normal_gradients(cell_normals):
-    # Compute gradients of the normals
+    """
+    Compute gradients of the normals
+
+    Args:
+        cell_normals:
+
+    Returns:
+
+    """
     gradients_generator = vtk.vtkGradientFilter()
     gradients_generator.SetInputData(cell_normals)
     gradients_generator.SetInputArrayToProcess(0, 0, 0, 1, "Normals")
@@ -612,12 +650,24 @@ def vtk_compute_normal_gradients(cell_normals):
     return gradients
 
 
-def vtk_compute_polydata_normals(surface):
-    # Get cell normals
+def vtk_compute_polydata_normals(surface, compute_point_normals=False, compute_cell_normals=False):
+    """
+    Get cell normals
+
+    Args:
+        surface:
+        compute_point_normals:
+        compute_cell_normals:
+
+    Returns:
+
+    """
     normal_generator = vtk.vtkPolyDataNormals()
     normal_generator.SetInputData(surface)
-    normal_generator.ComputePointNormalsOff()
-    normal_generator.ComputeCellNormalsOn()
+    if compute_point_normals:
+        normal_generator.ComputePointNormalsOn()
+    if compute_cell_normals:
+        normal_generator.ComputeCellNormalsOn()
     normal_generator.Update()
     cell_normals = normal_generator.GetOutput()
 
