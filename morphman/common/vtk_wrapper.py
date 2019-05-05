@@ -447,10 +447,16 @@ def vtk_extract_feature_edges(polydata, compute_feature_edges=False, compute_bou
     feature_edges = vtk.vtkFeatureEdges()
     if compute_feature_edges:
         feature_edges.FeatureEdgesOn()
+    else:
+        feature_edges.FeatureEdgesOff()
     if compute_boundary_edges:
         feature_edges.BoundaryEdgesOn()
+    else:
+        feature_edges.BoundaryEdgesOff()
     if compute_non_manifold_edges:
         feature_edges.NonManifoldEdgesOn()
+    else:
+        feature_edges.NonManifoldEdgesOff()
     feature_edges.SetInputData(polydata)
     feature_edges.Update()
 
@@ -685,8 +691,13 @@ def vtk_compute_polydata_normals(surface, compute_point_normals=False, compute_c
     normal_generator.SetInputData(surface)
     if compute_point_normals:
         normal_generator.ComputePointNormalsOn()
+    else:
+        normal_generator.ComputePointNormalsOff()
     if compute_cell_normals:
         normal_generator.ComputeCellNormalsOn()
+    else:
+        normal_generator.ComputeCellNormalsOff()
+
     normal_generator.Update()
     cell_normals = normal_generator.GetOutput()
 
