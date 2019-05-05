@@ -176,6 +176,7 @@ def write_polydata(input_data, filename, datatype=None, file_type="ascii"):
     Write the given input data based on the file name extension.
 
     Args:
+        file_type (string): Filetype of output
         input_data (vtkSTL/vtkPolyData/vtkXMLStructured/
                     vtkXMLRectilinear/vtkXMLPolydata/vtkXMLUnstructured/
                     vtkXMLImage/Tecplot): Input data.
