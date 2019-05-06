@@ -18,45 +18,6 @@ surfaceNormalsArrayName = 'SurfaceNormalArray'
 radiusArrayName = 'MaximumInscribedSphereRadius'
 
 
-def detach_branch(voronoi_remaining, centerlines, poly_ball_size, unprepared_output_filepath, surface, output_filepath,
-                  centerlines_complete, base_path):
-    """
-    Reconstructs the Voronoi diagram, creating a new surface,
-    without the selected branch, utimatley removing it.
-    Proceeds by computing the corresponding centerline in the new
-    geometries, used for postprocessing, geometric analysis and
-    meshing.
-
-    Args:
-        centerlines (vtkPolyData): Relevant centerlines in new geometry
-        centerlines_complete (vtkPolyData): Complete set of centerlines
-        surface (vtkPolyData): Surface model
-        unprepared_output_filepath (string): Path to save unprepared surface
-        voronoi_remaining (vtkPolyData): Voronoi diagram of remaining surface model
-        base_path (string): Path to save location
-        output_filepath (str): Path to output the manipulated surface.
-        poly_ball_size (list): Resolution of polyballs used to create surface.
-    """
-    new_centerlines_path = base_path + "_centerline_removed_branch.vtp"
-    new_voronoi_path = base_path + "_voronoi_removed_branch.vtp"
-
-    # Create new voronoi diagram and new centerlines
-    write_polydata(voronoi_remaining, new_voronoi_path)
-
-    write_polydata(centerlines, new_centerlines_path)
-
-    new_surface = create_new_surface(voronoi_remaining, poly_ball_size=poly_ball_size)
-    write_polydata(new_surface, unprepared_output_filepath)
-
-    print("-- Smoothing, clean, and check surface")
-    new_surface = prepare_output_surface(new_surface, surface,
-                                         centerlines, output_filepath,
-                                         test_merge=False, changed=False,
-                                         old_centerline=centerlines_complete)
-
-    write_polydata(new_surface, output_filepath)
-
-
 def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, poly_ball_size, no_smooth,
                       no_smooth_point, resampling_step, angle, remove_branch, branch_to_manipulate_number,
                       branch_location, translation_method):
@@ -149,6 +110,45 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
                                new_branch_pos, new_branch_pos_id, output_filepath, poly_ball_size, surface,
                                unprepared_output_filepath, voronoi_branch, voronoi_remaining, base_path,
                                translation_method)
+
+
+def detach_branch(voronoi_remaining, centerlines, poly_ball_size, unprepared_output_filepath, surface, output_filepath,
+                  centerlines_complete, base_path):
+    """
+    Reconstructs the Voronoi diagram, creating a new surface,
+    without the selected branch, utimatley removing it.
+    Proceeds by computing the corresponding centerline in the new
+    geometries, used for postprocessing, geometric analysis and
+    meshing.
+
+    Args:
+        centerlines (vtkPolyData): Relevant centerlines in new geometry
+        centerlines_complete (vtkPolyData): Complete set of centerlines
+        surface (vtkPolyData): Surface model
+        unprepared_output_filepath (string): Path to save unprepared surface
+        voronoi_remaining (vtkPolyData): Voronoi diagram of remaining surface model
+        base_path (string): Path to save location
+        output_filepath (str): Path to output the manipulated surface.
+        poly_ball_size (list): Resolution of polyballs used to create surface.
+    """
+    new_centerlines_path = base_path + "_centerline_removed_branch.vtp"
+    new_voronoi_path = base_path + "_voronoi_removed_branch.vtp"
+
+    # Create new voronoi diagram and new centerlines
+    write_polydata(voronoi_remaining, new_voronoi_path)
+
+    write_polydata(centerlines, new_centerlines_path)
+
+    new_surface = create_new_surface(voronoi_remaining, poly_ball_size=poly_ball_size)
+    write_polydata(new_surface, unprepared_output_filepath)
+
+    print("-- Smoothing, clean, and check surface")
+    new_surface = prepare_output_surface(new_surface, surface,
+                                         centerlines, output_filepath,
+                                         test_merge=False, changed=False,
+                                         old_centerline=centerlines_complete)
+
+    write_polydata(new_surface, output_filepath)
 
 
 def move_and_rotate_branch(angle, capped_surface, centerlines, centerlines_complete, diverging_centerline_branch,
