@@ -120,7 +120,7 @@ def manipulate_bend(input_filepath, output_filepath, smooth, smooth_factor, regi
 
     # Clip Voronoi diagram into
     # bend and remaining part of geometry
-    print("-- Clipping Voronoi diagrams")
+    print("-- Clipping Voronoi diagram")
     voronoi_bend, voronoi_remaining = get_split_voronoi_diagram(voronoi, [centerline_bend, centerline_remaining])
     write_polydata(voronoi_bend, voronoi_bend_path)
     write_polydata(voronoi_remaining, voronoi_remaining_path)
@@ -180,6 +180,8 @@ def manipulate_bend(input_filepath, output_filepath, smooth, smooth_factor, regi
                                          test_merge=True, changed=True,
                                          old_centerline=vtk_merge_polydata([centerlines,
                                                                             diverging_centerlines]))
+
+    print("\n-- Writing new surface to {}.".format(output_filepath))
     write_polydata(new_centerlines, new_centerlines_path)
     write_polydata(new_surface, output_filepath)
 

@@ -91,7 +91,7 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
     diverging_centerline_branch = get_diverging_centerline_branch(centerlines_branched, branch_to_manipulate_end_point)
 
     # Clip Voronoi diagram into bend and remaining part of geometry
-    print("-- Clipping Voronoi diagrams")
+    print("-- Clipping Voronoi diagram")
     voronoi_branch, voronoi_remaining = get_split_voronoi_diagram(voronoi, [diverging_centerline_branch,
                                                                             centerlines])
 
@@ -137,12 +137,13 @@ def detach_branch(voronoi_remaining, centerlines, poly_ball_size, unprepared_out
     new_surface = create_new_surface(voronoi_remaining, poly_ball_size=poly_ball_size)
     write_polydata(new_surface, unprepared_output_filepath)
 
-    print("-- Smoothing, clean, and check surface")
+    print("-- Smoothing, cleaning, and checking surface")
     new_surface = prepare_output_surface(new_surface, surface,
                                          centerlines, output_filepath,
                                          test_merge=False, changed=False,
                                          old_centerline=centerlines_complete)
 
+    print("\n-- Writing new surface to {}.".format(output_filepath))
     write_polydata(new_surface, output_filepath)
 
 
@@ -203,12 +204,13 @@ def move_and_rotate_branch(angle, capped_surface, centerlines, centerlines_compl
     new_surface = create_new_surface(new_voronoi, poly_ball_size=poly_ball_size)
     write_polydata(new_surface, unprepared_output_filepath)
 
-    print("-- Smoothing, clean, and check surface")
+    print("-- Smoothing, cleaning, and checking surface")
     new_surface = prepare_output_surface(new_surface, surface,
                                          new_centerlines, output_filepath,
                                          test_merge=False, changed=True,
                                          old_centerline=centerlines_complete)
 
+    print("\n-- Writing new surface to {}.".format(output_filepath))
     write_polydata(new_surface, output_filepath)
 
 

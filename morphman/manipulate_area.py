@@ -83,7 +83,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
         write_polydata(vtk_merge_polydata(centerline_diverging), centerline_diverging_path)
 
     # Split the Voronoi diagram
-    print("-- Change Voronoi diagram")
+    print("-- Changing Voronoi diagram")
     centerline_regions = [centerline_splined, centerline_remaining]
     if centerline_diverging is not None:
         for i, div_cl in enumerate(centerline_diverging):
@@ -117,12 +117,14 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     write_polydata(new_voronoi, voronoi_new_path)
 
     # Make new surface
-    print("-- Create surface")
+    print("-- Creating surface")
     new_surface = create_new_surface(new_voronoi, poly_ball_size=poly_ball_size)
 
-    print("-- Smoothing, clean, and check surface.")
+    print("-- Smoothing, cleaning, and checking surface.")
     new_surface = prepare_output_surface(new_surface, surface, centerlines,
                                          output_filepath, test_merge=True)
+
+    print("\n-- Writing new surface to {}.".format(output_filepath))
     write_polydata(new_surface, output_filepath)
 
 

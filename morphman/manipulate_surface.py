@@ -83,7 +83,7 @@ def manipulate_surface(input_filepath, output_filepath, smooth, smooth_factor, n
 
     # Compute and smooth voronoi diagram (not aneurysm)
     if smooth:
-        print("-- Smooth the Voronoi diagram.")
+        print("-- Smoothing Voronoi diagram.")
         if no_smooth:
             no_smooth_cl = get_no_smooth_cl(capped_surface, centerlines, base_path, smooth,
                                             no_smooth, voronoi, no_smooth_point, pole_ids,
@@ -95,7 +95,7 @@ def manipulate_surface(input_filepath, output_filepath, smooth, smooth_factor, n
                                                   smooth_factor, no_smooth_cl, absolute)
 
     if noise:
-        print("-- Add noise to the Voronoi diagram.")
+        print("-- Adding noise to Voronoi diagram.")
         voronoi_relevant = add_noise_to_voronoi_diagram_new_points(surface,
                                                                    voronoi_relevant,
                                                                    centerline_splined,
@@ -111,7 +111,7 @@ def manipulate_surface(input_filepath, output_filepath, smooth, smooth_factor, n
     write_polydata(voronoi, voronoi_new_path)
 
     # Write a new surface from the new voronoi diagram
-    print("-- Create new surface.")
+    print("-- Creating new surface.")
     new_surface = create_new_surface(voronoi, poly_ball_size)
 
     print("-- Preparing surface for output.")

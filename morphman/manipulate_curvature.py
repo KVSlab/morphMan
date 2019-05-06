@@ -90,14 +90,14 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
         write_polydata(voronoi_regions[i], voronoi_div_path.format(i-1))
 
     # Move the centerline
-    print("-- Smooth / sharpen centerline")
+    print("-- Smoothing / sharpening centerline")
     smoothed_centerline_splined = vmtk_compute_geometric_features(centerline_splined, True, True,
                                                                   factor=smooth_factor_line,
                                                                   iterations=iterations)
     write_polydata(smoothed_centerline_splined, centerline_smooth_path)
 
     # Move the Voronoi diagram
-    print("-- Smooth / sharpen Voronoi diagram")
+    print("-- Smoothing / sharpening Voronoi diagram")
     diverging_points = [centerline_diverging[i].GetPoint(diverging_ids[i]) for i in range(len(diverging_ids))]
     moved_voronoi_region, div_offset = make_voronoi_smooth(voronoi_regions[0],
                                                            centerline_splined,
@@ -113,15 +113,16 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
     write_polydata(new_centerlines, new_centerlines_path)
 
     # Create new surface and move centerlines (for postprocessing)
-    print("-- Create new surface")
+    print("-- Creating new surface")
     new_surface = create_new_surface(new_voronoi, poly_ball_size=poly_ball_size)
 
-    print("-- Smoothing, clean, and check surface")
+    print("-- Smoothing, cleaning, and checking surface")
     new_surface = prepare_output_surface(new_surface, surface,
                                          new_centerlines, output_filepath,
                                          test_merge=True, changed=True,
                                          old_centerline=centerlines)
 
+    print("\n-- Writing new surface to {}.".format(output_filepath))
     write_polydata(new_surface, output_filepath)
 
 
