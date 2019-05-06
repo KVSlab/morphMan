@@ -28,9 +28,13 @@ def test_manipulate_branch(surface_paths):
     # New location of branch
     new_branch_location = (45.7, 37.6, 42.5)
 
+    # Branch translation method
+    translation_method = 'commandline'
+
     # Change default input
     common_input.update(
-        dict(angle=angle, branch_to_manipulate_number=branch_number, branch_location=new_branch_location))
+        dict(angle=angle, branch_to_manipulate_number=branch_number, branch_location=new_branch_location,
+             translation_method=translation_method))
 
     # Run area variation
     manipulate_branch(**common_input)
