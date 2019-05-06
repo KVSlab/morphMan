@@ -155,7 +155,7 @@ def move_and_rotate_branch(angle, capped_surface, centerlines, centerlines_compl
                            new_branch_pos, new_branch_pos_id, output_filepath, poly_ball_size, surface,
                            unprepared_output_filepath, voronoi_branch, voronoi_remaining, base_path, method):
     """
-    Moves, and performs rotation of the voronoi diagram, then
+    Moves, and/or performs rotation of the voronoi diagram, then
     reconstructs the Voronoi diagram, creating a new surface.
     Proceeds by computing the corresponding centerline in the new
     geometries, used for postprocessing, geometric analysis and
@@ -188,21 +188,7 @@ def move_and_rotate_branch(angle, capped_surface, centerlines, centerlines_compl
     else:
         new_normal = old_normal
 
-    """
-    Idea:
-    - Check if need to translate
-    
-    if translate: 
-        get normal, get rotation matrix, get translation params -> move branch and rotate upright
-        
-    - Check if need to rotate
-    - Split Voronoi into base and branch
-    if angle: 
-        get new normal if translate, else old normal. 
-        for points in base: rotate with linear profile: no turn -> turn 'a' degrees 
-        leaves base untouched -> full turn at branch
-    """
-    if method != 'no_translation':
+    if method in ['commandline', 'manual']:
         print("-- Translate branch")
         manipulated_voronoi, manipulated_centerline, origo = move_branch(centerlines, diverging_centerline_branch,
                                                                          new_branch_pos, old_normal, new_normal,
@@ -238,27 +224,63 @@ def move_and_rotate_branch(angle, capped_surface, centerlines, centerlines_compl
 
 def move_branch(centerlines, diverging_centerline_branch, new_branch_pos,
                 old_normal, new_normal, voronoi_branch):
+    """
+    Translates and rotates the voronoi diagram and centerline from one point
+    on the surface model to a selected point, defined by
+    new branch position.
+
+    Args:
+        new_normal (ndarray): New surface normal
+        old_normal (ndarray): Old surface normal
+        centerlines (vtkPolyData): Relevant centerlines in new geometry
+        diverging_centerline_branch (vtkPolyData): Diverging centerline
+        new_branch_pos (vtkPoint): Point where branch is moved
+        voronoi_branch (vtkPolyData): Voronoi diagram of branch
+
+    Returns:
+        vtkPolyData: Translated Voronoi diagram
+        vtkPolyData: Translated centerline
+        ndarray: Origin of new position
+    """
     # Define rotation between surface normal vectors
     u, surface_normals_angle = get_rotation_axis_and_angle(new_normal, old_normal)
-    R_u = get_rotation_matrix(u, surface_normals_angle)
+    R = get_rotation_matrix(u, surface_normals_angle)
 
     # Define translation parameters
     dx, origo = get_translation_parameters(centerlines, diverging_centerline_branch, new_branch_pos)
 
     # Move branch centerline and voronoi diagram
-    moved_voronoi = move_voronoi_branch(voronoi_branch, dx, R_u, origo)
-    moved_centerline = move_centerline_branch(diverging_centerline_branch, origo, R_u, dx)
+    moved_voronoi = manipulate_voronoi_branch(voronoi_branch, dx, R, origo, None, None, None, 'translate')
+    moved_centerline = manipulate_centerline_branch(diverging_centerline_branch, origo, R, dx, None, None,
+                                                    'translate')
 
     return moved_voronoi, moved_centerline, origo
 
 
 def rotate_branch(angle, diverging_centerline_branch, voronoi_branch, origo, normal):
+    """
+    Perform rotation of the voronoi diagram and the centerline
+    around a given axis defined by the input normal vector.
+
+    Args:
+        angle (float): Angle to rotate the branch, in radians
+        origo (ndarray): Origin of the centerline
+        normal (ndarray): Surface normal, defining axis of rotation
+        diverging_centerline_branch (vtkPolyData): Diverging centerline
+        voronoi_branch (vtkPolyData): Voronoi diagram of branch
+
+    Returns:
+        vtkPolyData: Rotated Voronoi diagram
+        vtkPolyData: Rotated centerline
+    """
     # Define rotation around new surface normal
-    R_z = get_rotation_matrix(-normal, angle)
+    R = get_rotation_matrix(-normal, angle)
 
     # Move branch centerline and voronoi diagram
-    rotated_voronoi = rotate_voronoi_branch(diverging_centerline_branch, voronoi_branch, R_z, origo, normal, angle)
-    rotated_centerline = rotate_centerline_branch(diverging_centerline_branch, origo, R_z, normal, angle)
+    rotated_voronoi = manipulate_voronoi_branch(voronoi_branch, None, R, origo, diverging_centerline_branch,
+                                                normal, angle, 'rotate')
+    rotated_centerline = manipulate_centerline_branch(diverging_centerline_branch, origo, R, None, normal,
+                                                      angle, 'rotate')
 
     return rotated_voronoi, rotated_centerline
 
@@ -620,62 +642,19 @@ def get_estimated_surface_normal(diverging_centerline_branch):
     return normal_vector
 
 
-def move_centerline_branch(centerline_branch, origo, R_u, dx):
+def manipulate_centerline_branch(centerline_branch, origo, R, dx, normal, angle, manipulation):
     """
-    Translate and rotate the selected branch, represented
-    as a Voronoi diagram.
+    Depending on manipulation method, either translates or
+    rotates the selected branch, represented as a centerline.
 
     Args:
+        manipulation (str): Type of manipulation, either 'rotate' or 'translate'
         centerline_branch (vtkPolyData): Centerline through surface
         dx (float): Distance to translate branch
-        R_u (ndarray): Rotation matrix, rotation from old to new surface normal
+        R (ndarray): Rotation matrix, rotation from old to new surface normal or around new surface normal
         origo (ndarray): Adjusted origin / position of new branch position
-
-    Returns:
-        centerline (vtkPolyData): Manipulated centerline
-    """
-    # Locator to find closest point on centerline
-    number_of_points = centerline_branch.GetNumberOfPoints()
-
-    centerline = vtk.vtkPolyData()
-    centerline_points = vtk.vtkPoints()
-    centerline_cell_array = vtk.vtkCellArray()
-    radius_array = get_vtk_array(radiusArrayName, 1, number_of_points)
-
-    centerline_cell_array.InsertNextCell(number_of_points)
-    radius_array_data = centerline_branch.GetPointData().GetArray(radiusArrayName).GetTuple1
-
-    for p in range(centerline_branch.GetNumberOfPoints()):
-        point = centerline_branch.GetPoint(p)
-
-        # Translate
-        point = np.asarray(point) + dx
-
-        # Rotate
-        point = np.dot(R_u, point - origo) + origo
-
-        centerline_points.InsertNextPoint(point)
-        radius_array.SetTuple1(p, radius_array_data(p))
-        centerline_cell_array.InsertCellPoint(p)
-
-    centerline.SetPoints(centerline_points)
-    centerline.SetLines(centerline_cell_array)
-    centerline.GetPointData().AddArray(radius_array)
-
-    return centerline
-
-
-def rotate_centerline_branch(centerline_branch, origo, R_z, normal, angle):
-    """
-    Translate and rotate the selected branch, represented
-    as a Voronoi diagram.
-
-    Args:
         angle (float): Angle to rotate in radians
         normal (ndarray): Normal vector at manipulation location
-        centerline_branch (vtkPolyData): Centerline through surface
-        R_z (ndarray): Rotation matrix, rotation around new surface normal
-        origo (ndarray): Adjusted origin / position of new branch position
 
     Returns:
         centerline (vtkPolyData): Manipulated centerline
@@ -697,13 +676,19 @@ def rotate_centerline_branch(centerline_branch, origo, R_z, normal, angle):
     for p in range(centerline_branch.GetNumberOfPoints()):
         point = centerline_branch.GetPoint(p)
 
-        # Rotate centerline points
-        if p <= base_end:
-            transition_angle = angle * (p / base_end) ** 0.2
-            transition_rotation_matrix = get_rotation_matrix(-normal, transition_angle)
-            point = np.dot(transition_rotation_matrix, point - origo) + origo
-        else:
-            point = np.dot(R_z, point - origo) + origo
+        if manipulation == 'translate':
+            # Translate and rotate branch upright
+            point = np.asarray(point) + dx
+            point = np.dot(R, point - origo) + origo
+
+        elif manipulation == 'rotate':
+            # Rotate branch around axis
+            if p <= base_end:
+                transition_angle = angle * (p / base_end) ** 0.2
+                transition_rotation_matrix = get_rotation_matrix(-normal, transition_angle)
+                point = np.dot(transition_rotation_matrix, point - origo) + origo
+            else:
+                point = np.dot(R, point - origo) + origo
 
         centerline_points.InsertNextPoint(point)
         radius_array.SetTuple1(p, radius_array_data(p))
@@ -760,61 +745,20 @@ def get_rotation_matrix(u, angle):
     return R
 
 
-def move_voronoi_branch(voronoi, dx, R_u, origo):
+def manipulate_voronoi_branch(voronoi, dx, R, origo, centerline, normal, angle, manipulation):
     """
-    Rotate the selected branch, represented
-    as a Voronoi diagram.
+    Depending on manipulation method, either translates or
+    rotates the selected branch, represented as a Voronoi diagram.
 
     Args:
+        manipulation (str): Type of manipulation, either 'rotate' or 'translate'
         voronoi (vtkPolyData): Voronoi diagram of surface
         dx (float): Distance to translate branch
-        R_u (ndarray): Rotation matrix, rotation from old to new surface normal
+        R (ndarray): Rotation matrix, rotation from old to new surface normal or around new surface normal
         origo (ndarray): Adjusted origin / position of new branch position
-
-    Returns:
-        new_voronoi (vtkPolyData): Manipulated Voronoi diagram
-    """
-    # Voronoi diagram
-    n = voronoi.GetNumberOfPoints()
-    new_voronoi = vtk.vtkPolyData()
-    voronoi_points = vtk.vtkPoints()
-    cell_array = vtk.vtkCellArray()
-    radius_array = get_vtk_array(radiusArrayName, 1, n)
-    misr_array = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1
-
-    # Iterate through Voronoi diagram and manipulate
-    for i in range(n):
-        point = voronoi.GetPoint(i)
-        misr = misr_array(i)
-
-        # Translate voronoi points
-        point = np.asarray(point) + dx
-        point = np.dot(R_u, point - origo) + origo
-
-        # Change radius
-        radius_array.SetTuple1(i, misr)
-        voronoi_points.InsertNextPoint(point)
-        cell_array.InsertNextCell(1)
-        cell_array.InsertCellPoint(i)
-
-    new_voronoi.SetPoints(voronoi_points)
-    new_voronoi.SetVerts(cell_array)
-    new_voronoi.GetPointData().AddArray(radius_array)
-    return new_voronoi
-
-
-def rotate_voronoi_branch(centerline, voronoi, R_z, origo, normal, angle):
-    """
-    Translate the selected branch, represented
-    as a Voronoi diagram.
-
-    Args:
         angle (float): Angle to rotate in radians
         normal (ndarray): Normal vector at manipulation location
         centerline (vtkPolyData): Centerline of branch to be manipulated
-        voronoi (vtkPolyData): Voronoi diagram of surface
-        R_z (ndarray): Rotation matrix, rotation around new surface normal
-        origo (ndarray): Adjusted origin / position of new branch position
 
     Returns:
         new_voronoi (vtkPolyData): Manipulated Voronoi diagram
@@ -827,26 +771,33 @@ def rotate_voronoi_branch(centerline, voronoi, R_z, origo, normal, angle):
     radius_array = get_vtk_array(radiusArrayName, 1, n)
     misr_array = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1
 
-    # Centerline locator
-    m = centerline.GetNumberOfPoints()
-    centerline_locator = vtk_point_locator(centerline)
+    if manipulation == 'rotate':
+        # Centerline locator
+        m = centerline.GetNumberOfPoints()
+        centerline_locator = vtk_point_locator(centerline)
 
-    # Transition from base to branch for 30% of branch creating a smoother rotation transition
-    base_end = int(m * 0.3)
+        # Transition from base to branch for 30% of branch creating a smoother rotation transition
+        base_end = int(m * 0.3)
 
     # Iterate through Voronoi diagram and manipulate
     for i in range(n):
         point = voronoi.GetPoint(i)
         misr = misr_array(i)
-        cl_id = centerline_locator.FindClosestPoint(point)
 
-        # Rotate voronoi points
-        if cl_id <= base_end:
-            transition_angle = angle * (cl_id / base_end) ** 0.2
-            transition_rotation_matrix = get_rotation_matrix(-normal, transition_angle)
-            point = np.dot(transition_rotation_matrix, point - origo) + origo
-        else:
-            point = np.dot(R_z, point - origo) + origo
+        if manipulation == 'translate':
+            # Translate voronoi points
+            point = np.asarray(point) + dx
+            point = np.dot(R, point - origo) + origo
+
+        elif manipulation == 'rotate':
+            # Rotate voronoi points
+            cl_id = centerline_locator.FindClosestPoint(point)
+            if cl_id <= base_end:
+                transition_angle = angle * (cl_id / base_end) ** 0.2
+                transition_rotation_matrix = get_rotation_matrix(-normal, transition_angle)
+                point = np.dot(transition_rotation_matrix, point - origo) + origo
+            else:
+                point = np.dot(R, point - origo) + origo
 
         # Change radius
         radius_array.SetTuple1(i, misr)
