@@ -35,7 +35,7 @@ def test_manipulate_branch_translation(surface_paths):
         dict(angle=angle, branch_to_manipulate_number=branch_number, branch_location=new_branch_location,
              translation_method=translation_method))
 
-    # Run area variation
+    # Run manipulate branch
     manipulate_branch(**common_input)
 
     # Set file paths
@@ -97,7 +97,7 @@ def test_manipulate_branch_translation_and_rotation(surface_paths):
     angle1 = np.pi
     common_input.update(dict(angle=angle1))
 
-    # Run area variation
+    # Run manipulate branch
     manipulate_branch(**common_input)
 
     # Read centerlines
@@ -132,10 +132,10 @@ def test_manipulate_branch_rotation(surface_paths):
     common_input.update(
         dict(branch_to_manipulate_number=branch_number, translation_method=translation_method))
 
-    # Run without rotation around surface normal
+    # Run with only rotation around original surface normal
     common_input.update(dict(angle=angle))
 
-    # Run area variation
+    # Run manipulate branch
     manipulate_branch(**common_input)
 
     # Set file paths
