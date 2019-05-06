@@ -18,95 +18,6 @@ surfaceNormalsArrayName = 'SurfaceNormalArray'
 radiusArrayName = 'MaximumInscribedSphereRadius'
 
 
-def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, poly_ball_size, no_smooth,
-                      no_smooth_point, resampling_step, angle, remove_branch, branch_to_manipulate_number,
-                      branch_location):
-    """
-    Primary script for moving or removing a selected branch of any blood vessel.
-    Relies on a surface geometry of a 3D blood vessel network.
-
-    Defines in- and out-put files, computes voronoi diagram, and
-    moves voronoi diagram according to user selected points.
-    Used selects two points defining a diverging branch, and the
-    one point defining the new location on the surface.
-    Proceedes with either removal of a single branch,
-    or traslationg and rotation of a single branch.
-
-    Args:
-        remove_branch (bool: If true, removes selected branch completely.
-        input_filepath (str): Path to input surface.
-        output_filepath (str): Path to output the manipulated surface.
-        smooth (bool): Smooth the Voronoi diagram.
-        smooth_factor (float): Smoothing factor used for Voronoi diagram smoothing.
-        poly_ball_size (list): Resolution of polyballs used to create surface.
-        no_smooth (bool): True of part of the model is not to be smoothed.
-        no_smooth_point (ndarray): Point which is untouched by smoothing.
-        resampling_step (float): Resampling length when resampling centerline.
-        angle (float): Angle to rotate around new surface normal vector. Default i no rotation.
-        branch_to_manipulate_number (int): Number of branch to manipulate, ordered from up- to down-stream.
-        branch_location (ndarray): Point where branch to manipulate will be moved. Closest point on surface is selected.
-    """
-
-    # Input and output filenames
-    base_path = get_path_names(input_filepath)
-    centerlines_path = base_path + "_centerline.vtp"
-    unprepared_output_filepath = base_path + "_unprepared_output.vtp"
-
-    # Clean and capp / uncapp surface
-    surface, capped_surface = prepare_surface(base_path, input_filepath)
-    inlet, outlets = compute_centers(surface, base_path)
-
-    print("-- Compute centerlines and Voronoi diagram")
-    centerlines_complete, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path,
-                                                                  capped_surface, resampling=resampling_step,
-                                                                  smooth=False, base_path=base_path)
-
-    if smooth:
-        print("-- Smoothing Voronoi diagram")
-        voronoi = prepare_voronoi_diagram(capped_surface, centerlines_complete, base_path,
-                                          smooth, smooth_factor, no_smooth,
-                                          no_smooth_point, voronoi, pole_ids)
-
-    # Select branch to manipulate
-    if branch_to_manipulate_number > 0:
-        check_branch_number(branch_to_manipulate_number, centerlines_complete)
-        longest_centerline = get_sorted_lines(centerlines_complete)[-1]
-        branch_to_manipulate = get_branch(branch_to_manipulate_number, centerlines_complete, longest_centerline)
-    else:
-        shortest_centerlines = get_sorted_lines(centerlines_complete)[:-1]
-        branch_to_manipulate = pick_branch(capped_surface, shortest_centerlines)
-
-    if not remove_branch:
-        # Get new position of branch on model surface
-        if branch_location is None:
-            new_branch_pos_id, new_branch_pos = pick_new_branch_position(capped_surface)
-        else:
-            new_branch_pos_id, new_branch_pos = get_new_branch_position(branch_location, capped_surface)
-
-    branch_to_manipulate_end_point = get_end_point(branch_to_manipulate)
-    centerlines = filter_centerlines(centerlines_complete, branch_to_manipulate_end_point)
-
-    # Select diverging branch from Brancher and compare with diverging branch found manually
-    centerlines_branched = vmtk_compute_branch_extractor(centerlines_complete)
-    diverging_centerline_branch = get_diverging_centerline_branch(centerlines_branched, branch_to_manipulate_end_point)
-
-    # Clip Voronoi diagram into bend and remaining part of geometry
-    print("-- Clipping Voronoi diagrams")
-    voronoi_branch, voronoi_remaining = get_split_voronoi_diagram(voronoi, [diverging_centerline_branch,
-                                                                            centerlines])
-
-    voronoi_branch, voronoi_remaining_2 = filter_voronoi(voronoi_branch, diverging_centerline_branch)
-    voronoi_remaining = vtk_merge_polydata([voronoi_remaining, voronoi_remaining_2])
-
-    if remove_branch:
-        detach_branch(voronoi_remaining, centerlines, poly_ball_size,
-                      unprepared_output_filepath, surface, output_filepath, centerlines_complete, base_path)
-    else:
-        move_and_rotate_branch(angle, capped_surface, centerlines, centerlines_complete, diverging_centerline_branch,
-                               new_branch_pos, new_branch_pos_id, output_filepath, poly_ball_size, surface,
-                               unprepared_output_filepath, voronoi_branch, voronoi_remaining, base_path)
-
-
 def detach_branch(voronoi_remaining, centerlines, poly_ball_size, unprepared_output_filepath, surface, output_filepath,
                   centerlines_complete, base_path):
     """
@@ -146,6 +57,98 @@ def detach_branch(voronoi_remaining, centerlines, poly_ball_size, unprepared_out
     write_polydata(new_surface, output_filepath)
 
 
+def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, poly_ball_size, no_smooth,
+                      no_smooth_point, resampling_step, angle, remove_branch, branch_to_manipulate_number,
+                      branch_location, translation_method):
+    """
+    Primary script for moving or removing a selected branch of any blood vessel.
+    Relies on a surface geometry of a 3D blood vessel network.
+
+    Defines in- and out-put files, computes voronoi diagram, and
+    moves voronoi diagram according to user selected points.
+    Used selects two points defining a diverging branch, and the
+    one point defining the new location on the surface.
+    Proceedes with either removal of a single branch,
+    or traslationg and rotation of a single branch.
+
+    Args:
+        remove_branch (bool: If true, removes selected branch completely.
+        input_filepath (str): Path to input surface.
+        output_filepath (str): Path to output the manipulated surface.
+        smooth (bool): Smooth the Voronoi diagram.
+        smooth_factor (float): Smoothing factor used for Voronoi diagram smoothing.
+        poly_ball_size (list): Resolution of polyballs used to create surface.
+        no_smooth (bool): True of part of the model is not to be smoothed.
+        no_smooth_point (ndarray): Point which is untouched by smoothing.
+        resampling_step (float): Resampling length when resampling centerline.
+        angle (float): Angle to rotate around new surface normal vector. Default i no rotation.
+        branch_to_manipulate_number (int): Number of branch to manipulate, ordered from up- to down-stream.
+        branch_location (ndarray): Point where branch to manipulate will be moved. Closest point on surface is selected.
+        translation_method (str): Method for translating the branch to be manipulated.
+    """
+
+    # Input and output filenames
+    base_path = get_path_names(input_filepath)
+    centerlines_path = base_path + "_centerline.vtp"
+    unprepared_output_filepath = base_path + "_unprepared_output.vtp"
+
+    # Clean and capp / uncapp surface
+    surface, capped_surface = prepare_surface(base_path, input_filepath)
+    inlet, outlets = compute_centers(surface, base_path)
+
+    print("-- Compute centerlines and Voronoi diagram")
+    centerlines_complete, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path,
+                                                                  capped_surface, resampling=resampling_step,
+                                                                  smooth=False, base_path=base_path)
+
+    if smooth:
+        print("-- Smoothing Voronoi diagram")
+        voronoi = prepare_voronoi_diagram(capped_surface, centerlines_complete, base_path,
+                                          smooth, smooth_factor, no_smooth,
+                                          no_smooth_point, voronoi, pole_ids)
+
+    # Select branch to manipulate
+    if branch_to_manipulate_number > 0:
+        check_branch_number(branch_to_manipulate_number, centerlines_complete)
+        longest_centerline = get_sorted_lines(centerlines_complete)[-1]
+        branch_to_manipulate = get_branch(branch_to_manipulate_number, centerlines_complete, longest_centerline)
+    else:
+        shortest_centerlines = get_sorted_lines(centerlines_complete)[:-1]
+        branch_to_manipulate = pick_branch(capped_surface, shortest_centerlines)
+
+    if not remove_branch:
+        # Get new position of branch on model surface
+        if translation_method == 'manual':
+            new_branch_pos_id, new_branch_pos = pick_new_branch_position(capped_surface)
+        elif translation_method == 'commandline':
+            new_branch_pos_id, new_branch_pos = get_new_branch_position(branch_location, capped_surface)
+        elif translation_method == 'no_translation':
+            new_branch_pos_id, new_branch_pos = get_new_branch_position(branch_location, capped_surface)
+
+    branch_to_manipulate_end_point = get_end_point(branch_to_manipulate)
+    centerlines = filter_centerlines(centerlines_complete, branch_to_manipulate_end_point)
+
+    # Select diverging branch from Brancher and compare with diverging branch found manually
+    centerlines_branched = vmtk_compute_branch_extractor(centerlines_complete)
+    diverging_centerline_branch = get_diverging_centerline_branch(centerlines_branched, branch_to_manipulate_end_point)
+
+    # Clip Voronoi diagram into bend and remaining part of geometry
+    print("-- Clipping Voronoi diagrams")
+    voronoi_branch, voronoi_remaining = get_split_voronoi_diagram(voronoi, [diverging_centerline_branch,
+                                                                            centerlines])
+
+    voronoi_branch, voronoi_remaining_2 = filter_voronoi(voronoi_branch, diverging_centerline_branch)
+    voronoi_remaining = vtk_merge_polydata([voronoi_remaining, voronoi_remaining_2])
+
+    if remove_branch:
+        detach_branch(voronoi_remaining, centerlines, poly_ball_size,
+                      unprepared_output_filepath, surface, output_filepath, centerlines_complete, base_path)
+    else:
+        move_and_rotate_branch(angle, capped_surface, centerlines, centerlines_complete, diverging_centerline_branch,
+                               new_branch_pos, new_branch_pos_id, output_filepath, poly_ball_size, surface,
+                               unprepared_output_filepath, voronoi_branch, voronoi_remaining, base_path)
+
+
 def move_and_rotate_branch(angle, capped_surface, centerlines, centerlines_complete, diverging_centerline_branch,
                            new_branch_pos, new_branch_pos_id, output_filepath, poly_ball_size, surface,
                            unprepared_output_filepath, voronoi_branch, voronoi_remaining, base_path):
@@ -177,6 +180,22 @@ def move_and_rotate_branch(angle, capped_surface, centerlines, centerlines_compl
 
     # Get surface normals
     old_normal = get_estimated_surface_normal(diverging_centerline_branch)
+
+    """
+    Idea:
+    - Check if need to translate
+    
+    if translate: 
+        get normal, get rotation matrix, get translation params -> move branch and rotate upright
+        
+    - Check if need to rotate
+    - Split Voronoi into base and branch
+    if angle: 
+        get new normal if translate, else old normal. 
+        for points in base: rotate with linear profile: no turn -> turn 'a' degrees 
+        leaves base untouched -> full turn at branch
+    """
+
     new_normal = get_exact_surface_normal(capped_surface, new_branch_pos_id)
 
     # Define rotation between surface normal vectors
@@ -752,6 +771,17 @@ def read_command_line_branch(input_path=None, output_path=None):
     required = not (input_path is not None and output_path is not None)
     add_common_arguments(parser, required=required)
 
+    parser.add_argument("-tm", "--translation-method", type=str, default="manual",
+                        choices=["manual", "commandline", "no_translation"],
+                        help="Defines the method of translation of the branch to be manipulated." +
+                             " The parameter provides three options: 'manual', 'commandline' and 'no_translation'. In" +
+                             " 'manual' the user will be provided with a visualization of the input surface, and " +
+                             "asked to provide the new position of the branch on the surface model." +
+                             " If 'commandline' is provided, then '--branch-location'" +
+                             " is expected to be provided. Selecting 'no_translation' will " +
+                             "result in no translation; any manipulation performed on the " +
+                             "branch will happen at the branch's current position. ")
+
     parser.add_argument('-bl', "--branch-location", nargs="+", type=float, default=None, metavar="branch_location",
                         help="If this parameter is provided, the branch to be manipulated will be moved to the point "
                              "on the surface closest to this point. Example providing the point (1, 5, -1):" +
@@ -759,12 +789,12 @@ def read_command_line_branch(input_path=None, output_path=None):
 
     # Arguments for rotation
     parser.add_argument('-a', '--angle', type=float, default=0,
-                        help="The manipulated branch is rotated an angle 'a' around the new" +
+                        help="The manipulated branch is rotated an angle 'a' around the old or new" +
                              " surface normal vector. 'a' is assumed to be in degrees," +
                              " and not radians. Default is no rotation.", metavar="surface_normal_axis_angle")
 
     # Argument for selecting branch
-    parser.add_argument('-bn', '--branch-number', type=int, default=0,
+    parser.add_argument('-bn', '--branch-number', type=int, default=1,
                         help="The number corresponding the branch to manipulate. " +
                              "The branches are ordered from 1 to N, " +
                              "from upstream to downstream, relative to the inlet. " +
@@ -791,7 +821,8 @@ def read_command_line_branch(input_path=None, output_path=None):
                 output_filepath=args.ofile, poly_ball_size=args.poly_ball_size,
                 no_smooth=args.no_smooth, no_smooth_point=args.no_smooth_point,
                 resampling_step=args.resampling_step, angle=angle_to_radians, remove_branch=args.remove_branch,
-                branch_to_manipulate_number=args.branch_number, branch_location=args.branch_location)
+                branch_to_manipulate_number=args.branch_number, branch_location=args.branch_location,
+                translation_method=args.translation_method)
 
 
 def main_branch():
