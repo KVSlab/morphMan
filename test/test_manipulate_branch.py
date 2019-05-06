@@ -1,11 +1,10 @@
-# def test_manipulate_arbitrary_branch(surface_paths):
-#    pass
 ##   Copyright (c) Aslak W. Bergersen, Henrik A. Kjeldsberg. All rights reserved.
 ##   See LICENSE file for details.
 
 ##      This software is distributed WITHOUT ANY WARRANTY; without even
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 ##      PURPOSE.  See the above copyright notices for more information.
+
 import numpy as np
 
 from .fixtures import surface_paths
@@ -68,9 +67,13 @@ def test_manipulate_branch_with_abitrary_branch_and_rotation(surface_paths):
     # New location of branch
     new_branch_location = (47.0, 27.8, 54.4)
 
+    # Branch translation method
+    translation_method = 'commandline'
+
     # Change default input
     common_input.update(
-        dict(branch_to_manipulate_number=branch_number, branch_location=new_branch_location))
+        dict(branch_to_manipulate_number=branch_number, branch_location=new_branch_location,
+             translation_method=translation_method))
 
     # Run without rotation around surface normal
     common_input.update(dict(angle=angle0))
