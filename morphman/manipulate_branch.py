@@ -209,7 +209,7 @@ def move_and_rotate_branch(angle, capped_surface, centerlines, centerlines_compl
             # Split voronoi into base & branch
             rotated_voronoi, rotated_centerline = rotate_branch(angle, moved_centerline,
                                                                 moved_voronoi, origo, new_normal)
-    if method == 'no_translation' or angle != 0:
+    elif method == 'no_translation':
         # Split voronoi into base & branch
         origo = diverging_centerline_branch.GetPoint(0)
         rotated_voronoi, rotated_centerline = rotate_branch(angle, diverging_centerline_branch,
