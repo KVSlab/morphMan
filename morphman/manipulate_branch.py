@@ -178,8 +178,16 @@ def move_and_rotate_branch(angle, capped_surface, centerlines, centerlines_compl
         poly_ball_size (list): Resolution of polyballs used to create surface.
         angle (float): Angle to rotate around new surface normal vector. Default i no rotation.
     """
-    new_centerlines_path = base_path + "_centerline_moved_and_rotated.vtp"
-    new_voronoi_path = base_path + "_voronoi_moved_and_rotated.vtp"
+    if method in ['commandline', 'manual']:
+        if angle != 0:
+            description = "moved_and_rotated"
+        else:
+            description = "moved"
+    elif method == 'no_translation':
+        description = 'rotated'
+
+    new_centerlines_path = base_path + "_centerline_{}.vtp".format(description)
+    new_voronoi_path = base_path + "_voronoi_{}.vtp".format(description)
 
     # Get surface normals
     old_normal = get_estimated_surface_normal(diverging_centerline_branch)

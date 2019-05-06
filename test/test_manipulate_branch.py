@@ -14,7 +14,7 @@ from morphman.common.common import get_path_names
 from morphman.common.surface_operations import read_polydata
 
 
-def test_manipulate_branch(surface_paths):
+def test_manipulate_branch_translation(surface_paths):
     # Get default input
     common_input = read_command_line_branch(surface_paths[0], surface_paths[1])
 
@@ -41,7 +41,7 @@ def test_manipulate_branch(surface_paths):
     # Set file paths
     base_path = get_path_names(common_input['input_filepath'])
     old_centerlines_path = base_path + "_centerline.vtp"
-    new_centerlines_path = base_path + "_centerline_moved_and_rotated.vtp"
+    new_centerlines_path = base_path + "_centerline_moved.vtp"
 
     # Read data, and get new area
     old_centerlines = read_polydata(old_centerlines_path)
@@ -54,7 +54,7 @@ def test_manipulate_branch(surface_paths):
     assert len(untouched_centerlines) < len(new_centerlines)
 
 
-def test_manipulate_branch_with_abitrary_branch_and_rotation(surface_paths):
+def test_manipulate_branch_translation_and_rotation(surface_paths):
     # Get default input
     common_input = read_command_line_branch(surface_paths[0], surface_paths[1])
 
@@ -84,7 +84,7 @@ def test_manipulate_branch_with_abitrary_branch_and_rotation(surface_paths):
     # Set file paths
     base_path = get_path_names(common_input['input_filepath'])
     old_centerlines_path = base_path + "_centerline.vtp"
-    new_centerlines_path = base_path + "_centerline_moved_and_rotated.vtp"
+    new_centerlines_path = base_path + "_centerline_moved.vtp"
 
     # Read centerlines
     old_centerlines = read_polydata(old_centerlines_path)
@@ -101,6 +101,7 @@ def test_manipulate_branch_with_abitrary_branch_and_rotation(surface_paths):
     manipulate_branch(**common_input)
 
     # Read centerlines
+    new_centerlines_path = base_path + "_centerline_moved_and_rotated.vtp"
     new_centerlines1 = read_polydata(new_centerlines_path)
     new_centerlines1 = [extract_single_line(new_centerlines1, i) for i in range(new_centerlines1.GetNumberOfLines())]
 
@@ -114,13 +115,54 @@ def test_manipulate_branch_with_abitrary_branch_and_rotation(surface_paths):
     assert len(unchanged_centerlines1) < len(old_centerlines)
 
 
-def compare_end_points(lines0, lines1):
-    unchanged_centerlines = []
-    for line0 in lines0:
+def test_manipulate_branch_rotation(surface_paths):
+    # Get default input
+    common_input = read_command_line_branch(surface_paths[0], surface_paths[1])
+
+    # Arbitrary branch in model C0001
+    branch_number = 2
+
+    # No rotation around new surface normal vector
+    angle = np.pi
+
+    # Branch translation method
+    translation_method = 'no_translation'
+
+    # Change default input
+    common_input.update(
+        dict(branch_to_manipulate_number=branch_number, translation_method=translation_method))
+
+    # Run without rotation around surface normal
+    common_input.update(dict(angle=angle))
+
+    # Run area variation
+    manipulate_branch(**common_input)
+
+    # Set file paths
+    base_path = get_path_names(common_input['input_filepath'])
+    old_centerlines_path = base_path + "_centerline.vtp"
+    new_centerlines_path = base_path + "_centerline_rotated.vtp"
+
+    # Read centerlines
+    old_centerlines = read_polydata(old_centerlines_path)
+    old_centerlines = [extract_single_line(old_centerlines, i) for i in range(old_centerlines.GetNumberOfLines())]
+
+    new_centerlines = read_polydata(new_centerlines_path)
+    new_centerlines = [extract_single_line(new_centerlines, i) for i in range(new_centerlines.GetNumberOfLines())]
+
+    # Compare end point of all centerlines
+    unchanged_centerlines = compare_end_points(new_centerlines, old_centerlines)
+
+    assert len(unchanged_centerlines) < len(old_centerlines)
+
+
+def compare_end_points(new_centerlines, old_centerlines):
+    new_unchanged_centerlines = []
+    for line0 in new_centerlines:
         line0_end = get_end_point(line0)
-        for line1 in lines1:
+        for line1 in old_centerlines:
             line1_end = get_end_point(line1)
             if line0_end == line1_end:
-                unchanged_centerlines.append(line1_end)
+                new_unchanged_centerlines.append(line0_end)
 
-    return unchanged_centerlines
+    return new_unchanged_centerlines
