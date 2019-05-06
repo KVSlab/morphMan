@@ -183,13 +183,10 @@ def move_and_rotate_branch(angle, capped_surface, centerlines, centerlines_compl
 
     # Get surface normals
     old_normal = get_estimated_surface_normal(diverging_centerline_branch)
-    if method != 'no_translation':
-        new_normal = get_exact_surface_normal(capped_surface, new_branch_pos_id)
-    else:
-        new_normal = old_normal
 
     if method in ['commandline', 'manual']:
         print("-- Translate branch")
+        new_normal = get_exact_surface_normal(capped_surface, new_branch_pos_id)
         manipulated_voronoi, manipulated_centerline, origo = move_branch(centerlines, diverging_centerline_branch,
                                                                          new_branch_pos, old_normal, new_normal,
                                                                          voronoi_branch)
@@ -201,7 +198,7 @@ def move_and_rotate_branch(angle, capped_surface, centerlines, centerlines_compl
         print("-- Rotate branch")
         origo = np.asarray(diverging_centerline_branch.GetPoint(0))
         manipulated_voronoi, manipulated_centerline = rotate_branch(angle, diverging_centerline_branch,
-                                                                    voronoi_branch, origo, new_normal)
+                                                                    voronoi_branch, origo, old_normal)
 
     # Create new voronoi diagram and new centerlines
     new_voronoi = vtk_merge_polydata([voronoi_remaining, manipulated_voronoi])
@@ -250,9 +247,8 @@ def move_branch(centerlines, diverging_centerline_branch, new_branch_pos,
     dx, origo = get_translation_parameters(centerlines, diverging_centerline_branch, new_branch_pos)
 
     # Move branch centerline and voronoi diagram
-    moved_voronoi = manipulate_voronoi_branch(voronoi_branch, dx, R, origo, None, None, None, 'translate')
-    moved_centerline = manipulate_centerline_branch(diverging_centerline_branch, origo, R, dx, None, None,
-                                                    'translate')
+    moved_voronoi = manipulate_voronoi_branch(voronoi_branch, dx, R, origo, None, None, 0.0, 'translate')
+    moved_centerline = manipulate_centerline_branch(diverging_centerline_branch, origo, R, dx, None, 0.0, 'translate')
 
     return moved_voronoi, moved_centerline, origo
 
@@ -277,10 +273,10 @@ def rotate_branch(angle, diverging_centerline_branch, voronoi_branch, origo, nor
     R = get_rotation_matrix(-normal, angle)
 
     # Move branch centerline and voronoi diagram
-    rotated_voronoi = manipulate_voronoi_branch(voronoi_branch, None, R, origo, diverging_centerline_branch,
-                                                normal, angle, 'rotate')
-    rotated_centerline = manipulate_centerline_branch(diverging_centerline_branch, origo, R, None, normal,
-                                                      angle, 'rotate')
+    rotated_voronoi = manipulate_voronoi_branch(voronoi_branch, 0.0, R, origo, diverging_centerline_branch, normal,
+                                                angle, 'rotate')
+    rotated_centerline = manipulate_centerline_branch(diverging_centerline_branch, origo, R, 0.0, normal, angle,
+                                                      'rotate')
 
     return rotated_voronoi, rotated_centerline
 
@@ -288,7 +284,7 @@ def rotate_branch(angle, diverging_centerline_branch, voronoi_branch, origo, nor
 def check_branch_number(branch_to_manipulate_number, centerlines_complete):
     """
     Check if branch number provided by user is larger than number of centerlines.
-    Rises RuntimeError if number exceeds limit.
+    Raises RuntimeError if number exceeds limit.
 
     Args:
         branch_to_manipulate_number (int): Input number, supplied by user
@@ -701,21 +697,21 @@ def manipulate_centerline_branch(centerline_branch, origo, R, dx, normal, angle,
     return centerline
 
 
-def get_rotation_axis_and_angle(n_new, n_old):
+def get_rotation_axis_and_angle(new_normal, old_normal):
     """
     Compute axis vector and angle between normal vectors (input)
 
     Args:
-        n_old (ndarray): Normal vector at initial position
-        n_new (ndarray): Normal vector at new position
+        old_normal (ndarray): Normal vector at initial position
+        new_normal (ndarray): Normal vector at new position
 
     Returns:
         u (ndarray): Normal vector corresponding to rotation axis
     Returns:
         angle (float): Angle between normal vectors
     """
-    z = np.asarray(n_old)
-    z_prime = np.asarray(n_new)
+    z = np.asarray(old_normal)
+    z_prime = np.asarray(new_normal)
 
     u = np.cross(z, z_prime)
     u /= la.norm(u)
@@ -731,7 +727,7 @@ def get_rotation_matrix(u, angle):
 
     Args:
         u (ndarray): Normal vector corresponding to rotation axis
-        angle (float): Angle between normal vectors
+        angle (float): Angle to rotate
 
     Returns:
         R (ndarray): Rotation matrix
