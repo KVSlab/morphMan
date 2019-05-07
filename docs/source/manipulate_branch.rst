@@ -42,8 +42,7 @@ Shown in Figure 2 is the result of moving the opthalmic artery of the vascular m
 
 To reproduce the surface model where the opthalmic artey has been moved, as shown in Figure 2, run::
 
-    morphman-branch --ifile C0002/surface/model.vtp --ofile C0002/surface/moved_branch.vtp --branch-number 1 --branch-location 21.7 18.1 25.9 --translation-method commandline
-  --poly-ball-size 250 250 250
+    morphman-branch --ifile C0002/surface/model.vtp --ofile C0002/surface/moved_branch.vtp --branch-number 1 --branch-location 21.7 18.1 25.9 --translation-method commandline --poly-ball-size 250 250 250
 
 As explained earlier, setting the `branch-number` equal to 1 corresponds to the first branch out of the main tube,
 in this case the opthalmic artery of the ICA model.
@@ -72,7 +71,7 @@ opthalmic artery has been rotated 120 degrees from its initial angle.
 
 To reproduce the surface model where the opthalmic artey has been rotated, as shown in Figure 4, run::
 
-    morphman-branch --ifile C0002/surface/model.vtp --ofile C0002/surface/moved_and_rotated_branch.vtp --translation-method no_translation --angle 120 --branch-number 1  --poly-ball-size 250 250 250
+    morphman-branch --ifile C0002/surface/model.vtp --ofile C0002/surface/rotated_branch.vtp --translation-method no_translation --angle 120 --branch-number 1  --poly-ball-size 250 250 250
 
 
 Finally, in Figure 5 is the result of removing an arbitrary branch.
