@@ -302,8 +302,8 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
     # Offset Voronoi diagram along "diverging" centerlines
     if diverging_centerline is not None:
         count = i + 1
-        loc_surf = get_locator(surface_area)
-        loc_cl = get_locator(centerlines)
+        loc_surf = get_vtk_point_locator(surface_area)
+        loc_cl = get_vtk_point_locator(centerlines)
 
         # 'Copy' old centerlines
         new_centerlines = vtk.vtkPolyData()
@@ -317,7 +317,7 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
             min_dist = 1e10
             for i in range(diverging_centerline[j].GetNumberOfPoints()):
                 point = diverging_centerline[j].GetPoint(i)
-                dist = distance(surface_area.GetPoint(loc_surf.FindClosestPoint(point)), point)
+                dist = get_distance(surface_area.GetPoint(loc_surf.FindClosestPoint(point)), point)
                 if dist < min_dist:
                     min_point = point
                     min_dist = dist
