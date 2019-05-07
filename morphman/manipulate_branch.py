@@ -53,13 +53,13 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
     surface, capped_surface = prepare_surface(base_path, input_filepath)
     inlet, outlets = compute_centers(surface, base_path)
 
-    print("-- Compute centerlines and Voronoi diagram")
+    print("-- Computing centerlines and Voronoi diagram")
     centerlines_complete, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path,
                                                                   capped_surface, resampling=resampling_step,
                                                                   smooth=False, base_path=base_path)
 
     if smooth:
-        print("-- Smooth Voronoi diagram")
+        print("-- Smoothing Voronoi diagram")
         voronoi = prepare_voronoi_diagram(capped_surface, centerlines_complete, base_path,
                                           smooth, smooth_factor, no_smooth,
                                           no_smooth_point, voronoi, pole_ids)
@@ -90,7 +90,7 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
     diverging_centerline_branch = get_diverging_centerline_branch(centerlines_branched, branch_to_manipulate_end_point)
 
     # Clip Voronoi diagram into bend and remaining part of geometry
-    print("-- Clip Voronoi diagrams")
+    print("-- Clipping Voronoi diagrams")
     voronoi_branch, voronoi_remaining = get_split_voronoi_diagram(voronoi, [diverging_centerline_branch,
                                                                             centerlines])
 
@@ -98,7 +98,7 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
     voronoi_remaining = vtk_merge_polydata([voronoi_remaining, voronoi_remaining_2])
 
     if remove_branch:
-        print("-- Remove branch")
+        print("-- Removing branch")
         detach_branch(voronoi_remaining, centerlines, poly_ball_size,
                       unprepared_output_filepath, surface, output_filepath, centerlines_complete, base_path)
     else:
@@ -138,7 +138,7 @@ def detach_branch(voronoi_remaining, centerlines, poly_ball_size, unprepared_out
     new_surface = create_new_surface(voronoi_remaining, poly_ball_size=poly_ball_size)
     write_polydata(new_surface, unprepared_output_filepath)
 
-    print("-- Smoothing, clean, and check surface")
+    print("-- Smoothing, cleaning, and checking surface")
     new_surface = prepare_output_surface(new_surface, surface,
                                          centerlines, output_filepath,
                                          test_merge=False, changed=False,
@@ -189,17 +189,17 @@ def move_and_rotate_branch(angle, capped_surface, centerlines, centerlines_compl
     old_normal = get_estimated_surface_normal(diverging_centerline_branch)
 
     if method in ['commandline', 'manual']:
-        print("-- Translate branch")
+        print("-- Translating branch")
         new_normal = get_exact_surface_normal(capped_surface, new_branch_pos_id)
         manipulated_voronoi, manipulated_centerline, origo = move_branch(centerlines, diverging_centerline_branch,
                                                                          new_branch_pos, old_normal, new_normal,
                                                                          voronoi_branch)
         if angle != 0:
-            print("-- Rotate branch")
+            print("-- Rotating branch")
             manipulated_voronoi, manipulated_centerline = rotate_branch(angle, manipulated_centerline,
                                                                         manipulated_voronoi, origo, new_normal)
     elif method == 'no_translation':
-        print("-- Rotate branch")
+        print("-- Rotating branch")
         origo = np.asarray(diverging_centerline_branch.GetPoint(0))
         manipulated_voronoi, manipulated_centerline = rotate_branch(angle, diverging_centerline_branch,
                                                                     voronoi_branch, origo, old_normal)
@@ -214,7 +214,7 @@ def move_and_rotate_branch(angle, capped_surface, centerlines, centerlines_compl
     new_surface = create_new_surface(new_voronoi, poly_ball_size=poly_ball_size)
     write_polydata(new_surface, unprepared_output_filepath)
 
-    print("-- Smoothing, clean, and check surface")
+    print("-- Smoothing, cleaning, and checking surface")
     new_surface = prepare_output_surface(new_surface, surface,
                                          new_centerlines, output_filepath,
                                          test_merge=False, changed=True,
