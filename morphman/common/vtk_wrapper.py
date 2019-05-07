@@ -38,7 +38,7 @@ def get_number_of_arrays(vtk_polydata):
 
 def extract_single_line(centerlines, line_id, start_id=0, end_id=None):
     """Extract one line from multiple centerlines.
-    If startID and endID is set then only a segment of the centerline is extracted.
+    If start_id and end_id is set then only a segment of the centerline is extracted.
 
     Args:
         centerlines (vtkPolyData): Centerline to extract.
