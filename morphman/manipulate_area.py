@@ -7,13 +7,9 @@
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
-from IPython import embed
-
+# Local import
 from morphman.common.argparse_common import *
 from morphman.common.surface_operations import *
-
-
-# Local import
 
 
 def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
@@ -157,8 +153,7 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
         linear = area.shape[0]
 
     # Transition
-    trans = np.asarray(np.linspace(1, 0, k).tolist() + np.zeros(linear).tolist() +
-                       np.linspace(0, 1, k).tolist())
+    trans = np.asarray(np.linspace(1, 0, k).tolist() + np.zeros(linear).tolist() + np.linspace(0, 1, k).tolist())
 
     # Only smooth end with first_line
     if region_of_interest == "first_line":
@@ -244,7 +239,7 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
     if asym:
         # Get Frenet Normal and compare with point from CL and Voronoi point
         # Comute angle -> make profile as a function: f(theta, cl_id)
-        frenetNormals = get_point_data_array("FrenetNormal", line_to_change, k=3)
+        frenet_normals_array = get_point_data_array("FrenetNormal", line_to_change, k=3)
 
     # Iterate through Voronoi diagram and manipulate
     point_radius_array = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1
@@ -253,10 +248,12 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
         id_list = vtk.vtkIdList()
         point = voronoi.GetPoint(i)
 
-        profiles = ['linear', 'exponential', 'log']
-        profile = profiles[0]
 
         if asym:
+            # Set profiles
+            profiles = ['linear', 'exponential', 'log']
+            profile = profiles[0]
+
             # Find actual closest point on centerline
             cl_id = locator.FindClosestPoint(point)
             cl_point = line_to_change.GetPoint(cl_id)
@@ -264,7 +261,7 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
             # Find angle between
             origin = np.asarray(cl_point)
             voro_point = np.asarray(point)
-            frenet_normal = frenetNormals[cl_id]
+            frenet_normal = frenet_normals_array[cl_id]
             voronoi_vector = voro_point - origin
             frenet_normal = frenet_normal - origin
             angle = np.arccos(
