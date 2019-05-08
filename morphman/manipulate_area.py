@@ -253,6 +253,9 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
         id_list = vtk.vtkIdList()
         point = voronoi.GetPoint(i)
 
+        profiles = ['linear', 'exponential', 'log']
+        profile = profiles[0]
+
         if asym:
             # Find actual closest point on centerline
             cl_id = locator.FindClosestPoint(point)
@@ -267,8 +270,15 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
             angle = np.arccos(
                 np.dot(frenet_normal, voronoi_vector) / (la.norm(frenet_normal) * la.norm(voronoi_vector)))
 
-            # Linear model: 0 in 0 and 360
-            asymmetric_factor = angle / np.pi
+            # Linear model: 0 in 0
+            if profile == 'linear':
+                asymmetric_factor = abs(angle) / np.pi
+            elif profile == 'exponential':  # Square root
+                asymmetric_factor = np.sqrt(abs(angle) / np.pi)
+            elif profile == 'log':  # Deviant
+                deviation = 2 * np.pi
+                asymmetric_factor = np.exp(-(abs(angle) / np.pi) ** 2) / np.sqrt(deviation)
+
             factorz.append(asymmetric_factor)
 
         # Find two closest points on centerline
@@ -314,14 +324,12 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
             # Change radius
             # asym = 0 => factor = 1
             # Asym = 1 => factor = factor
-            profiles = ['linear','exponential', 'log']
-            profile = profiles[0]
             if profile == 'linear':
                 point_radius = point_radius_array(i) * ((factor_ - 1) * asymmetric_factor + 1)
             elif profile == 'exponential':
-                point_radius = point_radius_array(i) * factor_  ** asymmetric_factor
+                point_radius = point_radius_array(i) * factor_ ** asymmetric_factor
             elif profile == 'log':
-                point_radius = point_radius_array(i) * (factor_ -1) * np.log(1+asymmetric_factor) / np.log(2) + 1
+                point_radius = point_radius_array(i) * (factor_ - 1) * np.log(1 + asymmetric_factor) / np.log(2) + 1
 
         else:
             v = v_change * (1 - factor_)
