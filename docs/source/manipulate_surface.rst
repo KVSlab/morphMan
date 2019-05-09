@@ -45,7 +45,7 @@ Shown in Figure 2 is the result of adding noise to the surface.
 
 You can reproduce the results in Figure 3 by running the following command::
 
-    morphman-surface --ifile C0005/surface/model.vtp --ofile C0005/surface/smooth.vtp --poly-ball-size 250 250 250
+    morphman-surface --ifile C0005/surface/model.vtp --ofile C0005/surface/noise.vtp --poly-ball-size 250 250 250 --smooth False --noise True --frequency 0 --frequency-deviation 1 -l 0.8 -u 0.9 --radius-min 1.1 --radius-max 1.5
 
 For additional information, beyond this tutorial, on the script and
 input parameters, please run ``morphman-surface -h`` or confer with
