@@ -281,16 +281,16 @@ def vmtk_surface_curvature(surface, curvature_type="mean", absolute=False,
         surface (vtkPolydata): Input surface with an point data array with curvature values
     """
     curvature = vmtkscripts.vmtkSurfaceCurvature()
-    curvature.surface
+    curvature.Surface = surface
     curvature.CurvatureType = curvature_type
     if absolute:
         curvature.AbsoluteCurvature = 1
     else:
         curvature.AbsoluteCurvature = 0
-    if median:
+    if median_filtering:
         curvature.MedianFiltering = 1
     else:
-        curvature.medianFiltering = 0
+        curvature.MedianFiltering = 0
     if curvature_on_boundaries:
         curvature.CurvatureOnBoundaries = 1
     else:
