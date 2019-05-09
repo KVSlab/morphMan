@@ -111,7 +111,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
                         region_of_interest)
     new_voronoi, new_centerlines = change_area(voronoi_regions[0], factor, centerline_area,
                                                centerline_diverging, voronoi_regions[2:],
-                                               surface_area, centerlines, method, region_of_interest)
+                                               surface_area, centerlines)
     new_voronoi = vtk_merge_polydata([new_voronoi, voronoi_regions[1]])
     write_polydata(new_voronoi, voronoi_new_path)
 
@@ -201,16 +201,13 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
     return factor
 
 
-def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging_voronoi, surface_area, centerlines,
-                method, region_of_interest):
+def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging_voronoi, surface_area, centerlines):
     """
     Change the cross-sectional area of an input
     voronoi diagram along the corresponding area
     represented by a centerline.
 
     Args:
-        interest:
-        method (str): Method of manipulation to area
         voronoi (vtkPolyData): Voronoi diagram.
         factor (ndarray): An array with a factor for changing each point along the centerline
         line_to_change (vtkPolyData): Centerline representing area of interest.
@@ -243,24 +240,14 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
         # Get Frenet Normal and compare with point from CL and Voronoi point
         # Comute angle -> make profile as a function: f(theta, cl_id)
         frenet_normals_array = get_point_data_array("FrenetNormal", line_to_change, k=3)
-        frenet_tangent_array = get_point_data_array("FrenetTangent", line_to_change, k=3)
-        write_polydata(line_to_change, "frenetor.vtp")
 
     # Iterate through Voronoi diagram and manipulate
     point_radius_array = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1
-    factorz = []
-    anglez = []
-    pers = []
     for i in range(n):
         id_list = vtk.vtkIdList()
         point = voronoi.GetPoint(i)
 
         if asym:
-            # Set profiles
-            profiles = ['linear', 'exponential', 'log']
-            profile = profiles[0]
-            profile = "None"
-
             # Find actual closest point on centerline
             cl_id = locator.FindClosestPoint(point)
             cl_point = line_to_change.GetPoint(cl_id)
@@ -272,103 +259,54 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
             voronoi_vector = voro_point - origin
             frenet_normal = frenet_normal - origin
 
-            # Project voronoi vector into frenet tangent plane and compute angle
-            frenet_tangent = frenet_tangent_array[cl_id] - origin
-            a_ = np.cross(frenet_tangent, (np.cross(voronoi_vector, frenet_tangent)))
-            proj_voronoi = np.dot(a_, voronoi_vector) / (np.dot(a_, a_)) * a_
-            voronoi_vector = proj_voronoi
-
             angle = np.arccos(
                 np.dot(frenet_normal, voronoi_vector) / (la.norm(frenet_normal) * la.norm(voronoi_vector)))
-
-            # Linear model: 0 in 0
-            if profile == 'linear':
-                asymmetric_factor = abs(angle) / np.pi
-                if angle < np.pi:
-                    asymmetric_factor = 1
-                else:
-                    asymmetric_factor = 0
-            elif profile == 'exponential':  # Square root
-                asymmetric_factor = np.sqrt(abs(angle) / np.pi)
-            elif profile == 'log':  # Deviant
-                deviation = 2 * np.pi
-                asymmetric_factor = np.exp(-(abs(angle) / np.pi) ** 2) / np.sqrt(deviation)
-
             asymmetric_factor = abs(angle) / np.pi
-            if angle < np.pi*0.5:
-                asymmetric_factor =0
-            else:
-                asymmetric_factor =1
-            percentage = 70 * asymmetric_factor
 
-            # factor = get_factor(line_to_change, method, 0.0, 0.0, percentage,
-            #                   region_of_interest)
-            # t = np.linspace(0, np.pi, line_to_change.GetNumberOfPoints())
-            # factor = (1 - np.sin(t) * percentage * 0.01).tolist()
-            # factor = factor * (1 - trans) + trans
-            factorz.append(asymmetric_factor)
-            anglez.append(angle)
-            pers.append(percentage)
         # Find two closest points on centerline
         locator.FindClosestNPoints(2, point, id_list)
         tmp_id1, tmp_id2 = id_list.GetId(0), id_list.GetId(1)
 
         # Define points and vectors
         A = np.asarray(line_to_change.GetPoint(tmp_id1))
-        B = np.asarray(point)
-        C = np.asarray(line_to_change.GetPoint(tmp_id2))
-        BA = A - B
-        BC = C - B
-        AC = C - A
+        P = np.asarray(point)
+        B = np.asarray(line_to_change.GetPoint(tmp_id2))
+        AB = B - A
+        AP = P - A
 
         # If point is "beyond" start or end of centerline
+        sign = 1
         if tmp_id1 in [0, N]:
-            tetha = np.arccos(np.dot(AC, -BA) / (np.linalg.norm(AC) * np.linalg.norm(BA)))
+            tetha = np.arccos(np.dot(AP, AB) / (np.linalg.norm(AP) * np.linalg.norm(AB)))
             if tetha > np.pi / 2:
                 sign = -1
-            else:
-                sign = 1
-        else:
-            sign = 1
 
-        # Get direction (v_change) to move the point
-        AC_length = np.linalg.norm(AC)
-        if AC_length != 0:
-            h = np.linalg.norm(np.cross(BA, BC)) / AC_length  # shortest distance between point and line
-            D = A + sign * (AC / AC_length) * np.sqrt(np.linalg.norm(BA) ** 2 - h ** 2)
+        # Get direction (delta_p) to move the point
+        AB_length = la.norm(AB)
+        if AB_length > get_centerline_tolerance(line_to_change) * 10:
+            P_mid = A + sign * np.dot(AP, AB) / np.dot(AB, AB) * AB
         else:
-            D = A
+            P_mid = A
 
-        v_change = D - B
-        if method in ['stenosis', 'bulge'] or sign < 0:
+        delta_p = P_mid - P
+
+        if sign < 0:
             factor_ = factor[tmp_id1]
         else:
-            factor_ = update_factor(A, AC_length, D, factor, tmp_id1, tmp_id2, v_change)
+            AP_mid_length = la.norm(P_mid - A)
+            BP_mid_length = la.norm(P_mid - B)
+            factor_ = (factor[tmp_id1] * AP_mid_length + factor[tmp_id2] * BP_mid_length) / AB_length
+
+        # Change radius
+        point_radius = point_radius_array(i) * factor_
 
         if asym:
-            # v = v_change * (1 - factor_)  # * (1 - asymmetric_factor)
-            v = v_change * (1 - factor_) * (1-asymmetric_factor**4)
-            voronoi_points.InsertNextPoint((B + v).tolist())
-
-            # Change radius
-            # asym = 0 => factor = 1
-            # Asym = 1 => factor = factor
-
-            if profile == 'linear':
-                point_radius = point_radius_array(i) * factor_ * ((factor_ - 1) * asymmetric_factor + 1)
-            elif profile == 'exponential':
-                point_radius = point_radius_array(i) * factor_ ** asymmetric_factor
-            elif profile == 'log':
-                point_radius = point_radius_array(i) * (factor_ - 1) * np.log(1 + asymmetric_factor) / np.log(2) + 1
-            else:
-                point_radius = point_radius_array(i) * factor_
-
+            # Revert displacement to add asymmetric effect
+            v = -delta_p / la.norm(delta_p) * point_radius_array(i) * (1 - factor_) * asymmetric_factor
         else:
-            v = v_change * (1 - factor_)
-            voronoi_points.InsertNextPoint((B + v).tolist())
+            v = delta_p * (1 - factor_)
 
-            # Change radius
-            point_radius = point_radius_array(i) * factor_
+        voronoi_points.InsertNextPoint((P + v).tolist())
         radius_array.SetTuple1(i, point_radius)
         cell_array.InsertNextCell(1)
         cell_array.InsertCellPoint(i)
@@ -414,10 +352,10 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
             else:
                 D = A
 
-            v_change = D - B
+            delta_p = D - B
             factor_ = factor[tmp_id1] * (1 - np.linalg.norm(D) / AC_length) \
                       + factor[tmp_id2] * (np.linalg.norm(D) / AC_length)
-            v = v_change * (1 - factor_)
+            v = delta_p * (1 - factor_)
 
             # Offset centerline
             # This method might not work if diverging centerline has a daughter branch
@@ -454,8 +392,7 @@ def update_factor(A, AC_length, D, factor, tmp_id1, tmp_id2, v_change):
     factor_ = factor[tmp_id1] * (1 - np.linalg.norm(A - D) / AC_length) \
               + factor[tmp_id2] * (np.linalg.norm(A - D) / AC_length)
     if factor_ > 10:
-        print(factor_, factor[tmp_id1], factor[tmp_id2], AC_length,
-              np.linalg.norm(v_change))
+        print(factor_, factor[tmp_id1], factor[tmp_id2], AC_length, np.linalg.norm(v_change))
 
     return factor_
 
