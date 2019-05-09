@@ -5,6 +5,8 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 ##      PURPOSE.  See the above copyright notices for more information.
 
+import functools
+
 from scipy.interpolate import splrep, splev
 from scipy.signal import resample
 
@@ -791,3 +793,80 @@ def compute_splined_centerline(line, get_curv=False, isline=False, nknots=50, ge
         return line, curvature
     else:
         return line
+
+
+def get_sorted_lines(centerlines_complete):
+    """
+    Compares and sorts centerlines from shortest to longest in actual length
+
+    Args:
+        centerlines_complete (vtkPolyData): Centerlines to be sorted
+
+    Returns:
+        sorted_lines (vtkPolyData): Sorted centerlines
+    """
+
+    def compare_lines(line0, line1):
+        len0 = len(get_curvilinear_coordinate(line0))
+        len1 = len(get_curvilinear_coordinate(line1))
+        if len0 > len1:
+            return 1
+        return -1
+
+    lines = [extract_single_line(centerlines_complete, i) for i in range(centerlines_complete.GetNumberOfLines())]
+    sorted_lines = sorted(lines, key=functools.cmp_to_key(compare_lines))
+
+    return sorted_lines
+
+
+def get_end_point(centerline, offset=0):
+    """
+    Get last point of a centerline
+
+    Args:
+        centerline (vtkPolyData): Centerline(s)
+        offset (int): Number of points from the end point to be selected
+
+    Returns:
+        centerline_end_point (vtkPoint): Point corresponding to end of centerline.
+    """
+    centerline_end_point = centerline.GetPoint(centerline.GetNumberOfPoints() - 1 - offset)
+
+    return centerline_end_point
+
+
+def get_diverging_centerline_branch(centerlines_branched, diverging_centerline_end):
+    """
+    Extract diverging centerline branch, comparing it to diverging centerline end point
+
+    Args:
+        centerlines_branched (vktPolyData): Branched centerlines, from vmtkBrancher
+        diverging_centerline_end (vktPoint): End point of diverging centerline
+    Returns:
+        centerline_branch (vtkPolyDat): Branch extracted centerline branch
+    """
+    for i in range(centerlines_branched.GetNumberOfLines()):
+        centerline_branch = extract_single_line(centerlines_branched, i)
+        if get_end_point(centerline_branch) == diverging_centerline_end:
+            return centerline_branch
+
+
+def filter_centerlines(centerlines, diverging_centerline_end):
+    """
+    Filters out diverging centerline from all centerline
+
+    Args:
+        centerlines (vtkPolyData): Complete set of centerlines
+        diverging_centerline_end (vtkPoint): End point of diverging centerline
+    Returns:
+        filtered_centerlines (vtkPolyData): Complete set of centerlines, except diverging centerline
+    """
+    remaining_centerlines = []
+    for i in range(centerlines.GetNumberOfLines()):
+        diverging_centerline = extract_single_line(centerlines, i)
+        if get_end_point(diverging_centerline) != diverging_centerline_end:
+            remaining_centerlines.append(diverging_centerline)
+
+    filtered_centerlines = vtk_merge_polydata(remaining_centerlines)
+
+    return filtered_centerlines

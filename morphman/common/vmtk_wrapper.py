@@ -5,56 +5,101 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 ##      PURPOSE.  See the above copyright notices for more information.
 
-from vmtk import vtkvmtk, vmtkscripts
-
 from os import path
+
+from vmtk import vtkvmtk, vmtkscripts
 
 # Global array names
 from morphman.common.vtk_wrapper import read_polydata, write_polydata
 
 radiusArrayName = 'MaximumInscribedSphereRadius'
+surfaceNormalsArrayName = 'SurfaceNormalArray'
 parallelTransportNormalsArrayName = 'ParallelTransportNormals'
 groupIDsArrayName = "GroupIds"
 abscissasArrayName = 'Abscissas'
 branchClippingArrayName = 'BranchClippingArray'
 
 
-def vmtk_smooth_centerline(centerlines_output, num_iter, smooth_factor):
+def vmtk_smooth_centerline(centerlines, num_iter, smooth_factor):
+    """
+    Wrapper for vmtkCenterlineSmoothing. Smooth centerlines with a moving average filter.
+
+    Args:
+        centerlines (vtkPolyDat): Centerline to be smoothed.
+        num_iter (int): Number of smoothing iterations.
+        smooth_factor (float): Smoothing factor
+
+    Returns:
+        vtkPolyData: Smoothed version of input centerline
+    """
     centerline_smoothing = vmtkscripts.vmtkCenterlineSmoothing()
-    centerline_smoothing.SetInputData(centerlines_output)
+    centerline_smoothing.SetInputData(centerlines)
     centerline_smoothing.SetNumberOfSmoothingIterations(num_iter)
     centerline_smoothing.SetSmoothingFactor(smooth_factor)
     centerline_smoothing.Update()
-    centerlines_output = centerline_smoothing.GetOutput()
+    centerlines_smoothed = centerline_smoothing.GetOutput()
 
-    return centerlines_output
+    return centerlines_smoothed
 
 
-def vmtk_compute_centerlines(end_point, inlet, method, outlet, pole_ids, resampling, surface, voronoi):
+def vmtk_compute_centerlines(end_point, inlet, method, outlet, pole_ids, resampling_step, surface, voronoi,
+                             flip_normals=False, cap_displacement=None, delaunay_tolerance=None,
+                             simplify_voronoi=False):
+    """
+    Wrapper for vmtkCenterlines.
+    compute centerlines from a branching tubular surface. Seed points can be interactively selected on the surface,
+    or specified as the barycenters of the open boundaries of the surface.
+
+    Args:
+        end_point (int): Toggle append open profile barycenters to centerlines
+        surface (vktPolyData): Surface model
+        voronoi (vtkPolyData): Voronoi diagram based on previous centerlines (Optional)
+        inlet (ndarray): List of source point coordinates
+        method (str): Seed point selection method
+        outlet (ndarray): List of target point coordinates
+        pole_ids (ndarray): Pole ID list of Voronoi diagram (Optional)
+        resampling_step (float): Resampling step
+        flip_normals (float): Flip normals after outward normal computation
+        cap_displacement (float): Displacement of the center points of caps at open profiles along their normals
+        delaunay_tolerance (float): Tolerance for evaluating coincident points during Delaunay tessellation
+        simplify_voronoi (bool): Toggle simplification of Voronoi diagram
+
+    Returns:
+
+    """
     centerlines = vmtkscripts.vmtkCenterlines()
     centerlines.Surface = surface
     centerlines.SeedSelectorName = method
     centerlines.AppendEndPoints = end_point
     centerlines.Resampling = 1
-    centerlines.ResamplingStepLength = resampling
+    centerlines.ResamplingStepLength = resampling_step
     centerlines.SourcePoints = inlet
     centerlines.TargetPoints = outlet
+
     if voronoi is not None and pole_ids is not None:
         centerlines.VoronoiDiagram = voronoi
         centerlines.PoleIds = pole_ids
+    if flip_normals:
+        centerlines.FlipNormals = 1
+    if cap_displacement is not None:
+        centerlines.CapDisplacement = cap_displacement
+    if delaunay_tolerance is not None:
+        centerlines.DelaunayTolerance = delaunay_tolerance
+    if simplify_voronoi:
+        centerlines.SimplifyVoronoi = 1
     centerlines.Execute()
     centerlines_output = centerlines.Centerlines
 
     return centerlines, centerlines_output
 
 
-def vmtk_compute_centerline_sections(surface, centerline):
+def vmtk_compute_centerline_sections(surface, centerlines):
     """
     Wrapper for vmtk centerline sections.
 
     Args:
         surface (vtkPolyData): Surface to meassure area.
-        centerline (vtkPolyData): centerline to measure along.
+        centerlines (vtkPolyData): centerline to measure along.
 
     Returns:
         line (vtkPolyData): centerline with the attributes
@@ -62,7 +107,7 @@ def vmtk_compute_centerline_sections(surface, centerline):
     """
     centerline_sections = vtkvmtk.vtkvmtkPolyDataCenterlineSections()
     centerline_sections.SetInputData(surface)
-    centerline_sections.SetCenterlines(centerline)
+    centerline_sections.SetCenterlines(centerlines)
     centerline_sections.SetCenterlineSectionAreaArrayName('CenterlineSectionArea')
     centerline_sections.SetCenterlineSectionMinSizeArrayName('CenterlineSectionMinSize')
     centerline_sections.SetCenterlineSectionMaxSizeArrayName('CenterlineSectionMaxSize')
@@ -76,11 +121,11 @@ def vmtk_compute_centerline_sections(surface, centerline):
     return line, centerlines_sections_area
 
 
-def vmtk_compute_geometric_features(line, smooth, outputsmoothed=False, factor=1.0, iterations=100):
+def vmtk_compute_geometric_features(centerlines, smooth, outputsmoothed=False, factor=1.0, iterations=100):
     """Wrapper for vmtk centerline geometry.
 
     Args:
-        line (vtkPolyData): Line to compute centerline geometry from.
+        centerlines (vtkPolyData): Line to compute centerline geometry from.
         smooth (bool): Turn on and off smoothing before computing the geometric features.
         outputsmoothed (bool): Turn on and off the smoothed centerline.
         factor (float): Smoothing factor.
@@ -90,7 +135,7 @@ def vmtk_compute_geometric_features(line, smooth, outputsmoothed=False, factor=1
         line (vtkPolyData): Line with geometry.
     """
     geometry = vmtkscripts.vmtkCenterlineGeometry()
-    geometry.Centerlines = line
+    geometry.Centerlines = centerlines
 
     if smooth:
         geometry.LineSmoothing = 1
@@ -106,17 +151,17 @@ def vmtk_compute_geometric_features(line, smooth, outputsmoothed=False, factor=1
     return geometry.Centerlines
 
 
-def vmtk_compute_centerline_attributes(line):
+def vmtk_compute_centerline_attributes(centerlines):
     """ Wrapper for centerline attributes.
 
     Args:
-        line (vtkPolyData): Line to investigate.
+        centerlines (vtkPolyData): Line to investigate.
 
     Returns:
         line (vtkPolyData): Line with centerline atributes.
     """
     attributes = vmtkscripts.vmtkCenterlineAttributes()
-    attributes.Centerlines = line
+    attributes.Centerlines = centerlines
     attributes.NormalsArrayName = parallelTransportNormalsArrayName
     attributes.AbscissaArrayName = abscissasArrayName
     attributes.Execute()
@@ -125,30 +170,34 @@ def vmtk_compute_centerline_attributes(line):
     return centerlines
 
 
-def vmtk_resample_centerline(line, length):
+def vmtk_resample_centerline(centerlines, length):
     """Wrapper for vmtkcenterlineresampling
 
     Args:
-        line (vtkPolyData): line to resample.
+        centerlines (vtkPolyData): line to resample.
         length (float): resampling step.
 
     Returns:
         line (vtkPolyData): Resampled line.
     """
     resampler = vmtkscripts.vmtkCenterlineResampling()
-    resampler.Centerlines = line
+    resampler.Centerlines = centerlines
     resampler.Length = length
     resampler.Execute()
 
-    line = resampler.Centerlines
+    resampled_centerline = resampler.Centerlines
 
-    return line
+    return resampled_centerline
 
 
-def vmtk_cap_polydata(surface):
-    """Wrapper for vmtkCapPolyData
+def vmtk_cap_polydata(surface, boundary_ids=None, displacement=0.0, in_plane_displacement=0.0):
+    """Wrapper for vmtkCapPolyData.
+    Close holes in a surface model.
 
     Args:
+        in_plane_displacement (float): Displacement of boundary baricenters, at section plane relative to the radius
+        displacement (float):  Displacement of boundary baricenters along boundary normals relative to the radius.
+        boundary_ids (ndarray): Set ids of the boundaries to cap.
         surface (vtkPolyData): Surface to be capped.
 
     Returns:
@@ -156,17 +205,23 @@ def vmtk_cap_polydata(surface):
     """
     surface_capper = vtkvmtk.vtkvmtkCapPolyData()
     surface_capper.SetInputData(surface)
-    surface_capper.SetDisplacement(0.0)
-    surface_capper.SetInPlaneDisplacement(0.0)
+    surface_capper.SetDisplacement(displacement)
+    surface_capper.SetInPlaneDisplacement(in_plane_displacement)
+    if boundary_ids is not None:
+        surface_capper.SetBoundaryIds(boundary_ids)
     surface_capper.Update()
 
     return surface_capper.GetOutput()
 
 
-def vmtk_smooth_surface(surface, method, iterations=800, passband=1.0, relaxation=0.01):
+def vmtk_smooth_surface(surface, method, iterations=800, passband=1.0, relaxation=0.01, normalize_coordinates=True,
+                        smooth_boundary=True):
     """Wrapper for a vmtksurfacesmoothing.
 
     Args:
+        smooth_boundary (bool): Toggle allow change of position of boundary points
+        normalize_coordinates (bool): Normalization of coordinates prior to filtering,
+            minimize spurious translation effects (Taubin only)
         surface (vtkPolyData): Input surface to be smoothed.
         method (str): Smoothing method.
         iterations (int): Number of iterations.
@@ -186,6 +241,11 @@ def vmtk_smooth_surface(surface, method, iterations=800, passband=1.0, relaxatio
     elif method == "taubin":
         smoother.PassBand = passband
 
+    if not normalize_coordinates:
+        smoother.NormalizeCoordinates = 0
+    if not smooth_boundary:
+        smoother.BoundarySmoothing = 0
+
     smoother.Method = method
     smoother.Execute()
     surface = smoother.Surface
@@ -193,17 +253,24 @@ def vmtk_smooth_surface(surface, method, iterations=800, passband=1.0, relaxatio
     return surface
 
 
-def vmtk_compute_voronoi_diagram(surface, filename):
+def vmtk_compute_voronoi_diagram(surface, filename, simplify_voronoi=False, cap_displacement=None, flip_normals=False,
+                                 check_non_manifold=False, delaunay_tolerance=0.001, subresolution_factor=1.0):
     """
-    Creates a surface model's
-    coresponding voronoi diagram
+    Wrapper for vmtkDelanayVoronoi. Creates a surface model's
+    coresponding voronoi diagram.
 
     Args:
+        subresolution_factor (float): Factor for removal of subresolution tetrahedra
+        flip_normals (bool): Flip normals after outward normal computation.
+        cap_displacement (float): Displacement of the center points of caps at open profiles along their normals
+        simplify_voronoi (bool): Use alternative algorith for compute Voronoi diagram, reducing quality, improving speed
+        check_non_manifold (bool): Check the surface for non-manifold edges
+        delaunay_tolerance (float): Tolerance for evaluating coincident points during Delaunay tessellation
         surface (vtkPolyData): Surface model
         filename (str): Path where voronoi diagram is stored
 
     Returns:
-        newVoronoi (vtkPolyData): Voronoi diagram
+        new_voronoi (vtkPolyData): Voronoi diagram
     """
     if path.isfile(filename):
         return read_polydata(filename)
@@ -211,55 +278,187 @@ def vmtk_compute_voronoi_diagram(surface, filename):
     voronoi = vmtkscripts.vmtkDelaunayVoronoi()
     voronoi.Surface = surface
     voronoi.RemoveSubresolutionTetrahedra = 1
-    voronoi.Execute()
-    write_polydata(voronoi.VoronoiDiagram, filename)
+    voronoi.DelaunayTolerance = delaunay_tolerance
+    voronoi.SubresolutionFactor = subresolution_factor
+    if simplify_voronoi:
+        voronoi.SimplifyVoronoi = 1
+    if cap_displacement is not None:
+        voronoi.CapDisplacement = cap_displacement
+    if flip_normals:
+        voronoi.FlipNormals = 1
+    if check_non_manifold:
+        voronoi.CheckNonManifold = 1
 
+    voronoi.Execute()
     new_voronoi = voronoi.VoronoiDiagram
+
+    write_polydata(new_voronoi, filename)
 
     return new_voronoi
 
 
-def vmtk_polyball_modeller(complete_voronoi_diagram, poly_ball_size):
+def vmtk_polyball_modeller(voronoi_diagram, poly_ball_size):
+    """
+    Wrapper for vtkvmtkPolyBallModeller.
+    Create an image where a polyball or polyball line are evaluated as a function.
+
+    Args:
+        voronoi_diagram (vtkPolyData): Input Voronoi diagram representing surface model
+        poly_ball_size (list): Resolution of output
+
+    Returns:
+        vtkvmtkPolyBallModeller: Image where polyballs have been evaluated over a Voronoi diagram
+    """
     modeller = vtkvmtk.vtkvmtkPolyBallModeller()
-    modeller.SetInputData(complete_voronoi_diagram)
+    modeller.SetInputData(voronoi_diagram)
     modeller.SetRadiusArrayName(radiusArrayName)
     modeller.UsePolyBallLineOff()
     modeller.SetSampleDimensions(poly_ball_size)
     modeller.Update()
+
     return modeller
 
 
-def vmtk_surface_connectivity(surface):
+def vmtk_surface_connectivity(surface, method="largest", clean_output=True, closest_point=None):
+    """
+    Wrapper for vmtkSurfaceConnectivity. Extract the largest connected region,
+    the closest point-connected region or the scalar-connected region from a surface
+
+    Args:
+        surface (vtkPolyData): Surface model
+        method (str): Connectivity method, either 'largest' or 'closest'
+        clean_output (bool): Clean the unused points in the output
+        closest_point (ndarray): Coordinates of the closest point
+
+    Returns:
+        vmtkSurfaceConnectivity: Filter for extracting largest connected region
+    """
     connector = vmtkscripts.vmtkSurfaceConnectivity()
     connector.Surface = surface
-    connector.CleanOutput = 1
+    connector.Method = method
+    if clean_output:
+        connector.CleanOutput = 1
+    if closest_point is not None:
+        connector.ClosestPoint = closest_point
+
     connector.Execute()
 
     return connector
 
 
-def vmtk_branch_clipper(clipped_centerlines, surface):
+def vmtk_branch_clipper(centerlines, surface, clip_value=0.0, inside_out=False, use_radius_information=True,
+                        interactive=False):
+    """
+    Wrapper for vmtkBranchClipper. Divide a surface in relation to its split and grouped centerlines.
+
+    Args:
+        centerlines (vtkPolyData): Input centerlines
+        surface (vtkPolyData): Input surface model
+        clip_value (float):
+        inside_out (bool): Get the inverse of the branch clipper output.
+        use_radius_information (bool): To use MISR info for clipping branches.
+        interactive (bool): Use interactive mode, requires user input.
+
+    Returns:
+        vmtkBranchClipper: Branch clipper used to divide a surface into regions.
+    """
     clipper = vmtkscripts.vmtkBranchClipper()
     clipper.Surface = surface
-    clipper.Centerlines = clipped_centerlines
+    clipper.Centerlines = centerlines
+    clipper.ClipValue = clip_value
     clipper.RadiusArrayName = radiusArrayName
     clipper.GroupIdsArrayName = groupIDsArrayName
     clipper.BlankingArrayName = branchClippingArrayName
+    if inside_out:
+        clipper.InsideOut = 1
+    if not use_radius_information:
+        clipper.UseRadiusInformation = 0
+    if interactive:
+        clipper.Interactive = 1
+
     clipper.Execute()
 
     return clipper
 
 
-def vmtk_endpoint_extractor(centerlines, clipspheres):
+def vmtk_endpoint_extractor(centerlines, number_of_end_point_spheres, number_of_gap_spheres=1):
+    """
+    Wrapper for vmtkEndpointExtractor.
+    Find the endpoints of a split and grouped centerline
+
+    Args:
+        centerlines (vtkPolyData): Input centerlines.
+        number_of_end_point_spheres (float): Number of spheres to skip at endpoint
+        number_of_gap_spheres (float): Number of spheres to skip per gap.
+
+    Returns:
+        vmtkEndpointExtractor: Endpoint extractor based on centerline
+    """
     extractor = vmtkscripts.vmtkEndpointExtractor()
     extractor.Centerlines = centerlines
     extractor.RadiusArrayName = radiusArrayName
     extractor.GroupIdsArrayName = groupIDsArrayName
     extractor.BlankingArrayName = branchClippingArrayName
-    extractor.NumberOfEndPointSpheres = clipspheres
+    extractor.NumberOfEndPointSpheres = number_of_end_point_spheres
+    extractor.NumberOfGapSpheres = number_of_gap_spheres
     extractor.Execute()
 
     return extractor
+
+
+def vmtk_compute_surface_normals(surface, auto_orient_normals=True, orient_normals=True,
+                                 compute_cell_normals=False, flip_normals=False):
+    """
+    Wrapper for vmtkSurfaceNormals.
+    Computes the normals of the input surface.
+
+    Args:
+        surface (vtkPolyData): Input surface model
+        auto_orient_normals (bool): Try to auto orient normals outwards
+        orient_normals (bool): Try to orient normals so that neighboring points have similar orientations
+        compute_cell_normals (bool): Compute cell normals instead of point normals
+        flip_normals (bool): Flip normals after computing them
+
+    Returns:
+        vtkPolyData: Surface model with computed normals
+    """
+    surface_normals = vmtkscripts.vmtkSurfaceNormals()
+    surface_normals.Surface = surface
+    surface_normals.NormalsArrayName = surfaceNormalsArrayName
+    if not auto_orient_normals:
+        surface_normals.AutoOrientNormals = 0
+    if not orient_normals:
+        surface_normals.Consistency = 0
+    if compute_cell_normals:
+        surface_normals.ComputeCellNormals = 1
+    if flip_normals:
+        surface_normals.FlipNormals = 1
+
+    surface_normals.Execute()
+    surface_with_normals = surface_normals.Surface
+
+    return surface_with_normals
+
+
+def vmtk_compute_branch_extractor(centerlines):
+    """
+    Wrapper for vmtkBranchExtractor.
+    Split and group centerlines along branches:
+
+    Args:
+        centerlines (vtkPolyData): Line to split into branches.
+
+    Returns:
+        vtkPolyData: Split centerline.
+    """
+
+    brancher = vmtkscripts.vmtkBranchExtractor()
+    brancher.Centerlines = centerlines
+    brancher.RadiusArrayName = radiusArrayName
+    brancher.Execute()
+    centerlines_branched = brancher.Centerlines
+
+    return centerlines_branched
 
 
 def vmtk_surface_curvature(surface, curvature_type="mean", absolute=False,
