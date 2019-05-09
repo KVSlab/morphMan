@@ -20,7 +20,8 @@ Documentation for `morphMan <https://github.com/KVSlab/morphMan>`_.
    manipulate_area
    manipulate_bend
    manipulate_bifurcation
-   manipulate_curvature
    manipulate_branch
+   manipulate_curvature
+   manipulate_surface
    Miscellaneous
    scripts

@@ -12,7 +12,7 @@ from .fixtures import surface_paths
 from morphman import manipulate_bifurcation, read_command_line_bifurcation
 from morphman.common.surface_operations import get_centerline_tolerance
 from morphman.common.common import get_path_names, get_distance
-from morphman.common.vtk_wrapper import read_polydata, vtk_point_locator, extract_single_line
+from morphman.common.vtk_wrapper import read_polydata, get_vtk_point_locator, extract_single_line
 
 
 @pytest.mark.parametrize("angle", [20 / 180 * np.pi, -20 / 180 * np.pi])
@@ -45,8 +45,8 @@ def test_bifurcation_angle(surface_paths, angle):
         line_old = extract_single_line(old_centerlines, i)
         line_new = extract_single_line(new_centerlines, i)
 
-        loc_old = vtk_point_locator(line_old)
-        loc_new = vtk_point_locator(line_new)
+        loc_old = get_vtk_point_locator(line_old)
+        loc_new = get_vtk_point_locator(line_new)
 
         id1_old = loc_old.FindClosestPoint(start_point1)
         id2_old = loc_old.FindClosestPoint(start_point2)

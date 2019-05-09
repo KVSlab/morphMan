@@ -11,6 +11,7 @@ from os import makedirs, path
 from vtk.util import numpy_support
 
 from morphman.common.voronoi_operations import *
+from morphman.common.surface_operations import *
 
 
 def get_relevant_outlets(surface, base_path):
@@ -603,7 +604,7 @@ def attach_clipped_regions_to_surface(surface, clipped, center):
     regions = []
     for i in range(int(region_id.max() + 1)):
         regions.append(vtk_compute_threshold(connectivity, "RegionId", lower=i - 0.1, upper=i + 0.1, source=0))
-        locator = vtk_point_locator(regions[-1])
+        locator = get_vtk_point_locator(regions[-1])
         region_point = regions[-1].GetPoint(locator.FindClosestPoint(center))
         distances.append(get_distance(region_point, center))
 
@@ -619,7 +620,7 @@ def attach_clipped_regions_to_surface(surface, clipped, center):
 
 
 def prepare_voronoi_diagram(capped_surface, centerlines, base_path, smooth, smooth_factor, no_smooth, no_smooth_point,
-                            voronoi, pole_ids):
+                            voronoi, pole_ids,resampling_length, absolute=False, upper=None):
     """
     Compute and smooth voronoi diagram of surface model.
 
@@ -633,68 +634,17 @@ def prepare_voronoi_diagram(capped_surface, centerlines, base_path, smooth, smoo
         centerlines (vtkPolyData): Centerlines throughout geometry.
         no_smooth (bool): Part of Voronoi is not smoothed.
         no_smooth_point (vtkPolyData): Point which defines unsmoothed area.
+        resampling_length (float): Length of resampling the centerline.
+        absolute (bool): Turn on/off absolute values for the smoothing. Default is off.
+        upper (int): Set an upper limit for the smoothing factor. Default is None.
 
     Returns:
         voronoi (vtkPolyData): Voronoi diagram of surface.
     """
     # Check if a region should not be smoothed
     if smooth and no_smooth:
-        no_smooth_path = base_path + "_centerline_no_smooth.vtp"
-
-        if not path.exists(no_smooth_path):
-            # Get inlet and outlets
-            tol = get_centerline_tolerance(centerlines)
-            inlet = extract_single_line(centerlines, 0)
-            inlet = inlet.GetPoint(0)  # inlet.GetNumberOfPoints() - 1)
-            outlets = []
-            parameters = get_parameters(base_path)
-
-            if "no_smooth_point_1" in parameters.keys():
-                counter = 1
-                while "no_smooth_point_{}".format(counter) in parameters.keys():
-                    outlets += parameters["no_smooth_point_{}".format(counter)]
-                    counter += 1
-
-            elif no_smooth_point is None:
-                seed_selector = vmtkPickPointSeedSelector()
-                seed_selector.SetSurface(capped_surface)
-                seed_selector.text = "Please place a point on the segments you do not want" + \
-                                     " to smooth, e.g. an aneurysm, \'u\' to undo\n"
-                seed_selector.Execute()
-                point_ids = seed_selector.GetTargetSeedIds()
-                for i in range(point_ids.GetNumberOfIds()):
-                    parameters["no_smooth_point_{}".format(i)] = capped_surface.GetPoint(point_ids.GetId(i))
-                    outlets += capped_surface.GetPoint(point_ids.GetId(i))
-
-            else:
-                locator = vtk_point_locator(capped_surface)
-                for i in range(len(no_smooth_point) // 3):
-                    tmp_id = locator.FindClosestPoint(no_smooth_point[3 * i:3 * (i + 1)])
-                    parameters["no_smooth_point_{}".format(i)] = capped_surface.GetPoint(tmp_id)
-                    outlets += capped_surface.GetPoint(tmp_id)
-
-            # Store parameters
-            write_parameters(parameters)
-
-            # Create the centerline
-            no_smooth_centerlines, _, _ = compute_centerlines(inlet, outlets, None, capped_surface, resampling=0.1,
-                                                              smooth=False, voronoi=voronoi, pole_ids=pole_ids)
-
-            # Extract the centerline region which diverges from the existing centerlines
-            no_smooth_segments = []
-            for i in range(no_smooth_centerlines.GetNumberOfLines()):
-                tmp_line = extract_single_line(no_smooth_centerlines, i)
-                div_ids = []
-                for j in range(centerlines.GetNumberOfLines()):
-                    div_ids.append(get_diverging_point_id(tmp_line, extract_single_line(centerlines, j), tol))
-                div_id = max(div_ids)
-                no_smooth_segments.append(extract_single_line(tmp_line, 0, start_id=div_id))
-
-            no_smooth_cl = vtk_merge_polydata(no_smooth_segments)
-            write_polydata(no_smooth_cl, no_smooth_path)
-        else:
-            no_smooth_cl = read_polydata(no_smooth_path)
-
+        get_no_smooth_cl(capped_surface, centerlines, base_path, smooth, no_smooth, voronoi,
+                         no_smooth_point, pole_ids, resampling_length)
     else:
         no_smooth_cl = None
 
@@ -859,7 +809,7 @@ def extract_ica_centerline(base_path, resampling_step, relevant_outlets=None):
 
     if relevant_outlets is not None:
         outlet1, outlet2 = relevant_outlets[:3], relevant_outlets[3:]
-        surface_locator = vtk_point_locator(capped_surface)
+        surface_locator = get_vtk_point_locator(capped_surface)
         id1 = surface_locator.FindClosestPoint(outlet1)
         id2 = surface_locator.FindClosestPoint(outlet2)
         outlet1 = capped_surface.GetPoint(id1)
@@ -889,3 +839,100 @@ def extract_ica_centerline(base_path, resampling_step, relevant_outlets=None):
     write_polydata(line, ica_centerline_path)
 
     return line
+
+
+def get_no_smooth_cl(capped_surface, centerlines, base_path, smooth, no_smooth, voronoi,
+                     no_smooth_point, pole_ids, resampling_length, region_points=None):
+    """
+    Extract a section where the Voronoi should not be smoothed
+     Args:
+        capped_surface (polydata): Cappedsurface model to create a Voronoi diagram of.
+        centerlines (vtkPolyData): Centerlines throughout geometry.
+        base_path (str): Absolute path to surface model path.
+        smooth (bool): Voronoi is smoothed if True.
+        no_smooth (bool): Part of Voronoi is not smoothed.
+        voronoi (vtkPolyData): Voronoi diagram.
+        no_smooth_point (vtkPolyData): Point which defines unsmoothed area.
+        pole_ids (vtkIDList): Pole ids of Voronoi diagram.
+        resampling_length (float): Length of resampling the centerline.
+        region_points (list): Flatten list with the region points
+     Returns:
+        no_smooth_cl (vtkPolyData): Centerline section where the Voronoi should not be smoothed
+    """
+
+    no_smooth_path = base_path + "_centerline_no_smooth.vtp"
+    # Get inlet and outlets
+    tol = get_centerline_tolerance(centerlines)
+    inlet = extract_single_line(centerlines, 0)
+    inlet = inlet.GetPoint(0)
+    outlets = []
+    parameters = get_parameters(base_path)
+
+    if "no_smooth_point_1" in parameters.keys():
+        counter = 1
+        while "no_smooth_point_{}".format(counter) in parameters.keys():
+            outlets += parameters["no_smooth_point_{}".format(counter)]
+            counter += 1
+
+    elif no_smooth_point is None:
+        seed_selector = vmtkPickPointSeedSelector()
+        seed_selector.SetSurface(capped_surface)
+        seed_selector.text = "Please place a point on the segments you do not want" + \
+                             " to smooth, e.g. an aneurysm, \'u\' to undo\n"
+        seed_selector.Execute()
+        point_ids = seed_selector.GetTargetSeedIds()
+        for i in range(point_ids.GetNumberOfIds()):
+            parameters["no_smooth_point_{}".format(i)] = capped_surface.GetPoint(point_ids.GetId(i))
+            outlets += capped_surface.GetPoint(point_ids.GetId(i))
+
+    else:
+        locator = get_vtk_point_locator(capped_surface)
+        for i in range(len(no_smooth_point) // 3):
+            tmp_id = locator.FindClosestPoint(no_smooth_point[3 * i:3 * (i + 1)])
+            parameters["no_smooth_point_{}".format(i)] = capped_surface.GetPoint(tmp_id)
+            outlets += capped_surface.GetPoint(tmp_id)
+
+    # Store parameters
+    write_parameters(parameters, base_path)
+
+    # Create the centerline
+    no_smooth_centerlines, _, _ = compute_centerlines(inlet, outlets, None,
+                                                      capped_surface,
+                                                      resampling=resampling_length,
+                                                      smooth=False, voronoi=voronoi, pole_ids=pole_ids)
+
+    # Remove the no_smooth_centerline outside the region of interest
+    if region_points is not None:
+        no_smooth_centerlines_list = []
+        tol = get_centerline_tolerance(no_smooth_centerlines)
+
+        for i in range(no_smooth_centerlines.GetNumberOfLines()):
+            line = extract_single_line(no_smooth_centerlines, i)
+            locator = get_vtk_point_locator(line)
+            id1 = locator.FindClosestPoint(region_points[:3])
+            id2 = locator.FindClosestPoint(region_points[3:])
+
+            distance1 = get_distance(region_points[:3], line.GetPoint(id1))
+        distance2 = get_distance(region_points[3:], line.GetPoint(id2))
+
+        if distance1 < tol * 5 != distance2 < tol * 5:
+            no_smooth_centerlines_list.append(extract_single_line(line, i, start_id=id1))
+
+        no_smooth_centerlines = vtk_merge_polydata(no_smooth_centerlines_list)
+
+    # Extract the centerline region which diverges from the existing centerlines
+    no_smooth_segments = []
+    for i in range(no_smooth_centerlines.GetNumberOfLines()):
+        tmp_line = extract_single_line(no_smooth_centerlines, i)
+        div_ids = []
+        for j in range(centerlines.GetNumberOfLines()):
+            div_ids.append(get_diverging_point_id(tmp_line, extract_single_line(centerlines, j), tol))
+        div_id = max(div_ids)
+        no_smooth_segments.append(extract_single_line(tmp_line, 0, start_id=div_id))
+
+    no_smooth_cl = vtk_merge_polydata(no_smooth_segments)
+    write_polydata(no_smooth_cl, no_smooth_path)
+    #else:
+    #    no_smooth_cl = read_polydata(no_smooth_path)
+
+    return no_smooth_cl

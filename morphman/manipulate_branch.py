@@ -62,7 +62,7 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
         print("-- Smoothing Voronoi diagram")
         voronoi = prepare_voronoi_diagram(capped_surface, centerlines_complete, base_path,
                                           smooth, smooth_factor, no_smooth,
-                                          no_smooth_point, voronoi, pole_ids)
+                                          no_smooth_point, voronoi, pole_ids, resampling_step)
 
     # Select branch to manipulate
     if branch_to_manipulate_number > 0:
@@ -90,7 +90,7 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
     diverging_centerline_branch = get_diverging_centerline_branch(centerlines_branched, branch_to_manipulate_end_point)
 
     # Clip Voronoi diagram into bend and remaining part of geometry
-    print("-- Clipping Voronoi diagrams")
+    print("-- Clipping Voronoi diagram")
     voronoi_branch, voronoi_remaining = get_split_voronoi_diagram(voronoi, [diverging_centerline_branch,
                                                                             centerlines])
 
@@ -144,6 +144,7 @@ def detach_branch(voronoi_remaining, centerlines, poly_ball_size, unprepared_out
                                          test_merge=False, changed=False,
                                          old_centerline=centerlines_complete)
 
+    print("\n-- Writing new surface to {}.".format(output_filepath))
     write_polydata(new_surface, output_filepath)
 
 
@@ -220,6 +221,7 @@ def move_and_rotate_branch(angle, capped_surface, centerlines, centerlines_compl
                                          test_merge=False, changed=True,
                                          old_centerline=centerlines_complete)
 
+    print("\n-- Writing new surface to {}.".format(output_filepath))
     write_polydata(new_surface, output_filepath)
 
 
@@ -313,7 +315,7 @@ def get_new_branch_position(branch_location, capped_surface):
         new_branch_pos_id (int): Point closest to branch location ID on surface.
         new_branch_pos (ndarray): Point closest to branch location on surface.
     """
-    surface_locator = vtk_point_locator(capped_surface)
+    surface_locator = get_vtk_point_locator(capped_surface)
     new_branch_pos_id = surface_locator.FindClosestPoint(branch_location)
     new_branch_pos = capped_surface.GetPoint(new_branch_pos_id)
 
@@ -396,7 +398,7 @@ def pick_branch(capped_surface, centerlines):
     closest_dist = 1e9
     branch_to_manipulate = None
     for line_to_compare in centerlines:
-        locator = vtk_point_locator(line_to_compare)
+        locator = get_vtk_point_locator(line_to_compare)
         closest_point_id = locator.FindClosestPoint(surface_point)
         closest_point = line_to_compare.GetPoint(closest_point_id)
         dist = get_distance(closest_point, surface_point)
@@ -421,7 +423,7 @@ def filter_voronoi(voronoi, diverging_centerline_branch):
         vtkPolyData: Voronoi diagram, remaining part
     """
     misr = get_point_data_array(radiusArrayName, diverging_centerline_branch)
-    locator = vtk_point_locator(diverging_centerline_branch)
+    locator = get_vtk_point_locator(diverging_centerline_branch)
 
     n = voronoi.GetNumberOfPoints()
     diverging_voronoi = vtk.vtkPolyData()
@@ -514,7 +516,7 @@ def get_translation_parameters(centerlines, diverging_centerline_branch, new_bra
     Returns:
         origo (ndarray): Adjusted origin / position of new branch position
     """
-    locator = vtk_point_locator(centerlines)
+    locator = get_vtk_point_locator(centerlines)
     new_branch_pos_on_cl = centerlines.GetPoint(locator.FindClosestPoint(new_branch_pos))
     adjusted_branch_pos = (np.asarray(new_branch_pos) - np.asarray(new_branch_pos_on_cl)) * 0.8 + np.asarray(
         new_branch_pos_on_cl)
@@ -701,7 +703,7 @@ def manipulate_voronoi_branch(voronoi, dx, R, origo, centerline, normal, angle, 
     if manipulation == 'rotate':
         # Centerline locator
         m = centerline.GetNumberOfPoints()
-        centerline_locator = vtk_point_locator(centerline)
+        centerline_locator = get_vtk_point_locator(centerline)
 
         # Transition from base to branch for 30% of branch creating a smoother rotation transition
         base_end = int(m * 0.3)

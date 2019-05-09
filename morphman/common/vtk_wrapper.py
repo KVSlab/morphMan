@@ -38,7 +38,7 @@ def get_number_of_arrays(vtk_polydata):
 
 def extract_single_line(centerlines, line_id, start_id=0, end_id=None):
     """Extract one line from multiple centerlines.
-    If startID and endID is set then only a segment of the centerline is extracted.
+    If start_id and end_id is set then only a segment of the centerline is extracted.
 
     Args:
         centerlines (vtkPolyData): Centerline to extract.
@@ -493,7 +493,7 @@ def get_vtk_cell_locator(surface):
     Returns:
         return (vtkCellLocator): Cell locator of the input surface.
     """
-    locator = vtk.vtkCellLocator()
+    locator = vtk.vtkStaticCellLocator()
     locator.SetDataSet(surface)
     locator.BuildLocator()
 
@@ -511,6 +511,7 @@ def create_vtk_array(values, name, k=1):
     Returns:
         vtk_array (vtkPointArray): vtk point array
     """
+    values = np.asarray(values)
     vtk_array = get_vtk_array(name, k, values.shape[0])
 
     if k == 1:
@@ -567,7 +568,7 @@ def move_past_sphere(centerline, center, r, start, step=-1, stop=0, scale_factor
     return tmp_point, r, i
 
 
-def vtk_point_locator(centerline):
+def get_vtk_point_locator(centerline):
     """Wrapper for vtkStaticPointLocator.
 
     Args:

@@ -12,7 +12,7 @@ from .fixtures import surface_paths
 from morphman import manipulate_curvature, read_command_line_curvature
 from morphman.common.surface_operations import compute_discrete_derivatives
 from morphman.common.common import get_path_names
-from morphman.common.vtk_wrapper import extract_single_line, read_polydata, vtk_point_locator
+from morphman.common.vtk_wrapper import extract_single_line, read_polydata, get_vtk_point_locator
 
 
 @pytest.mark.parametrize("smooth_line", [True, False])
@@ -42,7 +42,7 @@ def test_decrease_curvature(surface_paths, smooth_line):
 
     old_centerlines_path = base_path + "_centerline.vtp"
     old_centerlines = read_polydata(old_centerlines_path)
-    old_locator = vtk_point_locator(extract_single_line(old_centerlines, 0))
+    old_locator = get_vtk_point_locator(extract_single_line(old_centerlines, 0))
     old_id1 = old_locator.FindClosestPoint(p1)
     old_id2 = old_locator.FindClosestPoint(p2)
     old_centerline = extract_single_line(old_centerlines, 0, start_id=old_id1,
@@ -51,7 +51,7 @@ def test_decrease_curvature(surface_paths, smooth_line):
     direction = "smoothed" if smooth_line else "extended"
     new_centerlines_path = base_path + "_centerline_new_%s.vtp" % direction
     new_centerlines = read_polydata(new_centerlines_path)
-    new_locator = vtk_point_locator(extract_single_line(new_centerlines, 0))
+    new_locator = get_vtk_point_locator(extract_single_line(new_centerlines, 0))
     new_id1 = new_locator.FindClosestPoint(p1)
     new_id2 = new_locator.FindClosestPoint(p2)
     new_centerline = extract_single_line(new_centerlines, 0, start_id=new_id1,

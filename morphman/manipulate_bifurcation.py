@@ -65,6 +65,7 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
     voronoi_clipped_path = base_path + "_voronoi_clipped_ang.vtp"
     voronoi_ang_path = base_path + "_voronoi_ang.vtp"
     voronoi_rotated_path = base_path + "_voronoi_rotated_ang.vtp"
+    voronoi_bifurcation_path = base_path + "_voronoi_bifurcation.vtp"
 
     # Points
     points_clipp_path = base_path + "_clippingpoints.vtp"
@@ -79,7 +80,7 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
         outlet1, outlet2 = get_relevant_outlets(capped_surface, base_path)
     else:
         outlet1, outlet2 = region_points[:3], region_points[3:]
-        surface_locator = vtk_point_locator(capped_surface)
+        surface_locator = get_vtk_point_locator(capped_surface)
         id1 = surface_locator.FindClosestPoint(outlet1)
         id2 = surface_locator.FindClosestPoint(outlet2)
         outlet1 = capped_surface.GetPoint(id1)
@@ -111,11 +112,11 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
     write_parameters(data, base_path)
 
     # Compute and smooth voronoi diagram (not aneurysm)
-    print("-- Compute voronoi diagram.")
+    print("-- Computing voronoi diagram.")
     if smooth:
         voronoi = prepare_voronoi_diagram(capped_surface, centerline_par, base_path, smooth,
                                           smooth_factor, no_smooth, no_smooth_point,
-                                          voronoi, pole_ids)
+                                          voronoi, pole_ids, resampling_step)
 
     # Locate diverging-points and end-points, for bif or lower, rotated or not
     key = "div_point"
@@ -142,15 +143,16 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
         write_polydata(patch_bif_cl, centerline_clipped_bif_path)
 
     # Clip the voronoi diagram
-    print("-- Clipping the Voronoi diagram")
-    voronoi_clipped, _ = get_split_voronoi_diagram(voronoi, [patch_cl,
-                                                             clipped_centerline])
+    print("-- Clipping Voronoi diagram")
+    voronoi_clipped, voronoi_bifurcation = get_split_voronoi_diagram(voronoi, [patch_cl,
+                                                                     clipped_centerline])
     write_polydata(voronoi_clipped, voronoi_clipped_path)
+    write_polydata(voronoi_bifurcation, voronoi_bifurcation_path)
 
     # Rotate branches (Centerline and Voronoi diagram)
     angle = 0 if keep_fixed_1 and keep_fixed_2 else angle
     if angle != 0:
-        print("-- Rotate centerlines and voronoi diagram.")
+        print("-- Rotating centerlines and voronoi diagram.")
         rotated_cl = rotate_cl(patch_cl, end_points[1], m, R)
         write_polydata(rotated_cl, centerline_rotated_path)
 
@@ -167,7 +169,7 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
             rotated_bif_cl = patch_bif_cl
 
     # Interpolate the centerline
-    print("-- Interpolate centerlines.")
+    print("-- Interpolating centerlines.")
     interpolated_cl = interpolate_patch_centerlines(rotated_cl, centerline_par,
                                                     div_points[0].GetPoint(0),
                                                     True, tension, continuity)
@@ -201,7 +203,7 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
         bif_ = [interpolated_bif_lower, rotated_bif_cl]
 
     # Interpolate voronoi diagram
-    print("-- Interpolate voronoi diagram.")
+    print("-- Interpolating voronoi diagram.")
     interpolated_voronoi = interpolate_voronoi_diagram(interpolated_cl, rotated_cl,
                                                        rotated_voronoi,
                                                        end_points,
@@ -211,7 +213,7 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
     write_polydata(interpolated_voronoi, voronoi_ang_path)
 
     # Write a new surface from the new voronoi diagram
-    print("-- Create new surface.")
+    print("-- Creating new surface.")
     new_surface = create_new_surface(interpolated_voronoi, poly_ball_size)
 
     print("-- Preparing surface for output.")
@@ -219,7 +221,7 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
                                          output_filepath, test_merge=True, changed=True,
                                          old_centerline=centerline_par)
 
-    print("-- Writing new surface to {}.".format(output_filepath))
+    print("\n-- Writing new surface to {}.".format(output_filepath))
     write_polydata(new_surface, output_filepath)
 
 
@@ -276,7 +278,7 @@ def rotate_voronoi(clipped_voronoi, patch_cl, div_points, m, R):
     not_rotate = [0]
     for i in range(patch_cl.GetNumberOfCells()):
         cell_line.append(extract_single_line(patch_cl, i))
-        tmp_locator = vtk_point_locator(cell_line[-1])
+        tmp_locator = get_vtk_point_locator(cell_line[-1])
         locator.append(tmp_locator)
 
     for i in range(1, patch_cl.GetNumberOfCells()):
@@ -357,7 +359,7 @@ def rotate_cl(patch_cl, div_points, rotation_matrices, R):
     radius_array = get_vtk_array(radiusArrayName, 1, number_of_points)
 
     line0 = extract_single_line(patch_cl, 0)
-    locator0 = vtk_point_locator(line0)
+    locator0 = get_vtk_point_locator(line0)
 
     # Iterate through points along the centerline
     count = 0
@@ -370,7 +372,7 @@ def rotate_cl(patch_cl, div_points, rotation_matrices, R):
         test = get_distance(start, dist) > tolerance*10
 
         if test or len(div_points) == 2:
-            locator = vtk_point_locator(cell)
+            locator = get_vtk_point_locator(cell)
             pnt1 = cell.GetPoint(locator.FindClosestPoint(div_points[-2]))
             pnt2 = cell.GetPoint(locator.FindClosestPoint(div_points[-1]))
             dist1 = get_distance(pnt1, div_points[-2])
@@ -486,7 +488,7 @@ def merge_cl(centerline, end_point, div_point):
 
     # Find lines to merge
     lines = [extract_single_line(centerline, i) for i in range(n_lines)]
-    locators = [vtk_point_locator(lines[i]) for i in range(n_lines)]
+    locators = [get_vtk_point_locator(lines[i]) for i in range(n_lines)]
     div_id = [locators[i].FindClosestPoint(div_point[0]) for i in range(n_lines)]
     end_id = [locators[i].FindClosestPoint(end_point[0]) for i in range(n_lines)]
 
@@ -510,7 +512,7 @@ def merge_cl(centerline, end_point, div_point):
         line = lines[i]
 
         # Check if it should be merged
-        loc = vtk_point_locator(line)
+        loc = get_vtk_point_locator(line)
         end_point_id = loc.FindClosestPoint(end_point[0])
         div_point_id = loc.FindClosestPoint(div_point[0])
         clipp_dist = get_distance(line.GetPoint(end_point_id), end_point[0])
