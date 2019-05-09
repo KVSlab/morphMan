@@ -7,9 +7,11 @@
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
-# Local import
 from morphman.common.argparse_common import *
 from morphman.common.surface_operations import *
+
+
+# Local import
 
 
 def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
@@ -109,7 +111,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
                         region_of_interest)
     new_voronoi, new_centerlines = change_area(voronoi_regions[0], factor, centerline_area,
                                                centerline_diverging, voronoi_regions[2:],
-                                               surface_area, centerlines, method)
+                                               surface_area, centerlines, method, region_of_interest)
     new_voronoi = vtk_merge_polydata([new_voronoi, voronoi_regions[1]])
     write_polydata(new_voronoi, voronoi_new_path)
 
@@ -200,13 +202,14 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
 
 
 def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging_voronoi, surface_area, centerlines,
-                method):
+                method, region_of_interest):
     """
     Change the cross-sectional area of an input
     voronoi diagram along the corresponding area
     represented by a centerline.
 
     Args:
+        interest:
         method (str): Method of manipulation to area
         voronoi (vtkPolyData): Voronoi diagram.
         factor (ndarray): An array with a factor for changing each point along the centerline
@@ -240,19 +243,23 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
         # Get Frenet Normal and compare with point from CL and Voronoi point
         # Comute angle -> make profile as a function: f(theta, cl_id)
         frenet_normals_array = get_point_data_array("FrenetNormal", line_to_change, k=3)
+        frenet_tangent_array = get_point_data_array("FrenetTangent", line_to_change, k=3)
+        write_polydata(line_to_change, "frenetor.vtp")
 
     # Iterate through Voronoi diagram and manipulate
     point_radius_array = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1
     factorz = []
+    anglez = []
+    pers = []
     for i in range(n):
         id_list = vtk.vtkIdList()
         point = voronoi.GetPoint(i)
-
 
         if asym:
             # Set profiles
             profiles = ['linear', 'exponential', 'log']
             profile = profiles[0]
+            profile = "None"
 
             # Find actual closest point on centerline
             cl_id = locator.FindClosestPoint(point)
@@ -264,20 +271,44 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
             frenet_normal = frenet_normals_array[cl_id]
             voronoi_vector = voro_point - origin
             frenet_normal = frenet_normal - origin
+
+            # Project voronoi vector into frenet tangent plane and compute angle
+            frenet_tangent = frenet_tangent_array[cl_id] - origin
+            a_ = np.cross(frenet_tangent, (np.cross(voronoi_vector, frenet_tangent)))
+            proj_voronoi = np.dot(a_, voronoi_vector) / (np.dot(a_, a_)) * a_
+            voronoi_vector = proj_voronoi
+
             angle = np.arccos(
                 np.dot(frenet_normal, voronoi_vector) / (la.norm(frenet_normal) * la.norm(voronoi_vector)))
 
             # Linear model: 0 in 0
             if profile == 'linear':
                 asymmetric_factor = abs(angle) / np.pi
+                if angle < np.pi:
+                    asymmetric_factor = 1
+                else:
+                    asymmetric_factor = 0
             elif profile == 'exponential':  # Square root
                 asymmetric_factor = np.sqrt(abs(angle) / np.pi)
             elif profile == 'log':  # Deviant
                 deviation = 2 * np.pi
                 asymmetric_factor = np.exp(-(abs(angle) / np.pi) ** 2) / np.sqrt(deviation)
 
-            factorz.append(asymmetric_factor)
+            asymmetric_factor = abs(angle) / np.pi
+            if angle < np.pi*0.5:
+                asymmetric_factor =0
+            else:
+                asymmetric_factor =1
+            percentage = 70 * asymmetric_factor
 
+            # factor = get_factor(line_to_change, method, 0.0, 0.0, percentage,
+            #                   region_of_interest)
+            # t = np.linspace(0, np.pi, line_to_change.GetNumberOfPoints())
+            # factor = (1 - np.sin(t) * percentage * 0.01).tolist()
+            # factor = factor * (1 - trans) + trans
+            factorz.append(asymmetric_factor)
+            anglez.append(angle)
+            pers.append(percentage)
         # Find two closest points on centerline
         locator.FindClosestNPoints(2, point, id_list)
         tmp_id1, tmp_id2 = id_list.GetId(0), id_list.GetId(1)
@@ -315,18 +346,22 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
             factor_ = update_factor(A, AC_length, D, factor, tmp_id1, tmp_id2, v_change)
 
         if asym:
-            v = v_change * (1 - factor_) * asymmetric_factor
+            # v = v_change * (1 - factor_)  # * (1 - asymmetric_factor)
+            v = v_change * (1 - factor_) * (1-asymmetric_factor**4)
             voronoi_points.InsertNextPoint((B + v).tolist())
 
             # Change radius
             # asym = 0 => factor = 1
             # Asym = 1 => factor = factor
+
             if profile == 'linear':
-                point_radius = point_radius_array(i) * ((factor_ - 1) * asymmetric_factor + 1)
+                point_radius = point_radius_array(i) * factor_ * ((factor_ - 1) * asymmetric_factor + 1)
             elif profile == 'exponential':
                 point_radius = point_radius_array(i) * factor_ ** asymmetric_factor
             elif profile == 'log':
                 point_radius = point_radius_array(i) * (factor_ - 1) * np.log(1 + asymmetric_factor) / np.log(2) + 1
+            else:
+                point_radius = point_radius_array(i) * factor_
 
         else:
             v = v_change * (1 - factor_)
