@@ -7,11 +7,9 @@
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
+# Local import
 from morphman.common.argparse_common import *
 from morphman.common.surface_operations import *
-
-
-# Local import
 
 
 def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
@@ -201,13 +199,15 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
     return factor
 
 
-def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging_voronoi, surface_area, centerlines):
+def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging_voronoi, surface_area, centerlines,
+                angle_asymmetric):
     """
     Change the cross-sectional area of an input
     voronoi diagram along the corresponding area
     represented by a centerline.
 
     Args:
+        angle_asymmetric (float): Angle defining the orientation of the asymmetry for a stenosis / bulge
         voronoi (vtkPolyData): Voronoi diagram.
         factor (ndarray): An array with a factor for changing each point along the centerline
         line_to_change (vtkPolyData): Centerline representing area of interest.
@@ -235,33 +235,29 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
     radius_array = get_vtk_array(radiusArrayName, 1, m)
     N = line_to_change.GetNumberOfPoints()
 
-    asym = True
-    if asym:
-        # Get Frenet Normal and compare with point from CL and Voronoi point
-        # Comute angle -> make profile as a function: f(theta, cl_id)
-        frenet_normals_array = get_point_data_array("FrenetNormal", line_to_change, k=3)
-
     # Iterate through Voronoi diagram and manipulate
+    frenet_normals_array = get_point_data_array("FrenetNormal", line_to_change, k=3)
     point_radius_array = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1
     for i in range(n):
         id_list = vtk.vtkIdList()
         point = voronoi.GetPoint(i)
 
-        if asym:
-            # Find actual closest point on centerline
+        if angle_asymmetric is not None:
+            # Find closest point on centerline
             cl_id = locator.FindClosestPoint(point)
             cl_point = line_to_change.GetPoint(cl_id)
 
-            # Find angle between
+            # Find angle between Frenet normal and Voronoi point
             origin = np.asarray(cl_point)
             voro_point = np.asarray(point)
             frenet_normal = frenet_normals_array[cl_id]
             voronoi_vector = voro_point - origin
             frenet_normal = frenet_normal - origin
-
             angle = np.arccos(
                 np.dot(frenet_normal, voronoi_vector) / (la.norm(frenet_normal) * la.norm(voronoi_vector)))
-            asymmetric_factor = abs(angle) / np.pi
+
+            # Set asymmetric profile
+            asymmetric_factor = np.exp(- (angle - angle_asymmetric) ** 2)
 
         # Find two closest points on centerline
         locator.FindClosestNPoints(2, point, id_list)
@@ -283,24 +279,18 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
 
         # Get direction (delta_p) to move the point
         AB_length = la.norm(AB)
-        if AB_length > get_centerline_tolerance(line_to_change) * 10:
-            P_mid = A + sign * np.dot(AP, AB) / np.dot(AB, AB) * AB
-        else:
-            P_mid = A
-
+        P_mid = get_midpoint(A, AB, AB_length, AP, line_to_change, sign)
         delta_p = P_mid - P
 
         if sign < 0:
             factor_ = factor[tmp_id1]
         else:
-            AP_mid_length = la.norm(P_mid - A)
-            BP_mid_length = la.norm(P_mid - B)
-            factor_ = (factor[tmp_id1] * AP_mid_length + factor[tmp_id2] * BP_mid_length) / AB_length
+            factor_ = update_factor(A, AB_length, B, P_mid, factor, tmp_id1, tmp_id2)
 
         # Change radius
         point_radius = point_radius_array(i) * factor_
 
-        if asym:
+        if angle_asymmetric is not None:
             # Revert displacement to add asymmetric effect
             v = -delta_p / la.norm(delta_p) * point_radius_array(i) * (1 - factor_) * asymmetric_factor
         else:
@@ -336,7 +326,6 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
                     div_id = i
 
             # Get offset for Voronoi diagram and centerline
-            tmp_id = locator.FindClosestNPoints(2, min_point, id_list)
             tmp_id1, tmp_id2 = id_list.GetId(0), id_list.GetId(1)
 
             A = np.asarray(line_to_change.GetPoint(tmp_id1))
@@ -346,6 +335,7 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
             BC = C - B
             AC = C - A
             AC_length = np.linalg.norm(AC)
+
             if AC_length != 0:
                 h = np.linalg.norm(np.cross(BA, BC)) / AC_length  # shortest distance between point and line
                 D = A + (AC / AC_length) * np.sqrt(np.linalg.norm(BA) ** 2 - h ** 2)
@@ -388,13 +378,53 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
     return new_voronoi, new_centerlines
 
 
-def update_factor(A, AC_length, D, factor, tmp_id1, tmp_id2, v_change):
-    factor_ = factor[tmp_id1] * (1 - np.linalg.norm(A - D) / AC_length) \
-              + factor[tmp_id2] * (np.linalg.norm(A - D) / AC_length)
-    if factor_ > 10:
-        print(factor_, factor[tmp_id1], factor[tmp_id2], AC_length, np.linalg.norm(v_change))
+def update_factor(A, AB_length, B, P_mid, factor, tmp_id1, tmp_id2):
+    """
+    Update values in Factor based on midpoint between
+    A and B.
+
+    Args:
+        P_mid (ndarray): Midpoint
+        factor (list): List of scaling factors for area variation
+        tmp_id1 (int): Id at first point
+        tmp_id2 (int): Id at second point
+        A (ndarray): First point
+        B (ndarray): Second point
+        AB_length (float): Length of line AB
+
+    Returns:
+        list: List of updated scaling factors
+    """
+    AP_mid_length = la.norm(P_mid - A)
+    BP_mid_length = la.norm(P_mid - B)
+    factor_ = (factor[tmp_id1] * AP_mid_length + factor[tmp_id2] * BP_mid_length) / AB_length
 
     return factor_
+
+
+def get_midpoint(A, AB, AB_length, AP, line_to_change, sign):
+    """
+   Find midpoint on line AB from Voronoi point P
+
+    Args:
+        A (ndarray): First point
+        AB (ndarray): Vector between point A and B
+        AB_length (float): Length of line AB
+        AP (ndarray): Vector between point A and P
+        line_to_change (vtkPolyData): Relevant centerline
+        sign (int): Integer swtich used for points beyond centerline
+
+    Returns:
+        ndarray: Midpoint on line AB
+    """
+
+    if AB_length > get_centerline_tolerance(line_to_change) * 10:
+        # Project Voronoi on line AB and get midpoint
+        P_mid = A + sign * np.dot(AP, AB) / np.dot(AB, AB) * AB
+    else:
+        P_mid = A
+
+    return P_mid
 
 
 def read_command_line_area(input_path=None, output_path=None):
