@@ -115,7 +115,7 @@ In Figure 4 you can see the output of creating an asymmetric stenosis, with an i
 
 To recreate the above output, execute the following from the commandline::
 
-    morphman-area --ifile C0002/surface/model.vtp --ofile C0002/surface/asymmetric_stenosis.vtp --method stenosis --angle-asymmetric 180 --size 6 --percentage 75 --poly-ball-size 250 250 250
+    morphman-area --ifile C0002/surface/model.vtp --ofile C0002/surface/asymmetric_stenosis.vtp --method stenosis --angle-asymmetric 180 --size 6 --percentage 75 --region-points 23.39 7.05 40.85 --poly-ball-size 250 250 250
 
 Remove a stenosis
 ~~~~~~~~~~~~~~~~~

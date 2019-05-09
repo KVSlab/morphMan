@@ -53,6 +53,20 @@ default_values["poly_ball_size"] = [250, 250, 250]
 # Run manipulation
 manipulate_area(**default_values)
 
+### Create asymmetric stenosis
+# Method spesific parameters - create an asymmetric stenosis
+default_values["stenosis_length"] = 6.0
+default_values["percentage"] = 75
+default_values["angle_asymmetric"] = 180
+
+# Set region of interest
+default_values["region_points"] = [23.39, 7.05, 40.85]
+
+# Set new output path
+output_filepath = path.join(absolute_path, case, "surface", "asymmetric_stenosis.vtp")
+
+# Run manipulation
+manipulate_area(**default_values)
 
 ### Decrease cross-section area ratio
 # Method spesific parameters
