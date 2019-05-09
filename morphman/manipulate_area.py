@@ -15,7 +15,7 @@ from morphman.common.surface_operations import *
 def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
                     no_smooth_point, region_of_interest, region_points, beta, ratio,
                     size, percentage, output_filepath, poly_ball_size,
-                    resampling_step):
+                    resampling_step, angle_asymmetric):
     """
     Objective manipulation of area variation in
     patient-specific models of blood vessels.
@@ -109,7 +109,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
                         region_of_interest)
     new_voronoi, new_centerlines = change_area(voronoi_regions[0], factor, centerline_area,
                                                centerline_diverging, voronoi_regions[2:],
-                                               surface_area, centerlines)
+                                               surface_area, centerlines, angle_asymmetric)
     new_voronoi = vtk_merge_polydata([new_voronoi, voronoi_regions[1]])
     write_polydata(new_voronoi, voronoi_new_path)
 
@@ -510,6 +510,13 @@ def read_command_line_area(input_path=None, output_path=None):
                              " area of the geometry is increase/decreased overall or only" +
                              " in stenosis / bulge.")
 
+    # Arguments for rotation of asymmetric area variation
+    parser.add_argument('-as', '--angle-asymmetric', type=float, default=None,
+                        help="Angle in degrees, defining asymmetric manipulation. " +
+                             "Introduces asymmetric stenosis / bulges by applying an angle-dependent profile to " +
+                             "area variation factor. Intended for 'stenosis' and 'bulge' methods, " +
+                             "experimental for other methods.", metavar="angle-asymmetric")
+
     # Parse paths to get default values
     if required:
         args = parser.parse_args()
@@ -532,10 +539,12 @@ def read_command_line_area(input_path=None, output_path=None):
         if len(args.no_smooth_point) % 3 != 0:
             raise ValueError("ERROR: Please provide the no smooth point(s) as a multiple" +
                              " of 3.")
+    if args.angle is not None:
+        angle_radians = args.angle_asymmetric * math.pi / 180  # Convert from deg to rad
 
     return dict(input_filepath=args.ifile, method=args.method, smooth=args.smooth,
                 smooth_factor=args.smooth_factor, beta=args.beta,
-                region_of_interest=args.region_of_interest,
+                region_of_interest=args.region_of_interest, angle_asymmetric=angle_radians,
                 region_points=args.region_points, ratio=args.ratio,
                 size=args.size, percentage=args.percentage, output_filepath=args.ofile,
                 poly_ball_size=args.poly_ball_size, no_smooth=args.no_smooth,
