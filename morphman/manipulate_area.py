@@ -86,7 +86,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     centerline_regions = [centerline_splined, centerline_remaining]
     if centerline_diverging is not None:
         for i, div_cl in enumerate(centerline_diverging):
-            centerline_regions += [extract_single_line(div_cl, 0, start_id=diverging_ids[i][1])]
+            centerline_regions += [extract_single_line(div_cl, 0, start_id=diverging_ids[i])]
     voronoi_regions = get_split_voronoi_diagram(voronoi, centerline_regions)
 
     # Write the seperate segments
@@ -372,6 +372,7 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
         radius_array.SetTuple1(i, point_radius)
         cell_array.InsertNextCell(1)
         cell_array.InsertCellPoint(i)
+
     # Offset Voronoi diagram along "diverging" centerlines
     if diverging_centerline is not None:
         count = i + 1
