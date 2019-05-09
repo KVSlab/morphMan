@@ -260,3 +260,48 @@ def vmtk_endpoint_extractor(centerlines, clipspheres):
     extractor.Execute()
 
     return extractor
+
+
+def vmtk_surface_curvature(surface, curvature_type="mean", absolute=False,
+                           median_filtering=False, curvature_on_boundaries=False,
+                           bounded_reciporcal=False, epsilon=1.0, offset=0.0):
+    """Wrapper for vmtksurfacecurvature
+
+    Args:
+        surface (vtkPolyData): The input surface
+        curvature_type (str): The type of surface curvature to compute (mean | gaussian | maximum | minimum)
+        absolute (bool): Output the avsolute value of the curvature
+        median_filtering (bool): Output curvature after median filtering to suppress numerical noise speckles
+        curvature_on_boundaries (bool): Turn on/off curvature on boundaries
+        bounded_reciporcal (bool): Output bounded reciprocal of the curvature
+        epsilon (float): Bounded reciprocal epsilon at the denominator
+        offset (float): Offset curvature by the specified value
+
+    Returns:
+        surface (vtkPolydata): Input surface with an point data array with curvature values
+    """
+    curvature = vmtkscripts.vmtkSurfaceCurvature()
+    curvature.surface
+    curvature.CurvatureType = curvature_type
+    if absolute:
+        curvature.AbsoluteCurvature = 1
+    else:
+        curvature.AbsoluteCurvature = 0
+    if median:
+        curvature.MedianFiltering = 1
+    else:
+        curvature.medianFiltering = 0
+    if curvature_on_boundaries:
+        curvature.CurvatureOnBoundaries = 1
+    else:
+        curvature.CurvatureOnBoundaries = 0
+    if bounded_reciporcal:
+        curvature.BoundedReciporcal = 1
+    else:
+        curvature.BoundedReciporcal = 0
+    curvature.Epsilon = epsilon
+    curvature.Offset = offset
+
+    curvature.Execute()
+
+    return curvature.Surface
