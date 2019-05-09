@@ -37,12 +37,14 @@ output_filepath = path.join(absolute_path, case, "surface", "moved_branch.vtp")
 if not path.exists(path.join(input_filepath)):
     download_case(case)
 
-# Get default values for manipulate_bifurcation
+# Get default values for manipulate_branch
 default_values = read_command_line_branch(input_filepath, output_filepath)
 
+### Translation of branch
 # Set region of interest
 default_values["branch_to_manipulate_number"] = 1
 default_values["branch_location"] = [21.7, 18.1, 25.9]
+default_values["translation_method"] = "commandline"
 
 # Parameters for reconstructing the surface
 default_values["poly_ball_size"] = [250, 250, 250]
@@ -53,8 +55,8 @@ default_values["output_filepath"] = output_filepath
 # Run manipulation
 manipulate_branch(**default_values)
 
-### Translation and rotation
-# Method spesific parameters - rotate the daughter branches appart
+### Translation and rotation of branch
+# Method spesific parameters - rotation and translation of branch
 default_values["angle"] = 180
 
 # Set new output path
@@ -62,6 +64,19 @@ default_values["output_filepath"] = path.join(absolute_path, case, "surface", "m
 
 # Run manipulation
 manipulate_branch(**default_values)
+
+
+### Rotation around branch base
+# Method spesific parameters - rotation only
+default_values["angle"] = 120
+default_values["translation_method"] = "no_translation"
+
+# Set new output path
+default_values["output_filepath"] = path.join(absolute_path, case, "surface", "rotated_branch.vtp")
+
+# Run manipulation
+manipulate_branch(**default_values)
+
 
 ### Branch removal
 # Method spesific parameters

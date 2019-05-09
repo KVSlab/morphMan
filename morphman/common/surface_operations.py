@@ -128,7 +128,7 @@ def compute_centers(polydata, case_path=None):
         delaunay.Update()
 
         # Add quanteties
-        area.append(vtk_compute_surface_area(delaunay.GetOutput()))
+        area.append(vtk_compute_mass_properties(delaunay.GetOutput()))
         center.append(np.mean(tmp_points, axis=0))
 
     # Store the center and area
@@ -325,7 +325,7 @@ def get_uncapped_surface(surface, gradients_limit=0.15, area_limit=0.3, circlene
 
     """
 
-    cell_normals = vtk_compute_polydata_normals(surface)
+    cell_normals = vtk_compute_polydata_normals(surface, compute_cell_normals=True)
 
     gradients = vtk_compute_normal_gradients(cell_normals)
 
@@ -360,7 +360,7 @@ def get_uncapped_surface(surface, gradients_limit=0.15, area_limit=0.3, circlene
         circ, center = compute_circleness(regions[-1])
         circleness.append(circ)
         centers_edge.append(center)
-        area.append(vtk_compute_surface_area(regions[-1]))
+        area.append(vtk_compute_mass_properties(regions[-1]))
 
     # Only keep outlets with circleness < circleness_limit and area > area_limit
     circleness_ids = np.where(np.array(circleness) < circleness_limit)
