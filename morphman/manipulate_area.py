@@ -24,6 +24,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     and change the corresponding radius.
 
     Args:
+        angle_asymmetric (float): Angle defining the orientation of the asymmetry for a stenosis / bulge
         input_filepath (str): Path to directory with cases.
         method (str): Type of manipulation of the centerline.
         smooth (bool): Determines Voronoi smoothing or not.
@@ -257,7 +258,7 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
                 np.dot(frenet_normal, voronoi_vector) / (la.norm(frenet_normal) * la.norm(voronoi_vector)))
 
             # Set asymmetric profile
-            asymmetric_factor = np.exp(- (angle - angle_asymmetric) ** 2)
+            asymmetric_factor = get_asymmetric_factor(angle, angle_asymmetric)
 
         # Find two closest points on centerline
         locator.FindClosestNPoints(2, point, id_list)
@@ -376,6 +377,23 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
     new_voronoi.GetPointData().AddArray(radius_array)
 
     return new_voronoi, new_centerlines
+
+
+def get_asymmetric_factor(angle, angle_asymmetric):
+    """
+    Definie asymmetric profile depening on angle between
+    Voronoi point and Frenet frame normal vector.
+
+    Args:
+        angle (float): Angle between vectors
+        angle_asymmetric (float): Initial angle, applying translation to profile
+
+    Returns:
+        float: Magnitude of manipulation at spesific angle
+    """
+    asymmetric_factor = np.exp(- (angle - angle_asymmetric) ** 2)
+
+    return asymmetric_factor
 
 
 def update_factor(A, AB_length, B, P_mid, factor, tmp_id1, tmp_id2):
@@ -539,8 +557,8 @@ def read_command_line_area(input_path=None, output_path=None):
         if len(args.no_smooth_point) % 3 != 0:
             raise ValueError("ERROR: Please provide the no smooth point(s) as a multiple" +
                              " of 3.")
-    if args.angle is not None:
-        angle_radians = args.angle_asymmetric * math.pi / 180  # Convert from deg to rad
+    if args.angle_asymmetric is not None:
+        angle_radians = args.angle_asymmetric * np.pi / 180  # Convert from deg to rad
 
     return dict(input_filepath=args.ifile, method=args.method, smooth=args.smooth,
                 smooth_factor=args.smooth_factor, beta=args.beta,
