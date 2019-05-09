@@ -6,6 +6,17 @@
 API documentation
 =================
 
+Manipulation of the area
+==========================
+
+manipulate_area.py
+------------------
+
+.. automodule:: manipulate_area
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 Manipulation of a bend
 ======================
@@ -17,29 +28,6 @@ manipulate_bend.py
     :members:
     :undoc-members:
     :show-inheritance:
-
-Manipulation of a the area
-==========================
-
-manipulate_area.py
-------------------
-
-.. automodule:: manipulate_area
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-Manipulation of a curvature
-===========================
-
-manipulate_curvature.py
-------------------------------
-
-.. automodule:: manipulate_curvature
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 
 Manipulation of a bifurcation
 =============================
@@ -63,6 +51,31 @@ manipulate_branch.py
     :members:
     :undoc-members:
     :show-inheritance:
+
+
+Manipulation of a curvature
+===========================
+
+manipulate_curvature.py
+------------------------------
+
+.. automodule:: manipulate_curvature
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Manipulation of a surface roughness
+===================================
+
+manipulate_surface.py
+------------------------------
+
+.. automodule:: manipulate_surface
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 
 Miscellaneous

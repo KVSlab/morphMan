@@ -44,7 +44,7 @@ default_values["no_smooth_point"] = [54.7310791015625, 46.95508575439453, 41.975
 default_values["poly_ball_size"] = [250, 250, 250]
 
 # Run manipulation - smooth the entire geometry except aneurysm dome
-manipulate_surface(**default_values)
+#manipulate_surface(**default_values)
 
 ### Add noise to the surface
 # Output file path
@@ -53,11 +53,11 @@ default_values["output_filepath"] = path.join(absolute_path, case, "surface", "s
 # Method specific paramters
 default_values["smooth"] = False
 default_values["noise"] = True
-default_values["frequency"] = 5
-default_values["frequency_deviation"] = 0.01
+default_values["frequency"] = 0
+default_values["frequency_deviation"] = 1
 default_values["add_noise_lower_limit"] = 0.8
-default_values["add_noise_upper_limit"] = 0.95
+default_values["add_noise_upper_limit"] = 0.90
 default_values["radius_min"] = 1.1
-default_values["radius_max"] = 1.35
+default_values["radius_max"] = 1.5
 
 manipulate_surface(**default_values)
