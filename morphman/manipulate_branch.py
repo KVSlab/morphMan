@@ -703,7 +703,7 @@ def manipulate_voronoi_branch(voronoi, dx, R, origo, centerline, normal, angle, 
     if manipulation == 'rotate':
         # Centerline locator
         m = centerline.GetNumberOfPoints()
-        centerline_locator = vtk_point_locator(centerline)
+        centerline_locator = get_vtk_point_locator(centerline)
 
         # Transition from base to branch for 30% of branch creating a smoother rotation transition
         base_end = int(m * 0.3)
