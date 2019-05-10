@@ -57,10 +57,10 @@ manipulate_area(**default_values)
 # Method spesific parameters - create an asymmetric stenosis
 default_values["stenosis_length"] = 6.0
 default_values["percentage"] = 75
-default_values["angle_asymmetric"] = 180
+default_values["angle_asymmetric"] = 90
 
 # Set region of interest
-default_values["region_points"] = [23.39, 7.05, 40.85]
+default_values["region_points"] = [23.83, 4.66, 38.33]
 
 # Set new output path
 output_filepath = path.join(absolute_path, case, "surface", "asymmetric_stenosis.vtp")

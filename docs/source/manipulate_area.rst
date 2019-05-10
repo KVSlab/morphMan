@@ -102,20 +102,17 @@ To recreate the above output, execute the following from the commandline::
 
 Alternativley, you can introduce an asymmetric stenosis by setting the ``--angle-asymmetric`` flag
 to a desired angle, :math:`\theta \in [0, 360 ]`. The selected value of :math:`\theta` determines where the surface
-is unaffected, relative to the region point. Futhermore, the amount of manipulated
-surface will vary with an angle dependent Gaussian profile.
-Altering this profile is trivial, and can be done by adjusting the
-function located in :meth:`manipulate_area.get_asymmetric_factor`.
+is unaffected, relative to the region point.
 
-In Figure 4 you can see the output of creating an asymmetric stenosis, with an initial angle of 180 degrees.
+In Figure 4 you can see the output of creating an asymmetric stenosis, with an initial angle of 90 degrees.
 
-.. figure:: make_asymmetric_stenosis.png
+.. figure:: asymmetric_stenosis.png
 
   Figure 4: Comparison of the new and old model, with and without an asymmetric stenosis.
 
 To recreate the above output, execute the following from the commandline::
 
-    morphman-area --ifile C0002/surface/model.vtp --ofile C0002/surface/asymmetric_stenosis.vtp --method stenosis --angle-asymmetric 180 --size 6 --percentage 75 --region-points 23.39 7.05 40.85 --poly-ball-size 250 250 250
+    morphman-area --ifile C0002/surface/model.vtp --ofile C0002/surface/asymmetric_stenosis.vtp --method stenosis --angle-asymmetric 90 --size 6 --percentage 75 --region-points 23.83 4.66 38.33 --poly-ball-size 250 250 250
 
 Remove a stenosis
 ~~~~~~~~~~~~~~~~~
