@@ -579,6 +579,8 @@ def read_command_line_area(input_path=None, output_path=None):
                              " of 3.")
     if args.angle_asymmetric is not None:
         angle_radians = args.angle_asymmetric * np.pi / 180  # Convert from deg to rad
+    else:
+        angle_radians = None
 
     return dict(input_filepath=args.ifile, method=args.method, smooth=args.smooth,
                 smooth_factor=args.smooth_factor, beta=args.beta,
