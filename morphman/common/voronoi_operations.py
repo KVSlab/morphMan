@@ -24,7 +24,7 @@ def remove_distant_voronoi_points(voronoi, centerline):
     points = vtk.vtkPoints()
     radius = np.zeros(n)
 
-    locator = vtk_point_locator(centerline)
+    locator = get_vtk_point_locator(centerline)
     radius_array_data = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1
     limit = radius_array_data(0)
     limit = limit * 10
@@ -58,7 +58,8 @@ def remove_distant_voronoi_points(voronoi, centerline):
     return new_voronoi
 
 
-def smooth_voronoi_diagram(voronoi, centerlines, smoothing_factor, no_smooth_cl=None):
+def smooth_voronoi_diagram(voronoi, centerlines, smoothing_factor, no_smooth_cl=None,
+                           absolute=False):
     """
     Smooth voronoi diagram based on a given
     smoothingfactor. Each voronoi point
@@ -68,13 +69,20 @@ def smooth_voronoi_diagram(voronoi, centerlines, smoothing_factor, no_smooth_cl=
     Args:
         voronoi (vtkPolyData): Voronoi diagram to be smoothed.
         centerlines (vtkPolyData): Centerline data.
-        smoothing_factor (float): Smoothing factor.
-        no_smooth_cl (vktPolyData): Unsmoothed centerline.
+        smoothing_factor (float): Smoothing factor: remove points with radius below (1-smoothing_factor)*MISR
+        no_smooth_cl (vktPolyData): Section of centerline not to smooth along.
+        absolute (bool): Turn on absolute values for smoothing.
 
-    Returns: smoothedDiagram (vtkPolyData): Smoothed voronoi diagram.
+    Returns:
+        smoothedDiagram (vtkPolyData): Smoothed voronoi diagram.
     """
-    number_of_points = voronoi.GetNumberOfPoints()
+    # Set smoothing thresholds
     thresholds = get_point_data_array(radiusArrayName, centerlines) * (1 - smoothing_factor)
+    if absolute:
+        threshold_lower = np.zeros(centerlines.GetNumberOfPoints())
+        threshold_lower[:] = smoothing_factor
+    else:
+        threshold_lower = get_point_data_array(radiusArrayName, centerlines) * (1 - smoothing_factor)
 
     # Do not smooth inlet and outlets, set threshold to -1
     start = 0
@@ -86,18 +94,22 @@ def smooth_voronoi_diagram(voronoi, centerlines, smoothing_factor, no_smooth_cl=
         end += end_
 
         # Point buffer start
-        end_id = end_ - np.argmin(np.abs(-(length - length.max()) - thresholds[end]))
-        start_id = np.argmin(np.abs(length - thresholds[start]))
+        end_id = end_ - np.argmin(np.abs(-(length - length.max()) - threshold_lower[end]))
+        start_id = np.argmin(np.abs(length - threshold_lower[start]))
+
+        threshold_lower[start:start + start_id] = -1
+        threshold_lower[end - end_id:end] = -1
 
         thresholds[start:start + start_id] = -1
         thresholds[end - end_id:end] = -1
         start += end_ + 1
         end += 1
 
-    locator = vtk_point_locator(centerlines)
+    locator = get_vtk_point_locator(centerlines)
     if no_smooth_cl is not None:
-        no_locator = vtk_point_locator(no_smooth_cl)
+        no_locator = get_vtk_point_locator(no_smooth_cl)
 
+    number_of_points = voronoi.GetNumberOfPoints()
     smoothed_diagram = vtk.vtkPolyData()
     points = vtk.vtkPoints()
     cell_array = vtk.vtkCellArray()
@@ -110,13 +122,15 @@ def smooth_voronoi_diagram(voronoi, centerlines, smoothing_factor, no_smooth_cl=
         id_ = locator.FindClosestPoint(point)
         cl_point = centerlines.GetPoint(id_)
 
-        if get_distance(point, cl_point) > 2 * thresholds[id_] / (1 - smoothing_factor):
+        # Do not include distant points
+        if get_distance(point, cl_point) > 2 * threshold_lower[id_] / (1 - smoothing_factor):
             points.InsertNextPoint(point)
             cell_array.InsertNextCell(1)
             cell_array.InsertCellPoint(count)
             radius_array_numpy[count] = radius
             count += 1
 
+        # Compare distance with no-smooth line
         elif no_smooth_cl is not None:
             dist1 = get_distance(point, centerlines.GetPoint(id_))
             id_1 = no_locator.FindClosestPoint(point)
@@ -129,14 +143,15 @@ def smooth_voronoi_diagram(voronoi, centerlines, smoothing_factor, no_smooth_cl=
                 radius_array_numpy[count] = radius
                 count += 1
             else:
-                if radius >= thresholds[id_]:
+                if radius >= threshold_lower[id_]:
                     points.InsertNextPoint(point)
                     cell_array.InsertNextCell(1)
                     cell_array.InsertCellPoint(count)
                     radius_array_numpy[count] = radius
                     count += 1
+        # Check threshold
         else:
-            if radius >= thresholds[id_]:
+            if radius >= threshold_lower[id_]:
                 points.InsertNextPoint(point)
                 cell_array.InsertNextCell(1)
                 cell_array.InsertCellPoint(count)
@@ -197,7 +212,7 @@ def get_split_voronoi_diagram(voronoi, centerlines):
     points1 = [vtk.vtkPoints() for i in range(n) if centerlines[i] is not None]
     cell_array1 = [vtk.vtkCellArray() for i in range(n) if centerlines[i] is not None]
     radius1 = [np.zeros(voronoi.GetNumberOfPoints()) for i in range(n) if centerlines[i] is not None]
-    loc1 = [vtk_point_locator(centerlines[i]) for i in range(n) if centerlines[i] is not None]
+    loc1 = [get_vtk_point_locator(centerlines[i]) for i in range(n) if centerlines[i] is not None]
     count1 = [0 for i in range(n) if centerlines[i] is not None]
 
     n1 = len(centerline1)

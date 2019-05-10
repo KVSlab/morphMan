@@ -57,7 +57,7 @@ def get_bifurcating_and_diverging_point_data(centerline, centerline_bif, tol):
     # Find the diverging points for the bifurcation
     # continue further downstream in each direction and stop when
     # a point is closer than tol, then move point MISR * X
-    locator = vtk_point_locator(centerline_bif)
+    locator = get_vtk_point_locator(centerline_bif)
 
     for counter, cl in enumerate([cl1, cl2]):
         for i in range(i, cl.GetNumberOfPoints(), 1):
@@ -113,7 +113,7 @@ def get_manipulated_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_ce
 
         radius_array_data = line.GetPointData().GetArray(radiusArrayName).GetTuple1
 
-        locator = vtk_point_locator(line)
+        locator = get_vtk_point_locator(line)
         id1 = locator.FindClosestPoint(p1)
         if diverging_id is not None and i == (number_of_cells - 1):
             # Note: Reuse id2 and idmid from previous loop
@@ -175,7 +175,7 @@ def get_centerline_between_clipping_points(centerline_relevant_outlets, data):
     line1 = extract_single_line(centerline_relevant_outlets, 1)
     lines = []
     for i, line in enumerate([line0, line1]):
-        loc = vtk_point_locator(line)
+        loc = get_vtk_point_locator(line)
         tmp_id_dau = loc.FindClosestPoint(data[i]["end_point"])
         tmp_id_bif = loc.FindClosestPoint(data["bif"]["end_point"])
         lines.append(extract_single_line(line, 0, start_id=tmp_id_bif, end_id=tmp_id_dau))
@@ -356,7 +356,7 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
             print("-- The chosen region points:", region_points)
 
         # Get locator
-        locator = vtk_point_locator(centerline)
+        locator = get_vtk_point_locator(centerline)
 
         if len(region_points) == 3:
             # Project point onto centerline
@@ -370,7 +370,7 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
             while dist > tol / 10:
                 cl_id += 1
                 line = extract_single_line(centerline, cl_id)
-                tmp_loc = vtk_point_locator(line)
+                tmp_loc = get_vtk_point_locator(line)
                 tmp_id = tmp_loc.FindClosestPoint(point1)
                 dist = get_distance(point1, line.GetPoint(tmp_id))
 
@@ -399,7 +399,7 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
             ids2 = []
             for i in range(centerline.GetNumberOfLines()):
                 line = extract_single_line(centerline, i)
-                tmp_loc = vtk_point_locator(line)
+                tmp_loc = get_vtk_point_locator(line)
                 ids1.append(tmp_loc.FindClosestPoint(point1))
                 ids2.append(tmp_loc.FindClosestPoint(point2))
                 cl_point1 = line.GetPoint(ids1[-1])
@@ -418,6 +418,9 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
             start_id = min(ids1[cl_id], ids2[cl_id])
             end_id = max(ids1[cl_id], ids2[cl_id])
 
+    elif region_of_interest == "full_model":
+        return centerline, None, None, None, None
+
     # Extract and spline a single line
     line_to_change = extract_single_line(centerline, cl_id, start_id=start_id, end_id=end_id)
 
@@ -428,7 +431,7 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
     tol = get_centerline_tolerance(centerline) * 4
     for i in range(centerline.GetNumberOfLines()):
         line = extract_single_line(centerline, i)
-        locator = vtk_point_locator(line)
+        locator = get_vtk_point_locator(line)
         id1 = locator.FindClosestPoint(start_point)
         id2 = locator.FindClosestPoint(end_point)
         p1_tmp = line.GetPoint(id1)
@@ -498,7 +501,7 @@ def get_region_of_interest_and_diverging_centerlines(centerlines_complete, regio
     tol = get_centerline_tolerance(centerlines_complete) * 4
     for i in range(centerlines_complete.GetNumberOfLines()):
         line = extract_single_line(centerlines_complete, i)
-        locator = vtk_point_locator(line)
+        locator = get_vtk_point_locator(line)
         id1 = locator.FindClosestPoint(p1)
         id2 = locator.FindClosestPoint(p2)
         p1_tmp = line.GetPoint(id1)
@@ -510,7 +513,7 @@ def get_region_of_interest_and_diverging_centerlines(centerlines_complete, regio
 
     # Sort and set clipping points to vtk object
     centerline = centerlines[0]
-    locator = vtk_point_locator(centerline)
+    locator = get_vtk_point_locator(centerline)
     id1 = locator.FindClosestPoint(region_points[0])
     id2 = locator.FindClosestPoint(region_points[1])
     if id1 > id2:

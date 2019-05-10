@@ -12,7 +12,7 @@ import vtk
 from os import path
 
 # Local import
-from morphman.common.vtk_wrapper import get_vtk_array, vtk_point_locator
+from morphman.common.vtk_wrapper import get_vtk_array, get_vtk_point_locator
 
 
 def get_path_names(input_filepath):
@@ -465,7 +465,7 @@ def get_direction_parameters(line, param, direction, clip_points):
         ids (ndarray): IDs of points along centerline.
         dx (ndarray): Direction to move geometry.
     """
-    locator = vtk_point_locator(line)
+    locator = get_vtk_point_locator(line)
     p1 = clip_points.GetPoint(0)
     p2 = clip_points.GetPoint(1)
     id1 = locator.FindClosestPoint(p1)
