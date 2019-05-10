@@ -47,10 +47,11 @@ def get_bifurcating_and_diverging_point_data(centerline, centerline_bif, tol):
         distance_between_points = get_distance(point_0, point_1)
         if distance_between_points > tol:
             center = cl1.GetPoint(i)
-            r = cl1.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
+            tmp_id = cl1.GetNumberOfPoints() - i
+            r = cl1.GetPointData().GetArray(radiusArrayName).GetTuple1(tmp_id)
             break
 
-    end, r_end, id_end = move_past_sphere(cl1, center, r, i, step=-1)
+    end, r_end, id_end = move_past_sphere(cl1, center, r, i, step=-1, scale_factor=1)
     data["bif"]["end_point"] = end
     data["bif"]["div_point"] = center
 
@@ -65,13 +66,15 @@ def get_bifurcating_and_diverging_point_data(centerline, centerline_bif, tol):
             closest_point_id = locator.FindClosestPoint(tmp_point)
             closest_point = centerline_bif.GetPoint(closest_point_id)
             distance_between_points = get_distance(tmp_point, closest_point)
-            if distance_between_points < tol * 4:
+            if distance_between_points < tol:
                 center = cl.GetPoint(i)
-                r = cl1.GetPointData().GetArray(radiusArrayName).GetTuple1(i)
+                tmp_id = cl.GetNumberOfPoints() - i
+                r = cl.GetPointData().GetArray(radiusArrayName).GetTuple1(tmp_id)
                 break
 
         end, r_end, id_end = move_past_sphere(cl, center, r, i, step=1,
                                               stop=i * 100, scale_factor=1)
+        print(r)
         data[counter]["end_point"] = end
         data[counter]["div_point"] = center
 
