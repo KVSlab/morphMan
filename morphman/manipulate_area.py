@@ -243,21 +243,9 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
         id_list = vtk.vtkIdList()
         point = voronoi.GetPoint(i)
 
+        # Compute asymmetric factor, ranging from 0 to 1
         if angle_asymmetric is not None:
-            # Find closest point on centerline
-            cl_id = locator.FindClosestPoint(point)
-            cl_point = line_to_change.GetPoint(cl_id)
-
-            # Find angle between Frenet normal and Voronoi point
-            origin = np.asarray(cl_point)
-            voro_point = np.asarray(point)
-            frenet_normal = frenet_normals_array[cl_id]
-            voronoi_vector = voro_point - origin
-            frenet_normal = frenet_normal - origin
-            angle = np.arccos(
-                np.dot(frenet_normal, voronoi_vector) / (la.norm(frenet_normal) * la.norm(voronoi_vector)))
-
-            # Set asymmetric profile
+            angle = get_frenet_voronoi_angle(frenet_normals_array, line_to_change, locator, point)
             asymmetric_factor = get_asymmetric_factor(angle, angle_asymmetric)
 
         # Find two closest points on centerline
@@ -283,13 +271,11 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
         P_mid = get_midpoint(A, AB, AB_length, AP, line_to_change, sign)
         delta_p = P_mid - P
 
-        if sign < 0:
-            factor_ = factor[tmp_id1]
-        else:
+        # Update factor value based on midpoint
+        if sign > 0:
             factor_ = update_factor(A, AB_length, B, P_mid, factor, tmp_id1, tmp_id2)
-
-        # Change radius
-        point_radius = point_radius_array(i) * factor_
+        else:
+            factor_ = factor[tmp_id1]
 
         if angle_asymmetric is not None:
             # Revert displacement to add asymmetric effect
@@ -297,6 +283,8 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
         else:
             v = delta_p * (1 - factor_)
 
+        # Change radius
+        point_radius = point_radius_array(i) * factor_
         voronoi_points.InsertNextPoint((P + v).tolist())
         radius_array.SetTuple1(i, point_radius)
         cell_array.InsertNextCell(1)
@@ -377,6 +365,35 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
     new_voronoi.GetPointData().AddArray(radius_array)
 
     return new_voronoi, new_centerlines
+
+
+def get_frenet_voronoi_angle(frenet_normals_array, line_to_change, locator, point):
+    """
+    Compute angle between frenet normal vector and Voronoi point.
+
+    Args:
+        frenet_normals_array (ndarray): List of all frenet normals
+        line_to_change (vtkPolyData): Centerline in region of interest
+        locator (vtkPointLocator): Centerline locator
+        point (vtkPoint): Voronoi point
+
+    Returns:
+        float: Angle between normal vector and Voronoi point
+    """
+    # Find closest point on centerline
+    cl_id = locator.FindClosestPoint(point)
+    cl_point = line_to_change.GetPoint(cl_id)
+
+    # Find angle between Frenet normal and Voronoi point
+    origin = np.asarray(cl_point)
+    voro_point = np.asarray(point)
+    frenet_normal = frenet_normals_array[cl_id]
+    voronoi_vector = voro_point - origin
+    frenet_normal = frenet_normal - origin
+
+    angle = np.arccos(np.dot(frenet_normal, voronoi_vector) / (la.norm(frenet_normal) * la.norm(voronoi_vector)))
+
+    return angle
 
 
 def get_asymmetric_factor(angle, angle_asymmetric):
