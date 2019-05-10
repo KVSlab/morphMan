@@ -267,12 +267,11 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
 
         # Get direction (delta_p) to move the point
         AB_length = la.norm(AB)
-        P_mid = get_midpoint(A, AB, AB_length, AP, line_to_change, sign)
-        delta_p = P_mid - P
+        delta_p = A - P
 
         # Update factor value based on midpoint
         if sign > 0:
-            factor_ = update_factor(A, AB_length, B, P_mid, factor, tmp_id1, tmp_id2)
+            factor_ = update_factor(A, AB_length, B, A, factor, tmp_id1, tmp_id2)
         else:
             factor_ = factor[tmp_id1]
 
@@ -416,31 +415,6 @@ def update_factor(A, AB_length, B, P_mid, factor, tmp_id1, tmp_id2):
     factor_ = (factor[tmp_id1] * AP_mid_length + factor[tmp_id2] * BP_mid_length) / AB_length
 
     return factor_
-
-
-def get_midpoint(A, AB, AB_length, AP, line_to_change, sign):
-    """
-   Find midpoint on line AB from Voronoi point P
-
-    Args:
-        A (ndarray): First point
-        AB (ndarray): Vector between point A and B
-        AB_length (float): Length of line AB
-        AP (ndarray): Vector between point A and P
-        line_to_change (vtkPolyData): Relevant centerline
-        sign (int): Integer swtich used for points beyond centerline
-
-    Returns:
-        ndarray: Midpoint on line AB
-    """
-
-    if AB_length > get_centerline_tolerance(line_to_change) * 10:
-        # Project Voronoi on line AB and get midpoint
-        P_mid = A + sign * np.dot(AP, AB) / np.dot(AB, AB) * AB
-    else:
-        P_mid = A
-
-    return P_mid
 
 
 def read_command_line_area(input_path=None, output_path=None):
