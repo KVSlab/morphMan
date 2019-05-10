@@ -15,7 +15,7 @@ from morphman.common.common import get_path_names
 from morphman.common.surface_operations import read_polydata, vmtk_compute_centerline_sections, get_point_data_array, \
     extract_single_line
 
-"""
+
 def test_area_linear(surface_paths):
     # Get default input
     common_input = read_command_line_area(surface_paths[0], surface_paths[1])
@@ -130,9 +130,6 @@ def test_create_stenosis(surface_paths):
 
     # Check if there is a 50 % narrowing
     assert abs((np.sqrt(new_area / old_area)).min() - 0.5) < 0.05
-
-
-"""
 
 
 def test_create_bulge(surface_paths):
