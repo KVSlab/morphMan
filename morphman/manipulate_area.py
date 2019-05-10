@@ -241,15 +241,11 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
 
     # Iterate through Voronoi diagram and manipulate
     frenet_normals_array = get_point_data_array("FrenetNormal", line_to_change, k=3)
+    frenet_tangents_array = get_point_data_array("FrenetTangent", line_to_change, k=3)
     point_radius_array = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1
     for i in range(n):
         id_list = vtk.vtkIdList()
         point = voronoi.GetPoint(i)
-
-        # Compute asymmetric factor, ranging from 0 to 1
-        if angle_asymmetric is not None:
-            angle = get_frenet_voronoi_angle(frenet_normals_array, line_to_change, locator, point)
-            asymmetric_factor = get_asymmetric_factor(angle, angle_asymmetric)
 
         # Find two closest points on centerline
         locator.FindClosestNPoints(2, point, id_list)
@@ -281,8 +277,8 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
             factor_ = factor[tmp_id1]
 
         if angle_asymmetric is not None:
-            # Revert displacement to add asymmetric effect
-            v = -delta_p / la.norm(delta_p) * point_radius_array(i) * (1 - factor_) * asymmetric_factor
+            v = get_asymmetric_displacement(A, angle_asymmetric, factor_, frenet_normals_array,
+                                            frenet_tangents_array, locator, point)
         else:
             v = delta_p * (1 - factor_)
 
@@ -370,50 +366,32 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
     return new_voronoi, new_centerlines
 
 
-def get_frenet_voronoi_angle(frenet_normals_array, line_to_change, locator, point):
+def get_asymmetric_displacement(A, angle_asymmetric, factor_, frenet_normals_array, frenet_tangents_array, locator,
+                                point):
     """
-    Compute angle between frenet normal vector and Voronoi point.
+    Compute translation adding asymmetric effect to stenosis / bulge
 
     Args:
-        frenet_normals_array (ndarray): List of all frenet normals
-        line_to_change (vtkPolyData): Centerline in region of interest
+        A (ndarray): Initial position on centerline
+        angle_asymmetric (Angle to rotate around Frenet tangent vector:
+        factor_ (float): Scaling factor for area manipulation
+        frenet_normals_array (list): List of Frenet normal vectors
+        frenet_tangents_array (list): List of Frenet tangent vectors
         locator (vtkPointLocator): Centerline locator
-        point (vtkPoint): Voronoi point
+        point (vtkPoint): Current Voronoi point
 
     Returns:
-        float: Angle between normal vector and Voronoi point
+        ndarray: Translation vector for asymmetric effect
     """
-    # Find closest point on centerline
     cl_id = locator.FindClosestPoint(point)
-    cl_point = line_to_change.GetPoint(cl_id)
-
-    # Find angle between Frenet normal and Voronoi point
-    origin = np.asarray(cl_point)
-    voro_point = np.asarray(point)
     frenet_normal = frenet_normals_array[cl_id]
-    voronoi_vector = voro_point - origin
-    frenet_normal = frenet_normal - origin
+    frenet_normal_vector = A + frenet_normal
+    frenet_normal_vector /= la.norm(frenet_normal_vector)
+    frenet_tangent = frenet_tangents_array[cl_id]
+    R = get_rotation_matrix(frenet_tangent, angle_asymmetric)
+    v = np.dot(R, frenet_normal_vector) * (1 - factor_) * 1.5
 
-    angle = np.arccos(np.dot(frenet_normal, voronoi_vector) / (la.norm(frenet_normal) * la.norm(voronoi_vector)))
-
-    return angle
-
-
-def get_asymmetric_factor(angle, angle_asymmetric):
-    """
-    Definie asymmetric profile depening on angle between
-    Voronoi point and Frenet frame normal vector.
-
-    Args:
-        angle (float): Angle between vectors
-        angle_asymmetric (float): Initial angle, applying translation to profile
-
-    Returns:
-        float: Magnitude of manipulation at spesific angle
-    """
-    asymmetric_factor = np.exp(- (angle - angle_asymmetric) ** 2)
-
-    return asymmetric_factor
+    return v
 
 
 def update_factor(A, AB_length, B, P_mid, factor, tmp_id1, tmp_id2):
