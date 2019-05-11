@@ -31,7 +31,7 @@ def test_area_linear(surface_paths):
                              region_points=region_points,
                              method="linear",
                              smooth=False,
-                             size=2,
+                             size=1,
                              percentage=50))
 
     # Run area variation

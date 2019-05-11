@@ -243,6 +243,7 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
     frenet_normals_array = get_point_data_array("FrenetNormal", line_to_change, k=3)
     frenet_tangents_array = get_point_data_array("FrenetTangent", line_to_change, k=3)
     point_radius_array = voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1
+    tol = get_centerline_tolerance(centerlines)
     for i in range(n):
         id_list = vtk.vtkIdList()
         point = voronoi.GetPoint(i)
@@ -267,11 +268,17 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
 
         # Get direction (delta_p) to move the point
         AB_length = la.norm(AB)
-        delta_p = A - P
+        if AB_length > tol * 10:
+            h = np.linalg.norm(np.cross(AP, AB)) / AB_length  # shortest distance between point and line
+            D = A + (AB / AB_length) * np.sqrt(np.linalg.norm(AP) ** 2 - h ** 2)
+        else:
+            D = A
+
+        delta_p = D - P
 
         # Update factor value based on midpoint
         if sign > 0:
-            factor_ = update_factor(A, AB_length, B, A, factor, tmp_id1, tmp_id2)
+            factor_ = update_factor(A, AB_length, B, D, factor, tmp_id1, tmp_id2)
         else:
             factor_ = factor[tmp_id1]
 
