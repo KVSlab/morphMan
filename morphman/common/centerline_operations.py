@@ -74,7 +74,6 @@ def get_bifurcating_and_diverging_point_data(centerline, centerline_bif, tol):
 
         end, r_end, id_end = move_past_sphere(cl, center, r, i, step=1,
                                               stop=i * 100, scale_factor=1)
-        print(r)
         data[counter]["end_point"] = end
         data[counter]["div_point"] = center
 
