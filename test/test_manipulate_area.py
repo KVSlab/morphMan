@@ -109,7 +109,7 @@ def test_create_stenosis(surface_paths):
     common_input.update(dict(region_of_interest="commandline",
                              region_points=region_point,
                              method="stenosis",
-                             size=1.0,
+                             size=2.0,
                              percentage=50))
 
     # Create a stenosis
