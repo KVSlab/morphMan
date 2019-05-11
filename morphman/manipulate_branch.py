@@ -38,8 +38,8 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
         no_smooth (bool): True of part of the model is not to be smoothed.
         no_smooth_point (ndarray): Point which is untouched by smoothing.
         resampling_step (float): Resampling length when resampling centerline.
-        polar_angle (float): Angle to rotate around new surface normal vector. Default i no rotation.
-        azimuth_angle (float): Angle to rotate around the axis spanned by cross product of new normal and frenet normal.
+        azimuth_angle (float): Angle to rotate around new surface normal vector. Default is no rotation.
+        polar_angle (float): Angle to rotate around the axis spanned by cross product of new normal and frenet normal.
         branch_to_manipulate_number (int): Number of branch to manipulate, ordered from up- to down-stream.
         branch_location (ndarray): Point where branch to manipulate will be moved. Closest point on surface is selected.
         translation_method (str): Method for translating the branch to be manipulated.
@@ -175,8 +175,8 @@ def move_and_rotate_branch(polar_angle, azimuth_angle, capped_surface, centerlin
         base_path (string): Path to save location
         output_filepath (str): Path to output the manipulated surface.
         poly_ball_size (list): Resolution of polyballs used to create surface.
-        polar_angle (float): Angle to rotate around new surface normal vector. Default i no rotation.
-        azimuth_angle (float): Angle to rotate around the axis spanned by cross product of new normal and frenet normal.
+        azimuth_angle (float): Angle to rotate around new surface normal vector. Default is no rotation.
+        polar_angle (float): Angle to rotate around the axis spanned by cross product of new normal and frenet normal.
     """
     if method in ['commandline', 'manual']:
         if polar_angle != 0 or azimuth_angle != 0:
@@ -204,14 +204,14 @@ def move_and_rotate_branch(polar_angle, azimuth_angle, capped_surface, centerlin
         manipulated_voronoi, manipulated_centerline, origin = move_branch(centerlines, manipulated_centerline,
                                                                           new_branch_pos, old_normal, new_normal,
                                                                           manipulated_voronoi)
-    if polar_angle != 0:
-        print("-- Rotating branch")
-        manipulated_voronoi, manipulated_centerline = rotate_branch(polar_angle, manipulated_centerline,
-                                                                    manipulated_voronoi, origin, new_normal)
     if azimuth_angle != 0:
         print("-- Rotating branch")
-        axis_of_rotation = get_axis_of_rotation(manipulated_centerline, new_normal)
         manipulated_voronoi, manipulated_centerline = rotate_branch(azimuth_angle, manipulated_centerline,
+                                                                    manipulated_voronoi, origin, new_normal)
+    if polar_angle != 0:
+        print("-- Rotating branch")
+        axis_of_rotation = get_axis_of_rotation(manipulated_centerline, new_normal)
+        manipulated_voronoi, manipulated_centerline = rotate_branch(polar_angle, manipulated_centerline,
                                                                     manipulated_voronoi, origin, axis_of_rotation)
 
     # Create new voronoi diagram and new centerlines
@@ -805,14 +805,14 @@ def read_command_line_branch(input_path=None, output_path=None):
                              " --branch-loc 1 5 -1")
 
     # Arguments for rotation
-    parser.add_argument('-pa', '--polar-angle', type=float, default=0,
-                        help="The manipulated branch is rotated an angle 'pa' around the old or new" +
-                             " surface normal vector. 'pa' is assumed to be in degrees," +
-                             " and not radians. Default is no rotation.", metavar="surface_normal_axis_angle")
     parser.add_argument('-aa', '--azimuth-angle', type=float, default=0,
-                        help="The manipulated branch is rotated an angle 'aa' around the" +
+                        help="The manipulated branch is rotated an angle 'aa' around the old or new" +
+                             " surface normal vector. 'aa' is assumed to be in degrees," +
+                             " and not radians. Default is no rotation.", metavar="surface_normal_axis_angle")
+    parser.add_argument('-pa', '--polar-angle', type=float, default=0,
+                        help="The manipulated branch is rotated an angle 'pa' around the" +
                              " surface tangent vector, constructed by the cross product of the surface normal vector" +
-                             " and the Frenet normal vector. 'aa' is assumed to be in degrees," +
+                             " and the Frenet normal vector. 'pa' is assumed to be in degrees," +
                              " and not radians. Default is no rotation.", metavar="surface_tangent_axis_angle")
 
     # Argument for selecting branch
@@ -843,10 +843,10 @@ def read_command_line_branch(input_path=None, output_path=None):
 
     # Convert from deg to rad and invert rotation if exceeding 180 degrees
     polar_angle_to_radians = args.polar_angle * math.pi / 180
-    if polar_angle_to_radians > np.pi:
-        polar_angle_to_radians -= 2 * np.pi
 
     azimuth_angle_to_radians = args.azimuth_angle * math.pi / 180
+    if azimuth_angle_to_radians > np.pi:
+        azimuth_angle_to_radians -= 2 * np.pi
 
     if args.no_smooth_point is not None and len(args.no_smooth_point):
         if len(args.no_smooth_point) % 3 != 0:
