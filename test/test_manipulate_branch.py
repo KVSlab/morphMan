@@ -22,7 +22,10 @@ def test_manipulate_branch_translation(surface_paths):
     branch_number = 2
 
     # No rotation around new surface normal vector
-    angle = 0
+    azimuth_angle = 0
+
+    # No rotation around new surface 'tangent' vector
+    polar_angle = 0
 
     # New location of branch
     new_branch_location = (45.7, 37.6, 42.5)
@@ -32,8 +35,8 @@ def test_manipulate_branch_translation(surface_paths):
 
     # Change default input
     common_input.update(
-        dict(angle=angle, branch_to_manipulate_number=branch_number, branch_location=new_branch_location,
-             translation_method=translation_method))
+        dict(polar_angle=polar_angle, branch_to_manipulate_number=branch_number, branch_location=new_branch_location,
+             translation_method=translation_method, azimuth_angle=azimuth_angle))
 
     # Run manipulate branch
     manipulate_branch(**common_input)
@@ -54,7 +57,7 @@ def test_manipulate_branch_translation(surface_paths):
     assert len(untouched_centerlines) < len(new_centerlines)
 
 
-def test_manipulate_branch_translation_and_rotation(surface_paths):
+def test_manipulate_branch_translation_and_polar_rotation(surface_paths):
     # Get default input
     common_input = read_command_line_branch(surface_paths[0], surface_paths[1])
 
@@ -62,7 +65,7 @@ def test_manipulate_branch_translation_and_rotation(surface_paths):
     branch_number = 3
 
     # No rotation around new surface normal vector
-    angle0 = 0
+    azimuth_angle0 = 0
 
     # New location of branch
     new_branch_location = (47.0, 27.8, 54.4)
@@ -76,7 +79,7 @@ def test_manipulate_branch_translation_and_rotation(surface_paths):
              translation_method=translation_method))
 
     # Run without rotation around surface normal
-    common_input.update(dict(angle=angle0))
+    common_input.update(dict(azimuth_angle=azimuth_angle0))
 
     # Run area variation
     manipulate_branch(**common_input)
@@ -94,8 +97,8 @@ def test_manipulate_branch_translation_and_rotation(surface_paths):
     new_centerlines0 = [extract_single_line(new_centerlines0, i) for i in range(new_centerlines0.GetNumberOfLines())]
 
     # Perform same manipulation WITH rotation around new surface normal.
-    angle1 = np.pi
-    common_input.update(dict(angle=angle1))
+    azimuth_angle1 = np.pi
+    common_input.update(dict(azimuth_angle=azimuth_angle1))
 
     # Run manipulate branch
     manipulate_branch(**common_input)
@@ -115,7 +118,7 @@ def test_manipulate_branch_translation_and_rotation(surface_paths):
     assert len(unchanged_centerlines1) < len(old_centerlines)
 
 
-def test_manipulate_branch_rotation(surface_paths):
+def test_manipulate_branch_polar_rotation(surface_paths):
     # Get default input
     common_input = read_command_line_branch(surface_paths[0], surface_paths[1])
 
@@ -123,7 +126,7 @@ def test_manipulate_branch_rotation(surface_paths):
     branch_number = 2
 
     # No rotation around new surface normal vector
-    angle = np.pi
+    polar_angle = np.pi / 4
 
     # Branch translation method
     translation_method = 'no_translation'
@@ -133,7 +136,48 @@ def test_manipulate_branch_rotation(surface_paths):
         dict(branch_to_manipulate_number=branch_number, translation_method=translation_method))
 
     # Run with only rotation around original surface normal
-    common_input.update(dict(angle=angle))
+    common_input.update(dict(polar_angle=polar_angle))
+
+    # Run manipulate branch
+    manipulate_branch(**common_input)
+
+    # Set file paths
+    base_path = get_path_names(common_input['input_filepath'])
+    old_centerlines_path = base_path + "_centerline.vtp"
+    new_centerlines_path = base_path + "_centerline_rotated.vtp"
+
+    # Read centerlines
+    old_centerlines = read_polydata(old_centerlines_path)
+    old_centerlines = [extract_single_line(old_centerlines, i) for i in range(old_centerlines.GetNumberOfLines())]
+
+    new_centerlines = read_polydata(new_centerlines_path)
+    new_centerlines = [extract_single_line(new_centerlines, i) for i in range(new_centerlines.GetNumberOfLines())]
+
+    # Compare end point of all centerlines
+    unchanged_centerlines = compare_end_points(new_centerlines, old_centerlines)
+
+    assert len(unchanged_centerlines) < len(old_centerlines)
+
+
+def test_manipulate_branch_azimuthal_rotation(surface_paths):
+    # Get default input
+    common_input = read_command_line_branch(surface_paths[0], surface_paths[1])
+
+    # Arbitrary branch in model C0001
+    branch_number = 2
+
+    # No rotation around new surface normal vector
+    azimuth_angle = np.pi
+
+    # Branch translation method
+    translation_method = 'no_translation'
+
+    # Change default input
+    common_input.update(
+        dict(branch_to_manipulate_number=branch_number, translation_method=translation_method))
+
+    # Run with only rotation around original surface normal
+    common_input.update(dict(azimuth_angle=azimuth_angle))
 
     # Run manipulate branch
     manipulate_branch(**common_input)
