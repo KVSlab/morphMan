@@ -610,9 +610,9 @@ def read_command_line_bifurcation(input_path=None, output_path=None):
                         help="Leave one branch untouched")
 
     # Arguments for parent artery centerline interpolation (not daughter)
-    parser.add_argument("-t", "--tension", type=restricted_float, default=0,
+    parser.add_argument("-t", "--tension", type=float, default=0.8,
                         help="Set tention of the KochanekSpline from -1 to 1")
-    parser.add_argument("-c", "--continuity", type=restricted_float, default=0,
+    parser.add_argument("-c", "--continuity", type=float, default=0.8,
                         help="Set continuity of the KochanekSpline from -1 to 1")
 
 
@@ -631,6 +631,13 @@ def read_command_line_bifurcation(input_path=None, output_path=None):
     else:
         args = parser.parse_args(["-i" + input_path, "-o" + output_path])
     ang_ = args.angle * math.pi / 180  # Convert from deg to rad
+
+    if not (-1 <= args.tension <= 1):
+        raise ValueError("Tension has to be between -1 and 1, not {}".format(args.tension))
+
+    if not (-1 <= args.continuity <= 1):
+        raise ValueError("Tension has to be between -1 and 1, not {}".format(args.continuity))
+
 
     return dict(input_filepath=args.ifile, smooth=args.smooth, output_filepath=args.ofile,
                 smooth_factor=args.smooth_factor, angle=ang_,

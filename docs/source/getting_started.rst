@@ -8,8 +8,8 @@ Using morphMan
 
 morphMan (morphological manipulation) is a collection of scripts to objectively manipulate morphological features
 of patient-specific vascular geometries. In the tutorials, we exemplify the usage
-by manipulating `internal carotid arteries <https://en.wikipedia.org/wiki/Internal_carotid_artery>`_
-, but morphMan can be applied to any geometry with a tubular shape.
+by manipulating `internal carotid arteries <https://en.wikipedia.org/wiki/Internal_carotid_artery>`_,
+but morphMan can be applied to any geometry with a tubular shape.
 
 The goal of morphMan is to provide researchers, and other users, with a set of tools to investigate the impact
 of altering morphological features in patient-specific geometries. For instance, by combining
@@ -41,10 +41,11 @@ Tutorials
 For morphMan to be user friendly, we provide a tutorial for each of the scripts.
 
 * :ref:`manipulate_area` (Create/remove a stenosis, in/decrease area variation, in/deflation of a vessel)
-* :ref:`manipulate_bend` (Change the curvature or angle of a bend)
 * :ref:`manipulate_bifurcation` (Change the angle in a bifurcation)
-* :ref:`manipulate_curvature` (Increase or decrease the curvature variation in the a vessel segment)
+* :ref:`manipulate_bend` (Change the curvature or angle of a bend)
 * :ref:`manipulate_branch` (Translate and rotate or removal of a specific branch anywhere on the surface)
+* :ref:`manipulate_curvature` (Increase or decrease the curvature variation in the a vessel segment)
+* :ref:`manipulate_surface` (Increase or decrease surface roughness)
 
 If you have any questions beyond the tutorials, please do not hesitate to get in touch with us.
 

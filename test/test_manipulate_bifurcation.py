@@ -94,4 +94,4 @@ def test_bifurcation_angle(surface_paths, angle):
 
     assert abs(first_daughter_branch_angle_change
                + second_daughter_branch_angle_change
-               - 2 * abs(common_input["angle"])) < 0.01
+               - 2 * abs(common_input["angle"])) < 0.04
