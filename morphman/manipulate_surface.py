@@ -422,8 +422,8 @@ def read_command_line_surface(input_path=None, output_path=None):
 
     if args.frequency_deviation <= 0:
         raise ArgumentTypeError("The standard deviation has to be larger than zero." +
-                                " Please provide a valid value, not {}" \
-                                .format(args.frequency_deviation))
+                                " Please provide a valid value, not" +
+                                " {}".format(args.frequency_deviation))
 
     return dict(input_filepath=args.ifile, smooth=args.smooth, output_filepath=args.ofile,
                 smooth_factor=args.smooth_factor, resampling_step=args.resampling_step,

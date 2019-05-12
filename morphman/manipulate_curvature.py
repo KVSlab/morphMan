@@ -6,6 +6,7 @@
 ##      PURPOSE.  See the above copyright notices for more information.
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
+
 from vtk.numpy_interface import dataset_adapter as dsa
 
 # Local import
@@ -66,9 +67,9 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
                                           no_smooth_point, voronoi, pole_ids, resampling_step)
     # Get region of interest
     centerline_splined, centerline_remaining, \
-        centerline_diverging, region_points, diverging_ids = get_line_to_change(capped_surface, centerlines,
-                                                                                region_of_interest, "variation",
-                                                                                region_points, None)
+    centerline_diverging, region_points, diverging_ids = get_line_to_change(capped_surface, centerlines,
+                                                                            region_of_interest, "variation",
+                                                                            region_points, None)
 
     write_polydata(centerline_splined, centerline_spline_path)
     write_polydata(centerline_remaining, centerline_remaining_path)
@@ -129,8 +130,8 @@ def get_dx(p0, p1, smooth_line, cl_id, id_end, id_mid, id_start):
     """Get the displacement for the Voronoi point
 
     Args:
-        p0 (list): Point i on the old centerline.
-        p1 (list): Point i on the new centerline.
+        p0 (ndarray): Point i on the old centerline.
+        p1 (ndarray): Point i on the new centerline.
         smooth_line (bool): Turn on/off increasing curvuature.
         cl_id (int): ID of point i
         id_end (int): Point ID of start transition region.
@@ -200,7 +201,7 @@ def make_voronoi_smooth(voronoi, old_cl, new_cl, smooth_line, div_voronoi, div_p
 
     # Offset diverging centerlines
     div_offset = []
-    if div_voronoi != []:
+    if len(div_voronoi) > 0:
         for i in range(len(div_voronoi)):
             cl_id = locator.FindClosestPoint(div_points[i])
             p0 = np.asarray(old_cl.GetPoint(cl_id))
