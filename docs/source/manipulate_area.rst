@@ -79,10 +79,12 @@ Create a stenosis
 ~~~~~~~~~~~~~~~~~
 For creating a stenosis you need to define the center, either by providing the point
 manually or using ``--stenosis-points``. The stenosis will be upstream and downstream
-of the center, with a length (``--size``) times the local maximal inscribed sphere, and  ``--percent``
-controls how much the local radius should be changed. For instance, if ``--percent 30``
+of the center, with a length (``--size``) times the local maximal inscribed sphere, and  ``--percentage``
+controls how much the local radius should be changed. For instance, if ``--percentage 30``
 is provided as an argument, the stenosis will have an area in the middle of stenosis of
 :math:`(0.7 \cdot r)^2\pi`, where :math:`r` is the radius of the area in the original geometry.
+An additional feature includes introducing an asymmetric stenosis, by setting the ``--angle-asymmetric`` flag
+to a desired angle, :math:`\theta \in [0, 360 ]`.
 
 The stenosis is now assumed to have a sinusoidal shape. However, altering the shape is trivial,
 and can be done by adapting one line in the function :meth:`manipulate_area.get_factor`.
@@ -98,18 +100,32 @@ To recreate the above output, execute the following from the commandline::
 
     morphman-area --ifile C0002/surface/model.vtp --ofile C0002/surface/stenosis.vtp --method stenosis --size 4 --percentage 50 --region-of-interest commandline --region-points 28.7 18.4 39.5 --poly-ball-size 250 250 250
 
+Alternativley, you can introduce an asymmetric stenosis by setting the ``--angle-asymmetric`` flag
+to a desired angle, :math:`\theta \in [0, 360 ]`. The selected value of :math:`\theta` determines where the surface
+is unaffected, relative to the region point.
+
+In Figure 4 you can see the output of creating an asymmetric stenosis, with an initial angle of 90 degrees.
+
+.. figure:: asymmetric_stenosis.png
+
+  Figure 4: Comparison of the new and old model, with and without an asymmetric stenosis.
+
+To recreate the above output, execute the following from the commandline::
+
+    morphman-area --ifile C0002/surface/model.vtp --ofile C0002/surface/asymmetric_stenosis.vtp --method stenosis --angle-asymmetric 90 --size 6 --percentage 75 --region-points 23.83 4.66 38.33 --poly-ball-size 250 250 250
+
 Remove a stenosis
 ~~~~~~~~~~~~~~~~~
 To remove a stenosis, you need to provide two points, one at each end of the
 stenosis. The area will be altered to change linearly between the two points.
 
 To exemplify this, we can use the output from the previous example ``C0002/surface/stenosis.vtp``.
-To the left in Figure 4 you can see the stenosed model compared to the original, and to the
+To the left in Figure 5 you can see the stenosed model compared to the original, and to the
 right, the comparison between the original model and the 'healed' surface.
 
 .. figure:: fix_stenosis.png
 
-  Figure 4: Comparison between the original model in white with opacity, and the modified models in red.
+  Figure 5: Comparison between the original model in white with opacity, and the modified models in red.
     
 To reproduce the above result, execute the following command::
 

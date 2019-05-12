@@ -654,25 +654,6 @@ def get_rotation_axis_and_angle(new_normal, old_normal):
     return u, angle
 
 
-def get_rotation_matrix(u, angle):
-    """
-    Get three dimensional rotation matrix based on Euler-Rodrigues formula
-
-    Args:
-        u (ndarray): Normal vector corresponding to rotation axis
-        angle (float): Angle to rotate
-
-    Returns:
-        R (ndarray): Rotation matrix
-    """
-    u_cross_matrix = np.asarray([[0, -u[2], u[1]],
-                                 [u[2], 0, -u[0]],
-                                 [-u[1], u[0], 0]])
-    u_outer = np.outer(u, u)
-    R = np.cos(angle) * np.eye(3) + np.sin(angle) * u_cross_matrix + (1 - np.cos(angle)) * u_outer
-
-    return R
-
 
 def manipulate_voronoi_branch(voronoi, dx, R, origo, centerline, normal, angle, manipulation):
     """

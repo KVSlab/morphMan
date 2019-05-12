@@ -6,10 +6,11 @@
 ##      PURPOSE.  See the above copyright notices for more information.
 
 import json
+from os import path
+
 import numpy as np
 import numpy.linalg as la
 import vtk
-from os import path
 
 # Local import
 from morphman.common.vtk_wrapper import get_vtk_array, get_vtk_point_locator
@@ -495,3 +496,23 @@ def get_direction_parameters(line, param, direction, clip_points):
     elif direction == "horizont":
         dz, zp, zm = get_horizontal_direction_parameters(n, region_points, points, param)
         return dz, ids
+
+
+def get_rotation_matrix(u, angle):
+    """
+    Get three dimensional rotation matrix based on Euler-Rodrigues formula
+
+    Args:
+        u (ndarray): Normal vector corresponding to rotation axis
+        angle (float): Angle to rotate
+
+    Returns:
+        R (ndarray): Rotation matrix
+    """
+    u_cross_matrix = np.asarray([[0, -u[2], u[1]],
+                                 [u[2], 0, -u[0]],
+                                 [-u[1], u[0], 0]])
+    u_outer = np.outer(u, u)
+    R = np.cos(angle) * np.eye(3) + np.sin(angle) * u_cross_matrix + (1 - np.cos(angle)) * u_outer
+
+    return R
