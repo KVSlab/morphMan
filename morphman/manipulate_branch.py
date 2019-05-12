@@ -672,7 +672,6 @@ def manipulate_centerline_branch(centerline_branch, origin, R, dx, normal, angle
 def get_clamped_branch_factors(angle, centerline_locator, dx, normal, number_of_points, point):
     """
     Gradually maniulate branch to clamp branch at endpoint.
-    Currently using a linear profile, ranging from 0 to 1.
 
     Args:
         dx (float): Distance to translate branch
@@ -686,17 +685,28 @@ def get_clamped_branch_factors(angle, centerline_locator, dx, normal, number_of_
         ndarray: Rotation matrix
         ndarray: Translation point
     """
-
-    def clamp_profile(centerline_id):
-        return (number_of_points - centerline_id) / number_of_points
-
     cl_id = centerline_locator.FindClosestPoint(point)
-    clamp_factor = clamp_profile(cl_id)
+    clamp_factor = clamp_profile(cl_id, number_of_points)
     new_angle = angle * clamp_factor
     R = get_rotation_matrix(normal, new_angle)
     point = np.asarray(point) + dx * clamp_factor
 
     return R, point
+
+
+def clamp_profile(centerline_id, number_of_points):
+    """
+    Profile used for gradually translating a branch to be clamped.
+    Currently using a linear profile, ranging from 0 to 1.
+
+    Args:
+        centerline_id (int): ID at current centerline point
+        number_of_points (int): Number of centerline points
+
+    Returns:
+        float: Clamp factor, ranging from 0 to 1
+    """
+    return (number_of_points - centerline_id) / float(number_of_points)
 
 
 def get_rotation_axis_and_angle(new_normal, old_normal):

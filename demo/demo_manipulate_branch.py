@@ -103,6 +103,21 @@ default_values["output_filepath"] = path.join(absolute_path, case, "surface", "p
 # Run manipulation
 manipulate_branch(**default_values)
 
+### Clamp branch when translating
+# Reset angle parameters
+default_values["polar_angle"] = 0
+default_values["azimuth_angle"] = 0
+
+# Method spesific parameters
+default_values["branch_location"] = [27.75, 29.75, 24.61]
+default_values["clamp_branch"] = True
+
+# Set new output path
+default_values["output_filepath"] = path.join(absolute_path, case, "surface", "clamped_branch.vtp")
+
+# Run manipulation
+manipulate_branch(**default_values)
+
 
 ### Branch removal
 # Method spesific parameters

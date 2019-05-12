@@ -31,6 +31,7 @@ When using ``morphman-branch``, there are five main settings which can be provid
  * ``branch_loc``: The point on / closest to the surface, where the selected branch will be placed.
  * ``polar-angle``: How many degrees the manipulated branch will be rotated around the surface tangent vector, here denoted :math:`\theta`.
  * ``azimuth-angle``: How many degrees the manipulated branch will be rotated around the surface normal vector, here denoted :math:`\phi`.
+ * ``clamp-branch``: Either `True` or `False`, determining whether or not to clamp the selected branch to its endpoint.
  * ``remove_branch``: Either `True` or `False`, determining whether or not to remove the selected branch.
  * ``translation_method``: Flag which determines which method of translation to use. If `no_translation` is selected, the algorithm will only perform rotation.
 
@@ -87,13 +88,25 @@ To reproduce the surface models as shown in Figure 5, run::
 
     morphman-branch --ifile C0002/surface/model.vtp --ofile C0002/surface/polar_rotated_branch_down.vtp --translation-method no_translation --polar-angle -20 --branch-number 1  --poly-ball-size 250 250 250
 
-Finally, in Figure 6 is the result of removing an arbitrary branch.
+When translating a branch, the option ``--clamp-branch`` allows the user to keep the end of the branch to be manipulated fixed at its endpoint. Thus the outlet is kept fixed, while the rest of the branch is gradually translated, folloing a linear profile. However, altering the profile is trivial,
+and can be done by adapting one line in the function :meth:`manipulate_branch.clamp_profile`.
+An example of a clamped branch is shown in Figure 6.
+
+.. figure:: clamped_branch.png
+
+  Figure 6: Branch translated and clamped to its endpoint.
+
+To reproduce the surface models as shown in Figure 6, run::
+
+    morphman-branch --ifile C0002/surface/model.vtp --ofile C0002/surface/branch_clamped.vtp --clamp-branch True --translation-method commandline --branch-location 27.75 29.75 24.61 --branch-number 1  --poly-ball-size 250 250 250
+
+Finally, in Figure 7 is the result of removing an arbitrary branch.
 
 .. figure:: branch_removed.png
 
-  Figure 6: Removal of an arbitrary branch, in this case the fourth major branch away from the inlet.
+  Figure 7: Removal of an arbitrary branch, in this case the fourth major branch away from the inlet.
 
-To reproduce the surface model where a branch has been removed, as shown in Figure 6, run::
+To reproduce the surface model where a branch has been removed, as shown in Figure 7, run::
 
     morphman-branch --ifile C0002/surface/model.vtp --ofile C0002/surface/removed_branch.vtp --remove-branch True --branch-number 4 --poly-ball-size 250 250 250
 
