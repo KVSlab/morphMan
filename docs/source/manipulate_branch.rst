@@ -7,7 +7,7 @@ Tutorial: Manipulate branch
 ===========================
 
 The goal of ``manipulate_branch.py`` is to manipulate a specific branch of a
-vascular model, either through pure tranlation and rotation, or by completely removing it, as depicted in Figure 1.
+vascular model, either through pure tranlsation and rotation, or by completely removing it, as depicted in Figure 1.
 In particular, we have defined a branch as any branch branching out of the longest tubular structure,
 defined by the physical length of the tube.
 The manipulation can be achieved by running ``morphman-branch`` in the terminal, followed by the
