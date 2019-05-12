@@ -88,7 +88,7 @@ To reproduce the surface models as shown in Figure 5, run::
 
     morphman-branch --ifile C0002/surface/model.vtp --ofile C0002/surface/polar_rotated_branch_down.vtp --translation-method no_translation --polar-angle -20 --branch-number 1  --poly-ball-size 250 250 250
 
-When translating a branch, the option ``--clamp-branch`` allows the user to keep the end of the branch to be manipulated fixed at its endpoint. Thus the outlet is kept fixed, while the rest of the branch is gradually translated, folloing a linear profile. However, altering the profile is trivial,
+When translating a branch, the option ``--clamp-branch`` allows the user to keep the end of the branch to be manipulated fixed at its endpoint. Thus, the outlet is kept fixed, while the rest of the branch is gradually translated, following a linear profile. Altering the profile is trivial,
 and can be done by adapting one line in the function :meth:`manipulate_branch.clamp_profile`.
 An example of a clamped branch is shown in Figure 6.
 
