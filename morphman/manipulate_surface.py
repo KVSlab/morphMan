@@ -22,7 +22,8 @@ def manipulate_surface(input_filepath, output_filepath, smooth, smooth_factor, n
     Controll the surface roughness by removing or adding points from the Voronoi diagram
     of the surface. A less general version of the smoothing algorithm was first presented
     in Ford et al. (2009).
-     Args:
+
+    Args:
         noise_method (str): Method of adding noise: ['add_misr_noise' | 'edit_misr_noise']
         input_filepath (str): Path to input surface.
         output_filepath (str): Path to output surface.
@@ -32,7 +33,8 @@ def manipulate_surface(input_filepath, output_filepath, smooth, smooth_factor, n
         no_smooth_point (ndarray): Point which is untouched by smoothing.
         poly_ball_size (list): Resolution of polyballs used to create surface.
         resampling_step (float): Resampling step used to resample centerlines.
-        region_of_interest (str): Method for setting the region of interest ['manual' | 'commandline' | 'first_line' | 'full_model']
+        region_of_interest (str): Method for setting the region of interest.
+            Supported regions: ['manual' | 'commandline' | 'first_line' | 'full_model']
         region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint
         add_noise_lower_limit (float): Upper bound for adding noise to the surface.
         add_noise_upper_limit (float): Upper bound for adding noise to the surface.
@@ -304,7 +306,8 @@ def read_command_line_surface(input_path=None, output_path=None):
     Read arguments from commandline and return all values in a dictionary.
     If input_path and output_path are not None, then do not parse command line, but
     only return default values.
-     Args:
+
+    Args:
         input_path (str): Input file path, positional argument with default None.
         output_path (str): Output file path, positional argument with default None.
     """

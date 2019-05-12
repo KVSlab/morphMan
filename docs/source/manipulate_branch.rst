@@ -13,7 +13,7 @@ defined by the physical length of the tube.
 The manipulation can be achieved by running ``morphman-branch`` in the terminal, followed by the
 respective command line arguments. Alternatively, you can execute the Python script directly,
 located in the ``morphman`` subfolder, by typing ``python manipulate_branch.py``. We have also created a
-demo folder where we show how to run this tutorial from a Python script, please checkout the code from GitHub to
+demo folder where we show how to run this tutorial from a Python script, please check out the code from GitHub to
 run the demos.
 
 .. figure:: Branch.png

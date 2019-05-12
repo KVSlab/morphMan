@@ -276,8 +276,7 @@ def get_clipped_diverging_centerline(centerline, clip_start_point, clip_end_id):
     return patch_cl
 
 
-def get_line_to_change(surface, centerline, region_of_interest, method, region_points,
-                       stenosis_length):
+def get_line_to_change(surface, centerline, region_of_interest, method, region_points, stenosis_length):
     """
     Extract and spline part of centerline
     within the geometry where

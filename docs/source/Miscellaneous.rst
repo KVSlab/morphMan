@@ -82,14 +82,15 @@ For a more detailed description of the method, please see [3]_.
 
 Common
 ======
-In ``common.py`` we have collected generic functions used by multiple scripts.
-Many of the functions wrap existing vtk and vmtk functions in a more pythonic syntax.
+In the folder ``common`` we have collected utility scripts containing generic functions used by multiple scripts.
+Many of the functions wrap existing vtk and vmtk functions in a more pythonic syntax,
+collected in ``vtk_wrapper.py`` and ``vmtk_wrapper.py``, respectively.
 Instead of writing 6-7 lines of code to initiate a vtk-object, and set each parameter,
-and the input surface, one can call one function with multiple arguments instead,
-see for instance :meth:`common.threshold`.
+and the input surface, one may call one function with multiple arguments instead,
+see for instance :meth:`vtk_wrapper.vtk_compute_threshold`.
 
 In addition to wrapping vtk and vmtk functionality, there is also new methods for
-manipulating centerlines and Voronoi diagrams.
+manipulating centerlines, surface models and Voronoi diagrams, collected in their respective scripts.
 
 .. [1] Piccinelli, M., Bacigaluppi, S., Boccardi, E., Ene-Iordache, B., Remuzzi, A., Veneziani, A. and Antiga, L., 2011. Geometry of the internal carotid artery and recurrent patterns in location, orientation, and rupture status of lateral aneurysms: an image-based computational study. Neurosurgery, 68(5), pp.1270-1285.
 .. [2] Bogunović, H., Pozo, J.M., Cárdenes, R., Villa-Uriol, M.C., Blanc, R., Piotin, M. and Frangi, A.F., 2012. Automated landmarking and geometric characterization of the carotid siphon. Medical image analysis, 16(4), pp.889-903.
