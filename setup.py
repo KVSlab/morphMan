@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 DEPENDENCIES = []  # 'scipy', 'numpy', 'vtk']
 TEST_DEPENDENCIES = []  # 'pytest']
 
-VERSION = "0.2"
+VERSION = "0.3"
 URL = "https://github.com/KVSlab/morphMan.git"
 
 setuptools.setup(
