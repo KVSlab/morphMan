@@ -833,13 +833,13 @@ def read_command_line_branch(input_path=None, output_path=None):
     else:
         args = parser.parse_args(["-i" + input_path, "-o" + output_path])
 
-    if not 0 <= args.polar_angle <= 360:
-        raise ArgumentTypeError("The polar angle is limited to be within [0, 360] degrees, cannot have value" +
-                                " {}".format(args.angle))
+    if not 0 <= args.azimuth_angle <= 360:
+        raise ArgumentTypeError("The azimuth angle is limited to be within [0, 360] degrees, cannot have value" +
+                                " {}".format(args.azimuth_angle))
 
-    if not -180 <= args.azimuth_angle <= 180:
-        raise ArgumentTypeError("The azimuth angle is limited to be within [-180, 180] degrees, cannot have value" +
-                                " {}".format(args.angle))
+    if not -180 <= args.polar_angle <= 180:
+        raise ArgumentTypeError("The polar angle is limited to be within [-180, 180] degrees, cannot have value" +
+                                " {}".format(args.polar_angle))
 
     # Convert from deg to rad and invert rotation if exceeding 180 degrees
     polar_angle_to_radians = args.polar_angle * math.pi / 180
