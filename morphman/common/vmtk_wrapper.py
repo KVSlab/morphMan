@@ -15,7 +15,6 @@ from morphman.common.vtk_wrapper import read_polydata, write_polydata
 radiusArrayName = 'MaximumInscribedSphereRadius'
 surfaceNormalsArrayName = 'SurfaceNormalArray'
 parallelTransportNormalsArrayName = 'ParallelTransportNormals'
-centerlineIdsArrayName = 'CenterlineIds'
 groupIDsArrayName = "GroupIds"
 abscissasArrayName = 'Abscissas'
 blankingArrayName = 'Blanking'
@@ -369,7 +368,6 @@ def vmtk_branch_clipper(centerlines, surface, clip_value=0.0, inside_out=False, 
     clipper.Surface = surface
     clipper.Centerlines = centerlines
     clipper.ClipValue = clip_value
-    clipper.CenterlineGroupIdsArrayName = centerlineIdsArrayName
     clipper.RadiusArrayName = radiusArrayName
     clipper.GroupIdsArrayName = groupIDsArrayName
     clipper.BlankingArrayName = blankingArrayName

@@ -7,7 +7,6 @@
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
-from IPython import embed
 from scipy.signal import argrelextrema
 
 # Local import
