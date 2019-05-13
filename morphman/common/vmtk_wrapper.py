@@ -353,7 +353,6 @@ def vmtk_branch_clipper(centerlines, surface, clip_value=0.0, inside_out=False, 
     Wrapper for vmtkBranchClipper. Divide a surface in relation to its split and grouped centerlines.
 
     Args:
-        groupIds:
         centerlines (vtkPolyData): Input centerlines
         surface (vtkPolyData): Input surface model
         clip_value (float):
