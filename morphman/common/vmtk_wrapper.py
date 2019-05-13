@@ -15,8 +15,10 @@ from morphman.common.vtk_wrapper import read_polydata, write_polydata
 radiusArrayName = 'MaximumInscribedSphereRadius'
 surfaceNormalsArrayName = 'SurfaceNormalArray'
 parallelTransportNormalsArrayName = 'ParallelTransportNormals'
+centerlineIdsArrayName = 'CenterlineIds'
 groupIDsArrayName = "GroupIds"
 abscissasArrayName = 'Abscissas'
+blankingArrayName = 'Blanking'
 branchClippingArrayName = 'BranchClippingArray'
 
 
@@ -347,11 +349,12 @@ def vmtk_surface_connectivity(surface, method="largest", clean_output=True, clos
 
 
 def vmtk_branch_clipper(centerlines, surface, clip_value=0.0, inside_out=False, use_radius_information=True,
-                        interactive=False):
+                        interactive=False, groupIds=[]):
     """
     Wrapper for vmtkBranchClipper. Divide a surface in relation to its split and grouped centerlines.
 
     Args:
+        groupIds:
         centerlines (vtkPolyData): Input centerlines
         surface (vtkPolyData): Input surface model
         clip_value (float):
@@ -366,9 +369,11 @@ def vmtk_branch_clipper(centerlines, surface, clip_value=0.0, inside_out=False, 
     clipper.Surface = surface
     clipper.Centerlines = centerlines
     clipper.ClipValue = clip_value
+    clipper.CenterlineGroupIdsArrayName = centerlineIdsArrayName
     clipper.RadiusArrayName = radiusArrayName
     clipper.GroupIdsArrayName = groupIDsArrayName
-    clipper.BlankingArrayName = branchClippingArrayName
+    clipper.BlankingArrayName = blankingArrayName
+    clipper.GroupIds = groupIds
     if inside_out:
         clipper.InsideOut = 1
     if not use_radius_information:
