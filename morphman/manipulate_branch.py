@@ -7,7 +7,6 @@
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
-from IPython import embed
 from scipy.signal import argrelextrema
 
 # Local import
@@ -15,79 +14,6 @@ from morphman.common.argparse_common import *
 from morphman.common.surface_operations import *
 
 MAX_BIFURCATION_LENGTH = 25
-
-
-def get_all_branches(branched_centerlines, centerlines):
-    """
-    Extract and combine all branches of the surface model
-
-    Args:
-        branched_centerlines (vktPolyData): Complete centerlines divided into branches
-        centerlines (list, ndarray): List containing sorted centerlines
-
-    Returns:
-        vtkPolyData: All possible branches in the geometry
-    """
-    n = branched_centerlines.GetNumberOfLines()
-    branch_segments = []
-    branches_tmp = []
-    add_branch = False
-    # Extract all branches
-    for i in range(n):
-        line = extract_single_line(branched_centerlines, i)
-        line_length = len(get_curvilinear_coordinate(line))
-
-        if line_length < MAX_BIFURCATION_LENGTH:
-            branches_tmp.append(line)
-            add_branch = True
-
-        if add_branch:
-            for j, bif in enumerate(branches_tmp):
-                branches_tmp[j] = vtk_merge_polydata([branches_tmp[j], line])
-
-        for cl in centerlines:
-            if get_end_point(cl) == get_end_point(line):
-                add_branch = False
-                branch_segments.append(branches_tmp)
-                branches_tmp = []
-
-    # Combine branches with common bifurcation point
-    all_branches_combined = []
-    for i, segment in enumerate(branch_segments):
-        for j, branch in enumerate(segment):
-            if branch is None:
-                continue
-
-            if branch.GetNumberOfLines() > 2:
-                bif_point = extract_single_line(branch, 1).GetPoint(0)
-
-                for k, segment_to_search in enumerate(branch_segments):
-                    # Skip current segment
-                    if k == i:
-                        continue
-
-                    for l, branch_to_check in enumerate(segment_to_search):
-                        if branch_to_check is None:
-                            continue
-
-                        bif_point_to_check = extract_single_line(branch_to_check, 1).GetPoint(0)
-                        if bif_point == bif_point_to_check:
-                            branch = vtk_merge_polydata([branch, branch_to_check])
-                            branch_segments[k][l] = None
-
-                all_branches_combined.append(branch)
-            else:
-                all_branches_combined.append(branch)
-
-            branch_segments[i][j] = None
-
-    # Remove bifurcation part of branch
-    all_branches = []
-    for branch in all_branches_combined:
-        branch_without_bifurcation = [extract_single_line(branch, i) for i in range(2, branch.GetNumberOfLines())]
-        all_branches.append(vtk_merge_polydata(branch_without_bifurcation))
-
-    return all_branches
 
 
 def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, poly_ball_size, no_smooth,
@@ -796,6 +722,124 @@ def manipulate_voronoi_branch(voronoi, dx, R, origin, centerline, normal, angle,
     new_voronoi.SetVerts(cell_array)
     new_voronoi.GetPointData().AddArray(radius_array)
     return new_voronoi
+
+
+def get_all_branches(branched_centerlines, centerlines):
+    """
+    Extract and combine all branches of the surface model.
+    Removes first part of centerlines after combining,
+    excluding the bifurcating part.
+
+    Args:
+        branched_centerlines (vktPolyData): Complete centerlines divided into branches
+        centerlines (list, ndarray): List containing sorted centerlines
+
+    Returns:
+        vtkPolyData: All possible branches in the geometry
+    """
+    branch_segments = extract_all_branches(branched_centerlines, centerlines)
+    all_branches_combined = combine_all_branches(branch_segments)
+    all_branches = remove_bifurcation_lines(all_branches_combined)
+
+    return all_branches
+
+
+def extract_all_branches(branched_centerlines, centerlines):
+    """
+    Find all unique branches of a network of centerlines.
+
+    Args:
+        branched_centerlines (vtkPolyData): Segmented centerlines from vmtkBranchExtractor
+        centerlines (list): List of all centerlines in geometry
+
+    Returns:
+        list: Contains all unique branches
+    """
+    n = branched_centerlines.GetNumberOfLines()
+    branch_segments = []
+    branches_tmp = []
+    add_branch = False
+    for i in range(n):
+        line = extract_single_line(branched_centerlines, i)
+        line_length = len(get_curvilinear_coordinate(line))
+
+        if line_length < MAX_BIFURCATION_LENGTH:
+            branches_tmp.append(line)
+            add_branch = True
+
+        if add_branch:
+            for j, bif in enumerate(branches_tmp):
+                branches_tmp[j] = vtk_merge_polydata([branches_tmp[j], line])
+
+        for cl in centerlines:
+            if get_end_point(cl) == get_end_point(line):
+                add_branch = False
+                branch_segments.append(branches_tmp)
+                branches_tmp = []
+
+    return branch_segments
+
+
+def combine_all_branches(branch_segments):
+    """
+    Combine branches which share a common bifurcation point
+
+    Args:
+        branch_segments (list): Contains all unique branching segments
+
+    Returns:
+        list: Contains combined branches which share bifurcation point
+    """
+    all_branches_combined = []
+    for i, segment in enumerate(branch_segments):
+        for j, branch in enumerate(segment):
+            if branch is None:
+                continue
+
+            if branch.GetNumberOfLines() > 2:
+                bif_point = extract_single_line(branch, 1).GetPoint(0)
+
+                for k, segment_to_search in enumerate(branch_segments):
+                    # Skip current segment
+                    if k == i:
+                        continue
+
+                    for l, branch_to_check in enumerate(segment_to_search):
+                        if branch_to_check is None:
+                            continue
+
+                        bif_point_to_check = extract_single_line(branch_to_check, 1).GetPoint(0)
+                        if bif_point == bif_point_to_check:
+                            branch = vtk_merge_polydata([branch, branch_to_check])
+                            branch_segments[k][l] = None
+
+                all_branches_combined.append(branch)
+            else:
+                all_branches_combined.append(branch)
+
+            branch_segments[i][j] = None
+
+    return all_branches_combined
+
+
+def remove_bifurcation_lines(all_branches_combined):
+    """
+    Removed first part of each centerline, containing
+    tiny bifurcation segment of centerline.
+
+    Args:
+        all_branches_combined (list): Combined unique branches
+
+    Returns:
+        list: Contains all unique branches in centerline network
+    """
+    # Remove bifurcation part of branch
+    all_branches = []
+    for branch in all_branches_combined:
+        branch_without_bifurcation = [extract_single_line(branch, i) for i in range(2, branch.GetNumberOfLines())]
+        all_branches.append(vtk_merge_polydata(branch_without_bifurcation))
+
+    return all_branches
 
 
 def read_command_line_branch(input_path=None, output_path=None):
