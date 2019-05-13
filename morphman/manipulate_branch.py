@@ -7,6 +7,7 @@
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
+from IPython import embed
 from scipy.signal import argrelextrema
 
 # Local import
@@ -83,7 +84,7 @@ def get_all_branches(branched_centerlines, centerlines):
     # Remove bifurcation part of branch
     all_branches = []
     for branch in all_branches_combined:
-        branch_without_bifurcation = [extract_single_line(branch, i) for i in range(1, branch.GetNumberOfLines())]
+        branch_without_bifurcation = [extract_single_line(branch, i) for i in range(2, branch.GetNumberOfLines())]
         all_branches.append(vtk_merge_polydata(branch_without_bifurcation))
 
     return all_branches
@@ -595,7 +596,7 @@ def get_translation_parameters(centerlines, diverging_centerline_branch, new_bra
     """
     locator = get_vtk_point_locator(centerlines)
     new_branch_pos_on_cl = centerlines.GetPoint(locator.FindClosestPoint(new_branch_pos))
-    adjusted_branch_pos = (np.asarray(new_branch_pos) - np.asarray(new_branch_pos_on_cl)) * 0.4 + np.asarray(
+    adjusted_branch_pos = (np.asarray(new_branch_pos) - np.asarray(new_branch_pos_on_cl)) * 0.8 + np.asarray(
         new_branch_pos_on_cl)
     dx = np.asarray(adjusted_branch_pos) - np.asarray(diverging_centerline_branch.GetPoint(0))
     origin = np.asarray(adjusted_branch_pos)
@@ -637,7 +638,7 @@ def get_estimated_surface_normal(diverging_centerline_branch):
     first_local_maxima_id = argrelextrema(curvature, np.greater)[0][0]
 
     # TODO: Generalize choice of end point factor
-    factor = 2.5
+    factor = 0.4
     start_point = 0
     end_point = int(first_local_maxima_id * factor)
     normal_vector = np.asarray(diverging_centerline_branch.GetPoint(end_point)) - np.asarray(
