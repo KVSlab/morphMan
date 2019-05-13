@@ -262,7 +262,7 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
         # If point is "beyond" start or end of centerline
         sign = 1
         if tmp_id1 in [0, N]:
-            tetha = np.arccos(np.dot(AP, AB) / (np.linalg.norm(AP) * np.linalg.norm(AB)))
+            tetha = get_angle(AP, AB)
             if tetha > np.pi / 2.0:
                 sign = -1
 

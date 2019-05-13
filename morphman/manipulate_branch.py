@@ -659,7 +659,7 @@ def manipulate_centerline_branch(centerline_branch, origin, R, dx, normal, angle
                 point = get_clamped_branch_rotation_factors(angle, p, number_of_points, normal, origin, point)
             else:
                 if p <= base_end:
-                    transition_angle = angle * (p / base_end) ** 0.2
+                    transition_angle = angle * rotation_profile(p, base_end)
                     transition_rotation_matrix = get_rotation_matrix(-normal, transition_angle)
                     point = np.dot(transition_rotation_matrix, point - origin) + origin
                 else:
@@ -736,7 +736,7 @@ def get_rotation_axis_and_angle(new_normal, old_normal):
     u = np.cross(z, z_prime)
     u /= la.norm(u)
 
-    angle = np.arccos(z.dot(z_prime) / (la.norm(z) * la.norm(z_prime)))
+    angle = get_angle(z, z_prime)
 
     return u, angle
 
@@ -797,7 +797,7 @@ def manipulate_voronoi_branch(voronoi, dx, R, origin, centerline, normal, angle,
                 point = get_clamped_branch_rotation_factors(angle, cl_id, m, normal, origin, point)
             else:
                 if cl_id <= base_end:
-                    transition_angle = angle * (cl_id / base_end) ** 0.2
+                    transition_angle = angle * rotation_profile(cl_id, base_end)
                     transition_rotation_matrix = get_rotation_matrix(-normal, transition_angle)
                     point = np.dot(transition_rotation_matrix, point - origin) + origin
                 else:
@@ -814,6 +814,22 @@ def manipulate_voronoi_branch(voronoi, dx, R, origin, centerline, normal, angle,
     new_voronoi.GetPointData().AddArray(radius_array)
 
     return new_voronoi
+
+
+def rotation_profile(centerline_id, number_of_points):
+    """
+    Profile used for gradually rotating a branch,
+    to avoid artifacts at the base.
+    Currently using a root function profile, ranging from 0 to 1.
+
+    Args:
+        centerline_id (int): ID at current centerline point
+        number_of_points (int): Number of centerline points
+
+    Returns:
+        float: Clamp factor, ranging from 0 to 1
+    """
+    return (centerline_id / number_of_points) ** 0.2
 
 
 def get_clamped_branch_rotation_factors(angle, cl_id, m, axis_of_rotation, origin, point):

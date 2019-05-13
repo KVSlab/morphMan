@@ -516,3 +516,20 @@ def get_rotation_matrix(u, angle):
     R = np.cos(angle) * np.eye(3) + np.sin(angle) * u_cross_matrix + (1 - np.cos(angle)) * u_outer
 
     return R
+
+
+def get_angle(a, b):
+    """
+    Compute angle between two lines,
+    expressed as vectors.
+
+    Args:
+        a (ndarray): First vector
+        b (ndarray): Second vector
+
+    Returns:
+        float: Angle between lines
+    """
+    angle = np.arccos(np.dot(a, b) / (la.norm(a) * la.norm(b)))
+
+    return angle
