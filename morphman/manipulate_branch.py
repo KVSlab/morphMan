@@ -832,7 +832,7 @@ def get_clamped_branch_rotation_factors(angle, cl_id, m, axis_of_rotation, origi
     Returns:
         ndarray: Rotated Voronoi point
     """
-    transition_angle = angle * (cl_id * (m - cl_id) / (m / 2) ** 2) ** 2
+    transition_angle = angle * (cl_id * (m - cl_id) / (m / 2.0) ** 2) ** 2
     R = get_rotation_matrix(-axis_of_rotation, transition_angle)
     point = np.dot(R, point - origin) + origin
 

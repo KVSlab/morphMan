@@ -35,7 +35,7 @@ def remove_distant_voronoi_points(voronoi, centerline):
         cl_point_id = locator.FindClosestPoint(point)
         cl_point = centerline.GetPoint(cl_point_id)
         dist = get_distance(point, cl_point)
-        if dist / 3 > radius_array_data(i) or radius_array_data(i) > limit:
+        if dist / 3.0 > radius_array_data(i) or radius_array_data(i) > limit:
             count += 1
             continue
 

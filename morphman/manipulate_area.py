@@ -263,7 +263,7 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
         sign = 1
         if tmp_id1 in [0, N]:
             tetha = np.arccos(np.dot(AP, AB) / (np.linalg.norm(AP) * np.linalg.norm(AB)))
-            if tetha > np.pi / 2:
+            if tetha > np.pi / 2.0:
                 sign = -1
 
         # Get direction (delta_p) to move the point
@@ -537,7 +537,7 @@ def read_command_line_area(input_path=None, output_path=None):
             raise ValueError("ERROR: Please provide the no smooth point(s) as a multiple" +
                              " of 3.")
     if args.angle_asymmetric is not None:
-        angle_radians = args.angle_asymmetric * np.pi / 180  # Convert from deg to rad
+        angle_radians = args.angle_asymmetric * np.pi / 180.0  # Convert from deg to rad
     else:
         angle_radians = None
 
