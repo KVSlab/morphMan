@@ -7,6 +7,7 @@
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
+from IPython import embed
 from scipy.signal import argrelextrema
 
 # Local import
@@ -322,8 +323,8 @@ def check_branch_number(branch_to_manipulate_number, branches_complete):
     """
     num_lines = len(branches_complete)
     if branch_to_manipulate_number > num_lines:
-        raise RuntimeError("\nERROR: Branch number cannot exceed number of centerlines." +
-                           " Number of selectable centerlines for this model is {}.".format(num_lines))
+        raise RuntimeError("\nERROR: Branch number cannot exceed number of valid branches." +
+                           " Number of selectable branches for this model is {}.".format(num_lines))
 
 
 def get_new_branch_position(branch_location, capped_surface):
@@ -735,13 +736,14 @@ def get_all_branches(branched_centerlines, centerlines):
         centerlines (list, ndarray): List containing sorted centerlines
 
     Returns:
-        vtkPolyData: All possible branches in the geometry
+        list: All possible branches in the geometry
     """
     branch_segments = extract_all_branches(branched_centerlines, centerlines)
     all_branches_combined = combine_all_branches(branch_segments)
     all_branches = remove_bifurcation_lines(all_branches_combined)
+    sorted_branches = sort_branches(all_branches, centerlines)
 
-    return all_branches
+    return sorted_branches
 
 
 def extract_all_branches(branched_centerlines, centerlines):
@@ -842,6 +844,38 @@ def remove_bifurcation_lines(all_branches_combined):
     return all_branches
 
 
+def sort_branches(branches, centerlines):
+    """
+    Sort combined branches based on sorted centerlines
+
+    Args:
+        branches (list): Contains branches to be sorted
+        centerlines (list): Contains sorted centerlines
+
+    Returns:
+        list: Sorted branches
+    """
+
+    sorted_branches_dict = {k: [] for k in range(len(centerlines))}
+
+    # Compare branches end point with sorted centerlines
+    for i, branch in enumerate(branches):
+        branch_end_point = get_end_point(branch)
+        for j, line in enumerate(centerlines):
+            line_end_point = get_end_point(line)
+            if branch_end_point == line_end_point:
+                sorted_branches_dict[j].append(branch)
+                continue
+
+    # Collect and merge all branches
+    sorted_branches = []
+    for _, lines in sorted_branches_dict.items():
+        for line in lines:
+            sorted_branches.append(line)
+
+    return sorted_branches
+
+
 def read_command_line_branch(input_path=None, output_path=None):
     """
     Read arguments from commandline and return all values in a dictionary.
@@ -922,6 +956,10 @@ def read_command_line_branch(input_path=None, output_path=None):
     azimuth_angle_to_radians = args.azimuth_angle * math.pi / 180
     if azimuth_angle_to_radians > np.pi:
         azimuth_angle_to_radians -= 2 * np.pi
+
+    if args.branch_number is not None:
+        if args.branch_number < 1:
+            raise ValueError("ERROR: Branch number cannot be 0 or negative. Please select a positive number")
 
     if args.no_smooth_point is not None and len(args.no_smooth_point):
         if len(args.no_smooth_point) % 3 != 0:
