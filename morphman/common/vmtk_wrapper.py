@@ -348,7 +348,7 @@ def vmtk_surface_connectivity(surface, method="largest", clean_output=True, clos
 
 
 def vmtk_branch_clipper(centerlines, surface, clip_value=0.0, inside_out=False, use_radius_information=True,
-                        interactive=False, groupIds=[]):
+                        interactive=False):
     """
     Wrapper for vmtkBranchClipper. Divide a surface in relation to its split and grouped centerlines.
 
@@ -371,7 +371,6 @@ def vmtk_branch_clipper(centerlines, surface, clip_value=0.0, inside_out=False, 
     clipper.RadiusArrayName = radiusArrayName
     clipper.GroupIdsArrayName = groupIDsArrayName
     clipper.BlankingArrayName = blankingArrayName
-    clipper.GroupIds = groupIds
     if inside_out:
         clipper.InsideOut = 1
     if not use_radius_information:
