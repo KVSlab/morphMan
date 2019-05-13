@@ -443,39 +443,6 @@ def pick_new_branch_position(capped_surface):
     return new_branch_pos_id, new_branch_pos
 
 
-def get_branch(branch_to_manipulate_number, centerlines_complete, longest_centerline):
-    """
-    Select branch number n, counting up- to down-stream.
-
-    Args:
-        branch_to_manipulate_number (int): Branch number
-        centerlines_complete (vtkPolyData): All centerlines
-        longest_centerline (vtkPolyData): Longest centerline
-
-    Returns:
-        selected_branch (vtkPolyData): Branch n, selected by user as input
-    """
-    if branch_to_manipulate_number == (centerlines_complete.GetNumberOfLines() - 1):
-        return longest_centerline
-
-    break_points = dict()
-    for i in range(centerlines_complete.GetNumberOfLines()):
-        current_line = extract_single_line(centerlines_complete, i)
-        tolerance = get_centerline_tolerance(current_line)
-        for j in range(current_line.GetNumberOfPoints()):
-            p1 = np.asarray(current_line.GetPoint(j))
-            p2 = np.asarray(longest_centerline.GetPoint(j))
-            if get_distance(p1, p2) > tolerance:
-                break_points[j] = i
-                break
-
-    break_points_keys = sorted(break_points.keys())
-    selected_branch_id = break_points[break_points_keys[branch_to_manipulate_number - 1]]
-    selected_branch = extract_single_line(centerlines_complete, selected_branch_id)
-
-    return selected_branch
-
-
 def pick_branch(capped_surface, centerlines):
     """
     Select (by manually chosing) which branch is translated to on the surface.
@@ -628,7 +595,7 @@ def get_translation_parameters(centerlines, diverging_centerline_branch, new_bra
     """
     locator = get_vtk_point_locator(centerlines)
     new_branch_pos_on_cl = centerlines.GetPoint(locator.FindClosestPoint(new_branch_pos))
-    adjusted_branch_pos = (np.asarray(new_branch_pos) - np.asarray(new_branch_pos_on_cl)) * 0.3 + np.asarray(
+    adjusted_branch_pos = (np.asarray(new_branch_pos) - np.asarray(new_branch_pos_on_cl)) * 0.4 + np.asarray(
         new_branch_pos_on_cl)
     dx = np.asarray(adjusted_branch_pos) - np.asarray(diverging_centerline_branch.GetPoint(0))
     origin = np.asarray(adjusted_branch_pos)
