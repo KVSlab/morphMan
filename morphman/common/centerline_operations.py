@@ -368,7 +368,7 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
             tol = get_centerline_tolerance(centerline)
             cl_id = -1
             dist = 1e10
-            while dist > tol / 10:
+            while dist > tol / 10.0:
                 cl_id += 1
                 line = extract_single_line(centerline, cl_id)
                 tmp_loc = get_vtk_point_locator(line)

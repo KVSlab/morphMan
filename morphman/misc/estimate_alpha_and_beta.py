@@ -226,8 +226,8 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
                                 " landmarking with automated_landmarking.py first.") % point_path)
         region_points = np.loadtxt(point_path)
     else:
-        _, _, _, region_points,_ = get_line_to_change(capped_surface, centerlines,
-                                                    region_of_interest, "bend", region_points, 0)
+        _, _, _, region_points, _ = get_line_to_change(capped_surface, centerlines,
+                                                       region_of_interest, "bend", region_points, 0)
         region_points = [[region_points[3 * i], region_points[3 * i + 1], region_points[3 * i + 2]]
                          for i in range(len(region_points) // 3)]
     p1 = region_points[0]
@@ -526,8 +526,8 @@ def compute_curvature(input_filepath, alpha, beta, method, new_centerlines, comp
                                 " landmarking with automated_landmarking.py first.") % point_path)
         region_points = np.loadtxt(point_path)
     else:
-        _, _, _, region_points,_ = get_line_to_change(capped_surface, centerlines,
-                                                    region_of_interest, "bend", region_points, 0)
+        _, _, _, region_points, _ = get_line_to_change(capped_surface, centerlines,
+                                                       region_of_interest, "bend", region_points, 0)
         region_points = [[region_points[3 * i], region_points[3 * i + 1], region_points[3 * i + 2]]
                          for i in range(len(region_points) // 3)]
     p1 = region_points[0]
@@ -633,10 +633,12 @@ def get_new_centerlines(centerlines, region_points, alpha, beta, p1, p2):
                                                       diverging_centerlines, direction, merge_lines=True)
     if alpha != 0.0:
         direction = "vertical"
-        middle_points, middle_ids, dx = get_direction_parameters(extract_single_line(new_centerlines, 0), alpha, direction,
+        middle_points, middle_ids, dx = get_direction_parameters(extract_single_line(new_centerlines, 0), alpha,
+                                                                 direction,
                                                                  region_points_vtk)
         merge_lines = False if beta != 0.0 else True
-        new_centerlines = get_manipulated_centerlines(new_centerlines, dx, p1, p2, diverging_id, diverging_centerlines, direction,
+        new_centerlines = get_manipulated_centerlines(new_centerlines, dx, p1, p2, diverging_id, diverging_centerlines,
+                                                      direction,
                                                       merge_lines=merge_lines)
 
     return centerlines, new_centerlines
@@ -829,8 +831,8 @@ def find_angle(pa, pb, p1, p2, projection):
     else:
         vector_a = np.array([0, pa[1] - p1[1], pa[2] - p1[2]])
         vector_b = np.array([0, pb[1] - p2[1], pb[2] - p2[2]])
-    costheta = (vector_a.dot(vector_b)) / (la.norm(vector_a) * la.norm(vector_b))
-    angle = np.arccos(costheta)
+
+    angle = get_angle(vector_a, vector_b)
     deg = (angle * 180 / np.pi)
 
     return deg, vector_a, vector_b
@@ -856,8 +858,7 @@ def find_angle_odr(d1, d2, projection):
         d1[0] = 0
         d2[0] = 0
 
-    costheta = (d1.dot(-d2)) / (la.norm(d1) * la.norm(-d2))
-    angle = np.arccos(costheta)
+    angle = get_angle(d1, -d2)
     deg = (angle * 180 / np.pi)
 
     return deg, d1, d2
