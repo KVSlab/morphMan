@@ -402,8 +402,7 @@ def get_asymmetric_displacement(A, angle_asymmetric, factor_, frenet_normals_arr
 
 def update_factor(A, AB_length, B, P_mid, factor, tmp_id1, tmp_id2):
     """
-    Update values in Factor based on midpoint between
-    A and B.
+    Update values in Factor based on midpoint between A and B.
 
     Args:
         P_mid (ndarray): Midpoint
@@ -521,21 +520,19 @@ def read_command_line_area(input_path=None, output_path=None):
         args = parser.parse_args(["-i" + input_path, "-o" + output_path])
 
     if args.method in ["stenosis", "bulge", "linear"] and args.region_of_interest == "first_line":
-        raise ValueError("Can not set region of interest to 'first_line' for 'stenosis'," + \
-                         " 'bulge', or 'linear'")
+        raise ValueError("Can not set region of interest to 'first_line' for 'stenosis', 'bulge', or 'linear'")
 
     if args.method == "variation" and args.ratio is not None and args.beta != 0.5:
         print("WARNING: The beta value you provided will be ignored, using ratio instead.")
 
     if args.region_points is not None:
         if len(args.region_points) % 3 != 0 or len(args.region_points) > 6:
-            raise ValueError("ERROR: Please provide region point(s) as a multiple of 3, and maximum" +
-                             " two points.")
+            raise ValueError("ERROR: Please provide region point(s) as a multiple of 3, and maximum two points.")
 
     if args.no_smooth_point is not None and len(args.no_smooth_point):
         if len(args.no_smooth_point) % 3 != 0:
-            raise ValueError("ERROR: Please provide the no smooth point(s) as a multiple" +
-                             " of 3.")
+            raise ValueError("ERROR: Please provide the no smooth point(s) as a multiple of 3.")
+
     if args.angle_asymmetric is not None:
         angle_radians = args.angle_asymmetric * np.pi / 180  # Convert from deg to rad
     else:

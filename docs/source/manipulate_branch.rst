@@ -7,13 +7,13 @@ Tutorial: Manipulate branch
 ===========================
 
 The goal of ``manipulate_branch.py`` is to manipulate a specific branch of a
-vascular model, either through pure tranlation and rotation, or by completely removing it, as depicted in Figure 1.
+vascular model, either through pure tranlsation and rotation, or by completely removing it, as depicted in Figure 1.
 In particular, we have defined a branch as any branch branching out of the longest tubular structure,
 defined by the physical length of the tube.
 The manipulation can be achieved by running ``morphman-branch`` in the terminal, followed by the
 respective command line arguments. Alternatively, you can execute the Python script directly,
 located in the ``morphman`` subfolder, by typing ``python manipulate_branch.py``. We have also created a
-demo folder where we show how to run this tutorial from a Python script, please checkout the code from GitHub to
+demo folder where we show how to run this tutorial from a Python script, please check out the code from GitHub to
 run the demos.
 
 .. figure:: Branch.png

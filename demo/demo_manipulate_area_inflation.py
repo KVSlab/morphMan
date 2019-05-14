@@ -11,7 +11,7 @@
 #       --method area --percentage -20 --region-of-interest first_line --poly-ball-size 250 250 250
 #  $ morphman-area --ifile C0002/surface/model.vtp --ofile C0002/surface/area_inflated.vtp \
 #       --method area --percentage 20 --region-of-interest first_line --poly-ball-size 250 250 250
-
+#
 # and a more detailed explenation could be found here:
 # https://morphman.readthedocs.io/en/latest/manipulate_area.html#inflation-deflation-of-an-arterial-segment
 

@@ -572,26 +572,26 @@ def get_exact_surface_normal(capped_surface, new_branch_pos_id):
     return new_normal
 
 
-def get_estimated_surface_normal(diverging_centerline_branch):
+def get_estimated_surface_normal(centerline):
     """
     Estimate the surface normal at initial diverging centerline branch.
 
     Args:
-        diverging_centerline_branch (vtkPolyData): Diverging centerline to be moved.
+        centerline (vtkPolyData): Diverging centerline to be moved.
 
     Returns:
         normal_vector (ndarray): Estimated normal vector at diverging centerline
     """
-    line = vmtk_compute_geometric_features(diverging_centerline_branch, True)
-    curvature = get_point_data_array("Curvature", line)
+    centerline = vmtk_compute_geometric_features(centerline, True)
+    curvature = get_point_data_array("Curvature", centerline)
     first_local_maxima_id = argrelextrema(curvature, np.greater)[0][0]
 
     # TODO: Generalize choice of end point factor
     factor = 0.6
     start_point = 0
     end_point = int(first_local_maxima_id * factor)
-    normal_vector = np.asarray(diverging_centerline_branch.GetPoint(end_point)) - np.asarray(
-        diverging_centerline_branch.GetPoint(start_point))
+    normal_vector = np.asarray(centerline.GetPoint(end_point)) - np.asarray(
+        centerline.GetPoint(start_point))
 
     normal_vector /= la.norm(normal_vector)
 
@@ -605,7 +605,7 @@ def manipulate_centerline_branch(centerline_branch, origin, R, dx, normal, angle
 
     Args:
         manipulation (str): Type of manipulation, either 'rotate' or 'translate'
-        centerline_branch (vtkPolyData): Centerline through surface
+        centerline_branch (vtkPolyData): Centerline branch to be manipulated
         dx (float): Distance to translate branch
         R (ndarray): Rotation matrix, rotation from old to new surface normal or around new surface normal
         origin (ndarray): Adjusted origin / position of new branch position
@@ -681,7 +681,6 @@ def get_rotation_axis_and_angle(new_normal, old_normal):
     return u, angle
 
 
-
 def manipulate_voronoi_branch(voronoi, dx, R, origin, centerline, normal, angle, manipulation):
     """
     Depending on manipulation method, either translates or
@@ -745,6 +744,7 @@ def manipulate_voronoi_branch(voronoi, dx, R, origin, centerline, normal, angle,
     new_voronoi.SetPoints(voronoi_points)
     new_voronoi.SetVerts(cell_array)
     new_voronoi.GetPointData().AddArray(radius_array)
+
     return new_voronoi
 
 
