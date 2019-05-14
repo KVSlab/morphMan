@@ -13,6 +13,8 @@ from scipy.signal import argrelextrema
 from morphman.common.argparse_common import *
 from morphman.common.surface_operations import *
 
+MAX_BIFURCATION_LENGTH = 25
+
 
 def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, poly_ball_size, no_smooth,
                       no_smooth_point, resampling_step, polar_angle, azimuth_angle, remove_branch,
@@ -66,14 +68,16 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
                                           smooth, smooth_factor, no_smooth,
                                           no_smooth_point, voronoi, pole_ids, resampling_step)
 
+    # Select diverging branch from Brancher and compare with diverging branch found manually
+    centerlines_branched = vmtk_compute_branch_extractor(centerlines_complete)
+    branches_complete = get_all_branches(centerlines_branched, get_sorted_lines(centerlines_complete))
+
     # Select branch to manipulate
-    if branch_to_manipulate_number > 0:
-        check_branch_number(branch_to_manipulate_number, centerlines_complete)
-        longest_centerline = get_sorted_lines(centerlines_complete)[-1]
-        branch_to_manipulate = get_branch(branch_to_manipulate_number, centerlines_complete, longest_centerline)
+    if branch_to_manipulate_number is not None:
+        check_branch_number(branch_to_manipulate_number, branches_complete)
+        branch_to_manipulate = branches_complete[branch_to_manipulate_number - 1]
     else:
-        shortest_centerlines = get_sorted_lines(centerlines_complete)[:-1]
-        branch_to_manipulate = pick_branch(capped_surface, shortest_centerlines)
+        branch_to_manipulate = pick_branch(capped_surface, branches_complete)
 
     if not remove_branch:
         # Get new position of branch on model surface
@@ -87,16 +91,9 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
     branch_to_manipulate_end_point = get_end_point(branch_to_manipulate)
     centerlines = filter_centerlines(centerlines_complete, branch_to_manipulate_end_point)
 
-    # Select diverging branch from Brancher and compare with diverging branch found manually
-    centerlines_branched = vmtk_compute_branch_extractor(centerlines_complete)
-    diverging_centerline_branch = get_diverging_centerline_branch(centerlines_branched, branch_to_manipulate_end_point)
-
-    # Clip Voronoi diagram into bend and remaining part of geometry
     print("-- Clipping Voronoi diagram")
-    voronoi_branch, voronoi_remaining = get_split_voronoi_diagram(voronoi, [diverging_centerline_branch,
-                                                                            centerlines])
-
-    voronoi_branch, voronoi_remaining_2 = filter_voronoi(voronoi_branch, diverging_centerline_branch)
+    voronoi_branch, voronoi_remaining = get_split_voronoi_diagram(voronoi, [branch_to_manipulate, centerlines])
+    voronoi_branch, voronoi_remaining_2 = filter_voronoi(voronoi_branch, branch_to_manipulate)
     voronoi_remaining = vtk_merge_polydata([voronoi_remaining, voronoi_remaining_2])
 
     if remove_branch:
@@ -105,7 +102,7 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
                       unprepared_output_filepath, surface, output_filepath, centerlines_complete, base_path)
     else:
         move_and_rotate_branch(polar_angle, azimuth_angle, capped_surface, centerlines, centerlines_complete,
-                               diverging_centerline_branch, new_branch_pos, new_branch_pos_id, output_filepath,
+                               branch_to_manipulate, new_branch_pos, new_branch_pos_id, output_filepath,
                                poly_ball_size, surface, unprepared_output_filepath, voronoi_branch, voronoi_remaining,
                                base_path, translation_method, clamp_branch)
 
@@ -322,19 +319,19 @@ def rotate_branch(angle, diverging_centerline_branch, voronoi_branch, origin, ax
     return rotated_voronoi, rotated_centerline
 
 
-def check_branch_number(branch_to_manipulate_number, centerlines_complete):
+def check_branch_number(branch_to_manipulate_number, branches_complete):
     """
     Check if branch number provided by user is larger than number of centerlines.
     Raises RuntimeError if number exceeds limit.
 
     Args:
         branch_to_manipulate_number (int): Input number, supplied by user
-        centerlines_complete (vtkPolyData): All centerlines
+        branches_complete (list): All centerline branches
     """
-    num_lines = centerlines_complete.GetNumberOfLines() - 2
+    num_lines = len(branches_complete)
     if branch_to_manipulate_number > num_lines:
-        raise RuntimeError("\nERROR: Branch number cannot exceed number of centerlines." +
-                           " Number of selectable centerlines for this model is {}.".format(num_lines))
+        raise RuntimeError("\nERROR: Branch number cannot exceed number of valid branches." +
+                           " Number of selectable branches for this model is {}.".format(num_lines))
 
 
 def get_new_branch_position(branch_location, capped_surface):
@@ -377,37 +374,9 @@ def pick_new_branch_position(capped_surface):
     new_branch_pos = capped_surface.GetPoint(new_branch_pos_id)
     print("-- The chosen new branch position:", np.asarray(new_branch_pos))
 
+    print("-- New branch location is:", np.asarray(new_branch_pos))
+
     return new_branch_pos_id, new_branch_pos
-
-
-def get_branch(branch_to_manipulate_number, centerlines_complete, longest_centerline):
-    """
-    Select branch number n, counting up- to down-stream.
-
-    Args:
-        branch_to_manipulate_number (int): Branch number
-        centerlines_complete (vtkPolyData): All centerlines
-        longest_centerline (vtkPolyData): Longest centerline
-
-    Returns:
-        selected_branch (vtkPolyData): Branch n, selected by user as input
-    """
-    break_points = dict()
-    for i in range(centerlines_complete.GetNumberOfLines()):
-        current_line = extract_single_line(centerlines_complete, i)
-        tolerance = get_centerline_tolerance(current_line)
-        for j in range(current_line.GetNumberOfPoints()):
-            p1 = np.asarray(current_line.GetPoint(j))
-            p2 = np.asarray(longest_centerline.GetPoint(j))
-            if get_distance(p1, p2) > tolerance:
-                break_points[j] = i
-                break
-
-    break_points_keys = sorted(break_points.keys())
-    selected_branch_id = break_points[break_points_keys[branch_to_manipulate_number - 1]]
-    selected_branch = extract_single_line(centerlines_complete, selected_branch_id)
-
-    return selected_branch
 
 
 def pick_branch(capped_surface, centerlines):
@@ -416,7 +385,7 @@ def pick_branch(capped_surface, centerlines):
 
     Args:
         capped_surface (vtkPolyData): Input surface
-        centerlines (vtkPolyData): Set of centerlines throughout model
+        centerlines (vtkPolyData): Set of valid centerline branches throughout model
 
     Returns:
           branch_to_manipulate (vtkPolyData): Branch selected to be manipulated
@@ -430,17 +399,25 @@ def pick_branch(capped_surface, centerlines):
     branch_surface_point_id = seed_selector.GetTargetSeedIds().GetId(0)
     surface_point = capped_surface.GetPoint(branch_surface_point_id)
 
-    # Find closest centerline
+    # Find closest centerlines
     closest_dist = 1e9
-    branch_to_manipulate = None
+    valid_branches_to_manipulate = []
     for line_to_compare in centerlines:
         locator = get_vtk_point_locator(line_to_compare)
         closest_point_id = locator.FindClosestPoint(surface_point)
         closest_point = line_to_compare.GetPoint(closest_point_id)
         dist = get_distance(closest_point, surface_point)
-        if dist < closest_dist:
+        if dist <= closest_dist:
             closest_dist = dist
-            branch_to_manipulate = line_to_compare
+            valid_branches_to_manipulate.append(line_to_compare)
+
+    # Select shortest centerline of valid branches
+    branch_to_manipulate = valid_branches_to_manipulate[0]
+    for branch in valid_branches_to_manipulate[1:]:
+        branch_length = len(get_curvilinear_coordinate(branch))
+        current_length = len(get_curvilinear_coordinate(branch_to_manipulate))
+        if branch_length < current_length:
+            branch_to_manipulate = branch
 
     return branch_to_manipulate
 
@@ -581,26 +558,26 @@ def get_exact_surface_normal(capped_surface, new_branch_pos_id):
     return new_normal
 
 
-def get_estimated_surface_normal(diverging_centerline_branch):
+def get_estimated_surface_normal(centerline):
     """
     Estimate the surface normal at initial diverging centerline branch.
 
     Args:
-        diverging_centerline_branch (vtkPolyData): Diverging centerline to be moved.
+        centerline (vtkPolyData): Diverging centerline to be moved.
 
     Returns:
         normal_vector (ndarray): Estimated normal vector at diverging centerline
     """
-    line = vmtk_compute_geometric_features(diverging_centerline_branch, True)
-    curvature = get_point_data_array("Curvature", line)
+    centerline = vmtk_compute_geometric_features(centerline, True)
+    curvature = get_point_data_array("Curvature", centerline)
     first_local_maxima_id = argrelextrema(curvature, np.greater)[0][0]
 
     # TODO: Generalize choice of end point factor
-    factor = 0.6
+    factor = 0.4
     start_point = 0
     end_point = int(first_local_maxima_id * factor)
-    normal_vector = np.asarray(diverging_centerline_branch.GetPoint(end_point)) - np.asarray(
-        diverging_centerline_branch.GetPoint(start_point))
+    normal_vector = np.asarray(centerline.GetPoint(end_point)) - np.asarray(
+        centerline.GetPoint(start_point))
 
     normal_vector /= la.norm(normal_vector)
 
@@ -615,7 +592,7 @@ def manipulate_centerline_branch(centerline_branch, origin, R, dx, normal, angle
     Args:
         clamp_branch (bool): Clamps branch at endpoint if True
         manipulation (str): Type of manipulation, either 'rotate' or 'translate'
-        centerline_branch (vtkPolyData): Centerline through surface
+        centerline_branch (vtkPolyData): Centerline branch to be manipulated
         dx (float): Distance to translate branch
         R (ndarray): Rotation matrix, rotation from old to new surface normal or around new surface normal
         origin (ndarray): Adjusted origin / position of new branch position
@@ -855,6 +832,157 @@ def get_clamped_branch_rotation_factors(angle, cl_id, m, axis_of_rotation, origi
     return point
 
 
+def get_all_branches(branched_centerlines, centerlines):
+    """
+    Extract and combine all branches of the surface model.
+    Removes first part of centerlines after combining,
+    excluding the bifurcating part.
+
+    Args:
+        branched_centerlines (vktPolyData): Complete centerlines divided into branches
+        centerlines (list, ndarray): List containing sorted centerlines
+
+    Returns:
+        list: All possible branches in the geometry
+    """
+    branch_segments = extract_all_branches(branched_centerlines, centerlines)
+    all_branches_combined = combine_all_branches(branch_segments)
+    all_branches = remove_bifurcation_lines(all_branches_combined)
+    sorted_branches = sort_branches(all_branches, centerlines)
+
+    return sorted_branches
+
+
+def extract_all_branches(branched_centerlines, centerlines):
+    """
+    Find all unique branches of a network of centerlines.
+
+    Args:
+        branched_centerlines (vtkPolyData): Segmented centerlines from vmtkBranchExtractor
+        centerlines (list): List of all centerlines in geometry
+
+    Returns:
+        list: Contains all unique branches
+    """
+    n = branched_centerlines.GetNumberOfLines()
+    branch_segments = []
+    branches_tmp = []
+    add_branch = False
+    for i in range(n):
+        line = extract_single_line(branched_centerlines, i)
+        line_length = len(get_curvilinear_coordinate(line))
+
+        if line_length < MAX_BIFURCATION_LENGTH:
+            branches_tmp.append(line)
+            add_branch = True
+
+        if add_branch:
+            for j, bif in enumerate(branches_tmp):
+                branches_tmp[j] = vtk_merge_polydata([branches_tmp[j], line])
+
+        for cl in centerlines:
+            if get_end_point(cl) == get_end_point(line):
+                add_branch = False
+                branch_segments.append(branches_tmp)
+                branches_tmp = []
+
+    return branch_segments
+
+
+def combine_all_branches(branch_segments):
+    """
+    Combine branches which share a common bifurcation point
+
+    Args:
+        branch_segments (list): Contains all unique branching segments
+
+    Returns:
+        list: Contains combined branches which share bifurcation point
+    """
+    all_branches_combined = []
+    for i, segment in enumerate(branch_segments):
+        for j, branch in enumerate(segment):
+            if branch is None:
+                continue
+
+            if branch.GetNumberOfLines() > 2:
+                bif_point = extract_single_line(branch, 1).GetPoint(0)
+
+                for k, segment_to_search in enumerate(branch_segments):
+                    # Skip current segment
+                    if k == i:
+                        continue
+
+                    for l, branch_to_check in enumerate(segment_to_search):
+                        if branch_to_check is None:
+                            continue
+
+                        bif_point_to_check = extract_single_line(branch_to_check, 1).GetPoint(0)
+                        if bif_point == bif_point_to_check:
+                            branch = vtk_merge_polydata([branch, branch_to_check])
+                            branch_segments[k][l] = None
+
+                all_branches_combined.append(branch)
+            else:
+                all_branches_combined.append(branch)
+
+            branch_segments[i][j] = None
+
+    return all_branches_combined
+
+
+def remove_bifurcation_lines(all_branches_combined):
+    """
+    Removed first part of each centerline, containing
+    tiny bifurcation segment of centerline.
+
+    Args:
+        all_branches_combined (list): Combined unique branches
+
+    Returns:
+        list: Contains all unique branches in centerline network
+    """
+    # Remove bifurcation part of branch
+    all_branches = []
+    for branch in all_branches_combined:
+        branch_without_bifurcation = [extract_single_line(branch, i) for i in range(2, branch.GetNumberOfLines())]
+        all_branches.append(vtk_merge_polydata(branch_without_bifurcation))
+
+    return all_branches
+
+
+def sort_branches(branches, centerlines):
+    """
+    Sort combined branches based on sorted centerlines
+
+    Args:
+        branches (list): Contains branches to be sorted
+        centerlines (list): Contains sorted centerlines
+
+    Returns:
+        list: Sorted branches
+    """
+
+    sorted_branches_dict = {k: [] for k in range(len(centerlines))}
+
+    # Compare branches end point with sorted centerlines
+    for i, branch in enumerate(branches):
+        branch_end_point = get_end_point(branch)
+        for j, line in enumerate(centerlines):
+            line_end_point = get_end_point(line)
+            if branch_end_point == line_end_point:
+                sorted_branches_dict[j].append(branch)
+                continue
+
+    # Collect and merge all branches
+    sorted_branches = []
+    for _, lines in sorted_branches_dict.items():
+        for line in lines:
+            sorted_branches.append(line)
+
+    return sorted_branches
+
+
 def read_command_line_branch(input_path=None, output_path=None):
     """
     Read arguments from commandline and return all values in a dictionary.
@@ -904,7 +1032,7 @@ def read_command_line_branch(input_path=None, output_path=None):
                              " and not radians. Default is no rotation.", metavar="surface_tangent_axis_angle")
 
     # Argument for selecting branch
-    parser.add_argument('-bn', '--branch-number', type=int, default=1,
+    parser.add_argument('-bn', '--branch-number', type=int, default=None,
                         help="The number corresponding the branch to manipulate. " +
                              "The branches are ordered from 1 to N, " +
                              "from upstream to downstream, relative to the inlet. " +
@@ -939,6 +1067,10 @@ def read_command_line_branch(input_path=None, output_path=None):
     azimuth_angle_to_radians = args.azimuth_angle * math.pi / 180
     if azimuth_angle_to_radians > np.pi:
         azimuth_angle_to_radians -= 2 * np.pi
+
+    if args.branch_number is not None:
+        if args.branch_number < 1:
+            raise ValueError("ERROR: Branch number cannot be 0 or negative. Please select a positive number")
 
     if args.no_smooth_point is not None and len(args.no_smooth_point):
         if len(args.no_smooth_point) % 3 != 0:

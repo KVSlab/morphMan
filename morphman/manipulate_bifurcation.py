@@ -13,9 +13,8 @@ from morphman.common.surface_operations import *
 from morphman.common.vessel_reconstruction_tools import *
 
 
-def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_factor, angle,
-                           keep_fixed_1, keep_fixed_2, bif, lower, no_smooth, no_smooth_point,
-                           poly_ball_size, cylinder_factor, resampling_step,
+def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_factor, angle, keep_fixed_1, keep_fixed_2,
+                           bif, lower, no_smooth, no_smooth_point, poly_ball_size, cylinder_factor, resampling_step,
                            region_of_interest, region_points, tension, continuity):
     """
     Objective rotation of daughter branches, by rotating
@@ -27,6 +26,8 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
     Includes the option to rotate only one of the daughter branches.
 
     Args:
+        tension (float): Tension parameter of Kochanek splines
+        continuity (float): Continuity parameter of Kochanek splines
         input_filepath (str): Path to input surface.
         output_filepath (str): Path to output surface.
         smooth (bool): Determine if the voronoi diagram should be smoothed.
@@ -144,8 +145,7 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
 
     # Clip the voronoi diagram
     print("-- Clipping Voronoi diagram")
-    voronoi_clipped, voronoi_bifurcation = get_split_voronoi_diagram(voronoi, [patch_cl,
-                                                                     clipped_centerline])
+    voronoi_clipped, voronoi_bifurcation = get_split_voronoi_diagram(voronoi, [patch_cl, clipped_centerline])
     write_polydata(voronoi_clipped, voronoi_clipped_path)
     write_polydata(voronoi_bifurcation, voronoi_bifurcation_path)
 
@@ -284,7 +284,7 @@ def rotate_voronoi(clipped_voronoi, patch_cl, div_points, m, R):
     for i in range(1, patch_cl.GetNumberOfCells()):
         pnt = cell_line[i].GetPoints().GetPoint(0)
         new = cell_line[0].GetPoints().GetPoint(locator[0].FindClosestPoint(pnt))
-        if get_distance(pnt, new) < tolerance*10:
+        if get_distance(pnt, new) < tolerance * 10:
             not_rotate.append(i)
 
     def check_rotate(point):
@@ -369,7 +369,7 @@ def rotate_cl(patch_cl, div_points, rotation_matrices, R):
 
         start = cell.GetPoint(0)
         dist = line0.GetPoint(locator0.FindClosestPoint(start))
-        test = get_distance(start, dist) > tolerance*10
+        test = get_distance(start, dist) > tolerance * 10
 
         if test or len(div_points) == 2:
             locator = get_vtk_point_locator(cell)
@@ -615,7 +615,6 @@ def read_command_line_bifurcation(input_path=None, output_path=None):
     parser.add_argument("-c", "--continuity", type=float, default=0.8,
                         help="Set continuity of the KochanekSpline from -1 to 1")
 
-
     # Bifurcation reconstruction arguments
     parser.add_argument("--bif", type=str2bool, default=False,
                         help="interpolate bif as well")
@@ -637,7 +636,6 @@ def read_command_line_bifurcation(input_path=None, output_path=None):
 
     if not (-1 <= args.continuity <= 1):
         raise ValueError("Tension has to be between -1 and 1, not {}".format(args.continuity))
-
 
     return dict(input_filepath=args.ifile, smooth=args.smooth, output_filepath=args.ofile,
                 smooth_factor=args.smooth_factor, angle=ang_,

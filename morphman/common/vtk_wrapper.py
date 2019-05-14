@@ -504,7 +504,7 @@ def create_vtk_array(values, name, k=1):
     """Given a set of numpy values, and a name of the array create vtk array
 
     Args:
-        values (numpy.ndarray): List of the values.
+        values (list, ndarray): List of the values.
         name (str): Name of the array.
         k (int): Length of tuple.
 
