@@ -17,6 +17,7 @@ surfaceNormalsArrayName = 'SurfaceNormalArray'
 parallelTransportNormalsArrayName = 'ParallelTransportNormals'
 groupIDsArrayName = "GroupIds"
 abscissasArrayName = 'Abscissas'
+blankingArrayName = 'Blanking'
 branchClippingArrayName = 'BranchClippingArray'
 
 
@@ -368,7 +369,7 @@ def vmtk_branch_clipper(centerlines, surface, clip_value=0.0, inside_out=False, 
     clipper.ClipValue = clip_value
     clipper.RadiusArrayName = radiusArrayName
     clipper.GroupIdsArrayName = groupIDsArrayName
-    clipper.BlankingArrayName = branchClippingArrayName
+    clipper.BlankingArrayName = blankingArrayName
     if inside_out:
         clipper.InsideOut = 1
     if not use_radius_information:
