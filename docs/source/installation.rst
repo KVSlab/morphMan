@@ -21,7 +21,7 @@ The general dependencies of morphMan are
 Basic Installation
 ==================
 We recommend that you can install morphMan through Anaconda.
-First, install Anaconda or Miniconda (preferably the python 3.6 version).
+First, install Anaconda or Miniconda (preferably the Python 3.6 version).
 Then execute the following command in a terminal window::
 
   $ conda create -n your_environment -c vmtk -c morphman morphman

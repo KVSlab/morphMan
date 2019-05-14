@@ -581,26 +581,26 @@ def get_exact_surface_normal(capped_surface, new_branch_pos_id):
     return new_normal
 
 
-def get_estimated_surface_normal(diverging_centerline_branch):
+def get_estimated_surface_normal(centerline):
     """
     Estimate the surface normal at initial diverging centerline branch.
 
     Args:
-        diverging_centerline_branch (vtkPolyData): Diverging centerline to be moved.
+        centerline (vtkPolyData): Diverging centerline to be moved.
 
     Returns:
         normal_vector (ndarray): Estimated normal vector at diverging centerline
     """
-    line = vmtk_compute_geometric_features(diverging_centerline_branch, True)
-    curvature = get_point_data_array("Curvature", line)
+    centerline = vmtk_compute_geometric_features(centerline, True)
+    curvature = get_point_data_array("Curvature", centerline)
     first_local_maxima_id = argrelextrema(curvature, np.greater)[0][0]
 
     # TODO: Generalize choice of end point factor
     factor = 0.6
     start_point = 0
     end_point = int(first_local_maxima_id * factor)
-    normal_vector = np.asarray(diverging_centerline_branch.GetPoint(end_point)) - np.asarray(
-        diverging_centerline_branch.GetPoint(start_point))
+    normal_vector = np.asarray(centerline.GetPoint(end_point)) - np.asarray(
+        centerline.GetPoint(start_point))
 
     normal_vector /= la.norm(normal_vector)
 
@@ -615,7 +615,7 @@ def manipulate_centerline_branch(centerline_branch, origin, R, dx, normal, angle
     Args:
         clamp_branch (bool): Clamps branch at endpoint if True
         manipulation (str): Type of manipulation, either 'rotate' or 'translate'
-        centerline_branch (vtkPolyData): Centerline through surface
+        centerline_branch (vtkPolyData): Centerline branch to be manipulated
         dx (float): Distance to translate branch
         R (ndarray): Rotation matrix, rotation from old to new surface normal or around new surface normal
         origin (ndarray): Adjusted origin / position of new branch position
