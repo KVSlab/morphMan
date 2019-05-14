@@ -56,4 +56,4 @@ As shown in the command above, increased total curvature is achieved by setting 
 
 For additional information, beyond this tutorial, on the script and
 input parameters, please run ``morphman-curvature -h`` or confer with
-the :meth:`curvature_variations.curvature_variations`.
+the :meth:`manipulate_curvature`.

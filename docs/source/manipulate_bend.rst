@@ -78,6 +78,5 @@ that can *a priori* find appropriate values for :math:`\alpha` and :math:`\beta`
 target change in maximum curvature or angle. Please see :ref:`compute_alpha_beta` for more information.
 
 For additional information, beyond this tutorial, on the script and input parameters,
-please run ``morphman-bend -h`` or confer with the :ref:`manipulate_bend`.
-
+please run ``morphman-bend -h`` or confer with the :meth:`manipulate_bend`.
 .. [1] Kjeldsberg, Henrik Aasen. Investigating the Interaction Between Morphology of the Anterior Bend and Aneurysm Initiation. MS thesis. 2018.

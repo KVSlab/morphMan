@@ -30,7 +30,7 @@ There are three methods, which can be set with ``--method``:
  * ``stenosis``: Create or remove a `stenosis <https://en.wikipedia.org/wiki/Stenosis>`_.
  * ``area``: Inflation or deflation of a vessel.
 
-It is easy to extend :meth:`manipulate_area.area_variations` with new features. Please make a pull
+It is easy to extend :meth:`manipulate_area.get_factor` with new features. Please make a pull
 request with changes, or create an issue suggesting an enhancement, and we will look into it.
 
 .. _area_variations:
@@ -78,7 +78,7 @@ You can manipulate a stenosis with  ``morphman-area`` by setting ``--method sten
 Create a stenosis
 ~~~~~~~~~~~~~~~~~
 For creating a stenosis you need to define the center, either by providing the point
-manually or using ``--stenosis-points``. The stenosis will be upstream and downstream
+manually or using ``--region-points``. The stenosis will be upstream and downstream
 of the center, with a length (``--size``) times the local maximal inscribed sphere, and  ``--percentage``
 controls how much the local radius should be changed. For instance, if ``--percentage 30``
 is provided as an argument, the stenosis will have an area in the middle of stenosis of
@@ -104,7 +104,7 @@ Alternativley, you can introduce an asymmetric stenosis by setting the ``--angle
 to a desired angle, :math:`\theta \in [0, 360 ]`. The selected value of :math:`\theta` determines where the surface
 is unaffected, relative to the region point.
 
-In Figure 4 you can see the output of creating an asymmetric stenosis, with an initial angle of 90 degrees.
+In Figure 4 you can see the output of creating an asymmetric stenosis, with an asymmetric angle of 90 degrees.
 
 .. figure:: asymmetric_stenosis.png
 
@@ -154,4 +154,4 @@ Below is an illustration of area decrease and increase in a single patient-speci
 
 For additional information, beyond this tutorial, on the script and
 input parameters, please run ``morphman-area -h`` or confer with
-the API documentation for :meth:`area_variations.area_variations`.
+the API documentation for :meth:`manipulate_area`.

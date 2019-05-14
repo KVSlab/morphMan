@@ -33,7 +33,7 @@ The input surfaces used in the tutorials are taken from the Aneurisk repository 
 for anyone to download. You can therefore easily follow the tutorials with the same geometries as we have used.
 
 We would like to acknowledge the two open-source projects `VTK <https://www.vtk.org>`_
-and `VMTK <http://www.vmtk.org>`_, with are the basis of morphMan.
+and `VMTK <http://www.vmtk.org>`_, which are the basis of morphMan.
 
 
 Tutorials
@@ -44,7 +44,7 @@ For morphMan to be user friendly, we provide a tutorial for each of the scripts.
 * :ref:`manipulate_bifurcation` (Change the angle in a bifurcation)
 * :ref:`manipulate_bend` (Change the curvature or angle of a bend)
 * :ref:`manipulate_branch` (Translate and rotate or removal of a specific branch anywhere on the surface)
-* :ref:`manipulate_curvature` (Increase or decrease the curvature variation in the a vessel segment)
+* :ref:`manipulate_curvature` (Increase or decrease the curvature variation in a vessel segment)
 * :ref:`manipulate_surface` (Increase or decrease surface roughness)
 
 If you have any questions beyond the tutorials, please do not hesitate to get in touch with us.

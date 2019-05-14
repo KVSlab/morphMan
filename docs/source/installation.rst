@@ -33,13 +33,13 @@ and typing::
     >>> import morphman
 
 which will give you access to every method within the framework.
-Alternatively you can use one of the four main methods of manipulation directly through the terminal, by typing::
+Alternatively you can use one of the six main methods of manipulation directly through the terminal, by typing::
 
     $ morphman-[METHOD]
 
 followed by the command line arguments for the selected method. A detailed explanation for usage of morphMan is described in :ref:`getting_started`.
 
-.. WARNING:: The vmtk version 1.4, the one currently distributed with anaconda, has a python3 bug in `vmtkcenterlines`. As a workaround you have to change this file. To find out where it is located please execute::
+.. WARNING:: The VMTK version 1.4, the one currently distributed with Anaconda, has a Python3 bug in `vmtkcenterlines`. As a workaround you have to change this file. To find out where it is located please execute::
   
     $ which vmtkcenterlines
     /Users/[Name]/anaconda3/envs/[your_environment]/bin/vmtkcenterlines
@@ -58,7 +58,7 @@ Development version
 Downloading
 ~~~~~~~~~~~
 The latest development version of morphMan can be found on the official
-`morphMan git repository <https://github.com/KVSlab/morphMan>`_ on Github.
+`morphMan git repository <https://github.com/KVSlab/morphMan>`_ on GitHub.
 Make sure Git (>=1.6) is installed, which is needed to clone the repository.
 To clone the morphMan repository, navigate to the directory where you wish
 morphMan to be stored, type the following command, and press Enter::

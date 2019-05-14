@@ -53,13 +53,13 @@ Installation
 ------------
 
 For reference, morphMan requires the following dependencies: VTK > 8.1, Numpy > 1.13, SciPy > 1.0.0, and VMTK 1.4.
-If you are on Linux or MaxOSX you can install all the general dependencies through anaconda.
-First install Anaconda or Miniconda (preferably the python 3.6 version).
+If you are on Windows, macOS or Linux you can install all the general dependencies through anaconda.
+First install Anaconda or Miniconda (preferably the Python 3.6 version).
 Then execute the following command
 
         conda create -n your_environment -c vmtk -c morphman morphman
 
-You can then activate your environment by runing ``source activate your_environment``.
+You can then activate your environment by running ``source activate your_environment``.
 You are now all set, and can start manipulating your geometries.
 
 Contact
