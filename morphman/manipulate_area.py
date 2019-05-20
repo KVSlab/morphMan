@@ -12,10 +12,9 @@ from morphman.common.argparse_common import *
 from morphman.common.surface_operations import *
 
 
-def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
-                    no_smooth_point, region_of_interest, region_points, beta, ratio,
-                    size, percentage, output_filepath, poly_ball_size,
-                    resampling_step, angle_asymmetric):
+def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth, no_smooth_point, region_of_interest,
+                    region_points, beta, ratio, size, percentage, output_filepath, poly_ball_size, resampling_step,
+                    angle_asymmetric):
     """
     Objective manipulation of area variation in
     patient-specific models of blood vessels.
@@ -50,6 +49,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
     centerline_spline_path = base_path + "_centerline_spline.vtp"
     centerline_remaining_path = base_path + "_centerline_remaining.vtp"
     centerline_diverging_path = base_path + "_centerline_diverging.vtp"
+    centerlines_new_path = base_path + "_centerline_manipulated.vtp"
 
     voronoi_new_path = base_path + "_voronoi_manipulated.vtp"
     voronoi_roi_path = base_path + "_voronoi_region_of_intrest.vtp"
@@ -113,7 +113,9 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth,
                                                centerline_diverging, voronoi_regions[2:],
                                                surface_area, centerlines, angle_asymmetric)
     new_voronoi = vtk_merge_polydata([new_voronoi, voronoi_regions[1]])
+
     write_polydata(new_voronoi, voronoi_new_path)
+    write_polydata(new_centerlines, centerlines_new_path)
 
     # Make new surface
     print("-- Creating surface")
@@ -283,8 +285,8 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
             factor_ = factor[tmp_id1]
 
         if angle_asymmetric is not None:
-            v = get_asymmetric_displacement(A, angle_asymmetric, factor_, frenet_normals_array,
-                                            frenet_tangents_array, locator, point)
+            v = get_asymmetric_displacement(A, angle_asymmetric, factor_, frenet_normals_array, frenet_tangents_array,
+                                            locator, point)
         else:
             v = delta_p * (1 - factor_)
 
@@ -308,7 +310,7 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
         new_centerlines.SetLines(centerlines.GetLines())
         new_centerlines.GetPointData().AddArray(centerlines.GetPointData().GetArray(radiusArrayName))
         points = new_centerlines.GetPoints()
-        for j in range(len(diverging_voronoi)):
+        for j, div_voronoi in enumerate(diverging_voronoi):
             # Get closest point on centerline to surface
             min_dist = 1e10
             for i in range(diverging_centerline[j].GetNumberOfPoints()):
@@ -349,9 +351,9 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
                 points.SetPoint(cl_id, (np.array(point) + v).tolist())
 
             # Offset Voronoi diagram
-            point_radius_array = diverging_voronoi[j].GetPointData().GetArray(radiusArrayName).GetTuple1
-            for i in range(diverging_voronoi[j].GetNumberOfPoints()):
-                point = diverging_voronoi[j].GetPoint(i)
+            point_radius_array = div_voronoi.GetPointData().GetArray(radiusArrayName).GetTuple1
+            for i in range(div_voronoi.GetNumberOfPoints()):
+                point = div_voronoi.GetPoint(i)
                 point = (np.asarray(point) + v).tolist()
 
                 voronoi_points.InsertNextPoint(point)

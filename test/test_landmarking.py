@@ -30,7 +30,8 @@ def test_landmarking(surface_paths, algorithm):
         landmark_input.update(smoothing_factor=1.0)
         landmarks = landmarking_bogunovic(**landmark_input)
         assert len(landmarks) == 4
-    elif algorithm == "piccinelli":
+
+    if algorithm == "piccinelli":
         landmark_input.update(smoothing_factor_torsion=1.0, smoothing_factor_curv=1.0)
         landmarks = landmarking_piccinelli(**landmark_input)
         assert len(landmarks) > 0

@@ -46,7 +46,7 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
     centerline_spline_path = base_path + "_centerline_splined.vtp"
     centerline_diverging_path = base_path + "_centerline_diverging.vtp"
     centerline_remaining_path = base_path + "_centerline_remaining.vtp"
-    new_centerlines_path = base_path + "_centerline_new_%s.vtp" % direction
+    centerline_new_path = base_path + "_centerline_new_%s.vtp" % direction
 
     # Clean and capp / uncapp surface
     surface, capped_surface = prepare_surface(base_path, input_filepath)
@@ -54,22 +54,18 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
     # Voronoi diagrams filenames
     voronoi_remaining_path = base_path + "_voronoi_curvature_remaining.vtp"
     voronoi_region_path = base_path + "_voronoi_region.vtp"
-    voronoi_div_path = base_path + "_voronoi_diverging_{}.vtp"
+    voronoi_diverging_path = base_path + "_voronoi_diverging_{}.vtp"
 
     # Compute centerlines
     inlet, outlets = get_inlet_and_outlet_centers(surface, base_path)
-    centerlines, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path,
-                                                         capped_surface, resampling=resampling_step,
-                                                         smooth=False, base_path=base_path)
+    centerlines, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path, capped_surface,
+                                                         resampling=resampling_step, smooth=False, base_path=base_path)
     if smooth:
-        voronoi = prepare_voronoi_diagram(capped_surface, centerlines, base_path,
-                                          smooth, smooth_factor, no_smooth,
+        voronoi = prepare_voronoi_diagram(capped_surface, centerlines, base_path, smooth, smooth_factor, no_smooth,
                                           no_smooth_point, voronoi, pole_ids, resampling_step)
     # Get region of interest
-    centerline_splined, centerline_remaining, \
-    centerline_diverging, region_points, diverging_ids = get_line_to_change(capped_surface, centerlines,
-                                                                            region_of_interest, "variation",
-                                                                            region_points, None)
+    centerline_splined, centerline_remaining, centerline_diverging, region_points, diverging_ids = get_line_to_change(
+        capped_surface, centerlines, region_of_interest, "variation", region_points, 0)
 
     write_polydata(centerline_splined, centerline_spline_path)
     write_polydata(centerline_remaining, centerline_remaining_path)
@@ -81,14 +77,13 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
     centerline_regions = [centerline_splined, centerline_remaining]
     if centerline_diverging is not None:
         for i, div_cl in enumerate(centerline_diverging):
-            centerline_regions += [extract_single_line(div_cl, 0,
-                                                       start_id=diverging_ids[i])]
+            centerline_regions += [extract_single_line(div_cl, 0, start_id=diverging_ids[i])]
     voronoi_regions = get_split_voronoi_diagram(voronoi, centerline_regions)
 
     write_polydata(voronoi_regions[0], voronoi_region_path)
     write_polydata(voronoi_regions[1], voronoi_remaining_path)
     for i in range(2, len(voronoi_regions)):
-        write_polydata(voronoi_regions[i], voronoi_div_path.format(i - 1))
+        write_polydata(voronoi_regions[i], voronoi_diverging_path.format(i - 1))
 
     # Move the centerline
     print("-- Smoothing / sharpening centerline")
@@ -110,17 +105,15 @@ def manipulate_curvature(input_filepath, smooth, smooth_factor, smooth_factor_li
 
     print("-- Moving centerlines")
     new_centerlines = move_all_centerlines(centerlines, smoothed_centerline_splined, smooth_line, div_offset)
-    write_polydata(new_centerlines, new_centerlines_path)
+    write_polydata(new_centerlines, centerline_new_path)
 
     # Create new surface and move centerlines (for postprocessing)
     print("-- Creating new surface")
     new_surface = create_new_surface(new_voronoi, poly_ball_size=poly_ball_size)
 
     print("-- Smoothing, cleaning, and checking surface")
-    new_surface = prepare_output_surface(new_surface, surface,
-                                         new_centerlines, output_filepath,
-                                         test_merge=True, changed=True,
-                                         old_centerline=centerlines)
+    new_surface = prepare_output_surface(new_surface, surface, new_centerlines, output_filepath, test_merge=True,
+                                         changed=True, old_centerline=centerlines)
 
     print("\n-- Writing new surface to {}.".format(output_filepath))
     write_polydata(new_surface, output_filepath)
@@ -148,14 +141,14 @@ def get_dx(p0, p1, smooth_line, cl_id, id_end, id_mid, id_start):
 
     # Smooth transition at inlet and at end of region of interest
     if cl_id < id_start:
-        dx = dx * cl_id / float(id_start)
+        dx *= cl_id / float(id_start)
     elif cl_id > id_mid:
-        dx = dx * (id_end - cl_id) / float(id_end - id_mid)
+        dx *= (id_end - cl_id) / float(id_end - id_mid)
 
     return dx
 
 
-def make_voronoi_smooth(voronoi, old_cl, new_cl, smooth_line, div_voronoi, div_points):
+def make_voronoi_smooth(voronoi, centerline, smoothed_centerline, smooth_line, div_voronoi, div_points):
     """
     Move the voronoi diagram based on a smoothed
     version of the centerline, returning a
@@ -163,32 +156,32 @@ def make_voronoi_smooth(voronoi, old_cl, new_cl, smooth_line, div_voronoi, div_p
 
     Args:
         voronoi (vtkPolyData): Voronoi diagram data set.
-        old_cl (vtkPolyData): Unsmoothed centerline points.
-        new_cl (vtkPolyData): Smoothed centerline points.
+        centerline (vtkPolyData): Unsmoothed centerline points.
+        smoothed_centerline (vtkPolyData): Smoothed centerline points.
         smooth_line (bool): Determines if model becomes smoother or sharper.
-        div_voronoi (list): A list of diverging centerlines.
+        div_voronoi (list): A list of diverging Voronoi diagrams.
         div_points (list): List of diverging points along the region of interest.
 
     Returns:
         new_dataset (vtkPolyData): Manipulated voronoi diagram.
         div_offset (list): List of the offset (dx) of each diverging section.
     """
-    locator = get_vtk_point_locator(old_cl)
+    locator = get_vtk_point_locator(centerline)
     n = voronoi.GetNumberOfPoints()
     new_dataset = vtk.vtkPolyData()
     points = vtk.vtkPoints()
     verts = vtk.vtkCellArray()
 
     # Define segments for transitioning
-    id_end = old_cl.GetNumberOfPoints() - 1
+    id_end = centerline.GetNumberOfPoints() - 1
     id_mid = int(id_end * 0.9)
     id_start = int(id_end * 0.1)
 
     # Iterate through voronoi points
     for i in range(n):
         cl_id = locator.FindClosestPoint(voronoi.GetPoint(i))
-        p0 = np.asarray(old_cl.GetPoint(cl_id))
-        p1 = np.asarray(new_cl.GetPoint(cl_id))
+        p0 = np.asarray(centerline.GetPoint(cl_id))
+        p1 = np.asarray(smoothed_centerline.GetPoint(cl_id))
         dx = get_dx(p0, p1, smooth_line, cl_id, id_end, id_mid, id_start)
 
         points.InsertNextPoint(np.asarray(voronoi.GetPoint(i)) + dx)
@@ -202,14 +195,14 @@ def make_voronoi_smooth(voronoi, old_cl, new_cl, smooth_line, div_voronoi, div_p
     # Offset diverging centerlines
     div_offset = []
     if len(div_voronoi) > 0:
-        for i in range(len(div_voronoi)):
+        for i, div_voronoi_i in enumerate(div_voronoi):
             cl_id = locator.FindClosestPoint(div_points[i])
-            p0 = np.asarray(old_cl.GetPoint(cl_id))
-            p1 = np.asarray(new_cl.GetPoint(cl_id))
+            p0 = np.asarray(centerline.GetPoint(cl_id))
+            p1 = np.asarray(smoothed_centerline.GetPoint(cl_id))
             dx = get_dx(p0, p1, smooth_line, cl_id, id_end, id_mid, id_start)
 
             # Offset voronoi
-            wrapped_voronoi = dsa.WrapDataObject(div_voronoi[i])
+            wrapped_voronoi = dsa.WrapDataObject(div_voronoi_i)
             wrapped_voronoi.Points += dx
             div_voronoi[i] = wrapped_voronoi.VTKObject
             div_offset.append(dx)
@@ -217,7 +210,7 @@ def make_voronoi_smooth(voronoi, old_cl, new_cl, smooth_line, div_voronoi, div_p
     return [new_dataset] + div_voronoi, div_offset
 
 
-def move_all_centerlines(old_cl, new_cl, smooth_line, div_offset):
+def move_all_centerlines(unsmoothed_centerline, smoothed_centerline, smooth_line, div_offset):
     """
     Takes the original centerline and eventual diverging centerlines, performing
     manual manipulation by smoothing / sharpening the centerline based on a
@@ -225,16 +218,16 @@ def move_all_centerlines(old_cl, new_cl, smooth_line, div_offset):
     Returns the final complete and manipulated centerline.
 
     Args:
-        old_cl (vtkPolyData): Centerlines excluding diverging centerlines.
-        new_cl (vtkPolyData): Smoothed region of the centerline.
+        unsmoothed_centerline (vtkPolyData): Centerlines excluding diverging centerlines.
+        smoothed_centerline (vtkPolyData): Smoothed region of the centerline.
         smooth_line (bool): Determines if model becomes smoother or sharper.
         div_offset (list): List of offset of the Voronoi diagram for each diverging section.
 
     Returns:
         centerline (vtkPolyData): Manipulated centerline.
     """
-    number_of_points = old_cl.GetNumberOfPoints()
-    number_of_cells = old_cl.GetNumberOfCells()
+    number_of_points = unsmoothed_centerline.GetNumberOfPoints()
+    number_of_cells = unsmoothed_centerline.GetNumberOfCells()
 
     centerline = vtk.vtkPolyData()
     centerline_points = vtk.vtkPoints()
@@ -242,16 +235,16 @@ def move_all_centerlines(old_cl, new_cl, smooth_line, div_offset):
     radius_array = get_vtk_array(radiusArrayName, 1, number_of_points)
 
     count = 0
-    id_end = new_cl.GetNumberOfPoints() - 1
-    p1 = new_cl.GetPoint(0)
-    p2 = new_cl.GetPoint(id_end)
+    id_end = smoothed_centerline.GetNumberOfPoints() - 1
+    p1 = smoothed_centerline.GetPoint(0)
+    p2 = smoothed_centerline.GetPoint(id_end)
 
-    tol = get_centerline_tolerance(old_cl)
+    tol = get_centerline_tolerance(unsmoothed_centerline)
 
     # Get a centerline going through p1 and p2
     full_change_line = None
     for i in range(number_of_cells):
-        full_change_line = extract_single_line(old_cl, i)
+        full_change_line = extract_single_line(unsmoothed_centerline, i)
 
         # Check if line goes through the region of interest
         full_change_locator = get_vtk_point_locator(full_change_line)
@@ -266,7 +259,7 @@ def move_all_centerlines(old_cl, new_cl, smooth_line, div_offset):
     # Iterate through centerline points
     div_count = -1
     for i in range(number_of_cells):
-        line = extract_single_line(old_cl, i)
+        line = extract_single_line(unsmoothed_centerline, i)
 
         # Check if line goes through the region of interest
         locator = get_vtk_point_locator(line)
@@ -301,7 +294,7 @@ def move_all_centerlines(old_cl, new_cl, smooth_line, div_offset):
 
             elif full_change:
                 if id1 <= p <= id2:
-                    p_new = np.asarray(new_cl.GetPoint(p - id1))
+                    p_new = np.asarray(smoothed_centerline.GetPoint(p - id1))
                     dx = p_new - p_old
                 else:
                     dx = 0
@@ -310,7 +303,7 @@ def move_all_centerlines(old_cl, new_cl, smooth_line, div_offset):
                 if p <= id1:
                     dx = 0
                 elif p <= div_limit:
-                    p_new = np.asarray(new_cl.GetPoint(p - id1))
+                    p_new = np.asarray(smoothed_centerline.GetPoint(p - id1))
                     dx = p_new - p_old
                 else:
                     dx = div_offset[div_count]

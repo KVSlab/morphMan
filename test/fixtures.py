@@ -7,8 +7,10 @@
 
 from os import system, path
 from sys import platform
-from morphman.common import get_centers, get_path_names, compute_centerlines, prepare_surface
+
 import pytest
+
+from morphman.common import get_centers, get_path_names, compute_centerlines, prepare_surface
 
 
 def download_testdata(test_path, outputfile):
@@ -39,9 +41,8 @@ def surface_paths():
         try:
             download_testdata(test_path, outputfile)
         except Exception:
-            raise Exception("Problem downloading the testdata, please do it manually from " \
-                            + test_path + " and extract the compressed tarball in the" \
-                            + " test folder")
+            raise Exception("Problem downloading the testdata, please do it manually from "
+                            + test_path + " and extract the compressed tarball in the test folder")
 
     # Create centerline
     input_filepath = path.join(abs_path, "C0001", "surface", "model.vtp")
@@ -50,8 +51,7 @@ def surface_paths():
     if not path.exists(centerlines_path):
         surface, capped_surface = prepare_surface(base_path, input_filepath)
         inlet, outlets = get_centers(surface, base_path)
-        centerlines, _, _ = compute_centerlines(inlet, outlets, centerlines_path,
-                                                capped_surface, resampling=0.1,
-                                                smooth=False, base_path=base_path)
+        compute_centerlines(inlet, outlets, centerlines_path, capped_surface, resampling=0.1, smooth=False,
+                            base_path=base_path)
 
     return [input_filepath, input_filepath.replace(".vtp", "_output.vtp")]
