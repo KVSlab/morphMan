@@ -48,25 +48,23 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
         translation_method (str): Method for translating the branch to be manipulated.
     """
 
-    # Input and output filenames
+    # Input filenames
     base_path = get_path_names(input_filepath)
     centerlines_path = base_path + "_centerline.vtp"
-    unprepared_output_filepath = base_path + "_unprepared_output.vtp"
 
     # Clean and capp / uncapp surface
     surface, capped_surface = prepare_surface(base_path, input_filepath)
     inlet, outlets = compute_centers(surface, base_path)
 
     print("-- Computing centerlines and Voronoi diagram")
-    centerlines_complete, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path,
-                                                                  capped_surface, resampling=resampling_step,
-                                                                  smooth=False, base_path=base_path)
+    centerlines_complete, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path, capped_surface,
+                                                                  resampling=resampling_step, smooth=False,
+                                                                  base_path=base_path)
 
     if smooth:
         print("-- Smoothing Voronoi diagram")
-        voronoi = prepare_voronoi_diagram(capped_surface, centerlines_complete, base_path,
-                                          smooth, smooth_factor, no_smooth,
-                                          no_smooth_point, voronoi, pole_ids, resampling_step)
+        voronoi = prepare_voronoi_diagram(capped_surface, centerlines_complete, base_path, smooth, smooth_factor,
+                                          no_smooth, no_smooth_point, voronoi, pole_ids, resampling_step)
 
     # Select diverging branch from Brancher and compare with diverging branch found manually
     centerlines_branched = vmtk_compute_branch_extractor(centerlines_complete)
@@ -98,16 +96,16 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
 
     if remove_branch:
         print("-- Removing branch")
-        detach_branch(voronoi_remaining, centerlines, poly_ball_size,
-                      unprepared_output_filepath, surface, output_filepath, centerlines_complete, base_path)
+        detach_branch(voronoi_remaining, centerlines, poly_ball_size, surface, output_filepath, centerlines_complete,
+                      base_path)
     else:
         move_and_rotate_branch(polar_angle, azimuth_angle, capped_surface, centerlines, centerlines_complete,
                                branch_to_manipulate, new_branch_pos, new_branch_pos_id, output_filepath,
-                               poly_ball_size, surface, unprepared_output_filepath, voronoi_branch, voronoi_remaining,
+                               poly_ball_size, surface, voronoi_branch, voronoi_remaining,
                                base_path, translation_method, clamp_branch)
 
 
-def detach_branch(voronoi_remaining, centerlines, poly_ball_size, unprepared_output_filepath, surface, output_filepath,
+def detach_branch(voronoi_remaining, centerlines, poly_ball_size, surface, output_filepath,
                   centerlines_complete, base_path):
     """
     Reconstructs the Voronoi diagram, creating a new surface,
@@ -120,7 +118,6 @@ def detach_branch(voronoi_remaining, centerlines, poly_ball_size, unprepared_out
         centerlines (vtkPolyData): Relevant centerlines in new geometry
         centerlines_complete (vtkPolyData): Complete set of centerlines
         surface (vtkPolyData): Surface model
-        unprepared_output_filepath (string): Path to save unprepared surface
         voronoi_remaining (vtkPolyData): Voronoi diagram of remaining surface model
         base_path (string): Path to save location
         output_filepath (str): Path to output the manipulated surface.
@@ -131,17 +128,13 @@ def detach_branch(voronoi_remaining, centerlines, poly_ball_size, unprepared_out
 
     # Create new voronoi diagram and new centerlines
     write_polydata(voronoi_remaining, new_voronoi_path)
-
     write_polydata(centerlines, new_centerlines_path)
 
     new_surface = create_new_surface(voronoi_remaining, poly_ball_size=poly_ball_size)
-    write_polydata(new_surface, unprepared_output_filepath)
 
     print("-- Smoothing, cleaning, and checking surface")
-    new_surface = prepare_output_surface(new_surface, surface,
-                                         centerlines, output_filepath,
-                                         test_merge=False, changed=False,
-                                         old_centerline=centerlines_complete)
+    new_surface = prepare_output_surface(new_surface, surface, centerlines, output_filepath, test_merge=False,
+                                         changed=False, old_centerline=centerlines_complete)
 
     print("\n-- Writing new surface to {}.".format(output_filepath))
     write_polydata(new_surface, output_filepath)
@@ -149,8 +142,7 @@ def detach_branch(voronoi_remaining, centerlines, poly_ball_size, unprepared_out
 
 def move_and_rotate_branch(polar_angle, azimuth_angle, capped_surface, centerlines, centerlines_complete,
                            diverging_centerline_branch, new_branch_pos, new_branch_pos_id, output_filepath,
-                           poly_ball_size, surface, unprepared_output_filepath, voronoi_branch, voronoi_remaining,
-                           base_path, method, clamp_branch):
+                           poly_ball_size, surface, voronoi_branch, voronoi_remaining, base_path, method, clamp_branch):
     """
     Moves, and/or performs rotation of the voronoi diagram, then
     reconstructs the Voronoi diagram, creating a new surface.
@@ -168,7 +160,6 @@ def move_and_rotate_branch(polar_angle, azimuth_angle, capped_surface, centerlin
         new_branch_pos (vtkPoint): Point where branch is moved
         new_branch_pos_id (int): ID of point where branch is moved
         surface (vtkPolyData): Surface model
-        unprepared_output_filepath (string): Path to save unprepared surface
         voronoi_branch (vtkPolyData): Voronoi diagram of branch
         voronoi_remaining (vtkPolyData): Voronoi diagram of remaining surface model
         base_path (string): Path to save location
@@ -210,9 +201,9 @@ def move_and_rotate_branch(polar_angle, azimuth_angle, capped_surface, centerlin
                                                                     clamp_branch)
     if polar_angle != 0:
         print("-- Rotating branch")
-        axis_of_rotation = get_axis_of_rotation(manipulated_centerline, new_normal)
+        rotation_axis = get_rotation_axis(manipulated_centerline, new_normal)
         manipulated_voronoi, manipulated_centerline = rotate_branch(polar_angle, manipulated_centerline,
-                                                                    manipulated_voronoi, origin, axis_of_rotation,
+                                                                    manipulated_voronoi, origin, rotation_axis,
                                                                     clamp_branch)
 
     # Create new voronoi diagram and new centerlines
@@ -223,19 +214,16 @@ def move_and_rotate_branch(polar_angle, azimuth_angle, capped_surface, centerlin
     write_polydata(new_centerlines, new_centerlines_path)
 
     new_surface = create_new_surface(new_voronoi, poly_ball_size=poly_ball_size)
-    write_polydata(new_surface, unprepared_output_filepath)
 
     print("-- Smoothing, cleaning, and checking surface")
-    new_surface = prepare_output_surface(new_surface, surface,
-                                         new_centerlines, output_filepath,
-                                         test_merge=False, changed=True,
-                                         old_centerline=centerlines_complete)
+    new_surface = prepare_output_surface(new_surface, surface, new_centerlines, output_filepath, test_merge=False,
+                                         changed=True, old_centerline=centerlines_complete)
 
     print("\n-- Writing new surface to {}.".format(output_filepath))
     write_polydata(new_surface, output_filepath)
 
 
-def get_axis_of_rotation(centerline, normal_vector):
+def get_rotation_axis(centerline, normal_vector):
     """
     Compute axis of rotation for Azimuthal rotation
 
@@ -248,9 +236,9 @@ def get_axis_of_rotation(centerline, normal_vector):
     """
     centerline = vmtk_compute_geometric_features(centerline, True)
     frenet_normal = centerline.GetPointData().GetArray("FrenetNormal").GetTuple3(0)
-    axis_of_rotation = np.cross(normal_vector, frenet_normal)
+    rotation_axis = np.cross(normal_vector, frenet_normal)
 
-    return axis_of_rotation
+    return rotation_axis
 
 
 def move_branch(centerlines, diverging_centerline_branch, new_branch_pos,
@@ -275,16 +263,16 @@ def move_branch(centerlines, diverging_centerline_branch, new_branch_pos,
         ndarray: Origin of new position
     """
     # Define rotation between surface normal vectors
-    u, surface_normals_angle = get_rotation_axis_and_angle(new_normal, old_normal)
-    R = get_rotation_matrix(u, surface_normals_angle)
+    rotation_axis, surface_normals_angle = get_rotation_axis_and_angle(new_normal, old_normal)
+    R = get_rotation_matrix(rotation_axis, surface_normals_angle)
 
     # Define translation parameters
     dx, origin = get_translation_parameters(centerlines, diverging_centerline_branch, new_branch_pos)
 
     # Move branch centerline and voronoi diagram
-    moved_voronoi = manipulate_voronoi_branch(voronoi_branch, dx, R, origin, diverging_centerline_branch, u,
+    moved_voronoi = manipulate_voronoi_branch(voronoi_branch, dx, R, origin, diverging_centerline_branch, rotation_axis,
                                               surface_normals_angle, 'translate', clamp_branch)
-    moved_centerline = manipulate_centerline_branch(diverging_centerline_branch, origin, R, dx, u,
+    moved_centerline = manipulate_centerline_branch(diverging_centerline_branch, origin, R, dx, rotation_axis,
                                                     surface_normals_angle, 'translate', clamp_branch)
 
     return moved_voronoi, moved_centerline, origin
@@ -372,8 +360,6 @@ def pick_new_branch_position(capped_surface):
     seed_selector.Execute()
     new_branch_pos_id = seed_selector.GetTargetSeedIds().GetId(0)
     new_branch_pos = capped_surface.GetPoint(new_branch_pos_id)
-    print("-- The chosen new branch position:", np.asarray(new_branch_pos))
-
     print("-- New branch location is:", np.asarray(new_branch_pos))
 
     return new_branch_pos_id, new_branch_pos
@@ -877,8 +863,8 @@ def extract_all_branches(branched_centerlines, centerlines):
             add_branch = True
 
         if add_branch:
-            for j, bif in enumerate(branches_tmp):
-                branches_tmp[j] = vtk_merge_polydata([branches_tmp[j], line])
+            for j, branch_tmp in enumerate(branches_tmp):
+                branches_tmp[j] = vtk_merge_polydata([branch_tmp, line])
 
         for cl in centerlines:
             if get_end_point(cl) == get_end_point(line):
@@ -922,9 +908,7 @@ def combine_all_branches(branch_segments):
                             branch = vtk_merge_polydata([branch, branch_to_check])
                             branch_segments[k][l] = None
 
-                all_branches_combined.append(branch)
-            else:
-                all_branches_combined.append(branch)
+            all_branches_combined.append(branch)
 
             branch_segments[i][j] = None
 
@@ -966,7 +950,7 @@ def sort_branches(branches, centerlines):
     sorted_branches_dict = {k: [] for k in range(len(centerlines))}
 
     # Compare branches end point with sorted centerlines
-    for i, branch in enumerate(branches):
+    for branch in branches:
         branch_end_point = get_end_point(branch)
         for j, line in enumerate(centerlines):
             line_end_point = get_end_point(line)

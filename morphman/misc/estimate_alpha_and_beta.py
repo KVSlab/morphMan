@@ -45,7 +45,7 @@ def estimate_alpha_and_beta(input_filepath, quantity_to_compute, boundary, radiu
     # Get region points
 
     # Compute discrete values for quantity
-    if type(boundary[-1]) is str:
+    if isinstance(boundary[-1], str):
         boundary = np.asarray(boundary, dtype=float)
     data = compute_quantities(input_filepath, boundary, quantity_to_compute, method_curv, method_angle,
                               region_of_interest, region_points, n=grid_size, projection=False)
@@ -250,8 +250,8 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
         siphon_splined, siphon_curv = compute_splined_centerline(siphon, get_curv=True, isline=True, nknots=nknots,
                                                                  get_misr=False)
 
-        moved_siphon_splined, moved_siphon_curv = compute_splined_centerline(moved_siphon, get_curv=True, isline=True,
-                                                                             nknots=nknots, get_misr=False)
+        _, moved_siphon_curv = compute_splined_centerline(moved_siphon, get_curv=True, isline=True, nknots=nknots,
+                                                          get_misr=False)
         siphon_curv = resample(siphon_curv, siphon_splined.GetNumberOfPoints())
         cutcurv = siphon_curv[id1:id2]
         newcutcurv = moved_siphon_curv[moved_id1:moved_id2]
@@ -259,8 +259,8 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
     if method == "discrete":
         # Smooth line with discrete derivatives
         neigh = 30
-        line_d, curv_d = compute_discrete_derivatives(siphon, neigh=neigh)
-        newline_d, newcurv_d = compute_discrete_derivatives(moved_siphon, neigh=neigh)
+        _, curv_d = compute_discrete_derivatives(siphon, neigh=neigh)
+        _, newcurv_d = compute_discrete_derivatives(moved_siphon, neigh=neigh)
         cutcurv_d = curv_d[id1:id2]
         newcutcurv_d = newcurv_d[moved_id1:moved_id2]
 
@@ -289,17 +289,17 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
     clipping_points_vtk = vtk.vtkPoints()
     for point in [p1, p2]:
         clipping_points_vtk.InsertNextPoint(point)
-    middle_points, middle_ids, dx = get_direction_parameters(extract_single_line(centerlines, 0), 0.1, direction,
-                                                             clipping_points_vtk)
+    middle_points, _, dx = get_direction_parameters(extract_single_line(centerlines, 0), 0.1, direction,
+                                                    clipping_points_vtk)
 
     # Find adjusted clipping points (and tracing points)
     if method == "plane":
-        max_p, max_id = get_most_distant_point(dx, siphon)
-        newmax_p, newmax_id = get_most_distant_point(dx, moved_siphon)
+        _, max_id = get_most_distant_point(dx, siphon)
+        _, newmax_id = get_most_distant_point(dx, moved_siphon)
 
     elif method in ["itplane", "itplane_clip"]:
-        max_p, max_id = get_most_distant_point(dx, siphon)
-        newmax_p, newmax_id = get_most_distant_point(dx, moved_siphon)
+        _, max_id = get_most_distant_point(dx, siphon)
+        _, newmax_id = get_most_distant_point(dx, moved_siphon)
 
         siphon = vmtk_compute_geometric_features(siphon, False)
 
@@ -323,12 +323,12 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
         normal = np.cross(dp, n1)
         newnormal = np.cross(dnewp, n2)
 
-        max_p, max_id = get_most_distant_point(normal, siphon)
-        newmax_p, newmax_id = get_most_distant_point(newnormal, moved_siphon)
+        _, max_id = get_most_distant_point(normal, siphon)
+        _, newmax_id = get_most_distant_point(newnormal, moved_siphon)
 
     elif method == "maxcurv":
-        max_id, v = max(enumerate(cutcurv), key=operator.itemgetter(1))
-        newmax_id, v = max(enumerate(newcutcurv), key=operator.itemgetter(1))
+        max_id, _ = max(enumerate(cutcurv), key=operator.itemgetter(1))
+        newmax_id, _ = max(enumerate(newcutcurv), key=operator.itemgetter(1))
 
     elif method == "smooth":
         allmaxcurv = argrelextrema(cutcurv, np.greater)[0]
@@ -348,8 +348,8 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
         newmax_id = allnewmaxcurv[0]
 
     elif method == "discrete":
-        max_id, v = max(enumerate(cutcurv_d), key=operator.itemgetter(1))
-        newmax_id, v = max(enumerate(newcutcurv_d), key=operator.itemgetter(1))
+        max_id, _ = max(enumerate(cutcurv_d), key=operator.itemgetter(1))
+        newmax_id, _ = max(enumerate(newcutcurv_d), key=operator.itemgetter(1))
 
     elif method == "maxdist":
         norm_p1 = [la.norm(np.array(p1) - np.array(siphon.GetPoint(i))) for i in range(siphon.GetNumberOfPoints())]
@@ -358,7 +358,7 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
         max_id = 0
         max_dist = 0
         for i, n1 in enumerate(norm_p1):
-            for j, n2 in enumerate(norm_p2):
+            for n2 in norm_p2:
                 dist = n1 ** 2 + n2 ** 2
                 if dist > max_dist:
                     max_dist = dist
@@ -382,8 +382,8 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
     if method == "odrline":
         limits = ["cumulative", "sd"]
         for limit in limits:
-            d1, d2, curvlineold = odr_line(id1, id2, siphon_splined, siphon_curv, limit)
-            newd1, newd2, curvlinenew = odr_line(moved_id1, moved_id2, moved_siphon, moved_siphon_curv, limit)
+            d1, d2, _ = odr_line(id1, id2, siphon_splined, siphon_curv, limit)
+            newd1, newd2, _ = odr_line(moved_id1, moved_id2, moved_siphon, moved_siphon_curv, limit)
 
             deg = find_angle_odr(d1, d2, projection)
             new_deg = find_angle_odr(newd1, newd2, projection)
@@ -397,13 +397,13 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
         newrad1 = moved_siphon.GetPointData().GetArray(radiusArrayName).GetTuple1(0)
         newrad2 = moved_siphon.GetPointData().GetArray(radiusArrayName).GetTuple1(n2 - 1)
 
-        pa, ra = move_past_sphere(siphon, p1, rad1, 0, step=1, stop=n1 - 1, scale_factor=multiplier)
-        pb, rb = move_past_sphere(siphon, p2, rad2, n1 - 1, step=-1, stop=0, scale_factor=multiplier)
-        new_pa, ra = move_past_sphere(moved_siphon, moved_p1, newrad1, 0, step=1, stop=n2 - 1, scale_factor=multiplier)
-        new_pb, rb = move_past_sphere(moved_siphon, moved_p2, newrad2, n2 - 1, step=-1, stop=0, scale_factor=multiplier)
+        pa, _ = move_past_sphere(siphon, p1, rad1, 0, step=1, stop=n1 - 1, scale_factor=multiplier)
+        pb, _ = move_past_sphere(siphon, p2, rad2, n1 - 1, step=-1, stop=0, scale_factor=multiplier)
+        new_pa, _ = move_past_sphere(moved_siphon, moved_p1, newrad1, 0, step=1, stop=n2 - 1, scale_factor=multiplier)
+        new_pb, _ = move_past_sphere(moved_siphon, moved_p2, newrad2, n2 - 1, step=-1, stop=0, scale_factor=multiplier)
 
-        deg, l1, l2 = find_angle(pa, pb, p1, p2, projection)
-        new_deg, nl1, nl2 = find_angle(new_pa, new_pb, moved_p1, moved_p2, projection)
+        deg, l1, _ = find_angle(pa, pb, p1, p2, projection)
+        new_deg, nl1, _ = find_angle(new_pa, new_pb, moved_p1, moved_p2, projection)
 
     else:
         if method == "frac":
@@ -574,23 +574,21 @@ def compute_curvature(input_filepath, alpha, beta, method, new_centerlines, comp
     # 3) Splines
     elif method == "spline":
         nknots = 50
-        siphon_splined, siphon_curv = compute_splined_centerline(new_centerline, get_curv=True,
-                                                                 isline=True, nknots=nknots)
+        _, siphon_curv = compute_splined_centerline(new_centerline, get_curv=True, isline=True, nknots=nknots)
         new_curvature = gaussian_filter(siphon_curv, 5)
 
         if compute_original:
-            siphon_splined, siphon_curv = compute_splined_centerline(centerline, get_curv=True,
-                                                                     isline=True, nknots=nknots)
+            _, siphon_curv = compute_splined_centerline(centerline, get_curv=True, isline=True, nknots=nknots)
             curvature = gaussian_filter(siphon_curv, 5)
 
     # 4) Default: Discrete derivatives
     elif method == "disc":
         neigh = 20
-        line_di, curv_di = compute_discrete_derivatives(new_centerline, neigh=neigh)
+        _, curv_di = compute_discrete_derivatives(new_centerline, neigh=neigh)
         new_curvature = gaussian_filter(curv_di, 5)
 
         if compute_original:
-            line_di, curv_di = compute_discrete_derivatives(centerline, neigh=neigh)
+            _, curv_di = compute_discrete_derivatives(centerline, neigh=neigh)
             curvature = gaussian_filter(curv_di, 5)
 
     old_maxcurv = max(curvature[id1 + 10:id2 - 10]) if compute_original else None
@@ -626,20 +624,18 @@ def get_new_centerlines(centerlines, region_points, alpha, beta, p1, p2):
     diverging_id = None if len(diverging_ids) == 0 else diverging_ids[0]
     if beta != 0.0:
         direction = "horizont"
-        middle_points, middle_ids = get_direction_parameters(extract_single_line(new_centerlines, 0), beta, direction,
-                                                             region_points_vtk)
+        middle_points, _ = get_direction_parameters(extract_single_line(new_centerlines, 0), beta, direction,
+                                                    region_points_vtk)
         dx_p1 = middle_points[0] - p1
         new_centerlines = get_manipulated_centerlines(new_centerlines, dx_p1, p1, p2, diverging_id,
                                                       diverging_centerlines, direction, merge_lines=True)
     if alpha != 0.0:
         direction = "vertical"
-        middle_points, middle_ids, dx = get_direction_parameters(extract_single_line(new_centerlines, 0), alpha,
-                                                                 direction,
-                                                                 region_points_vtk)
+        middle_points, _, dx = get_direction_parameters(extract_single_line(new_centerlines, 0), alpha, direction,
+                                                        region_points_vtk)
         merge_lines = False if beta != 0.0 else True
         new_centerlines = get_manipulated_centerlines(new_centerlines, dx, p1, p2, diverging_id, diverging_centerlines,
-                                                      direction,
-                                                      merge_lines=merge_lines)
+                                                      direction, merge_lines=merge_lines)
 
     return centerlines, new_centerlines
 
@@ -738,8 +734,8 @@ def odr_line(id1, id2, line, curvature, limit):
     points = [p1s, p2s]
     for k, p in enumerate(points):
         pts = vtk.vtkPoints()
-        for i in range(len(p)):
-            pts.InsertNextPoint(p[i])
+        for point in p:
+            pts.InsertNextPoint(point)
 
         lines = vtk.vtkCellArray()
         for i in range(len(p) - 2):

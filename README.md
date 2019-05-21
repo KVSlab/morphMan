@@ -5,8 +5,6 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/2k6q32hqg6g5oopc?svg=true)](https://ci.appveyor.com/project/hkjeldsberg/morphman-s1s38)
 [![DOI](http://joss.theoj.org/papers/10.21105/joss.01065/status.svg)](https://doi.org/10.21105/joss.01065)
 
-
-
 <p align="center">
     <img src="https://raw.githubusercontent.com/KVSlab/morphMan/master/docs/source/make_stenosis.png" width="640 height="280" alt="Create a stenois"/>
 </p>
@@ -30,8 +28,8 @@ Authors
 -------
 morphMan is developed by
 
-  * Aslak W. Bergersen 
-  * Henrik A. Kjeldsberg 
+* Aslak W. Bergersen 
+* Henrik A. Kjeldsberg 
 
 Licence
 -------
@@ -47,7 +45,6 @@ For an introduction to morphMan, and tutorials, please refer to the [documentati
 If you wish to use morphMan for journal publications, please cite the journal article from JOSS: 
 
 Kjeldsberg et al., (2019). morphMan: Automated manipulation of vascular geometries. Journal of Open Source Software, 4(35), 1065, https://doi.org/10.21105/joss.01065
-
 
 Installation
 ------------

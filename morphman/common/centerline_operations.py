@@ -51,7 +51,7 @@ def get_bifurcating_and_diverging_point_data(centerline, centerline_bif, tol):
             r = cl1.GetPointData().GetArray(radiusArrayName).GetTuple1(tmp_id)
             break
 
-    end, r_end, id_end = move_past_sphere(cl1, center, r, i, step=-1, scale_factor=1)
+    end, _, _ = move_past_sphere(cl1, center, r, i, step=-1, scale_factor=1)
     data["bif"]["end_point"] = end
     data["bif"]["div_point"] = center
 
@@ -72,8 +72,7 @@ def get_bifurcating_and_diverging_point_data(centerline, centerline_bif, tol):
                 r = cl.GetPointData().GetArray(radiusArrayName).GetTuple1(tmp_id)
                 break
 
-        end, r_end, id_end = move_past_sphere(cl, center, r, i, step=1,
-                                              stop=i * 100, scale_factor=1)
+        end, _, _ = move_past_sphere(cl, center, r, i, step=1, stop=i * 100, scale_factor=1)
         data[counter]["end_point"] = end
         data[counter]["div_point"] = center
 

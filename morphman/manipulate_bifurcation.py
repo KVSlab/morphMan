@@ -289,8 +289,8 @@ def rotate_voronoi(clipped_voronoi, patch_cl, div_points, m, R):
 
     def check_rotate(point):
         dist = []
-        for i in range(len(locator)):
-            tmp_id = locator[i].FindClosestPoint(point)
+        for i, loc in enumerate(locator):
+            tmp_id = loc.FindClosestPoint(point)
             tmp = cell_line[i].GetPoints().GetPoint(tmp_id)
             dist.append(get_distance(tmp, point))
 
