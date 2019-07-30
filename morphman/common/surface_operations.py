@@ -642,8 +642,8 @@ def prepare_voronoi_diagram(capped_surface, centerlines, base_path, smooth, smoo
     """
     # Check if a region should not be smoothed
     if smooth and no_smooth:
-        get_no_smooth_cl(capped_surface, centerlines, base_path, smooth, no_smooth, voronoi,
-                         no_smooth_point, pole_ids, resampling_length)
+        no_smooth_cl = get_no_smooth_cl(capped_surface, centerlines, base_path, smooth, no_smooth, voronoi,
+                                        no_smooth_point, pole_ids, resampling_length)
     else:
         no_smooth_cl = None
 
