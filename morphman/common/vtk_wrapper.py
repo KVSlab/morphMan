@@ -262,9 +262,40 @@ def vtk_merge_polydata(inputs):
     return merged_data
 
 
+def get_cell_data_array(array_name, line, k=1):
+    """
+    Get data array from polydata object (CellData).
+
+    Args:
+        array_name (str): Name of array.
+        line (vtkPolyData): Centerline object.
+        k (int): Dimension.
+
+    Returns:
+        array (ndarray): Array containing data points.
+    """
+    # w numpy support, n=63000 32.7 ms, wo numpy support 33.4 ms
+    # vtk_array = line.GetCellData().GetArray(arrayName)
+    # array = numpy_support.vtk_to_numpy(vtk_array)
+    array = np.zeros((line.GetNumberOfCells(), k))
+    if k == 1:
+        data_array = line.GetCellData().GetArray(array_name).GetTuple1
+    elif k == 2:
+        data_array = line.GetCellData().GetArray(array_name).GetTuple2
+    elif k == 3:
+        data_array = line.GetCellData().GetArray(array_name).GetTuple3
+    elif k == 9:
+        data_array = line.GetCellData().GetArray(array_name).GetTuple9
+
+    for i in range(line.GetNumberOfCells()):
+        array[i, :] = data_array(i)
+
+    return array
+
+
 def get_point_data_array(array_name, line, k=1):
     """
-    Get data array from centerline object (Point data).
+    Get data array from polydata object (PointData).
 
     Args:
         array_name (str): Name of array.
@@ -284,6 +315,8 @@ def get_point_data_array(array_name, line, k=1):
         data_array = line.GetPointData().GetArray(array_name).GetTuple2
     elif k == 3:
         data_array = line.GetPointData().GetArray(array_name).GetTuple3
+    elif k == 9:
+        data_array = line.GetPointData().GetArray(array_name).GetTuple9
 
     for i in range(line.GetNumberOfPoints()):
         array[i, :] = data_array(i)
