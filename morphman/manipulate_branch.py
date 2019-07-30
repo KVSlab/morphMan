@@ -67,8 +67,7 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
                                           no_smooth, no_smooth_point, voronoi, pole_ids, resampling_step)
 
     # Select diverging branch from Brancher and compare with diverging branch found manually
-    centerlines_branched = vmtk_compute_branch_extractor(centerlines_complete)
-    branches_complete = get_all_branches(centerlines_branched, get_sorted_lines(centerlines_complete))
+    branches_complete = get_all_branches(centerlines_complete)
 
     # Select branch to manipulate
     if branch_to_manipulate_number is not None:
@@ -90,9 +89,20 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
     centerlines = filter_centerlines(centerlines_complete, branch_to_manipulate_end_point)
 
     print("-- Clipping Voronoi diagram")
-    voronoi_branch, voronoi_remaining = get_split_voronoi_diagram(voronoi, [branch_to_manipulate, centerlines])
-    voronoi_branch, voronoi_remaining_2 = filter_voronoi(voronoi_branch, branch_to_manipulate)
-    voronoi_remaining = vtk_merge_polydata([voronoi_remaining, voronoi_remaining_2])
+    # Get Voronoi of branch
+    voronoi_branch, _ = get_split_voronoi_diagram(voronoi, [branch_to_manipulate, centerlines])
+    voronoi_branch, _ = filter_voronoi(voronoi_branch, branch_to_manipulate)
+
+    # Get Voronoi of the remaining geometry
+    centerline_for_splitting_voronoi = get_centerline_for_splitting_voronoi(centerlines_complete,
+                                                                            branch_to_manipulate.GetPoint(0),
+                                                                            base_path,
+                                                                            capped_surface,
+                                                                            voronoi,
+                                                                            pole_ids,
+                                                                            resampling_step)
+    voronoi_remaining, _ = get_split_voronoi_diagram(voronoi, [centerlines,
+                                                               centerline_for_splitting_voronoi])
 
     if remove_branch:
         print("-- Removing branch")
@@ -102,7 +112,84 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
         move_and_rotate_branch(polar_angle, azimuth_angle, capped_surface, centerlines, centerlines_complete,
                                branch_to_manipulate, new_branch_pos, new_branch_pos_id, output_filepath,
                                poly_ball_size, surface, voronoi_branch, voronoi_remaining,
-                               base_path, translation_method, clamp_branch)
+                               base_path, translation_method, clamp_branch,
+                               centerline_for_splitting_voronoi)
+
+
+def get_centerline_for_splitting_voronoi(centerlines, starting_point, base_path,
+                                         capped_surface, voronoi, pole_ids,
+                                         resampling_step):
+    """
+    Get a version of the centerline that extends closer to the 'main' centerline.
+    The logic to create a second centerline is to reduce the effect of 'bumb' left after
+    moving a branch.
+
+    Args:
+        centerlines (vtkPolyData): The complete centerline.
+        starting_point (list): The starting point of the branch-clipped centerline.
+        base_path (str): Path to the working folder and name of the case.
+
+    Returns:
+        clipping_centerline (vtkPolyData): The new centerline for splitting the Voronoi diagram
+    """
+
+    lines = []
+    lines_main = []
+    distances = []
+    tol = get_centerline_tolerance(centerlines)
+    for i in range(centerlines.GetNumberOfLines()):
+        line = extract_single_line(centerlines, i)
+        locator = get_vtk_point_locator(line)
+        tmp_id = locator.FindClosestPoint(starting_point)
+        dist = get_distance(line.GetPoint(tmp_id), starting_point)
+        if dist < tol:
+            lines.append(line)
+        else:
+            distances.append(dist)
+            lines_main.append(line)
+
+    # Main line for comparing
+    main_line = lines_main[distances.index(min(distances))]
+
+    # Create a centerline going the opposite way
+    inlet = main_line.GetPoint(main_line.GetNumberOfPoints()-1)
+    outlet = list(lines[0].GetPoint(lines[0].GetNumberOfPoints()-1) + lines[0].GetPoint(0))
+    reversed_cl, _, _ = compute_centerlines(inlet, outlet,
+                                            base_path + "_outlet_to_branch.vtp",
+                                            capped_surface, voronoi=voronoi,
+                                            pole_ids=pole_ids, resampling=resampling_step,
+                                            smooth=False)
+    # Extract each line
+    reversed_cl_main = extract_single_line(reversed_cl, 1)
+    reversed_cl = extract_single_line(reversed_cl, 0)
+
+    for i in range(min([main_line.GetNumberOfPoints(), lines[0].GetNumberOfPoints()])):
+        p_main = main_line.GetPoint(i)
+        p = lines[0].GetPoint(i)
+        if get_distance(p_main, p) > tol * 10:
+            new_starting_point = p
+            break
+
+    for i in range(min([reversed_cl_main.GetNumberOfPoints(), reversed_cl.GetNumberOfPoints()])):
+        p_main = reversed_cl_main.GetPoint(i)
+        p = reversed_cl.GetPoint(i)
+        if get_distance(p_main, p) > tol * 10:
+            new_starting_point_reversed = p
+            break
+
+    new_lines = []
+    for line in lines:
+        loc = get_vtk_point_locator(line)
+        start_id = loc.FindClosestPoint(new_starting_point)
+        new_lines.append(extract_single_line(line, 0, start_id=start_id))
+
+    loc = get_vtk_point_locator(reversed_cl)
+    start_id = loc.FindClosestPoint(new_starting_point_reversed)
+    new_lines.append(extract_single_line(reversed_cl, 0, start_id=start_id))
+
+    new_centerline = vtk_merge_polydata(new_lines)
+
+    return new_centerline
 
 
 def detach_branch(voronoi_remaining, centerlines, poly_ball_size, surface, output_filepath,
@@ -142,7 +229,8 @@ def detach_branch(voronoi_remaining, centerlines, poly_ball_size, surface, outpu
 
 def move_and_rotate_branch(polar_angle, azimuth_angle, capped_surface, centerlines, centerlines_complete,
                            diverging_centerline_branch, new_branch_pos, new_branch_pos_id, output_filepath,
-                           poly_ball_size, surface, voronoi_branch, voronoi_remaining, base_path, method, clamp_branch):
+                           poly_ball_size, surface, voronoi_branch, voronoi_remaining,
+                           base_path, method, clamp_branch, centerline_for_splitting_voronoi):
     """
     Moves, and/or performs rotation of the voronoi diagram, then
     reconstructs the Voronoi diagram, creating a new surface.
@@ -194,6 +282,7 @@ def move_and_rotate_branch(polar_angle, azimuth_angle, capped_surface, centerlin
         manipulated_voronoi, manipulated_centerline, origin = move_branch(centerlines, manipulated_centerline,
                                                                           new_branch_pos, old_normal, new_normal,
                                                                           manipulated_voronoi, clamp_branch)
+
     if azimuth_angle != 0:
         print("-- Rotating branch")
         manipulated_voronoi, manipulated_centerline = rotate_branch(azimuth_angle, manipulated_centerline,
@@ -537,7 +626,6 @@ def get_exact_surface_normal(capped_surface, new_branch_pos_id):
         new_normal (ndarray): Normal vector out of surface
     """
     capped_surface_with_normals = vmtk_compute_surface_normals(capped_surface)
-
     new_normal = capped_surface_with_normals.GetPointData().GetNormals().GetTuple(new_branch_pos_id)
     new_normal /= la.norm(new_normal)
 
@@ -566,7 +654,6 @@ def get_estimated_surface_normal(centerline):
         centerline.GetPoint(start_point))
 
     normal_vector /= la.norm(normal_vector)
-
     return normal_vector
 
 
@@ -818,153 +905,64 @@ def get_clamped_branch_rotation_factors(angle, cl_id, m, axis_of_rotation, origi
     return point
 
 
-def get_all_branches(branched_centerlines, centerlines):
+def get_all_branches(centerlines):
     """
     Extract and combine all branches of the surface model.
     Removes first part of centerlines after combining,
     excluding the bifurcating part.
 
     Args:
-        branched_centerlines (vktPolyData): Complete centerlines divided into branches
         centerlines (list, ndarray): List containing sorted centerlines
 
     Returns:
         list: All possible branches in the geometry
     """
-    branch_segments = extract_all_branches(branched_centerlines, centerlines)
-    all_branches_combined = combine_all_branches(branch_segments)
-    all_branches = remove_bifurcation_lines(all_branches_combined)
-    sorted_branches = sort_branches(all_branches, centerlines)
 
-    return sorted_branches
+    # Get branches
+    branched_centerlines = vmtk_compute_branch_extractor(centerlines)
 
+    # Remove first segment from inlet (cannot remove or move this)
+    branched_centerlines = vtk_compute_threshold(branched_centerlines, "TractIds",
+                                                 threshold_type="between",
+                                                 lower=0.1, upper=1e6, source=1)
 
-def extract_all_branches(branched_centerlines, centerlines):
-    """
-    Find all unique branches of a network of centerlines.
+    # Remove the bifurcation segments
+    branched_centerlines = vtk_compute_threshold(branched_centerlines, "Blanking",
+                                                 threshold_type="between", lower=-0.1,
+                                                 upper=0.1, source=1)
 
-    Args:
-        branched_centerlines (vtkPolyData): Segmented centerlines from vmtkBranchExtractor
-        centerlines (list): List of all centerlines in geometry
+    tract_ids = get_cell_data_array("TractIds", branched_centerlines, k=1)
 
-    Returns:
-        list: Contains all unique branches
-    """
-    n = branched_centerlines.GetNumberOfLines()
-    branch_segments = []
-    branches_tmp = []
-    add_branch = False
-    for i in range(n):
-        line = extract_single_line(branched_centerlines, i)
-        line_length = len(get_curvilinear_coordinate(line))
+    n = centerlines.GetNumberOfLines()
+    centerline_lines = [extract_single_line(centerlines, i) for i in range(n)]
+    locators = [get_vtk_point_locator(centerline_lines[i]) for i in range(n)]
+    tol = get_centerline_tolerance(centerlines)
 
-        if line_length < MAX_BIFURCATION_LENGTH:
-            branches_tmp.append(line)
-            add_branch = True
+    # Storing each branch
+    branches = []
 
-        if add_branch:
-            for j, branch_tmp in enumerate(branches_tmp):
-                branches_tmp[j] = vtk_merge_polydata([branch_tmp, line])
+    for i in np.unique(tract_ids):
+        lines = vtk_compute_threshold(branched_centerlines, "TractIds",
+                                      threshold_type="between", lower=i-0.5,
+                                      upper=i+0.5, source=1)
 
-        for cl in centerlines:
-            if get_end_point(cl) == get_end_point(line):
-                add_branch = False
-                branch_segments.append(branches_tmp)
-                branches_tmp = []
+        # Get unique start points
+        start_points = []
+        for j in range(lines.GetNumberOfLines()):
+            tmp = extract_single_line(lines, j).GetPoint(0)
+            if tmp not in start_points:
+                start_points.append(tmp)
 
-    return branch_segments
+        # Get all upstream branches of each point
+        for start_point in start_points:
+            point_ids = [loc.FindClosestPoint(start_point) for loc in locators]
+            points = [centerline_lines[i].GetPoint(point_ids[i]) for i in range(n)]
+            distances = np.array([get_distance(start_point, points[i]) for i in range(n)])
+            branch = [extract_single_line(centerline_lines[i], 0, start_id=point_ids[i]) for i in range(n)
+                      if distances[i] > tol]
+            branches.append(vtk_merge_polydata(branch))
 
-
-def combine_all_branches(branch_segments):
-    """
-    Combine branches which share a common bifurcation point
-
-    Args:
-        branch_segments (list): Contains all unique branching segments
-
-    Returns:
-        list: Contains combined branches which share bifurcation point
-    """
-    all_branches_combined = []
-    for i, segment in enumerate(branch_segments):
-        for j, branch in enumerate(segment):
-            if branch is None:
-                continue
-
-            if branch.GetNumberOfLines() > 2:
-                bif_point = extract_single_line(branch, 1).GetPoint(0)
-
-                for k, segment_to_search in enumerate(branch_segments):
-                    # Skip current segment
-                    if k == i:
-                        continue
-
-                    for l, branch_to_check in enumerate(segment_to_search):
-                        if branch_to_check is None:
-                            continue
-
-                        bif_point_to_check = extract_single_line(branch_to_check, 1).GetPoint(0)
-                        if bif_point == bif_point_to_check:
-                            branch = vtk_merge_polydata([branch, branch_to_check])
-                            branch_segments[k][l] = None
-
-            all_branches_combined.append(branch)
-
-            branch_segments[i][j] = None
-
-    return all_branches_combined
-
-
-def remove_bifurcation_lines(all_branches_combined):
-    """
-    Removed first part of each centerline, containing
-    tiny bifurcation segment of centerline.
-
-    Args:
-        all_branches_combined (list): Combined unique branches
-
-    Returns:
-        list: Contains all unique branches in centerline network
-    """
-    # Remove bifurcation part of branch
-    all_branches = []
-    for branch in all_branches_combined:
-        branch_without_bifurcation = [extract_single_line(branch, i) for i in range(2, branch.GetNumberOfLines())]
-        all_branches.append(vtk_merge_polydata(branch_without_bifurcation))
-
-    return all_branches
-
-
-def sort_branches(branches, centerlines):
-    """
-    Sort combined branches based on sorted centerlines
-
-    Args:
-        branches (list): Contains branches to be sorted
-        centerlines (list): Contains sorted centerlines
-
-    Returns:
-        list: Sorted branches
-    """
-
-    sorted_branches_dict = {k: [] for k in range(len(centerlines))}
-
-    # Compare branches end point with sorted centerlines
-    for branch in branches:
-        branch_end_point = get_end_point(branch)
-        for j, line in enumerate(centerlines):
-            line_end_point = get_end_point(line)
-            if branch_end_point == line_end_point:
-                sorted_branches_dict[j].append(branch)
-                continue
-
-    # Collect and merge all branches
-    sorted_branches = []
-    for _, lines in sorted_branches_dict.items():
-        for line in lines:
-            sorted_branches.append(line)
-
-    return sorted_branches
+    return branches
 
 
 def read_command_line_branch(input_path=None, output_path=None):
