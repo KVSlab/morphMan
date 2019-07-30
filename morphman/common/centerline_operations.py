@@ -337,11 +337,13 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
                                          " region of interest, 'u' to undo.\n"
                 elif method == "stenosis":
                     seed_selector.text = "Press space to select, the center of a new" + \
-                                         " stenosis (one point),\nOR place two points on each side" + \
-                                         " of an existing stenosis to remove it, \'u\' to undo."
+                                         " stenosis, \'u\' to undo."
+                elif method == "linear":
+                    seed_selector.text = "Press space to select two points to mark the" + \
+                                         " region of interest, \'u\' to undo."
                 elif method == "bulge":
                     seed_selector.text = "Press space to select the center of a new" + \
-                                         " bulge / fusiform aneurysm (one point), \'u\' to undo."
+                                         " bulge / fusiform aneurysm, \'u\' to undo."
                 elif method == "bend":
                     seed_selector.text = "Press space to select the start and end of the" + \
                                          " bend that you want to manipulate, 'u' to undo.\n"
