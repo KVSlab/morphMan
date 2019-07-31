@@ -826,7 +826,7 @@ def get_sorted_lines(centerlines_complete):
 
 def get_end_point(centerline, offset=0):
     """
-    Get last point of a centerline
+    Get last point(s) of the centerline(s)
 
     Args:
         centerline (vtkPolyData): Centerline(s)
@@ -835,25 +835,12 @@ def get_end_point(centerline, offset=0):
     Returns:
         centerline_end_point (vtkPoint): Point corresponding to end of centerline.
     """
-    centerline_end_point = centerline.GetPoint(centerline.GetNumberOfPoints() - 1 - offset)
+    centerline_end_points = []
+    for i in range(centerline.GetNumberOfLines()):
+        line = extract_single_line(centerline, i)
+        centerline_end_points.append(line.GetPoint(line.GetNumberOfPoints() - 1 - offset))
 
-    return centerline_end_point
-
-
-def get_diverging_centerline_branch(centerlines_branched, diverging_centerline_end):
-    """
-    Extract diverging centerline branch, comparing it to diverging centerline end point
-
-    Args:
-        centerlines_branched (vktPolyData): Branched centerlines, from vmtkBrancher
-        diverging_centerline_end (vktPoint): End point of diverging centerline
-    Returns:
-        centerline_branch (vtkPolyDat): Branch extracted centerline branch
-    """
-    for i in range(centerlines_branched.GetNumberOfLines()):
-        centerline_branch = extract_single_line(centerlines_branched, i)
-        if get_end_point(centerline_branch) == diverging_centerline_end:
-            return centerline_branch
+    return centerline_end_points
 
 
 def filter_centerlines(centerlines, diverging_centerline_end):
@@ -868,9 +855,9 @@ def filter_centerlines(centerlines, diverging_centerline_end):
     """
     remaining_centerlines = []
     for i in range(centerlines.GetNumberOfLines()):
-        diverging_centerline = extract_single_line(centerlines, i)
-        if get_end_point(diverging_centerline) != diverging_centerline_end:
-            remaining_centerlines.append(diverging_centerline)
+        line = extract_single_line(centerlines, i)
+        if line.GetPoint(line.GetNumberOfPoints() - 1) not in diverging_centerline_end:
+            remaining_centerlines.append(line)
 
     filtered_centerlines = vtk_merge_polydata(remaining_centerlines)
 

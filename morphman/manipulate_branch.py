@@ -85,8 +85,8 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
         elif translation_method == 'no_translation':
             new_branch_pos_id, new_branch_pos = None, None
 
-    branch_to_manipulate_end_point = get_end_point(branch_to_manipulate)
-    centerlines = filter_centerlines(centerlines_complete, branch_to_manipulate_end_point)
+    branch_to_manipulate_end_points = get_end_point(branch_to_manipulate)
+    centerlines = filter_centerlines(centerlines_complete, branch_to_manipulate_end_points)
 
     print("-- Clipping Voronoi diagram")
     # Get Voronoi of branch
@@ -106,8 +106,8 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
 
     if remove_branch:
         print("-- Removing branch")
-        detach_branch(voronoi_remaining, centerlines, poly_ball_size, surface, output_filepath, centerlines_complete,
-                      base_path)
+        detach_branch(voronoi_remaining, centerlines, poly_ball_size, surface,
+                      output_filepath, branch_to_manipulate_end_points, base_path)
     else:
         move_and_rotate_branch(polar_angle, azimuth_angle, capped_surface, centerlines, centerlines_complete,
                                branch_to_manipulate, new_branch_pos, new_branch_pos_id, output_filepath,
@@ -193,7 +193,7 @@ def get_centerline_for_splitting_voronoi(centerlines, starting_point, base_path,
 
 
 def detach_branch(voronoi_remaining, centerlines, poly_ball_size, surface, output_filepath,
-                  centerlines_complete, base_path):
+                  branch_end_points, base_path):
     """
     Reconstructs the Voronoi diagram, creating a new surface,
     without the selected branch, utimatley removing it.
@@ -202,13 +202,13 @@ def detach_branch(voronoi_remaining, centerlines, poly_ball_size, surface, outpu
     meshing.
 
     Args:
-        centerlines (vtkPolyData): Relevant centerlines in new geometry
-        centerlines_complete (vtkPolyData): Complete set of centerlines
-        surface (vtkPolyData): Surface model
         voronoi_remaining (vtkPolyData): Voronoi diagram of remaining surface model
-        base_path (string): Path to save location
-        output_filepath (str): Path to output the manipulated surface.
+        centerlines (vtkPolyData): Relevant centerlines in new geometry
         poly_ball_size (list): Resolution of polyballs used to create surface.
+        surface (vtkPolyData): Surface model
+        output_filepath (str): Path to output the manipulated surface.
+        branch_end_points (list): List of the coordinates of the end points of each branch to remove
+        base_path (string): Path to save location
     """
     new_centerlines_path = base_path + "_centerline_removed_branch.vtp"
     new_voronoi_path = base_path + "_voronoi_removed_branch.vtp"
@@ -221,7 +221,7 @@ def detach_branch(voronoi_remaining, centerlines, poly_ball_size, surface, outpu
 
     print("-- Smoothing, cleaning, and checking surface")
     new_surface = prepare_output_surface(new_surface, surface, centerlines, output_filepath, test_merge=False,
-                                         changed=False, old_centerline=centerlines_complete)
+                                         changed=False, removed=branch_end_points)
 
     print("\n-- Writing new surface to {}.".format(output_filepath))
     write_polydata(new_surface, output_filepath)

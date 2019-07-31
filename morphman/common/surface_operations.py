@@ -454,7 +454,8 @@ def check_if_surface_is_merged(surface, centerlines, output_filepath):
 
 
 def prepare_output_surface(surface, original_surface, new_centerline, output_filepath,
-                           test_merge=False, changed=False, old_centerline=None):
+                           test_merge=False, changed=False, old_centerline=None,
+                           removed=[[1e9, 1e9, 1e9]]):
     """After manipulation preparing the surface for output. This method clipps the
     outlets, slightly smooths the surface, and (potentially) tests if the surface is is
     merged.
@@ -511,6 +512,10 @@ def prepare_output_surface(surface, original_surface, new_centerline, output_fil
 
         # Get Center
         center = np.mean(tmp_points, axis=0)
+
+        # Check if branch has been removed
+        if np.sqrt(np.sum(np.array(removed) - center) ** 2) < 0.5:
+            continue
 
         # Get corresponding centerline to in/outlet
         if np.sqrt(np.sum((np.array(inlet_point) - center) ** 2)) < 0.5:
