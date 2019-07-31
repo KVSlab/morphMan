@@ -755,8 +755,25 @@ def vtk_plane(origin, normal):
     return plane
 
 
+def vtk_sphere(center, radius):
+    """Returns a vtk sphere object based on the bounds
+
+    Args:
+        center (list): Center of the sphere
+        radius (float): Radius of the sphere
+
+    Returns:
+        sphere (vtkSphere): A vtkSphere
+    """
+    sphere = vtk.vtkSphere()
+    sphere.SetCenter(center)
+    sphere.SetRadius(radius)
+
+    return sphere
+
+
 def vtk_clip_polydata(surface, cutter=None, value=0, get_inside_out=False, generate_clip_scalars=False):
-    """Clip the inpute vtkPolyData object with a cutter function (plane, box, etc)
+    """Clip the input vtkPolyData object with a cutter function (plane, box, etc)
 
     Args:
         generate_clip_scalars (bool): If True, output scalar values will be interpolated from implicit function values.
