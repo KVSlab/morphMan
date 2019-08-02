@@ -286,14 +286,13 @@ def move_and_rotate_branch(polar_angle, azimuth_angle, capped_surface, centerlin
         print("-- Rotating branch")
         manipulated_voronoi, manipulated_centerline = rotate_branch(azimuth_angle, manipulated_centerline,
                                                                     manipulated_voronoi, origin, new_normal,
-                                                                    clamp_branch)
+                                                                    clamp_branch, new_normal)
     if polar_angle != 0:
         print("-- Rotating branch")
         rotation_axis = get_rotation_axis(manipulated_centerline, new_normal)
         manipulated_voronoi, manipulated_centerline = rotate_branch(polar_angle, manipulated_centerline,
                                                                     manipulated_voronoi, origin, rotation_axis,
-                                                                    clamp_branch)
-
+                                                                    clamp_branch, new_normal)
     # Create new voronoi diagram and new centerlines
     new_voronoi = vtk_merge_polydata([voronoi_remaining, manipulated_voronoi])
     write_polydata(new_voronoi, new_voronoi_path)
@@ -374,6 +373,7 @@ def move_branch(centerlines, diverging_centerline_branch, new_branch_pos,
     id_old = locator.FindClosestPoint(origin_old)
     new_tangent = centerlines.GetPointData().GetArray("FrenetTangent").GetTuple3(id_new)
     old_tangent = centerlines.GetPointData().GetArray("FrenetTangent").GetTuple3(id_old)
+
     rotation_axis, surface_tangent_angle = get_rotation_axis_and_angle(new_tangent, old_tangent)
     R = get_rotation_matrix(rotation_axis, surface_tangent_angle)
 
@@ -388,7 +388,8 @@ def move_branch(centerlines, diverging_centerline_branch, new_branch_pos,
     return moved_voronoi, moved_centerline, new_branch_pos
 
 
-def rotate_branch(angle, diverging_centerline_branch, voronoi_branch, origin, axis_of_rotation, clamp_branch):
+def rotate_branch(angle, diverging_centerline_branch, voronoi_branch, origin,
+                  axis_of_rotation, clamp_branch, new_normal):
     """
     Perform rotation of the voronoi diagram and the centerline
     around a given axis defined by the input normal vector.
@@ -400,6 +401,7 @@ def rotate_branch(angle, diverging_centerline_branch, voronoi_branch, origin, ax
         axis_of_rotation (ndarray): Vector defing axis to rotate around
         diverging_centerline_branch (vtkPolyData): Diverging centerline
         voronoi_branch (vtkPolyData): Voronoi diagram of branch
+        new_normal (list): Vector which is the surface normal.
 
     Returns:
         vtkPolyData: Rotated Voronoi diagram
@@ -410,9 +412,10 @@ def rotate_branch(angle, diverging_centerline_branch, voronoi_branch, origin, ax
 
     # Move branch centerline and voronoi diagram
     rotated_voronoi = manipulate_voronoi_branch(voronoi_branch, 0.0, R, origin, diverging_centerline_branch,
-                                                axis_of_rotation, angle, 'rotate', clamp_branch)
+                                                axis_of_rotation, angle, 'rotate',
+                                                clamp_branch, new_normal)
     rotated_centerline = manipulate_centerline_branch(diverging_centerline_branch, origin, R, 0.0, axis_of_rotation,
-                                                      angle, 'rotate', clamp_branch)
+                                                      angle, 'rotate', clamp_branch, new_normal)
 
     return rotated_voronoi, rotated_centerline
 
@@ -699,32 +702,8 @@ def get_exact_surface_normal(capped_surface, new_branch_pos_id):
     return new_normal
 
 
-def get_estimated_surface_normal(centerline):
-    """
-    Estimate the surface normal at initial diverging centerline branch.
-
-    Args:
-        centerline (vtkPolyData): Diverging centerline to be moved.
-
-    Returns:
-        normal_vector (ndarray): Estimated normal vector at diverging centerline
-    """
-    centerline = vmtk_compute_geometric_features(centerline, True)
-    curvature = get_point_data_array("Curvature", centerline)
-    first_local_maxima_id = argrelextrema(curvature, np.greater)[0][0]
-
-    # TODO: Generalize choice of end point factor
-    factor = 0.4
-    start_point = 0
-    end_point = int(first_local_maxima_id * factor)
-    normal_vector = np.asarray(centerline.GetPoint(end_point)) - np.asarray(
-        centerline.GetPoint(start_point))
-
-    normal_vector /= la.norm(normal_vector)
-    return normal_vector
-
-
-def manipulate_centerline_branch(centerline_branch, origin, R, dx, normal, angle, manipulation, clamp_branch):
+def manipulate_centerline_branch(centerline_branch, origin, R, dx, normal, angle,
+                                 manipulation, clamp_branch, branch_normal=None):
     """
     Depending on manipulation method, either translates or
     rotates the selected branch, represented as a centerline.
@@ -754,11 +733,10 @@ def manipulate_centerline_branch(centerline_branch, origin, R, dx, normal, angle
     radius_array_data = centerline_branch.GetPointData().GetArray(radiusArrayName).GetTuple1
 
     # Transition from base to branch for 30% of branch creating a smoother rotation transition
-    base_end = int(number_of_points * 0.3)
     centerline_locator = get_vtk_point_locator(centerline_branch)
 
     for p in range(centerline_branch.GetNumberOfPoints()):
-        point = centerline_branch.GetPoint(p)
+        point = np.array(centerline_branch.GetPoint(p))
 
         if manipulation == 'translate':
             # Translate and rotate branch upright
@@ -774,13 +752,8 @@ def manipulate_centerline_branch(centerline_branch, origin, R, dx, normal, angle
             # Rotate branch around axis
             if clamp_branch:
                 point = get_clamped_branch_rotation_factors(angle, p, number_of_points, normal, origin, point)
-            else:
-                if p <= base_end:
-                    transition_angle = angle * rotation_profile(p, base_end)
-                    transition_rotation_matrix = get_rotation_matrix(-normal, transition_angle)
-                    point = np.dot(transition_rotation_matrix, point - origin) + origin
-                else:
-                    point = np.dot(R, point - origin) + origin
+            elif get_angle(branch_normal, np.array(point) - origin) < np.pi / 2:
+                point = np.dot(R, point - origin) + origin
 
         centerline_points.InsertNextPoint(point)
         radius_array.SetTuple1(p, radius_array_data(p))
@@ -858,7 +831,8 @@ def get_rotation_axis_and_angle(new_normal, old_normal):
     return u, angle
 
 
-def manipulate_voronoi_branch(voronoi, dx, R, origin, centerline, normal, angle, manipulation, clamp_branch):
+def manipulate_voronoi_branch(voronoi, dx, R, origin, centerline, normal, angle,
+                              manipulation, clamp_branch, branch_normal=None):
     """
     Depending on manipulation method, either translates or
     rotates the selected branch, represented as a Voronoi diagram.
@@ -873,6 +847,7 @@ def manipulate_voronoi_branch(voronoi, dx, R, origin, centerline, normal, angle,
         angle (float): Angle to rotate in radians
         normal (ndarray): Normal vector at manipulation location
         centerline (vtkPolyData): Centerline of branch to be manipulated
+        branch_normal (list): Vector the surface normal the branch location
 
     Returns:
         new_voronoi (vtkPolyData): Manipulated Voronoi diagram
@@ -889,12 +864,9 @@ def manipulate_voronoi_branch(voronoi, dx, R, origin, centerline, normal, angle,
     m = centerline.GetNumberOfPoints()
     centerline_locator = get_vtk_point_locator(centerline)
 
-    # Transition from base to branch for 30% of branch creating a smoother rotation transition
-    base_end = int(m * 0.3)
-
     # Iterate through Voronoi diagram and manipulate
     for i in range(n):
-        point = voronoi.GetPoint(i)
+        point = np.array(voronoi.GetPoint(i))
         misr = misr_array(i)
 
         if manipulation == 'translate':
@@ -912,13 +884,9 @@ def manipulate_voronoi_branch(voronoi, dx, R, origin, centerline, normal, angle,
 
             if clamp_branch:
                 point = get_clamped_branch_rotation_factors(angle, cl_id, m, normal, origin, point)
-            else:
-                if cl_id <= base_end:
-                    transition_angle = angle * rotation_profile(cl_id, base_end)
-                    transition_rotation_matrix = get_rotation_matrix(-normal, transition_angle)
-                    point = np.dot(transition_rotation_matrix, point - origin) + origin
-                else:
-                    point = np.dot(R, point - origin) + origin
+
+            elif get_angle(branch_normal, np.array(point) - origin) < np.pi / 2:
+                point = np.dot(R, point - origin) + origin
 
         # Change radius
         radius_array.SetTuple1(i, misr)
