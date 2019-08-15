@@ -82,7 +82,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth, no
         write_polydata(vtk_merge_polydata(centerline_diverging), centerline_diverging_path)
 
     # Split the Voronoi diagram
-    print("-- Changing Voronoi diagram")
+    print("-- Measure the area")
     centerline_regions = [centerline_splined, centerline_remaining]
     if centerline_diverging is not None:
         for i, div_cl in enumerate(centerline_diverging):
@@ -97,16 +97,21 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth, no
 
     # Compute area, and acount for diverging branches.
     if centerline_diverging is not None or smooth:
+        # TODO: Compare bounding box of voronoi region of interest with the full geometry,
+        #       and adjust poly ball resolution accordingly.
         surface_area = create_new_surface(voronoi_regions[0],
-                                          poly_ball_size=poly_ball_size)
+                                          poly_ball_size=(np.array(poly_ball_size)/2).astype(int))
     else:
         surface_area = surface
+
+    print("-- Compute centerline sections")
     centerline_area, centerline_area_sections = vmtk_compute_centerline_sections(surface_area,
                                                                                  centerline_splined)
     write_polydata(centerline_area, centerline_area_spline_path)
     write_polydata(centerline_area_sections, centerline_area_spline_sections_path)
 
     # Manipulate the Voronoi diagram
+    print("-- Changing Voronoi diagram")
     factor = get_factor(centerline_area, method, beta, ratio, percentage,
                         region_of_interest)
     new_voronoi, new_centerlines = change_area(voronoi_regions[0], factor, centerline_area,
@@ -311,10 +316,16 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
         new_centerlines.GetPointData().AddArray(centerlines.GetPointData().GetArray(radiusArrayName))
         points = new_centerlines.GetPoints()
         for j, div_voronoi in enumerate(diverging_voronoi):
+            # Clip the diverging centerline at the start of the region of interest
+            loc_div_cl = get_vtk_point_locator(diverging_centerline[j])
+            start_region_of_interest_id = loc_div_cl.FindClosestPoint(line_to_change.GetPoint(0))
+            tmp_diverging_centerline = extract_single_line(diverging_centerline[j], 0,
+                                                           start_id=start_region_of_interest_id)
+
             # Get closest point on centerline to surface
             min_dist = 1e10
-            for i in range(diverging_centerline[j].GetNumberOfPoints()):
-                point = diverging_centerline[j].GetPoint(i)
+            for i in range(tmp_diverging_centerline.GetNumberOfPoints()):
+                point = tmp_diverging_centerline.GetPoint(i)
                 dist = get_distance(surface_area.GetPoint(loc_surf.FindClosestPoint(point)), point)
                 if dist < min_dist:
                     min_point = point
@@ -322,6 +333,7 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
                     div_id = i
 
             # Get offset for Voronoi diagram and centerline
+            locator.FindClosestNPoints(2, min_point, id_list)
             tmp_id1, tmp_id2 = id_list.GetId(0), id_list.GetId(1)
 
             A = np.asarray(line_to_change.GetPoint(tmp_id1))
@@ -331,7 +343,6 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
             BC = C - B
             AC = C - A
             AC_length = np.linalg.norm(AC)
-
             if AC_length != 0:
                 h = np.linalg.norm(np.cross(BA, BC)) / AC_length  # shortest distance between point and line
                 D = A + (AC / AC_length) * np.sqrt(np.linalg.norm(BA) ** 2 - h ** 2)
@@ -345,8 +356,8 @@ def change_area(voronoi, factor, line_to_change, diverging_centerline, diverging
 
             # Offset centerline
             # This method might not work if diverging centerline has a daughter branch
-            for k in range(div_id, diverging_centerline[j].GetNumberOfPoints()):
-                point = diverging_centerline[j].GetPoint(k)
+            for k in range(div_id, tmp_diverging_centerline.GetNumberOfPoints()):
+                point = tmp_diverging_centerline.GetPoint(k)
                 cl_id = loc_cl.FindClosestPoint(point)
                 points.SetPoint(cl_id, (np.array(point) + v).tolist())
 
