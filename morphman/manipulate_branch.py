@@ -112,8 +112,7 @@ def manipulate_branch(input_filepath, output_filepath, smooth, smooth_factor, po
         move_and_rotate_branch(polar_angle, azimuth_angle, capped_surface, centerlines, centerlines_complete,
                                branch_to_manipulate, new_branch_pos, new_branch_pos_id, output_filepath,
                                poly_ball_size, surface, voronoi_branch, voronoi_remaining,
-                               base_path, translation_method, clamp_branch,
-                               centerline_for_splitting_voronoi)
+                               base_path, translation_method, clamp_branch)
 
 
 def get_centerline_for_splitting_voronoi(centerlines, starting_point, base_path,
@@ -230,7 +229,7 @@ def detach_branch(voronoi_remaining, centerlines, poly_ball_size, surface, outpu
 def move_and_rotate_branch(polar_angle, azimuth_angle, capped_surface, centerlines, centerlines_complete,
                            diverging_centerline_branch, new_branch_pos, new_branch_pos_id, output_filepath,
                            poly_ball_size, surface, voronoi_branch, voronoi_remaining,
-                           base_path, method, clamp_branch, centerline_for_splitting_voronoi):
+                           base_path, method, clamp_branch):
     """
     Moves, and/or performs rotation of the voronoi diagram, then
     reconstructs the Voronoi diagram, creating a new surface.
@@ -239,22 +238,22 @@ def move_and_rotate_branch(polar_angle, azimuth_angle, capped_surface, centerlin
     meshing.
 
     Args:
-        clamp_branch (bool): Clamps branch at endpoint if True
-        method (str): Translation method for selecting new branch position.
+        polar_angle (float): Angle to rotate around the axis spanned by cross product of new normal and frenet normal.
+        azimuth_angle (float): Angle to rotate around new surface normal vector. Default is no rotation.
         capped_surface (vtkPolyData): Capped surface model
         centerlines (vtkPolyData): Relevant centerlines in new geometry
         centerlines_complete (vtkPolyData): Complete set of centerlines
         diverging_centerline_branch (vtkPolyData): Diverging centerline
         new_branch_pos (vtkPoint): Point where branch is moved
         new_branch_pos_id (int): ID of point where branch is moved
-        surface (vtkPolyData): Surface model
-        voronoi_branch (vtkPolyData): Voronoi diagram of branch
-        voronoi_remaining (vtkPolyData): Voronoi diagram of remaining surface model
-        base_path (string): Path to save location
         output_filepath (str): Path to output the manipulated surface.
         poly_ball_size (list): Resolution of polyballs used to create surface.
-        azimuth_angle (float): Angle to rotate around new surface normal vector. Default is no rotation.
-        polar_angle (float): Angle to rotate around the axis spanned by cross product of new normal and frenet normal.
+        surface (vtkPolyData): Surface model
+        voronoi_remaining (vtkPolyData): Voronoi diagram of remaining surface model
+        voronoi_branch (vtkPolyData): Voronoi diagram of branch
+        base_path (string): Path to save location
+        method (str): Translation method for selecting new branch position.
+        clamp_branch (bool): Clamps branch at endpoint if True
     """
     if method in ['commandline', 'manual']:
         if polar_angle != 0 or azimuth_angle != 0:
@@ -271,6 +270,7 @@ def move_and_rotate_branch(polar_angle, azimuth_angle, capped_surface, centerlin
     origin, old_normal = get_origin(voronoi_remaining, centerlines, diverging_centerline_branch)
     manipulated_centerline = diverging_centerline_branch
     manipulated_voronoi = voronoi_branch
+
     if method == 'no_translation':
         new_normal = old_normal
 
@@ -293,6 +293,7 @@ def move_and_rotate_branch(polar_angle, azimuth_angle, capped_surface, centerlin
         manipulated_voronoi, manipulated_centerline = rotate_branch(polar_angle, manipulated_centerline,
                                                                     manipulated_voronoi, origin, rotation_axis,
                                                                     clamp_branch, new_normal)
+
     # Create new voronoi diagram and new centerlines
     new_voronoi = vtk_merge_polydata([voronoi_remaining, manipulated_voronoi])
     write_polydata(new_voronoi, new_voronoi_path)
@@ -516,7 +517,7 @@ def pick_new_branch_position(capped_surface):
     print("\nPlease select new point to move branch in the render window.")
     seed_selector = vmtkPickPointSeedSelector()
     seed_selector.SetSurface(capped_surface)
-    seed_selector.text = "Press space to select the point where you want to move the branch to, 'u' to undo.\n"
+    seed_selector.text = "Press space to select the point where you want to move the branch, 'u' to undo.\n"
     seed_selector.Execute()
     new_branch_pos_id = seed_selector.GetTargetSeedIds().GetId(0)
     new_branch_pos = capped_surface.GetPoint(new_branch_pos_id)
@@ -546,15 +547,14 @@ def pick_branch(capped_surface, centerlines):
     surface_point = capped_surface.GetPoint(branch_surface_point_id)
 
     # Find closest centerlines
-    closest_dist = 1e9
     valid_branches_to_manipulate = []
     for line_to_compare in centerlines:
         locator = get_vtk_point_locator(line_to_compare)
         closest_point_id = locator.FindClosestPoint(surface_point)
         closest_point = line_to_compare.GetPoint(closest_point_id)
         dist = get_distance(closest_point, surface_point)
-        if dist <= closest_dist:
-            closest_dist = dist
+        tolerance = 2*line_to_compare.GetPointData().GetArray(radiusArrayName).GetTuple1(closest_point_id)
+        if dist < tolerance:
             valid_branches_to_manipulate.append(line_to_compare)
 
     # Select shortest centerline of valid branches
@@ -975,7 +975,6 @@ def get_all_branches(centerlines):
 
     # Storing each branch
     branches = []
-
     for i in np.unique(tract_ids):
         lines = vtk_compute_threshold(branched_centerlines, "TractIds",
                                       threshold_type="between", lower=i-0.5,
@@ -994,7 +993,7 @@ def get_all_branches(centerlines):
             points = [centerline_lines[i].GetPoint(point_ids[i]) for i in range(n)]
             distances = np.array([get_distance(start_point, points[i]) for i in range(n)])
             branch = [extract_single_line(centerline_lines[i], 0, start_id=point_ids[i]) for i in range(n)
-                      if distances[i] > tol]
+                      if distances[i] < tol*2]
             branches.append(vtk_merge_polydata(branch))
 
     return branches
