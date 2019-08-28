@@ -57,8 +57,10 @@ install:
   - cmd: conda config --set restore_free_channel true
 
   # Add custom channels
-  - cmd: conda config --add channels pytest scipy vtk vmtk python=3.6
-  - cmd: conda config --add channels morphman
+  - cmd: conda config --add channels vmtk morphman
+
+   # Install
+  - cmd: conda install pytest scipy vtk vmtk python=3.6
 
 build: false
 
