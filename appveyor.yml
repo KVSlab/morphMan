@@ -101,18 +101,24 @@ test_script:
 
   # Useful for debugging any issues with conda
   #      - modified      C:\Miniconda-x64\Lib\site-packages\xontrib\conda.xsh
+  - cmd: dir
+  - cmd: cd ..
+  - cmd: dir
+  - cmd: cd ..
+  - cmd: dir
+  - cmd: cd .\\Miniconda-x64
 #  - "%CMD_IN_ENV% conda info -a"
 #  - "%CMD_IN_ENV% dir"
-  - "%CMD_IN_ENV% cd .."
-  - "%CMD_IN_ENV% cd .."
-  - "%CMD_IN_ENV% cd .\\Miniconda-x64"
-  - "%CMD_IN_ENV% dir"
-  - "%CMD_IN_ENV% cd .\\Lib"
-  - "%CMD_IN_ENV% dir"
-  - "%CMD_IN_ENV% cd .\\site-packages"
-  - "%CMD_IN_ENV% dir"
-  - "%CMD_IN_ENV% cd .\\vmtk"
-  - "%CMD_IN_ENV% dir"
+#  - "%CMD_IN_ENV% cd .."
+#  - "%CMD_IN_ENV% cd .."
+#  - "%CMD_IN_ENV% cd .\\Miniconda-x64"
+#  - "%CMD_IN_ENV% dir"
+#  - "%CMD_IN_ENV% cd .\\Lib"
+#  - "%CMD_IN_ENV% dir"
+#  - "%CMD_IN_ENV% cd .\\site-packages"
+#  - "%CMD_IN_ENV% dir"
+#  - "%CMD_IN_ENV% cd .\\vmtk"
+#  - "%CMD_IN_ENV% dir"
 
   # Search and replace in vmtkcenterlines.py for / to //
   #  - '%CMD_IN_ENV% sed -i "s/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g" C:\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtkcenterlines.py'
