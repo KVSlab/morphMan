@@ -45,7 +45,7 @@ configuration:
 install:
   # Installs the appropriate Miniconda (Py2/Py3, 32/64 bit),
   # - powershell .\\continuous-integration\\appveyor\\install.ps1
-  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
+  - cmd: SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%
   # - "SET PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
   - cmd: SET PATH=%CONDA_INSTALL_LOCN%;%CONDA_INSTALL_LOCN%\Scripts;%PATH%
   - cmd: python --version
@@ -74,6 +74,7 @@ test_script:
 # Set up environment
 #  - "%CMD_IN_END% conda config --set always_yes yes"
 #  - "%CMD_IN_END% conda update --quiet conda"
+#  - "%CMD_IN_END% conda install --quiet jinja2 conda-build=3.10.5 anaconda-client"
 #  - "%CMD_IN_END% conda config --set restore_free_channel true"
 #
 #  # Add custom channels
