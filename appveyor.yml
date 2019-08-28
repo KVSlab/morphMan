@@ -46,7 +46,7 @@ install:
   # Installs the appropriate Miniconda (Py2/Py3, 32/64 bit),
 #  - powershell .\\continuous-integration\\appveyor\\install.ps1
 #  - SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%
-#  - SET PATH=%CONDA_INSTALL_LOCN%;%CONDA_INSTALL_LOCN%\Scripts;%PATH%
+  - SET PATH=%CONDA_INSTALL_LOCN%;%CONDA_INSTALL_LOCN%\Scripts;%PATH%
 
   - cmd: dir
   - cmd: conda config --set always_yes yes
