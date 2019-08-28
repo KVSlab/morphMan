@@ -51,6 +51,7 @@ install:
   #  - SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%
   # - "SET PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
 #  - cmd: python --version
+  - cmd: dir
   - cmd: conda config --set always_yes yes
   - cmd: conda update --quiet conda
   - cmd: conda install --quiet jinja2 conda-build=3.10.5 anaconda-client
@@ -94,6 +95,15 @@ test_script:
 
   # Useful for debugging any issues with conda
   - "%CMD_IN_ENV% conda info -a"
+  - "%CMD_IN_ENV% dir"
+  - "%CMD_IN_ENV% cd .\\Python%CONDA_PY%_64"
+  - "%CMD_IN_ENV% dir"
+  - "%CMD_IN_ENV% cd .\\lib"
+  - "%CMD_IN_ENV% dir"
+  - "%CMD_IN_ENV% cd .\\site-packages"
+  - "%CMD_IN_ENV% dir"
+  - "%CMD_IN_ENV% cd .\\vmtk"
+  - "%CMD_IN_ENV% dir"
 
   # Search and replace in vmtkcenterlines.py for / to //
   - '%CMD_IN_ENV% sed -i "s/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g" C:\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtkcenterlines.py'
