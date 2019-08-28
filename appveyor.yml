@@ -44,21 +44,21 @@ configuration:
 
 install:
   # Installs the appropriate Miniconda (Py2/Py3, 32/64 bit),
-  - powershell .\\continuous-integration\\appveyor\\install.ps1
+#  - powershell .\\continuous-integration\\appveyor\\install.ps1
   - SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%
   - SET PATH=%CONDA_INSTALL_LOCN%;%CONDA_INSTALL_LOCN%\Scripts;%PATH%
 
   #  - SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%
   # - "SET PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
-  - cmd: python --version
-#  - cmd: conda config --set always_yes yes
-#  - cmd: conda update --quiet conda
-#  - cmd: conda install --quiet jinja2 conda-build=3.10.5 anaconda-client
-#  - cmd: conda config --set restore_free_channel true
-#
-#  # Add custom channels
-#  - cmd: conda config --add channels vmtk
-#  - cmd: conda config --add channels morphman
+#  - cmd: python --version
+  - cmd: conda config --set always_yes yes
+  - cmd: conda update --quiet conda
+  - cmd: conda install --quiet jinja2 conda-build=3.10.5 anaconda-client
+  - cmd: conda config --set restore_free_channel true
+
+  # Add custom channels
+  - cmd: conda config --add channels pytest scipy vtk vmtk python=3.6
+  - cmd: conda config --add channels morphman
 
 build: false
 
@@ -74,19 +74,17 @@ test_script:
   #  - cmd: conda install pytest vtk vmtk scipy numpy
 
   # Set up environment
-  - "%CMD_IN_ENV% conda config --set always_yes yes"
-  - "%CMD_IN_ENV% conda update --quiet conda"
-  - "%CMD_IN_ENV% conda install --quiet jinja2 conda-build=3.10.5 anaconda-client"
-  - "%CMD_IN_ENV% conda config --set restore_free_channel true"
-
-  # Add custom channels
-  - "%CMD_IN_ENV% conda config --add channels vmtk"
-  - "%CMD_IN_ENV% conda config --add channels morphman"
-  - "%CMD_IN_ENV% python --version"
-  #  - "%CMD_IN_END% conda install pytest vtk vmtk scipy numpy"
-  #  - "%CMD_IN_ENV% conda install vmtk"
-  - "%CMD_IN_ENV% conda install pytest scipy vtk vmtk python=3.6"
-  - "%CMD_IN_ENV% conda create -n morphman_env morphman pytest"
+#  - "%CMD_IN_ENV% conda config --set always_yes yes"
+#  - "%CMD_IN_ENV% conda update --quiet conda"
+#  - "%CMD_IN_ENV% conda install --quiet jinja2 conda-build=3.10.5 anaconda-client"
+#  - "%CMD_IN_ENV% conda config --set restore_free_channel true"
+#
+#  # Add custom channels
+#  - "%CMD_IN_ENV% conda config --add channels vmtk"
+#  - "%CMD_IN_ENV% conda config --add channels morphman"
+#
+#  - "%CMD_IN_ENV% conda install pytest scipy vtk vmtk python=3.6"
+  - "%CMD_IN_ENV% conda create -n morphman_env morphman"
 
   # Activate environment
   - "%CMD_IN_ENV% activate morphman_env"
@@ -95,9 +93,9 @@ test_script:
   - "%CMD_IN_ENV% conda info -a"
 
   # Search and replace in vmtkcenterlines.py for / to //
-  #  - '%CMD_IN_ENV% sed -i "s/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g" C:\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtkcenterlines.py'
-  #  - '%CMD_IN_ENV% sed -i "s/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g" C:\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtkcenterlines.py'
-  #  - '%CMD_IN_ENV% sed -i -e "s/(len(values) - 1)\/2/\(len\(values\) - 1\)\/\/2/g" C:\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtksurfacecurvature.py'
+  - '%CMD_IN_ENV% sed -i "s/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g" C:\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtkcenterlines.py'
+  - '%CMD_IN_ENV% sed -i "s/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g" C:\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtkcenterlines.py'
+  - '%CMD_IN_ENV% sed -i -e "s/(len(values) - 1)\/2/\(len\(values\) - 1\)\/\/2/g" C:\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtksurfacecurvature.py'
 
   # Start testing
   - cd .\\test
