@@ -94,8 +94,9 @@ test_script:
   - cmd: conda create -n morphman_env morphman
 
   # Activate environment
-  - "%CMD_IN_ENV% conda activate morphman_env"
-  #  - cmd: conda activate morphman_env
+  - cmd: conda init cmd.exe
+  #- "%CMD_IN_ENV% conda activate morphman_env"
+  - cmd: conda activate morphman_env
   #  - cmd: conda activate
 
   # Useful for debugging any issues with conda
