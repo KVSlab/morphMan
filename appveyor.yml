@@ -49,16 +49,28 @@ install:
   # - "SET PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
   - cmd: SET PATH=%CONDA_INSTALL_LOCN%;%CONDA_INSTALL_LOCN%\Scripts;%PATH%
 
+  - cmd: conda config --set restore_free_channel true"
+  - cmd: conda config --set always_yes yes
+  - cmd: conda update --quiet conda
+
+  # Add custom channels
+  - cmd: conda config --add channels vmtk
+  - cmd: conda config --add channels morphman
+  - cmd: conda install pytest vtk vmtk scipy numpy
+
 
 build: false
 
 test_script:
   # Start building
   #- "%CMD_IN_END% conda config --set restore_free_channel true"
-  - "%CMD_IN_ENV% conda config --set always_yes yes"
-  - "%CMD_IN_ENV% conda config --add channels vmtk"
-  - "%CMD_IN_ENV% conda config --add channels morphman"
-  - "%CMD_IN_ENV% conda install pytest vtk vmtk scipy numpy"
+#  - cmd: conda config --set always_yes yes
+#  - cmd: conda update --quiet conda
+#
+#  # Add custom channels
+#  - cmd: conda config --add channels vmtk
+#  - cmd: conda config --add channels morphman
+#  - cmd: conda install pytest vtk vmtk scipy numpy
 
 # Set up environment
   - "%CMD_IN_ENV% conda create -n morphman_env morphman pytest"
