@@ -45,49 +45,49 @@ configuration:
 install:
   # Installs the appropriate Miniconda (Py2/Py3, 32/64 bit),
   # - powershell .\\continuous-integration\\appveyor\\install.ps1
-  - cmd: SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%
+  - SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%
   # - "SET PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
-  - cmd: SET PATH=%CONDA_INSTALL_LOCN%;%CONDA_INSTALL_LOCN%\Scripts;%PATH%
+  - SET PATH=%CONDA_INSTALL_LOCN%;%CONDA_INSTALL_LOCN%\Scripts;%PATH%
   - cmd: python --version
-  - cmd: conda config --set always_yes yes
-  - cmd: conda update --quiet conda
-  - cmd: conda install --quiet jinja2 conda-build=3.10.5 anaconda-client
-  - cmd: conda config --set restore_free_channel true
-
-  # Add custom channels
-  - cmd: conda config --add channels vmtk
-  - cmd: conda config --add channels morphman
+#  - cmd: conda config --set always_yes yes
+#  - cmd: conda update --quiet conda
+#  - cmd: conda install --quiet jinja2 conda-build=3.10.5 anaconda-client
+#  - cmd: conda config --set restore_free_channel true
+#
+#  # Add custom channels
+#  - cmd: conda config --add channels vmtk
+#  - cmd: conda config --add channels morphman
 
 build: false
 
 test_script:
   # Start building
   #- "%CMD_IN_END% conda config --set restore_free_channel true"
-#  - cmd: conda config --set always_yes yes
-#  - cmd: conda update --quiet conda
-#
-#  # Add custom channels
-#  - cmd: conda config --add channels vmtk
-#  - cmd: conda config --add channels morphman
-#  - cmd: conda install pytest vtk vmtk scipy numpy
+  #  - cmd: conda config --set always_yes yes
+  #  - cmd: conda update --quiet conda
+  #
+  #  # Add custom channels
+  #  - cmd: conda config --add channels vmtk
+  #  - cmd: conda config --add channels morphman
+  #  - cmd: conda install pytest vtk vmtk scipy numpy
 
-# Set up environment
-#  - "%CMD_IN_END% conda config --set always_yes yes"
-#  - "%CMD_IN_END% conda update --quiet conda"
-#  - "%CMD_IN_END% conda install --quiet jinja2 conda-build=3.10.5 anaconda-client"
-#  - "%CMD_IN_END% conda config --set restore_free_channel true"
-#
-#  # Add custom channels
-#  - "%CMD_IN_END% conda config --add channels vmtk"
-#  - "%CMD_IN_END% conda config --add channels morphman"
+  # Set up environment
+  - "%CMD_IN_END% conda config --set always_yes yes"
+  - "%CMD_IN_END% conda update --quiet conda"
+  - "%CMD_IN_END% conda install --quiet jinja2 conda-build=3.10.5 anaconda-client"
+  - "%CMD_IN_END% conda config --set restore_free_channel true"
+
+  # Add custom channels
+  - "%CMD_IN_END% conda config --add channels vmtk"
+  - "%CMD_IN_END% conda config --add channels morphman"
   - "%CMD_IN_END% python --version"
   - "%CMD_IN_END% conda install pytest vtk vmtk scipy numpy"
   - "%CMD_IN_ENV% conda create -n morphman_env morphman pytest"
 
-# Activate environment
+  # Activate environment
   - "%CMD_IN_ENV% activate morphman_env"
 
-# Useful for debugging any issues with conda
+  # Useful for debugging any issues with conda
   - "%CMD_IN_ENV% conda info -a"
 
   # Search and replace in vmtkcenterlines.py for / to //
