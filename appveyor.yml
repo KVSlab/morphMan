@@ -46,10 +46,10 @@ install:
   # Installs the appropriate Miniconda (Py2/Py3, 32/64 bit),
   - powershell .\\continuous-integration\\appveyor\\install.ps1
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
-  - "SET PATH=%CONDA_INSTALL_LOCN%;%CONDA_INSTALL_LOCN%\Scripts;%PATH%"
 
-  #  - SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%
+  - SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%
   # - "SET PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
+  - "SET PATH=%CONDA_INSTALL_LOCN%;%CONDA_INSTALL_LOCN%\Scripts;%PATH%"
   - cmd: python --version
 #  - cmd: conda config --set always_yes yes
 #  - cmd: conda update --quiet conda
@@ -73,8 +73,6 @@ test_script:
   #  - cmd: conda config --add channels morphman
   #  - cmd: conda install pytest vtk vmtk scipy numpy
 
-  - cmd: conda install pytest
-
   # Set up environment
   - "%CMD_IN_ENV% conda config --set always_yes yes"
   - "%CMD_IN_ENV% conda update --quiet conda"
@@ -86,7 +84,7 @@ test_script:
   - "%CMD_IN_ENV% conda config --add channels morphman"
   - "%CMD_IN_ENV% python --version"
   #  - "%CMD_IN_END% conda install pytest vtk vmtk scipy numpy"
-  #  - "%CMD_IN_ENV% conda install vmtk"
+#  - "%CMD_IN_ENV% conda install vmtk"
   - "%CMD_IN_ENV% conda create -n morphman_env morphman pytest"
 
   # Activate environment
@@ -96,13 +94,13 @@ test_script:
   - "%CMD_IN_ENV% conda info -a"
 
   # Search and replace in vmtkcenterlines.py for / to //
-  #  - '%CMD_IN_ENV% sed -i "s/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g" C:\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtkcenterlines.py'
-  #  - '%CMD_IN_ENV% sed -i "s/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g" C:\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtkcenterlines.py'
-  #  - '%CMD_IN_ENV% sed -i -e "s/(len(values) - 1)\/2/\(len\(values\) - 1\)\/\/2/g" C:\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtksurfacecurvature.py'
+#  - '%CMD_IN_ENV% sed -i "s/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g" C:\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtkcenterlines.py'
+#  - '%CMD_IN_ENV% sed -i "s/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g" C:\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtkcenterlines.py'
+#  - '%CMD_IN_ENV% sed -i -e "s/(len(values) - 1)\/2/\(len\(values\) - 1\)\/\/2/g" C:\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtksurfacecurvature.py'
 
   # Start testing
-  - cmd: cd .\\test
+  - cd .\\test
   - ps: Start-FileDownload 'http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0001/C0001_models.tar.gz'
-  - cmd: tar --force-local -zxvf C0001_models.tar.gz
-  - cmd: del /f C0001_models.tar.gz
-  - cmd: pytest
+  - tar --force-local -zxvf C0001_models.tar.gz
+  - del /f C0001_models.tar.gz
+  - pytest .
