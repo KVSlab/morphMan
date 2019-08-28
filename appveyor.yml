@@ -102,6 +102,12 @@ test_script:
   # Useful for debugging any issues with conda
   #      - modified      C:\Miniconda-x64\Lib\site-packages\xontrib\conda.xsh
   - cmd: dir
+  - cmd: cd ..
+  - cmd: dir
+  - cmd: cd ..
+  - cmd: dir
+  - cmd: cd ..
+  - cmd: dir
   - "%CMD_IN_ENV% conda info -a"
   - "%CMD_IN_ENV% dir"
   - "%CMD_IN_ENV% cd .\\Miniconda-x64"
