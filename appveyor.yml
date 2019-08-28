@@ -61,7 +61,7 @@ install:
   - cmd: conda config --add channels morphman
 
    # Install
-  - cmd: conda install pytest scipy vtk vmtk python=3.6
+#  - cmd: conda install pytest scipy vtk vmtk python=3.6
 
 build: false
 
@@ -86,7 +86,7 @@ test_script:
 #  - "%CMD_IN_ENV% conda config --add channels vmtk"
 #  - "%CMD_IN_ENV% conda config --add channels morphman"
 #
-#  - "%CMD_IN_ENV% conda install pytest scipy vtk vmtk python=3.6"
+  - "%CMD_IN_ENV% conda install pytest scipy vtk vmtk python=3.6"
   - "%CMD_IN_ENV% conda create -n morphman_env morphman"
 
   # Activate environment
