@@ -51,6 +51,7 @@ install:
 
   - cmd: conda config --set always_yes yes
   - cmd: conda update --quiet conda
+  - cmd: conda install --quiet jinja2 conda-build=3.10.5 anaconda-client
   - cmd: conda config --set restore_free_channel true
 
   # Add custom channels
