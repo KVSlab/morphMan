@@ -107,6 +107,13 @@ test_script:
   - cmd: cd ..
   - cmd: dir
   - cmd: cd .\\Miniconda-x64
+  - cmd: dir
+  - cmd: cd .\\Lib
+  - cmd: dir
+  - cmd: cd .\\site-packages
+  - cmd: dir
+  - cmd: cd .\\vmtk
+  - cmd: dir
 #  - "%CMD_IN_ENV% conda info -a"
 #  - "%CMD_IN_ENV% dir"
 #  - "%CMD_IN_ENV% cd .."
