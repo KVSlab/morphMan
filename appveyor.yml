@@ -48,7 +48,7 @@ install:
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
   # - "SET PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
   - cmd: SET PATH=%CONDA_INSTALL_LOCN%;%CONDA_INSTALL_LOCN%\Scripts;%PATH%
-
+  - cmd: python --version
   - cmd: conda config --set always_yes yes
   - cmd: conda update --quiet conda
   - cmd: conda install --quiet jinja2 conda-build=3.10.5 anaconda-client
@@ -79,6 +79,7 @@ test_script:
 #  # Add custom channels
 #  - "%CMD_IN_END% conda config --add channels vmtk"
 #  - "%CMD_IN_END% conda config --add channels morphman"
+  - "%CMD_IN_END% python --version"
   - "%CMD_IN_END% conda install pytest vtk vmtk scipy numpy"
   - "%CMD_IN_ENV% conda create -n morphman_env morphman pytest"
 
