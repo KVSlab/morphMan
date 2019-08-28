@@ -56,8 +56,6 @@ install:
   # Add custom channels
   - cmd: conda config --add channels vmtk
   - cmd: conda config --add channels morphman
-  - cmd: conda install pytest vtk vmtk scipy numpy
-
 
 build: false
 
@@ -73,6 +71,7 @@ test_script:
 #  - cmd: conda install pytest vtk vmtk scipy numpy
 
 # Set up environment
+  - "%CMD_IN_END% conda install pytest vtk vmtk scipy numpy"
   - "%CMD_IN_ENV% conda create -n morphman_env morphman pytest"
 
 # Activate environment
