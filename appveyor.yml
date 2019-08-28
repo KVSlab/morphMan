@@ -63,9 +63,9 @@ test_script:
   - cmd: conda activate morphman_env
 
   # Search and replace in vmtkcenterlines.py for / to //
-  - cmd: sed -i "s/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g" C:\\Miniconda-x64\\Lib\\site-packages\\vmtk\\vmtkcenterlines.py
-  - cmd: sed -i "s/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g" C:\\Miniconda-x64\\Lib\\site-packages\\vmtk\\vmtkcenterlines.py
-  - cmd: sed -i -e "s/(len(values) - 1)\/2/\(len\(values\) - 1\)\/\/2/g" C:\\Miniconda-x64\\Lib\\site-packages\\vmtk\\vmtksurfacecurvature.py
+  - cmd: sed -i "s/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g" %CONDA_INSTALL_LOCN%\\Lib\\site-packages\\vmtk\\vmtkcenterlines.py
+  - cmd: sed -i "s/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g" %CONDA_INSTALL_LOCN%\\Lib\\site-packages\\vmtk\\vmtkcenterlines.py
+  - cmd: sed -i -e "s/(len(values) - 1)\/2/\(len\(values\) - 1\)\/\/2/g" %CONDA_INSTALL_LOCN%\\Lib\\site-packages\\vmtk\\vmtksurfacecurvature.py
 
   # Start testing
   - cd .\\test
