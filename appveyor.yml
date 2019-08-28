@@ -85,7 +85,7 @@ test_script:
   - "%CMD_IN_ENV% python --version"
   #  - "%CMD_IN_END% conda install pytest vtk vmtk scipy numpy"
   #  - "%CMD_IN_ENV% conda install vmtk"
-  - "%CMD_IN_ENV% conda install pytest"
+  - "%CMD_IN_ENV% conda install pytest scipy"
   - "%CMD_IN_ENV% conda create -n morphman_env morphman pytest"
 
   # Activate environment
