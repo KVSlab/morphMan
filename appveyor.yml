@@ -72,17 +72,18 @@ test_script:
   #  - cmd: conda install pytest vtk vmtk scipy numpy
 
   # Set up environment
-  - "%CMD_IN_END% conda config --set always_yes yes"
-  - "%CMD_IN_END% conda update --quiet conda"
-  - "%CMD_IN_END% conda install --quiet jinja2 conda-build=3.10.5 anaconda-client"
-  - "%CMD_IN_END% conda config --set restore_free_channel true"
+  - "%CMD_IN_ENV% conda config --set always_yes yes"
+  - "%CMD_IN_ENV% conda update --quiet conda"
+  - "%CMD_IN_ENV% conda install --quiet jinja2 conda-build=3.10.5 anaconda-client"
+  - "%CMD_IN_ENV% conda config --set restore_free_channel true"
 
   # Add custom channels
-  - "%CMD_IN_END% conda config --add channels vmtk"
-  - "%CMD_IN_END% conda config --add channels morphman"
-  - "%CMD_IN_END% python --version"
-#  - "%CMD_IN_END% conda install pytest vtk vmtk scipy numpy"
-  - "%CMD_IN_ENV% conda create -n morphman_env vmtk morphman pytest"
+  - "%CMD_IN_ENV% conda config --add channels vmtk"
+  - "%CMD_IN_ENV% conda config --add channels morphman"
+  - "%CMD_IN_ENV% python --version"
+  #  - "%CMD_IN_END% conda install pytest vtk vmtk scipy numpy"
+  - "%CMD_IN_ENV% conda install vmtk"
+  - "%CMD_IN_ENV% conda create -n morphman_env morphman pytest"
 
   # Activate environment
   - "%CMD_IN_ENV% activate morphman_env"
