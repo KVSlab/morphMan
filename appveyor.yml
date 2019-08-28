@@ -44,13 +44,10 @@ configuration:
 
 install:
   # Installs the appropriate Miniconda (Py2/Py3, 32/64 bit),
-  - powershell .\\continuous-integration\\appveyor\\install.ps1
-  - SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%
-  - SET PATH=%CONDA_INSTALL_LOCN%;%CONDA_INSTALL_LOCN%\Scripts;%PATH%
+#  - powershell .\\continuous-integration\\appveyor\\install.ps1
+#  - SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%
+#  - SET PATH=%CONDA_INSTALL_LOCN%;%CONDA_INSTALL_LOCN%\Scripts;%PATH%
 
-  #  - SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%
-  # - "SET PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
-  #  - cmd: python --version
   - cmd: dir
   - cmd: conda config --set always_yes yes
   - cmd: conda update --quiet conda
@@ -61,77 +58,20 @@ install:
   - cmd: conda config --add channels vmtk
   - cmd: conda config --add channels morphman
 
-  # Install
-#  - cmd: conda install pytest scipy vtk vmtk python=3.6
+  # Install dependencies
+  - cmd: conda install pytest scipy vtk vmtk python=3.6
+
+  # Set up environment
+  - cmd: conda create -n morphman_env morphman
 
 build: false
 
 test_script:
-  # Start building
-  #- "%CMD_IN_END% conda config --set restore_free_channel true"
-  #  - cmd: conda config --set always_yes yes
-  #  - cmd: conda update --quiet conda
-  #
-  #  # Add custom channels
-  #  - cmd: conda config --add channels vmtk
-  #  - cmd: conda config --add channels morphman
-  #  - cmd: conda install pytest vtk vmtk scipy numpy
-
-  # Set up environment
-  #  - "%CMD_IN_ENV% conda config --set always_yes yes"
-  #  - "%CMD_IN_ENV% conda update --quiet conda"
-  #  - "%CMD_IN_ENV% conda install --quiet jinja2 conda-build=3.10.5 anaconda-client"
-  #  - "%CMD_IN_ENV% conda config --set restore_free_channel true"
-  #
-  #  # Add custom channels
-  #  - "%CMD_IN_ENV% conda config --add channels vmtk"
-  #  - "%CMD_IN_ENV% conda config --add channels morphman"
-  #
-  #  - "%CMD_IN_ENV% conda install pytest scipy vtk vmtk python=3.6"
-  #  - "%CMD_IN_ENV% conda create -n morphman_env morphman"
-
-  - cmd: conda install pytest scipy vtk vmtk python=3.6
-  - cmd: conda create -n morphman_env morphman
-
   # Activate environment
   - cmd: conda init cmd.exe
-  #- "%CMD_IN_ENV% conda activate morphman_env"
   - cmd: conda activate morphman_env
-  #  - cmd: conda activate
-
-  # Useful for debugging any issues with conda
-  #      - modified      C:\Miniconda-x64\Lib\site-packages\xontrib\conda.xsh
-#  - cmd: dir
-#  - cmd: cd ..
-#  - cmd: dir
-#  - cmd: cd ..
-#  - cmd: dir
-#  - cmd: cd .\\Miniconda-x64
-#  - cmd: dir
-#  - cmd: cd .\\Lib
-#  - cmd: dir
-#  - cmd: cd .\\site-packages
-#  - cmd: dir
-#  - cmd: cd .\\vmtk
-#  - cmd: dir
-#  - "%CMD_IN_ENV% conda info -a"
-#  - "%CMD_IN_ENV% dir"
-#  - "%CMD_IN_ENV% cd .."
-#  - "%CMD_IN_ENV% cd .."
-#  - "%CMD_IN_ENV% cd .\\Miniconda-x64"
-#  - "%CMD_IN_ENV% dir"
-#  - "%CMD_IN_ENV% cd .\\Lib"
-#  - "%CMD_IN_ENV% dir"
-#  - "%CMD_IN_ENV% cd .\\site-packages"
-#  - "%CMD_IN_ENV% dir"
-#  - "%CMD_IN_ENV% cd .\\vmtk"
-#  - "%CMD_IN_ENV% dir"
 
   # Search and replace in vmtkcenterlines.py for / to //
-  #  - '%CMD_IN_ENV% sed -i "s/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g" C:\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtkcenterlines.py'
-  #  - '%CMD_IN_ENV% sed -i "s/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g" C:\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtkcenterlines.py'
-  #  - '%CMD_IN_ENV% sed -i -e "s/(len(values) - 1)\/2/\(len\(values\) - 1\)\/\/2/g" C:\\Python%CONDA_PY%_64\\lib\\site-packages\\vmtk\\vmtksurfacecurvature.py'
-
   - cmd: sed -i "s/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g" C:\\Miniconda-x64\\Lib\\site-packages\\vmtk\\vmtkcenterlines.py
   - cmd: sed -i "s/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g" C:\\Miniconda-x64\\Lib\\site-packages\\vmtk\\vmtkcenterlines.py
   - cmd: sed -i -e "s/(len(values) - 1)\/2/\(len\(values\) - 1\)\/\/2/g" C:\\Miniconda-x64\\Lib\\site-packages\\vmtk\\vmtksurfacecurvature.py
