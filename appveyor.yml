@@ -87,12 +87,16 @@ test_script:
   #  - "%CMD_IN_ENV% conda config --add channels vmtk"
   #  - "%CMD_IN_ENV% conda config --add channels morphman"
   #
-  - "%CMD_IN_ENV% conda install pytest scipy vtk vmtk python=3.6"
-  - "%CMD_IN_ENV% conda create -n morphman_env morphman"
+#  - "%CMD_IN_ENV% conda install pytest scipy vtk vmtk python=3.6"
+#  - "%CMD_IN_ENV% conda create -n morphman_env morphman"
+
+  - cmd: conda install pytest scipy vtk vmtk python=3.6
+  - cmd: conda create -n morphman_env morphman
 
   # Activate environment
   #  - "%CMD_IN_ENV% conda activate morphman_env"
-  - "%CMD_IN_ENV% conda activate"
+  - cmd: conda activate morphman_env
+  - cmd: conda activate
 
   # Useful for debugging any issues with conda
   #  - "%CMD_IN_ENV% conda info -a"
