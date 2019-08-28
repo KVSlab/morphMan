@@ -19,7 +19,7 @@ environment:
     CMD_IN_ENV: cmd /E:ON /V:ON /C .\\continuous-integration\\appveyor\\run_with_env.cmd
 
     # Appveyor machines should come with miniconda already installed.
-    CONDA_INSTALL_LOCN: "C:\\Miniconda-x64"
+    CONDA_INSTALL_LOCN: C:\\Miniconda-x64
 
   matrix:
     - PYTHON: "C:\\Python35_64"
