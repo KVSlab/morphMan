@@ -104,7 +104,7 @@ test_script:
 #  - "%CMD_IN_ENV% conda info -a"
 #  - "%CMD_IN_ENV% dir"
   - "%CMD_IN_ENV% cd .."
-  - "%CMD_IN_ENV% dc .."
+  - "%CMD_IN_ENV% cd .."
   - "%CMD_IN_ENV% cd .\\Miniconda-x64"
   - "%CMD_IN_ENV% dir"
   - "%CMD_IN_ENV% cd .\\Lib"
