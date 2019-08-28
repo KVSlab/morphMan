@@ -72,6 +72,7 @@ test_script:
   #  - cmd: conda config --add channels vmtk
   #  - cmd: conda config --add channels morphman
   #  - cmd: conda install pytest vtk vmtk scipy numpy
+
   - cmd: conda install pytest
 
   # Set up environment
