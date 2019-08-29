@@ -145,6 +145,7 @@ def vmtk_compute_geometric_features(centerlines, smooth, outputsmoothed=False, f
         geometry.NumberOfSmoothingIterations = iterations
     geometry.FernetTangentArrayName = "FernetTangent"
     geometry.FernetNormalArrayName = "FernetNormal"
+    geometry.FrenetBinormalArrayName = "FernetBiNormal"
     geometry.CurvatureArrayName = "Curvature"
     geometry.TorsionArrayName = "Torsion"
     geometry.Execute()
@@ -505,3 +506,22 @@ def vmtk_surface_curvature(surface, curvature_type="mean", absolute=False,
     curvature.Execute()
 
     return curvature.Surface
+
+
+def vmtk_surface_distance(surface1, surface2, distance_array_name="Distance",
+                          distance_vectors_array_name="",
+                          signed_distance_array_name="", flip_normals=False):
+    distance = vmtkscripts.vmtkSurfaceDistance()
+    distance.Surface = surface1
+    distance.ReferenceSurface = surface2
+    distance.DistanceArrayName = distance_array_name
+    distance.DistanceVectorsArrayname = distance_vectors_array_name
+    distance.SignedDistanceArrayName = signed_distance_array_name
+    if flip_normals:
+        distance.FlipNormals = 1
+    else:
+        distance.FlipNormals = 0
+
+    distance.Execute()
+
+    return distance.Surface

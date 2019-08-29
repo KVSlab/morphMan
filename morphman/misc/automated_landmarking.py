@@ -270,7 +270,7 @@ def landmarking_piccinelli(centerline, base_path, curv_method, algorithm, resamp
         centerline = vmtk_resample_centerline(centerline, resampling_step)
 
     if curv_method == "spline":
-        line, max_point_ids, min_point_ids = spline_and_geometry(centerline, smooth_line, nknots)
+        line, max_point_ids, _ = spline_and_geometry(centerline, smooth_line, nknots)
 
         # Get curvature and torsion, find peaks
         curvature = get_point_data_array("Curvature", line)

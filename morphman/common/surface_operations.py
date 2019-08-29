@@ -6,12 +6,11 @@
 ##      PURPOSE.  See the above copyright notices for more information.
 
 import math
+from os import makedirs
 
-from os import makedirs, path
 from vtk.util import numpy_support
 
 from morphman.common.voronoi_operations import *
-from morphman.common.surface_operations import *
 
 
 def get_relevant_outlets(surface, base_path):
@@ -455,7 +454,8 @@ def check_if_surface_is_merged(surface, centerlines, output_filepath):
 
 
 def prepare_output_surface(surface, original_surface, new_centerline, output_filepath,
-                           test_merge=False, changed=False, old_centerline=None):
+                           test_merge=False, changed=False, old_centerline=None,
+                           removed=[[1e9, 1e9, 1e9]]):
     """After manipulation preparing the surface for output. This method clipps the
     outlets, slightly smooths the surface, and (potentially) tests if the surface is is
     merged.
@@ -512,6 +512,10 @@ def prepare_output_surface(surface, original_surface, new_centerline, output_fil
 
         # Get Center
         center = np.mean(tmp_points, axis=0)
+
+        # Check if branch has been removed
+        if np.sqrt(np.sum(np.array(removed) - center) ** 2) < 0.5:
+            continue
 
         # Get corresponding centerline to in/outlet
         if np.sqrt(np.sum((np.array(inlet_point) - center) ** 2)) < 0.5:
@@ -620,7 +624,7 @@ def attach_clipped_regions_to_surface(surface, clipped, center):
 
 
 def prepare_voronoi_diagram(capped_surface, centerlines, base_path, smooth, smooth_factor, no_smooth, no_smooth_point,
-                            voronoi, pole_ids,resampling_length, absolute=False, upper=None):
+                            voronoi, pole_ids, resampling_length, absolute=False, upper=None):
     """
     Compute and smooth voronoi diagram of surface model.
 
@@ -643,8 +647,8 @@ def prepare_voronoi_diagram(capped_surface, centerlines, base_path, smooth, smoo
     """
     # Check if a region should not be smoothed
     if smooth and no_smooth:
-        get_no_smooth_cl(capped_surface, centerlines, base_path, smooth, no_smooth, voronoi,
-                         no_smooth_point, pole_ids, resampling_length)
+        no_smooth_cl = get_no_smooth_cl(capped_surface, centerlines, base_path, smooth, no_smooth, voronoi,
+                                        no_smooth_point, pole_ids, resampling_length)
     else:
         no_smooth_cl = None
 
@@ -819,16 +823,12 @@ def extract_ica_centerline(base_path, resampling_step, relevant_outlets=None):
     outlets, outlet1, outlet2 = get_sorted_outlets(outlets, outlet1, outlet2, base_path)
 
     # Compute / import centerlines
-    centerlines, _, _ = compute_centerlines(inlet, outlets, centerlines_path,
-                                            capped_surface,
-                                            resampling=resampling_step,
-                                            smooth=False, base_path=base_path)
+    compute_centerlines(inlet, outlets, centerlines_path, capped_surface, resampling=resampling_step, smooth=False,
+                        base_path=base_path)
 
     # Get relevant centerlines
-    centerline_relevant_outlets = compute_centerlines(inlet, outlet1 + outlet2,
-                                                      centerline_relevant_outlets_path,
-                                                      capped_surface,
-                                                      resampling=resampling_step)
+    centerline_relevant_outlets = compute_centerlines(inlet, outlet1 + outlet2, centerline_relevant_outlets_path,
+                                                      capped_surface, resampling=resampling_step)
 
     # Extract ICA centerline
     tmp_line_1 = extract_single_line(centerline_relevant_outlets[0], 0)
@@ -932,7 +932,7 @@ def get_no_smooth_cl(capped_surface, centerlines, base_path, smooth, no_smooth, 
 
     no_smooth_cl = vtk_merge_polydata(no_smooth_segments)
     write_polydata(no_smooth_cl, no_smooth_path)
-    #else:
+    # else:
     #    no_smooth_cl = read_polydata(no_smooth_path)
 
     return no_smooth_cl

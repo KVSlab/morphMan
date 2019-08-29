@@ -51,7 +51,7 @@ def get_bifurcating_and_diverging_point_data(centerline, centerline_bif, tol):
             r = cl1.GetPointData().GetArray(radiusArrayName).GetTuple1(tmp_id)
             break
 
-    end, r_end, id_end = move_past_sphere(cl1, center, r, i, step=-1, scale_factor=1)
+    end, _, _ = move_past_sphere(cl1, center, r, i, step=-1, scale_factor=1)
     data["bif"]["end_point"] = end
     data["bif"]["div_point"] = center
 
@@ -72,8 +72,7 @@ def get_bifurcating_and_diverging_point_data(centerline, centerline_bif, tol):
                 r = cl.GetPointData().GetArray(radiusArrayName).GetTuple1(tmp_id)
                 break
 
-        end, r_end, id_end = move_past_sphere(cl, center, r, i, step=1,
-                                              stop=i * 100, scale_factor=1)
+        end, _, _ = move_past_sphere(cl, center, r, i, step=1, stop=i * 100, scale_factor=1)
         data[counter]["end_point"] = end
         data[counter]["div_point"] = center
 
@@ -338,11 +337,13 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
                                          " region of interest, 'u' to undo.\n"
                 elif method == "stenosis":
                     seed_selector.text = "Press space to select, the center of a new" + \
-                                         " stenosis (one point),\nOR place two points on each side" + \
-                                         " of an existing stenosis to remove it, \'u\' to undo."
+                                         " stenosis, \'u\' to undo."
+                elif method == "linear":
+                    seed_selector.text = "Press space to select two points to mark the" + \
+                                         " region of interest, \'u\' to undo."
                 elif method == "bulge":
                     seed_selector.text = "Press space to select the center of a new" + \
-                                         " bulge / fusiform aneurysm (one point), \'u\' to undo."
+                                         " bulge / fusiform aneurysm, \'u\' to undo."
                 elif method == "bend":
                     seed_selector.text = "Press space to select the start and end of the" + \
                                          " bend that you want to manipulate, 'u' to undo.\n"
@@ -825,7 +826,7 @@ def get_sorted_lines(centerlines_complete):
 
 def get_end_point(centerline, offset=0):
     """
-    Get last point of a centerline
+    Get last point(s) of the centerline(s)
 
     Args:
         centerline (vtkPolyData): Centerline(s)
@@ -834,25 +835,12 @@ def get_end_point(centerline, offset=0):
     Returns:
         centerline_end_point (vtkPoint): Point corresponding to end of centerline.
     """
-    centerline_end_point = centerline.GetPoint(centerline.GetNumberOfPoints() - 1 - offset)
+    centerline_end_points = []
+    for i in range(centerline.GetNumberOfLines()):
+        line = extract_single_line(centerline, i)
+        centerline_end_points.append(line.GetPoint(line.GetNumberOfPoints() - 1 - offset))
 
-    return centerline_end_point
-
-
-def get_diverging_centerline_branch(centerlines_branched, diverging_centerline_end):
-    """
-    Extract diverging centerline branch, comparing it to diverging centerline end point
-
-    Args:
-        centerlines_branched (vktPolyData): Branched centerlines, from vmtkBrancher
-        diverging_centerline_end (vktPoint): End point of diverging centerline
-    Returns:
-        centerline_branch (vtkPolyDat): Branch extracted centerline branch
-    """
-    for i in range(centerlines_branched.GetNumberOfLines()):
-        centerline_branch = extract_single_line(centerlines_branched, i)
-        if get_end_point(centerline_branch) == diverging_centerline_end:
-            return centerline_branch
+    return centerline_end_points
 
 
 def filter_centerlines(centerlines, diverging_centerline_end):
@@ -867,9 +855,9 @@ def filter_centerlines(centerlines, diverging_centerline_end):
     """
     remaining_centerlines = []
     for i in range(centerlines.GetNumberOfLines()):
-        diverging_centerline = extract_single_line(centerlines, i)
-        if get_end_point(diverging_centerline) != diverging_centerline_end:
-            remaining_centerlines.append(diverging_centerline)
+        line = extract_single_line(centerlines, i)
+        if line.GetPoint(line.GetNumberOfPoints() - 1) not in diverging_centerline_end:
+            remaining_centerlines.append(line)
 
     filtered_centerlines = vtk_merge_polydata(remaining_centerlines)
 

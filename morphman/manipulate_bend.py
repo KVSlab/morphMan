@@ -83,8 +83,8 @@ def manipulate_bend(input_filepath, output_filepath, smooth, smooth_factor, regi
                                 " landmarking with automated_landmarking.py first.") % point_path)
         region_points = np.loadtxt(point_path)
     else:
-        _, _, _, region_points, _ = get_line_to_change(capped_surface, centerlines,
-                                                       region_of_interest, "bend", region_points, 0)
+        _, _, _, region_points, _ = get_line_to_change(capped_surface, centerlines, region_of_interest, "bend",
+                                                       region_points, 0)
         region_points = [[region_points[3 * i], region_points[3 * i + 1], region_points[3 * i + 2]]
                          for i in range(len(region_points) // 3)]
 
@@ -128,7 +128,7 @@ def manipulate_bend(input_filepath, output_filepath, smooth, smooth_factor, regi
     # Extract translation vectors
     print("-- Computing translation directions.")
     direction = "horizont"
-    middle_points, middle_ids = get_direction_parameters(centerlines, beta, direction, region_points_vtk)
+    middle_points, _ = get_direction_parameters(centerlines, beta, direction, region_points_vtk)
     dx_p1 = middle_points[0] - p1
 
     # Move centerline manually for updating inlet
@@ -233,8 +233,8 @@ def manipulate_bend_vertically(alpha, voronoi_remaining, voronoi_bend, centerlin
     # Find ID of middle point:
     print("-- Finding horizontal direction parameters.")
     direction = "vertical"
-    middle_points, middle_ids, dx = get_direction_parameters(extract_single_line(centerlines, 0), alpha, direction,
-                                                             region_points_vtk)
+    middle_points, _, dx = get_direction_parameters(extract_single_line(centerlines, 0), alpha, direction,
+                                                    region_points_vtk)
 
     # Iterate over points P from Voronoi diagram and manipulate
     print("-- Adjust Voronoi diagram")

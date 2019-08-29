@@ -69,9 +69,8 @@ def manipulate_surface(input_filepath, output_filepath, smooth, smooth_factor, n
 
     # Get inlet and outlets
     inlet, outlets = get_inlet_and_outlet_centers(surface, base_path)
-    centerlines, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path,
-                                                         capped_surface, resampling=resampling_step,
-                                                         smooth=False, base_path=base_path)
+    centerlines, voronoi, pole_ids = compute_centerlines(inlet, outlets, centerlines_path, capped_surface,
+                                                         resampling=resampling_step, smooth=False, base_path=base_path)
 
     centerline_splined, centerline_remaining, centerline_diverging, region_points, _ = get_line_to_change(
         capped_surface, centerlines, region_of_interest, "bend", region_points, 0)
@@ -89,14 +88,13 @@ def manipulate_surface(input_filepath, output_filepath, smooth, smooth_factor, n
     if smooth:
         print("-- Smoothing Voronoi diagram.")
         if no_smooth:
-            no_smooth_cl = get_no_smooth_cl(capped_surface, centerlines, base_path, smooth,
-                                            no_smooth, voronoi, no_smooth_point, pole_ids,
-                                            resampling_step, region_points)
+            no_smooth_cl = get_no_smooth_cl(capped_surface, centerlines, base_path, smooth, no_smooth, voronoi,
+                                            no_smooth_point, pole_ids, resampling_step, region_points)
         else:
             no_smooth_cl = None
 
-        voronoi_relevant = smooth_voronoi_diagram(voronoi_relevant, centerline_splined,
-                                                  smooth_factor, no_smooth_cl, absolute)
+        voronoi_relevant = smooth_voronoi_diagram(voronoi_relevant, centerline_splined, smooth_factor,
+                                                  no_smooth_cl, absolute)
 
     if noise:
         print("-- Add noise to the Voronoi diagram.")
@@ -118,9 +116,8 @@ def manipulate_surface(input_filepath, output_filepath, smooth, smooth_factor, n
     new_surface = create_new_surface(voronoi, poly_ball_size)
 
     print("-- Preparing surface for output.")
-    new_surface = prepare_output_surface(new_surface, surface, centerlines,
-                                         output_filepath, test_merge=False, changed=True,
-                                         old_centerline=centerlines)
+    new_surface = prepare_output_surface(new_surface, surface, centerlines, output_filepath, test_merge=False,
+                                         changed=True, old_centerline=centerlines)
 
     print("-- Writing new surface to {}.".format(output_filepath))
     write_polydata(new_surface, output_filepath)
@@ -273,7 +270,7 @@ def add_noise_to_existing_voronoi_diagram(voronoi, centerline, translation_noise
     radius_array = []
 
     # Generate noise-vectors used for translation of Voronoi points
-    noise_array = [np.random.uniform(-translation_noise_factor, translation_noise_factor, 3) for i in
+    noise_array = [np.random.uniform(-translation_noise_factor, translation_noise_factor, 3) for _ in
                    range(number_of_centerline_points)]
 
     # Add noise

@@ -20,30 +20,28 @@ Always write a clear commit message when submitting your changes. One-line messa
 ### Coding conventions
 
 #### Formatting 
-* Avoid inline comments.
-* Break long lines after 120 characters.
-* Delete trailing whitespace.
-* Don't include spaces after `(`, `[` or before `]`, `)`.
-* Don't misspell.
-* Use 4 space indentation.
-* Use an empty line between methods.
-* Use spaces around operators, except for unary operators, such as `!`.
-* Use spaces after commas, after colons and semicolons, around `{` and before
+  * Avoid inline comments.
+  * Break long lines after 120 characters.
+  * Delete trailing whitespace.
+  * Don't include spaces after `(`, `[` or before `]`, `)`.
+  * Don't misspell.
+  * Use 4 space indentation.
+  * Use an empty line between methods.
+  * Use spaces around operators, except for unary operators, such as `!`.
+  * Use spaces after commas, after colons and semicolons, around `{` and before
   `}`.
 
 #### Naming
-
-* Avoid abbreviations.
-* Use snake case for variables and methods.
-* Use camel case for classes.
-* Name variables, methods, and classes to reveal intent.
+  * Avoid abbreviations.
+  * Use snake case for variables and methods.
+  * Use camel case for classes.
+  * Name variables, methods, and classes to reveal intent.
 
 #### Organization
-
-* Order methods so that caller methods are earlier in the file than the methods
+  * Order methods so that caller methods are earlier in the file than the methods
   they call.
-* Place methods receiving command line arguments at the bottom of the file, but above the top-level script environment check.
-* Separate local and global imports of modules.
+  * Place methods receiving command line arguments at the bottom of the file, but above the top-level script environment check.
+  * Separate local and global imports of modules.
 
 ### Code of Conduct
 
@@ -61,21 +59,21 @@ appearance, race, religion, or sexual identity and orientation.
 Examples of behavior that contributes to creating a positive environment
 include:
 
-* Using welcoming and inclusive language
-* Being respectful of differing viewpoints and experiences
-* Gracefully accepting constructive criticism
-* Focusing on what is best for the community
-* Showing empathy towards other community members
+  * Using welcoming and inclusive language
+  * Being respectful of differing viewpoints and experiences
+  * Gracefully accepting constructive criticism
+  * Focusing on what is best for the community
+  * Showing empathy towards other community members
 
 Examples of unacceptable behavior by participants include:
 
-* The use of sexualized language or imagery and unwelcome sexual attention or
+  * The use of sexualized language or imagery and unwelcome sexual attention or
   advances
-* Trolling, insulting/derogatory comments, and personal or political attacks
-* Public or private harassment
-* Publishing others' private information, such as a physical or electronic
+  * Trolling, insulting/derogatory comments, and personal or political attacks
+  * Public or private harassment
+  * Publishing others' private information, such as a physical or electronic
   address, without explicit permission
-* Other conduct which could reasonably be considered inappropriate in a
+  * Other conduct which could reasonably be considered inappropriate in a
   professional setting
 
 ### Our Responsibilities
@@ -117,8 +115,7 @@ members of the project's leadership.
 This Code of Conduct is adapted from the [Contributor Covenant][homepage], version 1.4,
 available at https://www.contributor-covenant.org/version/1/4/code-of-conduct.html
 
-[homepage]: https://www.contributor-covenant.org
-
 For answers to common questions about this code of conduct, see
 https://www.contributor-covenant.org/faq
 
+[homepage]: https://www.contributor-covenant.org

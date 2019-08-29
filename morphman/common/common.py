@@ -246,7 +246,7 @@ def get_vertical_direction_parameters(n, region_points, cl_points, alpha):
 
     # Move points
     z_plus_dz = []
-    for i in range(len(cl_points)):
+    for i, _ in enumerate(cl_points):
         dz = np.array(dv) * dist[i] / max_dist * alpha
         z_plus_dz.append(cl_points[i] + dz)
 
@@ -269,7 +269,6 @@ def get_horizontal_direction_parameters(n, region_points, cl_points, beta):
     Returns:
         dZ (ndarray): Directions to points along the  centerline.
         zp_min (ndarray): Translation direction in upstream direction.
-        zm_min (ndarray): Translation direction in downstream direction.
     """
     p1 = region_points[0]
     p2 = region_points[1]
@@ -298,11 +297,11 @@ def get_horizontal_direction_parameters(n, region_points, cl_points, beta):
     # Move points
     mid_point = la.norm(p1 - p2) / 2.
     moved_points = [p1 + qp1 * beta]
-    for i in range(len(points_p)):
+    for i, _ in enumerate(points_p):
         dz = qp1 * points_p_dist[i] / mid_point * beta
         moved_points.append(points_p[i] + dz)
 
-    for i in range(len(points_m)):
+    for i, _ in enumerate(points_m):
         dz = qp2 * points_m_dist[i] / mid_point * beta
         moved_points.append(points_m[i] + dz)
     moved_points.append(p2 + qp2 * beta)
@@ -339,10 +338,8 @@ def get_horizontal_direction_parameters(n, region_points, cl_points, beta):
 
     zpid = points_p_dist.index(min(points_p_dist))
     zp_min = points_p[zpid]
-    zmid = points_m_dist.index(min(points_m_dist))
-    zm_min = points_m[zmid]
 
-    return moved_points, zp_min, zm_min
+    return moved_points, zp_min
 
 
 def compute_least_square_plane(cl_points, region_points):
@@ -473,7 +470,7 @@ def get_direction_parameters(line, param, direction, clip_points):
     id2 = locator.FindClosestPoint(p2)
     region_points = [p1, p2]
 
-    for i in range(len(region_points)):
+    for i, _ in enumerate(region_points):
         region_points[i] = np.array([region_points[i][0], region_points[i][1], region_points[i][2]])
 
     # Select n uniformly spaced points
@@ -494,7 +491,7 @@ def get_direction_parameters(line, param, direction, clip_points):
         return dz, ids, dx
 
     elif direction == "horizont":
-        dz, zp, zm = get_horizontal_direction_parameters(n, region_points, points, param)
+        dz, zp = get_horizontal_direction_parameters(n, region_points, points, param)
         return dz, ids
 
 
