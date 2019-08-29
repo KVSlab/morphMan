@@ -62,7 +62,7 @@ def test_manipulate_branch_translation_and_polar_rotation(surface_paths):
     common_input = read_command_line_branch(surface_paths[0], surface_paths[1])
 
     # Arbitrary branch in model C0001
-    branch_number = 3
+    branch_number = 0
 
     # No rotation around new surface normal vector
     azimuth_angle0 = 0
