@@ -14,7 +14,7 @@ from morphman.common.surface_operations import *
 
 def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth, no_smooth_point, region_of_interest,
                     region_points, beta, ratio, size, percentage, output_filepath, poly_ball_size, resampling_step,
-                    angle_asymmetric):
+                    angle_asymmetric, transition_length):
     """
     Objective manipulation of area variation in
     patient-specific models of blood vessels.
@@ -39,6 +39,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth, no
         poly_ball_size (list): Resolution of polyballs used to create surface.
         output_filepath (str): Path to output the manipulated surface.
         resampling_step (float): Resampling length for centerline resampling.
+        transition_length (float): Percent of the total length of the start and end to transition the change.
     """
     base_path = get_path_names(input_filepath)
 
@@ -113,7 +114,7 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth, no
     # Manipulate the Voronoi diagram
     print("-- Changing Voronoi diagram")
     factor = get_factor(centerline_area, method, beta, ratio, percentage,
-                        region_of_interest)
+                        region_of_interest, transition_length)
     new_voronoi, new_centerlines = change_area(voronoi_regions[0], factor, centerline_area,
                                                centerline_diverging, voronoi_regions[2:],
                                                surface_area, centerlines, angle_asymmetric)
@@ -134,7 +135,8 @@ def manipulate_area(input_filepath, method, smooth, smooth_factor, no_smooth, no
     write_polydata(new_surface, output_filepath)
 
 
-def get_factor(line_to_change, method, beta, ratio, percentage, region_of_interest):
+def get_factor(line_to_change, method, beta, ratio, percentage, region_of_interest,
+               transition_length):
     """
     Compute the factor determining
     the change in radius, used to
@@ -147,6 +149,7 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
         ratio (float): Desired ratio between min and max cross-sectional area.
         percentage (float): Desired increase/decrease in cross-sectional area.
         region_of_interest (str): Method for setting the region of interest.
+        transition_length (float): Percent of the total length of the start and end to transition the change.
 
     Returns:
         factor (float): Factor determining the change in radius.
@@ -157,7 +160,7 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
 
     # Linear transition first and last 10 % for some combinations of method an region_of_interest
     if region_of_interest in ["manual", "commandline"] and method in ["area", "variation"]:
-        k = int(round(area.shape[0] * 0.10, 0))
+        k = int(round(area.shape[0] * transition_length, 0))
         linear = area.shape[0] - k * 2
     else:
         k = 0
@@ -168,7 +171,7 @@ def get_factor(line_to_change, method, beta, ratio, percentage, region_of_intere
 
     # Only smooth end with first_line
     if region_of_interest == "first_line":
-        k = int(round(area.shape[0] * 0.10, 0))
+        k = int(round(area.shape[0] * transition_length, 0))
         linear = area.shape[0] - k
         trans = np.asarray(np.zeros(linear).tolist() + np.linspace(0, 1, k).tolist())
 
@@ -487,7 +490,7 @@ def read_command_line_area(input_path=None, output_path=None):
                              " line from the inlet (largest opening) to the first bifurcation" +
                              " will be altered, not that method='stenosis' can not be used" +
                              " with 'first_line'.")
-    parser.add_argument("--region-points", nargs="+", type=float, default=None, metavar="points",
+    parser.add_argument("-rp", "--region-points", nargs="+", type=float, default=None, metavar="points",
                         help="If -r or --region-of-interest is 'commandline' then this" +
                              " argument have to be given. The method expects two points" +
                              " which defines the start and end of the region of interest. If" +
@@ -495,9 +498,12 @@ def read_command_line_area(input_path=None, output_path=None):
                              " which is assumed to be the center of a new stenosis." +
                              " Example providing the points (1, 5, -1) and (2, -4, 3):" +
                              " --stenosis-points 1 5 -1 2 -4 3")
+    parser.add_argument("-t", "--transition-length", type=float, default=0.1,
+                        help="The percent of the region of interest where we transition" + \
+                             " into the change in cross-sectional area.")
 
     # "Variation" arguments
-    parser.add_argument('--beta', type=float, default=0.5,
+    parser.add_argument("--beta", type=float, default=0.5,
                         help="For method=variation: The new voronoi diagram is computed as" +
                              " (A/A_mean)**beta*r_old, over the respective area. If beta <" +
                              " 0 the geometry will have less area variation, and" +
@@ -514,13 +520,13 @@ def read_command_line_area(input_path=None, output_path=None):
                              " sphere radius of the selected point. Default is 2.0.")
 
     # "area" / "stenosis" argument
-    parser.add_argument("--percentage", type=float, default=50.0,
+    parser.add_argument("-p", "--percentage", type=float, default=50.0,
                         help="Percentage the" +
                              " area of the geometry is increase/decreased overall or only" +
                              " in stenosis / bulge.")
 
     # Arguments for rotation of asymmetric area variation
-    parser.add_argument('-as', '--angle-asymmetric', type=float, default=None,
+    parser.add_argument("-as", "--angle-asymmetric", type=float, default=None,
                         help="Angle in degrees, defining asymmetric manipulation. " +
                              "Introduces asymmetric stenosis / bulges by applying an angle-dependent profile to " +
                              "area variation factor. Intended for 'stenosis' and 'bulge' methods, " +
@@ -557,7 +563,9 @@ def read_command_line_area(input_path=None, output_path=None):
                 region_points=args.region_points, ratio=args.ratio,
                 size=args.size, percentage=args.percentage, output_filepath=args.ofile,
                 poly_ball_size=args.poly_ball_size, no_smooth=args.no_smooth,
-                no_smooth_point=args.no_smooth_point, resampling_step=args.resampling_step)
+                no_smooth_point=args.no_smooth_point,
+                resampling_step=args.resampling_step,
+                transition_length=args.transition_length)
 
 
 def main_area():
