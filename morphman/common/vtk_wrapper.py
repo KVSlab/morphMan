@@ -6,6 +6,7 @@
 ##      PURPOSE.  See the above copyright notices for more information.
 
 import sys
+from itertools import islice
 from os import path
 
 import numpy as np
@@ -129,8 +130,9 @@ def read_polydata(filename, datatype=None):
         reader.MergingOn()
     elif fileType == 'vtk':
         # Read header
-        with open(filename) as myfile:
-            head = "".join(list(islice(myfile, 10))).lower()
+        with open(filename, "rb") as f:
+            head = list(islice(f, 10))
+        head = "".join([l.decode('utf-8', 'backslashreplace') for l in head]).lower()
 
         # Set reader based on header
         if "unstructured_grid" in head:
