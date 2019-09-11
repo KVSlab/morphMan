@@ -14,8 +14,6 @@ matrix:
           python: 3.6
 
 install:
-  - sudo apt-get update
-
   # Install conda
   - wget "https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh" -O miniconda.sh;
   - bash miniconda.sh -b -p $HOME/miniconda
@@ -25,6 +23,7 @@ install:
   - hash -r
 
   # Set conda parameters
+  - conda config --set restore_free_channel true
   - conda config --set always_yes yes --set changeps1 no
   - conda config --add channels vmtk
   - conda config --add channels morphman
