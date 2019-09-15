@@ -517,8 +517,6 @@ def create_particles(base_path, algorithm, method):
                 point = "%s %s %s" % (p[0], p[1], p[2])
                 output_all.write(point + "\n")
             if key in ["ant_post", "sup_ant"]:
-                p = landmarked_points[key]
-                point = "%s %s %s" % (p[0], p[1], p[2])
                 output_siphon.write(point + "\n")
 
         elif algorithm == "piccinelli":
