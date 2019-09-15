@@ -44,26 +44,42 @@ def automated_landmarking(input_filepath, curv_method, resampling_step, algorith
                                nknots, smoothing_factor_curv, smoothing_factor_torsion, iterations)
 
 
-def map_landmarks(landmarks, centerline):
+def map_landmarks(landmarks, centerline, algorithm):
     """
     Takes new landmarks and original centerline,
     mapping each landmark interface to the original centerline.
 
     Args:
+        algorithm:
         landmarks (dict): Contains landmarks.
         centerline (vtkPolyData): Original centerline.
+        algorithm (str): Landmarking algorith, bogunovic or piccinelli
 
     Returns:
-        landmarks (dict): Contains landmarks mapped to centerline.
+        mapped_landmarks (dict): Contains landmarks mapped to centerline.
     """
+    mapped_landmarks = {}
+    landmark_ids = []
     locator = get_vtk_point_locator(centerline)
+    k = 1
     for key in landmarks:
         landmark = landmarks[key]
         landmark_id = locator.FindClosestPoint(landmark)
-        landmark_mapped = centerline.GetPoint(landmark_id)
-        landmarks[key] = landmark_mapped
 
-    return landmarks
+        if algorithm == "piccinelli":
+            if landmark_id in landmark_ids:
+                continue  # Skip for duplicate landmarking point
+            else:
+                landmark_ids.append(landmark_id)
+                landmark_mapped = centerline.GetPoint(landmark_id)
+                mapped_landmarks["bend%s" % k] = landmark_mapped
+                k += 1
+        if algorithm == "bogunovic":
+            landmark_mapped = centerline.GetPoint(landmark_id)
+            landmarks[key] = landmark_mapped
+            mapped_landmarks = landmarks
+
+    return mapped_landmarks
 
 
 def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
@@ -225,7 +241,7 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
         landmarks[k] = line.GetPoint(int(v))
 
     # Map landmarks to initial centerline
-    landmarks = map_landmarks(landmarks, centerline)
+    landmarks = map_landmarks(landmarks, centerline, algorithm)
 
     # Save landmarks
     print("-- Case was successfully landmarked.")
@@ -312,26 +328,28 @@ def landmarking_piccinelli(centerline, base_path, curv_method, algorithm, resamp
     for i in range(len(max_point_tor_ids) - 1):
         dist_tor.append(max_point_tor_ids[i + 1] - max_point_tor_ids[i])
 
+    curv_remove_ids = []
     for i, dx in enumerate(dist):
         if dx < tolerance:
             curv1 = curvature[max_point_ids[i]]
             curv2 = curvature[max_point_ids[i + 1]]
             if curv1 > curv2:
-                max_point_ids[i + 1] = None
+                curv_remove_ids.append(max_point_ids[i + 1])
             else:
-                max_point_ids[i] = None
+                curv_remove_ids.append(max_point_ids[i])
 
+    tor_remove_ids = []
     for i, dx in enumerate(dist_tor):
         if dx < tolerance:
             tor1 = torsion_smooth[max_point_tor_ids[i]]
             tor2 = torsion_smooth[max_point_tor_ids[i + 1]]
             if tor1 > tor2:
-                max_point_tor_ids[i + 1] = None
+                tor_remove_ids.append(max_point_tor_ids[i + 1])
             else:
-                max_point_tor_ids[i] = None
+                tor_remove_ids.append(max_point_tor_ids[i])
 
-    max_point_ids = [ID for ID in max_point_ids if ID is not None]
-    max_point_tor_ids = [ID for ID in max_point_tor_ids if ID is not None]
+    max_point_ids = [ID for ID in max_point_ids if ID not in curv_remove_ids]
+    max_point_tor_ids = [ID for ID in max_point_tor_ids if ID not in tor_remove_ids]
 
     # Define bend interfaces based on Piccinelli et al.
     def find_interface():
@@ -359,7 +377,7 @@ def landmarking_piccinelli(centerline, base_path, curv_method, algorithm, resamp
         landmarks[k] = line.GetPoints().GetPoint(int(v))
 
     # Map landmarks to initial centerline
-    landmarks = map_landmarks(landmarks, centerline)
+    landmarks = map_landmarks(landmarks, centerline, algorithm)
 
     # Save landmarks
     print("-- Case was successfully landmarked.")
@@ -485,26 +503,28 @@ def create_particles(base_path, algorithm, method):
     info_filepath = base_path + "_info.json"
     filename_all_landmarks = base_path + "_landmark_%s_%s.particles" % (algorithm, method)
     filename_bend_landmarks = base_path + "_anterior_bend.particles"
+    print("Saving all landmarks to: %s" % filename_all_landmarks)
 
     output_all = open(filename_all_landmarks, "w")
     output_siphon = open(filename_bend_landmarks, "w")
-    mani = open(info_filepath, "r")
-    lines = mani.readlines()
-    mani.close()
+    with open(info_filepath, ) as landmarks_json:
+        landmarked_points = json.load(landmarks_json)
 
-    for line in lines:
+    for key in landmarked_points:
         if algorithm == "bogunovic":
-            if line.split()[1][0] == "(":
-                coord = line.split()[1:]
-                point = "%s %s %s" % (coord[0][1:-1], coord[1][:-1], coord[2][:-1])
+            if key in ["ant_post", "post_inf", "inf_end", "sup_ant"]:
+                p = landmarked_points[key]
+                point = "%s %s %s" % (p[0], p[1], p[2])
                 output_all.write(point + "\n")
-                if line.split()[0] == "sup_ant:" or line.split()[0] == "ant_post:":
-                    output_siphon.write(point + "\n")
+            if key in ["ant_post", "sup_ant"]:
+                p = landmarked_points[key]
+                point = "%s %s %s" % (p[0], p[1], p[2])
+                output_siphon.write(point + "\n")
 
         elif algorithm == "piccinelli":
-            if line.split()[0][:4] == "bend":
-                coord = line.split()[1:]
-                point = "%s %s %s" % (coord[0][1:-1], coord[1][:-1], coord[2][:-1])
+            if "bend" in key:
+                p = landmarked_points[key]
+                point = "%s %s %s" % (p[0], p[1], p[2])
                 output_all.write(point + "\n")
 
     output_all.close()
@@ -541,9 +561,9 @@ def read_command_line():
     parser.add_argument('-sl', '--smooth-line', type=str2bool, default=False,
                         help="If the original centerline should be smoothed " +
                              "when computing the centerline attributes")
-    parser.add_argument('-facc', '--smoothing-factor-curvature', type=float, default=1.0,
+    parser.add_argument('-facc', '--smoothing-factor-curvature', type=float, default=1.5,
                         help="Smoothing factor for computing curvature.")
-    parser.add_argument('-fact', '--smoothing-factor-torsion', type=float, default=1.0,
+    parser.add_argument('-fact', '--smoothing-factor-torsion', type=float, default=1.2,
                         help="Smoothing factor for computing torsion.")
     parser.add_argument('-it', '--iterations', type=int, default=100,
                         help="Smoothing iterations.")
