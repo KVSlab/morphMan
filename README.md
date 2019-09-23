@@ -49,7 +49,7 @@ Kjeldsberg et al., (2019). morphMan: Automated manipulation of vascular geometri
 Installation
 ------------
 
-For reference, morphMan requires the following dependencies: VTK > 8.1, Numpy > 1.13, SciPy > 1.0.0, and VMTK 1.4.
+For reference, morphMan requires the following dependencies: VTK > 8.1, Numpy <= 1.13, SciPy > 1.0.0, and VMTK 1.4.
 If you are on Windows, macOS or Linux you can install all the general dependencies through anaconda.
 First install Anaconda or Miniconda (preferably the Python 3.6 version).
 Then execute the following command

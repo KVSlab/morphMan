@@ -1,6 +1,6 @@
 package:
   name: "morphman"
-  version: "0.3"
+  version: "1.0"
 
 source:
   path: ../
@@ -16,7 +16,7 @@ requirements:
   run:
     - python {{ python }}
     - scipy
-    - numpy <=1.13
+    - numpy {{ numpy }}
     - vtk {{ vtk }}
     - vmtk
 
