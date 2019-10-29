@@ -329,7 +329,7 @@ def get_uncapped_surface(surface, gradients_limit=0.15, area_limit=0.3, circlene
     gradients = vtk_compute_normal_gradients(cell_normals)
 
     # Compute the magnitude of the gradient
-    gradients_array = get_vtk_array("Gradients", gradients, 9)
+    gradients_array = get_cell_data_array("Gradients", gradients, 9)
     gradients_magnitude = np.sqrt(np.sum(gradients_array ** 2, axis=1))
 
     # Mark all cells with a gradient magnitude less then gradient_limit
