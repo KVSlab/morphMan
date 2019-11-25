@@ -528,7 +528,7 @@ def get_vtk_cell_locator(surface):
     Returns:
         return (vtkCellLocator): Cell locator of the input surface.
     """
-    locator = vtk.vtkStaticCellLocator()
+    locator = vtk.vtkCellLocator()
     locator.SetDataSet(surface)
     locator.BuildLocator()
 
