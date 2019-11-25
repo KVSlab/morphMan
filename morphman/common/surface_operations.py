@@ -8,6 +8,7 @@
 import math
 from os import makedirs
 
+from IPython import embed
 from vtk.util import numpy_support
 
 from morphman.common.voronoi_operations import *
@@ -755,7 +756,7 @@ def prepare_surface(base_path, surface_path):
     parameters = get_parameters(base_path)
     if "check_surface" not in parameters.keys():
         connected_surface = vtk_compute_connectivity(surface, mode="Largest")
-        if connected_surface.GetNumberOfPoints() != surface.GetNumberOfPoints():
+        if connected_surface.GetNumberOfCells() != surface.GetNumberOfCells():
             write_polydata(surface, surface_path.replace(".vtp", "_unconnected.vtp"))
             write_polydata(connected_surface, surface_path)
             surface = connected_surface
