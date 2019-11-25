@@ -315,7 +315,7 @@ def landmarking_piccinelli(centerline, base_path, curv_method, algorithm, resamp
                          "\nPlease select between 'spline' and 'vmtk'")
 
     # Extract local curvature minimums
-    length = get_curvilinear_coordinate(line_curv)
+    length = get_curvilinear_coordinate(line)
 
     # Remove points too close to the ends of the siphon
     for i in max_point_ids:
