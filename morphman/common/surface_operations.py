@@ -8,7 +8,6 @@
 import math
 from os import makedirs
 
-from IPython import embed
 from vtk.util import numpy_support
 
 from morphman.common.voronoi_operations import *
