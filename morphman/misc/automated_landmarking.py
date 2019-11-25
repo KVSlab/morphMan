@@ -33,7 +33,7 @@ def automated_landmarking(input_filepath, curv_method, resampling_step, algorith
     base_path = get_path_names(input_filepath)
 
     # Extract carotid siphon
-    ica_centerline = extract_ica_centerline(base_path, resampling_step)
+    ica_centerline = extract_ica_centerline(base_path, input_filepath, resampling_step)
 
     # Landmark
     if algorithm == "bogunovic":
