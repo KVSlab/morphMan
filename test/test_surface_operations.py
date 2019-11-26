@@ -187,11 +187,10 @@ def test_prepare_surface(surface_paths):
     input_filepath = surface_paths[0]
     base_path = get_path_names(input_filepath)
 
-    open, closed = prepare_surface(base_path, input_filepath)
+    surface, capped_surface = prepare_surface(base_path, input_filepath)
 
-    is_open = not is_surface_capped(open)
+    is_closed = is_surface_capped(capped_surface)
 
-    is_closed = is_surface_capped(closed)
-
-    assert is_open
     assert is_closed
+
+    assert surface.GetNumberOfCells() > 0
