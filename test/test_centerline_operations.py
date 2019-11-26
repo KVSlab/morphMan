@@ -56,3 +56,67 @@ def test_centerline_tolerance(surface_paths):
     assert tolerance < tolerance_max
 
 
+def test_clip_diverging_centerline(surface_paths):
+    input_filepath = surface_paths[0]
+    base_path = get_path_names(input_filepath)
+    centerline = extract_single_line(read_polydata(base_path + "_centerline.vtp"), 0)
+
+    n_points = centerline.GetNumberOfPoints()
+    start = int(0.9 * n_points)
+    p0 = centerline.GetPoint(start)
+
+    clipped_centerline = get_clipped_diverging_centerline(centerline, p0, n_points - 1)
+
+    n_clipped_points = clipped_centerline.GetNumberOfPoints()
+
+    diff = abs(n_points * 0.9 - n_clipped_points)
+
+    assert diff < 5
+
+
+def test_get_first_line_to_change(surface_paths):
+    input_filepath = surface_paths[0]
+    base_path = get_path_names(input_filepath)
+    centerlines = read_polydata(base_path + "_centerline.vtp")
+    full_line_to_change = extract_single_line(read_polydata(base_path + "_centerline.vtp"), 0)
+    line_to_change, _, _, _, _ = get_line_to_change(None, centerlines, "first_line", None, None, None)
+
+    n_points_full = full_line_to_change.GetNumberOfPoints()
+    n_points = line_to_change.GetNumberOfPoints()
+
+    p0 = np.asarray(line_to_change.GetPoint(0))
+    p1 = np.asarray(line_to_change.GetPoint(0))
+
+    pA = np.asarray(full_line_to_change.GetPoint(0))
+    pB = np.asarray(full_line_to_change.GetPoint(0))
+
+    tol = 1E-1
+
+    assert n_points < n_points_full
+
+    assert np.linalg.norm(p0 - pA) < tol
+    assert np.linalg.norm(p1 - pB) < tol
+
+
+def test_get_region_of_interest(surface_paths):
+    input_filepath = surface_paths[0]
+    base_path = get_path_names(input_filepath)
+    centerlines = read_polydata(base_path + "_centerline.vtp")
+    n_points = centerlines.GetNumberOfPoints()
+
+    start_id = int(n_points * 0.1)
+    stop_id = int(n_points * 0.2)
+
+    start = np.asarray(centerlines.GetPoint(start_id))
+    stop = np.asarray(centerlines.GetPoint(stop_id))
+
+    region_points = [start, stop]
+
+    remaining_centerlines, diverging_centerlines, _, _, diverging_ids \
+        = get_region_of_interest_and_diverging_centerlines(centerlines, region_points)
+
+    assert centerlines.GetNumberOfLines() == 7
+    assert remaining_centerlines.GetNumberOfLines() == 5
+    assert diverging_centerlines.GetNumberOfLines() == 2
+
+    assert len(diverging_ids) == 2
