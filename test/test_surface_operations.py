@@ -5,8 +5,6 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 ##      PURPOSE.  See the above copyright notices for more information.
 
-# noinspection PyUnresolvedReferences
-from IPython import embed
 
 from .fixtures import surface_paths
 from morphman.common.surface_operations import *
@@ -40,4 +38,11 @@ def test_compute_centers(surface_paths):
     assert len(inlet) // 3 == 1
     assert len(outlets) // 3 == centerlines.GetNumberOfLines()
 
+
+
+def test_clip_capped_surface(surface_paths):
+    input_filepath = surface_paths[0]
+    base_path = get_path_names(input_filepath)
+    surface = read_polydata(input_filepath)
+    centerlines = read_polydata(base_path + "_centerline.vtp")
 
