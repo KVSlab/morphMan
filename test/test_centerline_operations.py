@@ -5,9 +5,6 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 ##      PURPOSE.  See the above copyright notices for more information.
 
-# noinspection PyUnresolvedReferences
-from IPython import embed
-
 from .fixtures import surface_paths
 from morphman.common.centerline_operations import *
 
