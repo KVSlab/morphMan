@@ -4,6 +4,7 @@
 [![Build Status](https://travis-ci.org/KVSlab/morphMan.svg?branch=master)](https://travis-ci.org/KVSlab/morphMan)
 [![Build status](https://ci.appveyor.com/api/projects/status/2k6q32hqg6g5oopc?svg=true)](https://ci.appveyor.com/project/hkjeldsberg/morphman-s1s38)
 [![DOI](http://joss.theoj.org/papers/10.21105/joss.01065/status.svg)](https://doi.org/10.21105/joss.01065)
+[![Coverage Status](https://coveralls.io/repos/github/KVSlab/morphMan/badge.svg?branch=master)](https://coveralls.io/github/KVSlab/morphMan?branch=master)
 
 <p align="center">
     <img src="https://raw.githubusercontent.com/KVSlab/morphMan/master/docs/source/make_stenosis.png" width="640 height="280" alt="Create a stenois"/>
