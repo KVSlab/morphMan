@@ -19,8 +19,7 @@ def test_landmarking(surface_paths, algorithm):
     # Get region points
     base_path = get_path_names(surface_paths[0])
     relevant_outlets = [35.8, 59.8, 39.7, 76.8, 54.7, 53.2]
-    ica_centerline = extract_ica_centerline(base_path, 0.1,
-                                            relevant_outlets=relevant_outlets)
+    ica_centerline = extract_ica_centerline(base_path, surface_paths[0],  0.1, relevant_outlets=relevant_outlets)
 
     landmark_input = dict(
         centerline=ica_centerline, base_path=base_path, curv_method="spline", algorithm=algorithm,
