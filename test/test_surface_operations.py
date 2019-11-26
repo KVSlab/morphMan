@@ -4,7 +4,6 @@
 ##      This software is distributed WITHOUT ANY WARRANTY; without even
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 ##      PURPOSE.  See the above copyright notices for more information.
-from IPython import embed
 
 from .fixtures import surface_paths
 from morphman.common.surface_operations import *
