@@ -5,6 +5,7 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
 ##      PURPOSE.  See the above copyright notices for more information.
 
+import os
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 from scipy.ndimage.filters import gaussian_filter
@@ -33,7 +34,7 @@ def automated_landmarking(input_filepath, curv_method, resampling_step, algorith
     base_path = get_path_names(input_filepath)
 
     # Extract carotid siphon
-    ica_centerline = extract_ica_centerline(base_path, resampling_step)
+    ica_centerline = extract_ica_centerline(base_path, input_filepath, resampling_step)
 
     # Landmark
     if algorithm == "bogunovic":
@@ -48,9 +49,9 @@ def map_landmarks(landmarks, centerline, algorithm):
     """
     Takes new landmarks and original centerline,
     mapping each landmark interface to the original centerline.
+    Filters away duplicate landmarks
 
     Args:
-        algorithm:
         landmarks (dict): Contains landmarks.
         centerline (vtkPolyData): Original centerline.
         algorithm (str): Landmarking algorith, bogunovic or piccinelli
@@ -295,16 +296,18 @@ def landmarking_piccinelli(centerline, base_path, curv_method, algorithm, resamp
         max_point_tor_ids = list(argrelextrema(abs(torsion_smooth), np.greater)[0])
 
     elif curv_method == "vmtk":
-        line = vmtk_compute_geometric_features(centerline, True, outputsmoothed=False,
-                                               factor=smoothing_factor_curv, iterations=iterations)
+        line = centerline
+        line_curv = vmtk_compute_geometric_features(centerline, True, outputsmoothed=False,
+                                                    factor=smoothing_factor_curv, iterations=iterations)
         line_tor = vmtk_compute_geometric_features(centerline, True, outputsmoothed=False,
                                                    factor=smoothing_factor_torsion, iterations=iterations)
         # Get curvature and torsion, find peaks
-        curvature = get_point_data_array("Curvature", line)
+        curvature = get_point_data_array("Curvature", line_curv)
         torsion = get_point_data_array("Torsion", line_tor)
-        torsion_smooth = gaussian_filter(torsion, 10)
-        curvature_smooth = gaussian_filter(curvature, 10)
-        max_point_ids = list(argrelextrema(curvature_smooth, np.greater)[0])
+
+        # Smooth torsion curve to remove noise
+        torsion_smooth = gaussian_filter(torsion, 25)
+        max_point_ids = list(argrelextrema(curvature, np.greater)[0])
         max_point_tor_ids = list(argrelextrema(abs(torsion_smooth), np.greater)[0])
 
     else:
@@ -320,7 +323,7 @@ def landmarking_piccinelli(centerline, base_path, curv_method, algorithm, resamp
             max_point_ids.remove(i)
 
     # Remove curvature and torsion peaks too close to each other
-    tolerance = 50
+    tolerance = 70
     dist = []
     dist_tor = []
     for i in range(len(max_point_ids) - 1):
@@ -378,9 +381,15 @@ def landmarking_piccinelli(centerline, base_path, curv_method, algorithm, resamp
 
     # Map landmarks to initial centerline
     landmarks = map_landmarks(landmarks, centerline, algorithm)
+    print("Number of landmarks (Segments): %s" % len(landmarks))
 
     # Save landmarks
     print("-- Case was successfully landmarked.")
+    try:
+        os.remove(base_path + "_info.json")
+        os.remove(base_path + "_landmark_piccinelli_vmtk.particles")
+    except:
+        pass
     if landmarks is not None:
         write_parameters(landmarks, base_path)
         create_particles(base_path, algorithm, curv_method)
@@ -502,11 +511,9 @@ def create_particles(base_path, algorithm, method):
 
     info_filepath = base_path + "_info.json"
     filename_all_landmarks = base_path + "_landmark_%s_%s.particles" % (algorithm, method)
-    filename_bend_landmarks = base_path + "_anterior_bend.particles"
     print("Saving all landmarks to: %s" % filename_all_landmarks)
 
     output_all = open(filename_all_landmarks, "w")
-    output_siphon = open(filename_bend_landmarks, "w")
     with open(info_filepath, ) as landmarks_json:
         landmarked_points = json.load(landmarks_json)
 
@@ -516,17 +523,13 @@ def create_particles(base_path, algorithm, method):
                 p = landmarked_points[key]
                 point = "%s %s %s" % (p[0], p[1], p[2])
                 output_all.write(point + "\n")
-            if key in ["ant_post", "sup_ant"]:
-                output_siphon.write(point + "\n")
 
         elif algorithm == "piccinelli":
-            if "bend" in key:
-                p = landmarked_points[key]
-                point = "%s %s %s" % (p[0], p[1], p[2])
-                output_all.write(point + "\n")
+            p = landmarked_points[key]
+            point = "%s %s %s" % (p[0], p[1], p[2])
+            output_all.write(point + "\n")
 
     output_all.close()
-    output_siphon.close()
 
 
 def read_command_line():

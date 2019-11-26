@@ -755,7 +755,7 @@ def prepare_surface(base_path, surface_path):
     parameters = get_parameters(base_path)
     if "check_surface" not in parameters.keys():
         connected_surface = vtk_compute_connectivity(surface, mode="Largest")
-        if connected_surface.GetNumberOfPoints() != surface.GetNumberOfPoints():
+        if connected_surface.GetNumberOfCells() != surface.GetNumberOfCells():
             write_polydata(surface, surface_path.replace(".vtp", "_unconnected.vtp"))
             write_polydata(connected_surface, surface_path)
             surface = connected_surface
@@ -786,12 +786,13 @@ def prepare_surface(base_path, surface_path):
     return open_surface, capped_surface
 
 
-def extract_ica_centerline(base_path, resampling_step, relevant_outlets=None):
+def extract_ica_centerline(base_path, input_filepath, resampling_step, relevant_outlets=None):
     """
     Extract a centerline from the inlet to the first branch.
 
     Args:
         base_path (str): Path to the case folder.
+        input_filepath (str): Path to the original model.
         resampling_step (float): Resampling step length of the extracted centerline.
         relevant_outlets (ndarray): Array containing points corresponding to outlets
 
@@ -800,7 +801,6 @@ def extract_ica_centerline(base_path, resampling_step, relevant_outlets=None):
     """
     # TODO: Extract ICA centerline by comparing daughter branch cross-section areas
     centerlines_path = base_path + "_centerline.vtp"
-    input_filepath = base_path + ".vtp"
     ica_centerline_path = base_path + "_ica.vtp"
     centerline_relevant_outlets_path = base_path + "_centerline_relevant_outlets_landmark.vtp"
 
