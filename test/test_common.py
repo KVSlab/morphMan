@@ -4,16 +4,10 @@
 ##      This software is distributed WITHOUT ANY WARRANTY; without even
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 ##      PURPOSE.  See the above copyright notices for more information.
+
+import os
+
 from morphman.common.common import *
-
-import json, os
-
-
-def test_get_path_names():
-    filepath = "surface/model.vtp"
-    base_path = get_path_names(filepath)
-
-    assert base_path == "surface/model"
 
 
 def test_get_distance():
