@@ -120,3 +120,47 @@ def test_get_region_of_interest(surface_paths):
     assert diverging_centerlines.GetNumberOfLines() == 2
 
     assert len(diverging_ids) == 2
+
+
+def test_discrete_derivatives(surface_paths):
+    input_filepath = surface_paths[0]
+    base_path = get_path_names(input_filepath)
+    centerline = extract_single_line(read_polydata(base_path + "_centerline.vtp"), 0)
+
+    _, curvature = compute_discrete_derivatives(centerline)
+
+    # Check if curvature computed for each point on centerline
+    assert len(curvature) == centerline.GetNumberOfPoints()
+
+    # Check no diverging values
+    assert np.mean(curvature) < 0.5
+
+
+def test_spline_centerline(surface_paths):
+    input_filepath = surface_paths[0]
+    base_path = get_path_names(input_filepath)
+    centerline = extract_single_line(read_polydata(base_path + "_centerline.vtp"), 0)
+
+    _, curvature = compute_splined_centerline(
+        centerline, get_curv=True, isline=True, nknots=15, get_stats=False, get_misr=False)
+
+    # Check if curvature computed for each point on centerline
+    assert len(curvature) == centerline.GetNumberOfPoints()
+
+    # Check no diverging values
+    assert np.mean(curvature) < 0.5
+
+
+def test_get_end_point(surface_paths):
+    input_filepath = surface_paths[0]
+    base_path = get_path_names(input_filepath)
+    centerline = extract_single_line(read_polydata(base_path + "_centerline.vtp"), 0)
+
+    last_point_true = np.asarray(centerline.GetPoint(centerline.GetNumberOfPoints() - 1))
+
+    last_point = np.asarray(get_end_point(centerline))
+
+    diff = np.linalg.norm(last_point - last_point_true)
+    tol = 1E-16
+
+    assert diff < tol
