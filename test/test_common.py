@@ -37,7 +37,7 @@ def test_gram_schmidth():
     e3 = E[2]
 
     products = np.abs([e1.dot(e2), e2.dot(e3), e1.dot(e3)])
-    tol = 1e-15
+    tol = 1E-15
 
     assert sum(products) < tol
 
@@ -76,3 +76,54 @@ def test_numpy_to_polydata():
     assert v_as_vtk_array.GetPoint(0) == (0, 0, 0)
     assert v_as_vtk_array.GetPoint(1) == (1, 1, 1)
     assert v_as_vtk_array.GetPoint(2) == (2, 2, 2)
+
+
+def test_least_squares_plane():
+    region_points = np.array([[-1, -1, 1], [1, 1, 1]])
+    cl_points = np.asarray([
+        [-0.5, -0.5, -1],
+        [0.5, 0.5, -1],
+        [0.5, -0.5, -1],
+        [-0.5, 0.5, -1],
+    ])
+
+    n = compute_least_square_plane(cl_points, region_points)
+
+    # Check for unit vector
+    assert np.linalg.norm(n) == 1.0
+
+    # Assert on normal vector of plane
+    assert n[0] == 0.0
+    assert n[1] == 0.0
+    assert n[2] == 1.0
+
+
+def test_rotation_matrix():
+    u = [0, 0, 1]
+    angle = np.pi / 4
+
+    R = get_rotation_matrix(u, angle)
+
+    R_true = np.asarray(
+        [[0.7071, -0.7071, 0],
+         [0.7071, 0.7071, 0],
+         [0, 0, 1.0000]
+         ])
+
+    diff = R_true - R
+    tol = 1E-4
+
+    assert np.linalg.norm(diff) < tol
+
+
+def test_get_angle():
+    a = np.array([1, 1, 0])
+    b = np.array([0, 0, 1])
+
+    angle = get_angle(a, b)
+    angle_true = np.pi / 2
+    diff = angle - angle_true
+
+    tol = 1E-16
+
+    assert abs(diff) < tol
