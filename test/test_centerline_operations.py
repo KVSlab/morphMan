@@ -76,7 +76,7 @@ def test_get_first_line_to_change(surface_paths):
     base_path = get_path_names(input_filepath)
     centerlines = read_polydata(base_path + "_centerline.vtp")
     full_line_to_change = extract_single_line(read_polydata(base_path + "_centerline.vtp"), 0)
-    line_to_change, _, _, _, _ = get_line_to_change(None, centerlines, "first_line", None, None, None)
+    line_to_change, _, _, _, _ = get_line_to_change(None, centerlines, "first_line", "", [], 0.0)
 
     n_points_full = full_line_to_change.GetNumberOfPoints()
     n_points = line_to_change.GetNumberOfPoints()
