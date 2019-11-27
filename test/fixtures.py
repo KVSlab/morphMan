@@ -10,7 +10,7 @@ from sys import platform
 
 import pytest
 
-from morphman.common import get_centers, get_path_names, compute_centerlines, prepare_surface
+from morphman.common import  get_inlet_and_outlet_centers, get_path_names, compute_centerlines, prepare_surface
 
 
 def download_testdata(test_path, outputfile):
@@ -50,7 +50,7 @@ def surface_paths():
     centerlines_path = base_path + "_centerline.vtp"
     if not path.exists(centerlines_path):
         surface, capped_surface = prepare_surface(base_path, input_filepath)
-        inlet, outlets = get_centers(surface, base_path)
+        inlet, outlets = get_inlet_and_outlet_centers(surface, base_path)
         compute_centerlines(inlet, outlets, centerlines_path, capped_surface, resampling=0.1, smooth=False,
                             base_path=base_path)
 

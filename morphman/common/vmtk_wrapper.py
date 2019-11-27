@@ -34,11 +34,11 @@ def vmtk_smooth_centerline(centerlines, num_iter, smooth_factor):
         vtkPolyData: Smoothed version of input centerline
     """
     centerline_smoothing = vmtkscripts.vmtkCenterlineSmoothing()
-    centerline_smoothing.SetInputData(centerlines)
-    centerline_smoothing.SetNumberOfSmoothingIterations(num_iter)
-    centerline_smoothing.SetSmoothingFactor(smooth_factor)
-    centerline_smoothing.Update()
-    centerlines_smoothed = centerline_smoothing.GetOutput()
+    centerline_smoothing.Centerlines = centerlines
+    centerline_smoothing.SetNumberOfSmoothingIterations = num_iter
+    centerline_smoothing.SetSmoothingFactor = smooth_factor
+    centerline_smoothing.Execute()
+    centerlines_smoothed = centerline_smoothing.Centerlines
 
     return centerlines_smoothed
 
@@ -511,6 +511,20 @@ def vmtk_surface_curvature(surface, curvature_type="mean", absolute=False,
 def vmtk_surface_distance(surface1, surface2, distance_array_name="Distance",
                           distance_vectors_array_name="",
                           signed_distance_array_name="", flip_normals=False):
+    """
+    Compute the pointwise minimum distance of the input surface from a reference surface
+
+    Args:
+        surface1 (vtkPolyData): Input surface
+        surface2 (vtkPolyData): Reference surface
+        distance_array_name (str): Name of distance array
+        distance_vectors_array_name (str): Name of distance array (of vectors)
+        signed_distance_array_name (str): Name of distance arrays signed as positive or negative
+        flip_normals (bool): Flip normals relative to reference surface
+
+    Returns:
+        surface (vtkPoyData): Output surface with distance info
+    """
     distance = vmtkscripts.vmtkSurfaceDistance()
     distance.Surface = surface1
     distance.ReferenceSurface = surface2

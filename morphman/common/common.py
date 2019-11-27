@@ -501,7 +501,7 @@ def get_rotation_matrix(u, angle):
 
     Args:
         u (ndarray): Normal vector corresponding to rotation axis
-        angle (float): Angle to rotate
+        angle (float): Angle to rotate in radians
 
     Returns:
         R (ndarray): Rotation matrix
@@ -525,7 +525,7 @@ def get_angle(a, b):
         b (ndarray): Second vector
 
     Returns:
-        float: Angle between lines
+        float: Angle between lines in radians
     """
     angle = np.arccos(np.dot(a, b) / (la.norm(a) * la.norm(b)))
 

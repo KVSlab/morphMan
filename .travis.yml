@@ -9,9 +9,9 @@ notifications:
     on_failure: always  # default: always
 
 matrix:
-    include:
-        - os: linux
-          python: 3.6
+  include:
+    - os: linux
+      python: 3.6
 
 install:
   # Install conda
@@ -36,12 +36,20 @@ install:
 
   # Useful for debugging any issues with conda
   - conda info -a
-  
+
   # / -> // in vmtkcenterlines.py and vmtksurfacecurvature.py
   - sed -i -e 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' ../../../miniconda/envs/morphman_env/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
   - sed -i -e 's/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g' ../../../miniconda/envs/morphman_env/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
   - sed -i -e 's/(len(values) - 1)\/2/\(len\(values\) - 1\)\/\/2/g' ../../../miniconda/envs/morphman_env/lib/python3.6/site-packages/vmtk/vmtksurfacecurvature.py
 
+  # Dependencies for code coverage
+  - pip install pytest-cov codecov
+
+
 script:
   - cd test
-  - pytest .
+  - pytest --cov=./
+
+# Push the results back to codecov
+after_success:
+  - codecov
