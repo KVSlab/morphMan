@@ -57,5 +57,4 @@ def test_split_voronoi_diagram(surface_paths):
     split_voronoi = get_split_voronoi_diagram(voronoi, [centerline1, centerline2])
 
     assert len(split_voronoi) == 2
-
     assert split_voronoi[0].GetNumberOfCells() > split_voronoi[1].GetNumberOfCells()
