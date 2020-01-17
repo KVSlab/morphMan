@@ -1,8 +1,8 @@
 ##   Copyright (c) Aslak W. Bergersen, Henrik A. Kjeldsberg. All rights reserved.
 ##   See LICENSE file for details.
 
-##      This software is distributed WITHOUT ANY WARRANTY; without even 
-##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
+##      This software is distributed WITHOUT ANY WARRANTY; without even
+##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 ##      PURPOSE.  See the above copyright notices for more information.
 
 import os
@@ -113,12 +113,8 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
     if curv_method == "vmtk":
         line = vmtk_compute_centerline_attributes(centerline)
         line = vmtk_compute_geometric_features(line, smooth_line, factor=smoothing_factor, iterations=iterations)
-        curvature_ = get_point_data_array("Curvature", line)
-        curvature__ = gaussian_filter(curvature_, 5)
-        curvature = []
-        for c in curvature__:
-            curvature.append(c)
-        curvature = np.array(curvature)
+        curvature = get_point_data_array("Curvature", line)
+        curvature = gaussian_filter(curvature, 2)
 
     elif curv_method == "disc":
         neigh = 20
@@ -157,12 +153,12 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
     k_points = np.zeros((k1_points.shape[0], 2))
     k_points[:, 0] = k1_points[:, 0]
     k_points[:, 1] = k2_points[:, 0]
-    tetha = np.zeros(k1_points.shape[0] - 1)
-    for i in range(tetha.shape[0]):
+    theta = np.zeros(k1_points.shape[0] - 1)
+    for i in range(theta.shape[0]):
         a = k_points[i, :] / np.sqrt(np.sum(k_points[i, :] ** 2))
         b = k_points[i + 1, :] / np.sqrt(np.sum(k_points[i + 1, :] ** 2))
-        tetha[i] = math.acos(np.dot(a, b))
-        tetha[i] = tetha[i] * 180 / math.pi
+        theta[i] = math.acos(np.dot(a, b))
+        theta[i] = theta[i] * 180 / math.pi
 
     x = np.zeros(length.shape[0])
     y = np.zeros(length.shape[0])
@@ -178,30 +174,35 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
     tol_post_inf = 45
     tol_inf_end = 110
 
-    # Find max coronal coordinate
-    value_index = z[argrelextrema(z, np.less)[0]].min()
-    max_coronal_ids = np.array(z.tolist().index(value_index))
-    if abs(length[max_coronal_ids] - length[-1]) > 30:
-        print("-- Sanity check failed")
-        return None
+    # Find max coronal coordinate (within anterior bend)
+    value_index = z[argrelextrema(z, np.less_equal)[0]].min()
+    max_coronal_bend_id = np.array(z.tolist().index(value_index))
+    if abs(length[max_coronal_bend_id] - length[-1]) > 30:
+        print("-- Sanity check failed, checking for maximums")
+
+        value_index = z[argrelextrema(z, np.greater_equal)[0]].max()
+        max_coronal_bend_id = np.array(z.tolist().index(value_index))
+        if abs(length[max_coronal_bend_id] - length[-1]) > 30:
+            print("-- Sanity check failed, no anterior bend in model")
+            return None
 
     def find_interface(start, direction, tol, part):
-        stop = direction if direction == -1 else tetha.shape[0]
+        stop = direction if direction == -1 else theta.shape[0]
         success = False
         for i in range(start - 1, stop, direction):
-            if tetha[i] > tol:
+            if theta[i] > tol:
                 success = True
                 break
 
         if success:
             start = max_point_ids[i]
             stop = max_point_ids[i + 1]
-            index = ((min_point_ids > start) * (min_point_ids < stop)).nonzero()[0]
+            index = ((min_point_ids > start) * (min_point_ids < stop)).nonzero()[0].max()
             min_point = (min_point_ids[index])
             interfaces[part] = min_point
 
         elif not success and part == "sup_ant":
-            print("-- Where not able to identify the interface between the" +
+            print("-- Where not able to identify the interface between the " +
                   "anterior and superior bend. Check the coronal coordinates")
             return None
 
@@ -224,7 +225,7 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
     interfaces = {}
     min_point_ids = np.array(min_point_ids)
 
-    index = np.array((max_coronal_ids > max_point_ids).nonzero()[0]).max()
+    index = np.array((max_coronal_bend_id > max_point_ids).nonzero()[0]).max()
     start = find_interface(index, -1, tol_ant_post, "ant_post")
     if start is None:
         return None

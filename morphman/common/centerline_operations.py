@@ -862,3 +862,32 @@ def filter_centerlines(centerlines, diverging_centerline_end):
     filtered_centerlines = vtk_merge_polydata(remaining_centerlines)
 
     return filtered_centerlines
+
+
+def reverse_centerline(centerline_to_reverse):
+    """
+    Reverse the input centerline.
+
+    Args:
+        centerline_to_reverse (vtkPolyData): Centerline to be reversed
+
+    Returns:
+        centerline (vtkPolyData): Reversed centerline
+    """
+    number_of_points = centerline_to_reverse.GetNumberOfPoints()
+
+    centerline = vtk.vtkPolyData()
+    centerline_points = vtk.vtkPoints()
+    centerline_cell_array = vtk.vtkCellArray()
+    centerline_cell_array.InsertNextCell(number_of_points)
+    count = 0
+    for p in range(number_of_points - 1, -1, -1):
+        point = np.asarray(centerline_to_reverse.GetPoint(p))
+        centerline_points.InsertNextPoint(point)
+        centerline_cell_array.InsertCellPoint(count)
+        count += 1
+
+    centerline.SetPoints(centerline_points)
+    centerline.SetLines(centerline_cell_array)
+
+    return centerline
