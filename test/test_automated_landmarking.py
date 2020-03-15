@@ -15,18 +15,18 @@ from morphman.misc import landmarking_bogunovic, landmarking_piccinelli
 
 
 @pytest.mark.parametrize("algorithm", ["bogunovic", "piccinelli"])
-def test_landmarking(surface_paths, algorithm):
+def test_automated_landmarking(surface_paths, algorithm):
     # Get region points
     base_path = get_path_names(surface_paths[0])
     relevant_outlets = [35.8, 59.8, 39.7, 76.8, 54.7, 53.2]
     ica_centerline = extract_ica_centerline(base_path, surface_paths[0],  0.1, relevant_outlets=relevant_outlets)
 
     landmark_input = dict(
-        centerline=ica_centerline, base_path=base_path, curv_method="spline", algorithm=algorithm,
+        centerline=ica_centerline, base_path=base_path, approximation_method="spline", algorithm=algorithm,
         resampling_step=0.1, smooth_line=False, nknots=8, iterations=100)
 
     if algorithm == "bogunovic":
-        landmark_input.update(smoothing_factor=1.0)
+        landmark_input.update(smoothing_factor=1.0, coronal_axis='z')
         landmarks = landmarking_bogunovic(**landmark_input)
         assert len(landmarks) == 4
 

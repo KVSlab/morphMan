@@ -862,3 +862,20 @@ def filter_centerlines(centerlines, diverging_centerline_end):
     filtered_centerlines = vtk_merge_polydata(remaining_centerlines)
 
     return filtered_centerlines
+
+
+def reverse_centerline(centerline_to_reverse):
+    """
+    Reverse the input centerline.
+
+    Args:
+        centerline_to_reverse (vtkPolyData): Centerline to be reversed
+
+    Returns:
+        centerline (vtkPolyData): Reversed centerline
+    """
+    from vtk.numpy_interface import dataset_adapter as dsa
+    centerline = dsa.WrapDataObject(centerline_to_reverse)
+    centerline.Points = centerline.Points[::-1]
+
+    return centerline.VTKObject

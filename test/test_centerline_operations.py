@@ -161,3 +161,20 @@ def test_get_end_point(surface_paths):
     tol = 1E-16
 
     assert diff < tol
+
+
+def test_reverse_centerline(surface_paths):
+    input_filepath = surface_paths[0]
+    base_path = get_path_names(input_filepath)
+    centerline = extract_single_line(read_polydata(base_path + "_centerline.vtp"), 0)
+
+    point_start = centerline.GetPoint(0)
+    point_end = centerline.GetPoint(centerline.GetNumberOfPoints() - 1)
+
+    reversed_centerline = reverse_centerline(centerline)
+
+    point_start_r = reversed_centerline.GetPoint(0)
+    point_end_r = reversed_centerline.GetPoint(reversed_centerline.GetNumberOfPoints() - 1)
+
+    assert point_start == point_end_r
+    assert point_end == point_start_r
