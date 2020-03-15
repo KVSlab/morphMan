@@ -43,7 +43,11 @@ Documentation
 -------------
 For an introduction to morphMan, and tutorials, please refer to the [documentation](https://morphman.readthedocs.io/en/latest/).
 
-If you wish to use morphMan for journal publications, please cite the journal article from JOSS: 
+If you use wish to use morphMan for journal publications, please cite the following the following journal article for the methods:
+
+Bergersen, Aslak W., Henrik A. Kjeldsberg, and Kristian Valen‐Sendstad. "A Framework for Automated and Objective Modification of Tubular Structures: Application to the Internal Carotid Artery." International Journal for Numerical Methods in Biomedical Engineering (2020): e3330.
+
+And the journal article from JOSS for the software: 
 
 Kjeldsberg et al., (2019). morphMan: Automated manipulation of vascular geometries. Journal of Open Source Software, 4(35), 1065, https://doi.org/10.21105/joss.01065
 
