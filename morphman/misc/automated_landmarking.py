@@ -50,18 +50,6 @@ def automated_landmarking(input_filepath, approximation_method, resampling_step,
                                nknots, smoothing_factor_curv, smoothing_factor_torsion, iterations)
 
 
-def get_centerline_coordinates(line, length):
-    x = np.zeros(length.shape[0])
-    y = np.zeros(length.shape[0])
-    z = np.zeros(length.shape[0])
-    for i in range(z.shape[0]):
-        x[i] = line.GetPoints().GetPoint(i)[0]
-        y[i] = line.GetPoints().GetPoint(i)[1]
-        z[i] = line.GetPoints().GetPoint(i)[2]
-
-    return {"x": x, "y": y, "z": z}
-
-
 def landmarking_bogunovic(centerline, base_path, approximation_method, algorithm, resampling_step, smooth_line, nknots,
                           smoothing_factor, iterations, coronal_axis):
     """
@@ -376,6 +364,18 @@ def landmarking_piccinelli(centerline, base_path, approximation_method, algorith
         create_particles(base_path, algorithm, approximation_method)
 
     return landmarks
+
+
+def get_centerline_coordinates(line, length):
+    x = np.zeros(length.shape[0])
+    y = np.zeros(length.shape[0])
+    z = np.zeros(length.shape[0])
+    for i in range(z.shape[0]):
+        x[i] = line.GetPoints().GetPoint(i)[0]
+        y[i] = line.GetPoints().GetPoint(i)[1]
+        z[i] = line.GetPoints().GetPoint(i)[2]
+
+    return {"x": x, "y": y, "z": z}
 
 
 def orient_centerline(ica_centerline):
