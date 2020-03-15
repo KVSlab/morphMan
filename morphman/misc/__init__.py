@@ -6,4 +6,4 @@ from .estimate_alpha_and_beta import estimate_alpha_and_beta, compute_quantities
                                      alpha_beta_intersection
 from .automated_landmarking import automated_landmarking, landmarking_bogunovic, \
                                    landmarking_piccinelli, map_landmarks, \
-                                   spline_and_geometry, create_particles
+                                   spline_centerline_and_compute_geometric_features, create_particles

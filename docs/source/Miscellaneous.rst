@@ -25,7 +25,7 @@ options for your application.
 
 The script ``automated_landmarking.py`` has three methods for computing
 the discrete derivatives of the centerline curve, set with
-``--curv-method``.
+``--approximation-method``.
 
  1. B-Splines (``spine``)
  2. Discrete derivatives (``disc``)
@@ -35,9 +35,9 @@ To perform landmarking, we will be using the model with `ID C0001 <http://ecm2.m
 from the Aneurisk database. For the commands below we assume that there is a file `./C0001/surface/model.vtp`, relative to where you execute the command.
 To landmark the surface model, run the following command::
 
-    python automated_landmarking.py --ifile C0001/surface/model.vtp --algorithm bogunovic --curv-method spline --nknots 8
+    python automated_landmarking.py --ifile C0001/surface/model.vtp --algorithm bogunovic --approximation-method spline --nknots 8
 
-The command will output a file ``C0001/surface/landmark_[ALGORITHM]_[CURVMETHOD].particles``
+The command will output a file ``C0001/surface/landmark_[ALGORITHM]_[APPROXIMATION_METHOD].particles``
 which contains four points defining the interfaces between the segments of the vessel.
 
 .. figure:: landmarking.png

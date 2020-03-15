@@ -13,16 +13,17 @@ from scipy.signal import argrelextrema
 
 # Local import
 from morphman.common import *
+from scipy.ndimage.filters import gaussian_filter
 
 
-def automated_landmarking(input_filepath, curv_method, resampling_step, algorithm, nknots, smooth_line,
-                          smoothing_factor_curv, smoothing_factor_torsion, iterations):
+def automated_landmarking(input_filepath, approximation_method, resampling_step, algorithm, nknots, smooth_line,
+                          smoothing_factor_curv, smoothing_factor_torsion, iterations, coronal_axis):
     """
     Compute carotid siphon and perform landmarking.
 
     Args:
         input_filepath (str): Location of case to landmark.
-        curv_method (str): Method used for computing curvature.
+        approximation_method (str): Method used for computing curvature and torsion.
         resampling_step (float): Resampling step. Is None if no resampling.
         algorithm (str): Name of landmarking algorithm.
         nknots (int): Number of knots for B-splines.
@@ -30,61 +31,39 @@ def automated_landmarking(input_filepath, curv_method, resampling_step, algorith
         smoothing_factor_curv (float): Smoothing factor used in VMTK for curvature
         smoothing_factor_torsion (float): Smoothing factor used in VMTK for torsion
         iterations (int): Number of smoothing iterations.
+        coronal_axis (str) : Axis determining coronal coordinate
     """
     base_path = get_path_names(input_filepath)
 
     # Extract carotid siphon
     ica_centerline = extract_ica_centerline(base_path, input_filepath, resampling_step)
 
+    # Check axial coordinate of centerline, reverse if needed
+    ica_centerline = orient_centerline(ica_centerline)
+
     # Landmark
     if algorithm == "bogunovic":
-        landmarking_bogunovic(ica_centerline, base_path, curv_method, algorithm, resampling_step, smooth_line,
-                              nknots, smoothing_factor_curv, iterations)
+        landmarking_bogunovic(ica_centerline, base_path, approximation_method, algorithm, resampling_step, smooth_line,
+                              nknots, smoothing_factor_curv, iterations, coronal_axis)
     elif algorithm == "piccinelli":
-        landmarking_piccinelli(ica_centerline, base_path, curv_method, algorithm, resampling_step, smooth_line,
+        landmarking_piccinelli(ica_centerline, base_path, approximation_method, algorithm, resampling_step, smooth_line,
                                nknots, smoothing_factor_curv, smoothing_factor_torsion, iterations)
 
 
-def map_landmarks(landmarks, centerline, algorithm):
-    """
-    Takes new landmarks and original centerline,
-    mapping each landmark interface to the original centerline.
-    Filters away duplicate landmarks
+def get_centerline_coordinates(line, length):
+    x = np.zeros(length.shape[0])
+    y = np.zeros(length.shape[0])
+    z = np.zeros(length.shape[0])
+    for i in range(z.shape[0]):
+        x[i] = line.GetPoints().GetPoint(i)[0]
+        y[i] = line.GetPoints().GetPoint(i)[1]
+        z[i] = line.GetPoints().GetPoint(i)[2]
 
-    Args:
-        landmarks (dict): Contains landmarks.
-        centerline (vtkPolyData): Original centerline.
-        algorithm (str): Landmarking algorith, bogunovic or piccinelli
-
-    Returns:
-        mapped_landmarks (dict): Contains landmarks mapped to centerline.
-    """
-    mapped_landmarks = {}
-    landmark_ids = []
-    locator = get_vtk_point_locator(centerline)
-    k = 1
-    for key in landmarks:
-        landmark = landmarks[key]
-        landmark_id = locator.FindClosestPoint(landmark)
-
-        if algorithm == "piccinelli":
-            if landmark_id in landmark_ids:
-                continue  # Skip for duplicate landmarking point
-            else:
-                landmark_ids.append(landmark_id)
-                landmark_mapped = centerline.GetPoint(landmark_id)
-                mapped_landmarks["bend%s" % k] = landmark_mapped
-                k += 1
-        if algorithm == "bogunovic":
-            landmark_mapped = centerline.GetPoint(landmark_id)
-            landmarks[key] = landmark_mapped
-            mapped_landmarks = landmarks
-
-    return mapped_landmarks
+    return {"x": x, "y": y, "z": z}
 
 
-def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
-                          resampling_step, smooth_line, nknots, smoothing_factor, iterations):
+def landmarking_bogunovic(centerline, base_path, approximation_method, algorithm, resampling_step, smooth_line, nknots,
+                          smoothing_factor, iterations, coronal_axis):
     """
     Perform landmarking of an input centerline to
     identify different segments along the vessel.
@@ -95,13 +74,14 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
     Args:
         centerline (vtkPolyData): Centerline data points.
         base_path (str): Location of case to landmark.
-        curv_method (str): Method used for computing curvature.
+        approximation_method (str): Method used for computing curvature.
         algorithm (str): Name of landmarking algorithm.
         resampling_step (float): Resampling step. Is None if no resampling.
         smooth_line (bool): Smooths centerline with VMTK if True.
         nknots (int): Number of knots for B-splines.
         smoothing_factor (float): Smoothing factor used in VMTK
         iterations (int): Number of smoothing iterations.
+        coronal_axis (str) : Axis determining coronal coordinate
 
     Returns:
         landmarks (dict): Landmarking interfaces as points.
@@ -110,13 +90,13 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
     if resampling_step is not None:
         centerline = vmtk_resample_centerline(centerline, length=resampling_step)
 
-    if curv_method == "vmtk":
+    if approximation_method == "vmtk":
         line = vmtk_compute_centerline_attributes(centerline)
         line = vmtk_compute_geometric_features(line, smooth_line, factor=smoothing_factor, iterations=iterations)
         curvature = get_point_data_array("Curvature", line)
         curvature = gaussian_filter(curvature, 2)
 
-    elif curv_method == "disc":
+    elif approximation_method == "disc":
         neigh = 20
         line = vmtk_compute_centerline_attributes(centerline)
         line = vmtk_compute_geometric_features(line, smooth_line, factor=smoothing_factor, iterations=iterations)
@@ -126,11 +106,12 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
             curvature.append([c])
         curvature = np.array(curvature)
 
-    elif curv_method == "spline":
-        line, max_point_ids, min_point_ids = spline_and_geometry(centerline, smooth_line, nknots)
+    elif approximation_method == "spline":
+        line, max_point_ids, min_point_ids = spline_centerline_and_compute_geometric_features(centerline, smooth_line,
+                                                                                              nknots)
         curvature = get_point_data_array("Curvature", line)
 
-    if curv_method != "spline":
+    if approximation_method != "spline":
         max_point_ids = list(argrelextrema(curvature, np.greater)[0])
         min_point_ids = list(argrelextrema(curvature, np.less)[0])
         get_k1k2_basis(curvature, line)
@@ -160,31 +141,16 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
         theta[i] = math.acos(np.dot(a, b))
         theta[i] = theta[i] * 180 / math.pi
 
-    x = np.zeros(length.shape[0])
-    y = np.zeros(length.shape[0])
-    z = np.zeros(length.shape[0])
-    for i in range(z.shape[0]):
-        x[i] = line.GetPoints().GetPoint(i)[0]
-        y[i] = line.GetPoints().GetPoint(i)[1]
-        z[i] = line.GetPoints().GetPoint(i)[2]
-
     # Tolerance parameters from Bogunovic et al. (2012)
     tol_ant_post = 60
     tol_sup_ant = 45
     tol_post_inf = 45
     tol_inf_end = 110
 
-    # Find max coronal coordinate (within anterior bend)
-    value_index = z[argrelextrema(z, np.less_equal)[0]].min()
-    max_coronal_bend_id = np.array(z.tolist().index(value_index))
-    if abs(length[max_coronal_bend_id] - length[-1]) > 30:
-        print("-- Sanity check failed, checking for maximums")
-
-        value_index = z[argrelextrema(z, np.greater_equal)[0]].max()
-        max_coronal_bend_id = np.array(z.tolist().index(value_index))
-        if abs(length[max_coronal_bend_id] - length[-1]) > 30:
-            print("-- Sanity check failed, no anterior bend in model")
-            return None
+    # Find coronal coordinate and maximum (within anterior bend)
+    coordinates = get_centerline_coordinates(line, length)
+    coronal_coordinate = coordinates[coronal_axis]
+    max_coronal_coordinate_id = get_maximum_coronal_coordinate(coronal_coordinate, length)
 
     def find_interface(start, direction, tol, part):
         stop = direction if direction == -1 else theta.shape[0]
@@ -225,7 +191,7 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
     interfaces = {}
     min_point_ids = np.array(min_point_ids)
 
-    index = np.array((max_coronal_bend_id > max_point_ids).nonzero()[0]).max()
+    index = np.array((max_coronal_coordinate_id > max_point_ids).nonzero()[0]).max()
     start = find_interface(index, -1, tol_ant_post, "ant_post")
     if start is None:
         return None
@@ -249,12 +215,26 @@ def landmarking_bogunovic(centerline, base_path, curv_method, algorithm,
     print("-- Case was successfully landmarked.")
     if landmarks is not None:
         write_parameters(landmarks, base_path)
-        create_particles(base_path, algorithm, curv_method)
+        create_particles(base_path, algorithm, approximation_method)
 
     return landmarks
 
 
-def landmarking_piccinelli(centerline, base_path, curv_method, algorithm, resampling_step,
+def get_maximum_coronal_coordinate(coronal_coordinate, length):
+    value_index = coronal_coordinate[argrelextrema(coronal_coordinate, np.less_equal)[0]].min()
+    max_coronal_coordinate_id = np.array(coronal_coordinate.tolist().index(value_index))
+    if abs(length[max_coronal_coordinate_id] - length[-1]) > 30:
+        print("-- Sanity check failed, checking for maximums")
+
+        value_index = coronal_coordinate[argrelextrema(coronal_coordinate, np.greater_equal)[0]].max()
+        max_coronal_coordinate_id = np.array(coronal_coordinate.tolist().index(value_index))
+        if abs(length[max_coronal_coordinate_id] - length[-1]) > 30:
+            print("-- Sanity check failed, no anterior bend in model. Exiting.")
+            sys.exit(1)
+    return max_coronal_coordinate_id
+
+
+def landmarking_piccinelli(centerline, base_path, approximation_method, algorithm, resampling_step,
                            smooth_line, nknots, smoothing_factor_curv, smoothing_factor_torsion,
                            iterations):
     """
@@ -271,7 +251,7 @@ def landmarking_piccinelli(centerline, base_path, curv_method, algorithm, resamp
     Args:
         centerline (vtkPolyData): Centerline data points.
         base_path (str): Location of case to landmark.
-        curv_method (str): Method used for computing curvature.
+        approximation_method (str): Method used for computing curvature.
         algorithm (str): Name of landmarking algorithm.
         resampling_step (float): Resampling step. Is None if no resampling.
         smooth_line (bool): Smooths centerline with VMTK if True.
@@ -287,8 +267,8 @@ def landmarking_piccinelli(centerline, base_path, curv_method, algorithm, resamp
     if resampling_step is not None:
         centerline = vmtk_resample_centerline(centerline, resampling_step)
 
-    if curv_method == "spline":
-        line, max_point_ids, _ = spline_and_geometry(centerline, smooth_line, nknots)
+    if approximation_method == "spline":
+        line, max_point_ids, _ = spline_centerline_and_compute_geometric_features(centerline, smooth_line, nknots)
 
         # Get curvature and torsion, find peaks
         curvature = get_point_data_array("Curvature", line)
@@ -296,7 +276,7 @@ def landmarking_piccinelli(centerline, base_path, curv_method, algorithm, resamp
         torsion_smooth = gaussian_filter(torsion, 10)
         max_point_tor_ids = list(argrelextrema(abs(torsion_smooth), np.greater)[0])
 
-    elif curv_method == "vmtk":
+    elif approximation_method == "vmtk":
         line = centerline
         line_curv = vmtk_compute_geometric_features(centerline, True, outputsmoothed=False,
                                                     factor=smoothing_factor_curv, iterations=iterations)
@@ -393,12 +373,40 @@ def landmarking_piccinelli(centerline, base_path, curv_method, algorithm, resamp
         pass
     if landmarks is not None:
         write_parameters(landmarks, base_path)
-        create_particles(base_path, algorithm, curv_method)
+        create_particles(base_path, algorithm, approximation_method)
 
     return landmarks
 
 
-def spline_and_geometry(line, smooth, nknots):
+def orient_centerline(ica_centerline):
+    """
+    Check the orientation of the axial coordinate and
+    reverse centerline if path of centerline is in distal direction.
+
+    Args:
+        ica_centerline (vtkPolyData): Centerline to check
+
+    Returns:
+        ica_centerline (vtkPolyData): Centerline, possibly reversed
+    """
+    length = get_curvilinear_coordinate(ica_centerline)
+    coordinates = get_centerline_coordinates(ica_centerline, length)
+
+    # Iterate through coordinates and find axial coordinate
+    for _, coordinate in coordinates.items():
+        coordinate = gaussian_filter(coordinate, 100)
+        min_c = min(coordinate)
+        max_c = max(coordinate)
+        id0 = coordinate.tolist().index(min_c)
+        id1 = coordinate.tolist().index(max_c)
+        if id0 == 0 and id1 == (len(coordinate) - 1):
+            return ica_centerline
+
+        if id1 == 0 and id0 == (len(coordinate) - 1):
+            return reverse_centerline(ica_centerline)
+
+
+def spline_centerline_and_compute_geometric_features(line, smooth, nknots):
     """
     Compute attributes and geometric parameters of input
     centerline, using B-splines (SciPy).
@@ -499,6 +507,44 @@ def spline_and_geometry(line, smooth, nknots):
     return line, max_point_ids, min_point_ids
 
 
+def map_landmarks(landmarks, centerline, algorithm):
+    """
+    Takes new landmarks and original centerline,
+    mapping each landmark interface to the original centerline.
+    Filters away duplicate landmarks
+
+    Args:
+        landmarks (dict): Contains landmarks.
+        centerline (vtkPolyData): Original centerline.
+        algorithm (str): Landmarking algorith, bogunovic or piccinelli
+
+    Returns:
+        mapped_landmarks (dict): Contains landmarks mapped to centerline.
+    """
+    mapped_landmarks = {}
+    landmark_ids = []
+    locator = get_vtk_point_locator(centerline)
+    k = 1
+    for key in landmarks:
+        landmark = landmarks[key]
+        landmark_id = locator.FindClosestPoint(landmark)
+
+        if algorithm == "piccinelli":
+            if landmark_id in landmark_ids:
+                continue  # Skip for duplicate landmarking point
+            else:
+                landmark_ids.append(landmark_id)
+                landmark_mapped = centerline.GetPoint(landmark_id)
+                mapped_landmarks["bend%s" % k] = landmark_mapped
+                k += 1
+        if algorithm == "bogunovic":
+            landmark_mapped = centerline.GetPoint(landmark_id)
+            landmarks[key] = landmark_mapped
+            mapped_landmarks = landmarks
+
+    return mapped_landmarks
+
+
 def create_particles(base_path, algorithm, method):
     """
     Create a file with points where bends are located and
@@ -550,14 +596,16 @@ def read_command_line():
                           help="Path to the surface model")
 
     # Optional arguments
-    parser.add_argument('-m', '--curv-method', type=str, default="spline",
-                        help="Choose which method used for computing curvature: spline (default) " +
-                             "| vmtk | disc |",
+    parser.add_argument('-m', '--approximation-method', type=str, default="vmtk",
+                        help="Choose which method used for computing curvature and torsion. Default is 'vmtk'.",
                         choices=['spline', 'vmtk', 'disc'])
     parser.add_argument('-a', '--algorithm', type=str, default="bogunovic",
                         help="Choose which landmarking algorithm to use: " +
                              "'bogunovic' or 'piccinelli'. Default is 'bogunovic'.",
                         choices=['bogunovic', 'piccinelli'])
+    parser.add_argument('-ca', '--coronal-axis', type=str, default="z",
+                        help="Axis describing coronal coordinate. Default is 'z'.",
+                        choices=['x', 'y', 'z'])
     parser.add_argument('-k', '--nknots', type=int, default=11,
                         help="Number of knots used in B-splines.")
     parser.add_argument('-sl', '--smooth-line', type=str2bool, default=False,
@@ -573,9 +621,9 @@ def read_command_line():
                         help="Resampling step in centerlines.")
     args = parser.parse_args()
 
-    return dict(input_filepath=args.ifile, curv_method=args.curv_method, resampling_step=args.resampling_step,
-                algorithm=args.algorithm, nknots=args.nknots, smooth_line=args.smooth_line,
-                smoothing_factor_curv=args.smoothing_factor_curvature,
+    return dict(input_filepath=args.ifile, approximation_method=args.approximation_method,
+                coronal_axis=args.coronal_axis, resampling_step=args.resampling_step, algorithm=args.algorithm,
+                nknots=args.nknots, smooth_line=args.smooth_line, smoothing_factor_curv=args.smoothing_factor_curvature,
                 smoothing_factor_torsion=args.smoothing_factor_torsion, iterations=args.iterations)
 
 

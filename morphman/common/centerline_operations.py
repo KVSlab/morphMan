@@ -7,6 +7,7 @@
 
 import functools
 
+from IPython import embed
 from scipy.interpolate import splrep, splev
 from scipy.signal import resample
 
@@ -874,20 +875,8 @@ def reverse_centerline(centerline_to_reverse):
     Returns:
         centerline (vtkPolyData): Reversed centerline
     """
-    number_of_points = centerline_to_reverse.GetNumberOfPoints()
+    from vtk.numpy_interface import dataset_adapter as dsa
+    centerline = dsa.WrapDataObject(centerline_to_reverse)
+    centerline.Points = centerline.Points[::-1]
 
-    centerline = vtk.vtkPolyData()
-    centerline_points = vtk.vtkPoints()
-    centerline_cell_array = vtk.vtkCellArray()
-    centerline_cell_array.InsertNextCell(number_of_points)
-    count = 0
-    for p in range(number_of_points - 1, -1, -1):
-        point = np.asarray(centerline_to_reverse.GetPoint(p))
-        centerline_points.InsertNextPoint(point)
-        centerline_cell_array.InsertCellPoint(count)
-        count += 1
-
-    centerline.SetPoints(centerline_points)
-    centerline.SetLines(centerline_cell_array)
-
-    return centerline
+    return centerline.VTKObject
