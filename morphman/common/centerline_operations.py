@@ -7,7 +7,6 @@
 
 import functools
 
-from IPython import embed
 from scipy.interpolate import splrep, splev
 from scipy.signal import resample
 
