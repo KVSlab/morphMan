@@ -100,7 +100,7 @@ To recreate the above output, execute the following from the commandline::
 
     morphman-area --ifile C0002/surface/model.vtp --ofile C0002/surface/stenosis.vtp --method stenosis --size 4 --percentage 50 --region-of-interest commandline --region-points 28.7 18.4 39.5 --poly-ball-size 250 250 250
 
-Alternativley, you can introduce an asymmetric stenosis by setting the ``--angle-asymmetric`` flag
+Alternatively, you can introduce an asymmetric stenosis by setting the ``--angle-asymmetric`` flag
 to a desired angle, :math:`\theta \in [0, 360 ]`. The selected value of :math:`\theta` determines where the surface
 is unaffected, relative to the region point.
 
@@ -141,7 +141,7 @@ To perform a deflation, run the following command::
 
     morphman-area --ifile C0002/surface/model.vtp --ofile C0002/surface/area_deflated.vtp --method area --percentage -20 --region-of-interest first_line --poly-ball-size 250 250 250
 
-Simlarly, we can perform inflation by changing the sign of the ``--percentage`` argument.
+Similarly, we can perform inflation by changing the sign of the ``--percentage`` argument.
 To reproduce the inflated model shown in Figure 5, you can run the command::
 
     morphman-area --ifile C0002/surface/model.vtp --ofile C0002/surface/area_inflated.vtp --method area --percentage 20 --region-of-interest first_line --poly-ball-size 250 250 250

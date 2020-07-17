@@ -36,7 +36,8 @@ setuptools.setup(
     ],
     packages=["morphman",
               "morphman.common",
-              "morphman.misc"],
+              "morphman.misc",
+              "morphman.automated_landmarking"],
     package_dir={"morphman": "morphman"},
     entry_points={'console_scripts':
                       ['morphman-area=morphman.manipulate_area:main_area',

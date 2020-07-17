@@ -20,7 +20,7 @@ run the demos.
 As shown in Figure 1, we have defined two directions to move a bend in:
 :math:`\alpha` and :math:`\beta`. The input parameters ``--alpha`` and
 ``--beta`` control the distance to move the geometry in each direction,
-respectivly. For a detailed description on how we have defined of the
+respectively. For a detailed description on how we have defined of the
 vectors :math:`\alpha` and :math:`\beta`, see [1]_.
 
 In this tutorial, we are using the model with
