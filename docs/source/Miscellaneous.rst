@@ -15,6 +15,8 @@ we have implemented two previously published methods for landmarking: Piccinelli
 (2011) [1]_, and Bogunović et al. (2012) [2]_.
 The algorithms can also be applied to arbitrary tubular
 structures for automated subdivision into bends.
+A third algorithm (Kjeldsberg) has been develop to subdivide the ICA according
+to the Bouthillier classification [4]_.
 
 Although the two algorithms are well described in both articles,
 there is lacking information on the input parameters used to
@@ -24,10 +26,11 @@ a thorough comparison between the landmarking algorithms, input parameters,
 and centerline smoothing methods which can help you choose the correct
 options for your application.
 
-The script ``automated_landmarking.py`` includes the two following options for
+The script ``automated_landmarking.py`` includes the three following options for
 automated landmarking, selected by the ``--algorithm`` flag.
  1. Algorithm by Piccinelli et al. (``piccinelli``)
- 2. Algorithm by Bogunović (``bogunovic``)
+ 2. Algorithm by Bogunović et al. (``bogunovic``)
+ 3. Algorithm by Kjeldsberg et al. (``kjeldsberg``)
 
 Furthermore, the script includes three methods for computing
 the geometric properties (curvature and torsion) of the centerline, set with
@@ -101,3 +104,4 @@ manipulating centerlines, surface models and Voronoi diagrams, collected in thei
 .. [1] Piccinelli, M., Bacigaluppi, S., Boccardi, E., Ene-Iordache, B., Remuzzi, A., Veneziani, A. and Antiga, L., 2011. Geometry of the internal carotid artery and recurrent patterns in location, orientation, and rupture status of lateral aneurysms: an image-based computational study. Neurosurgery, 68(5), pp.1270-1285.
 .. [2] Bogunović, H., Pozo, J.M., Cárdenes, R., Villa-Uriol, M.C., Blanc, R., Piotin, M. and Frangi, A.F., 2012. Automated landmarking and geometric characterization of the carotid siphon. Medical image analysis, 16(4), pp.889-903.
 .. [3] Kjeldsberg, Henrik Aasen. Investigating the Interaction Between Morphology of the Anterior Bend and Aneurysm Initiation. MS thesis. 2018.
+.. [4] Bouthillier, A., Van Loveren, H.R. and Keller, J.T., 1996. Segments of the internal carotid artery: a new classification. Neurosurgery, 38(3), pp.425-433.
