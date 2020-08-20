@@ -11,7 +11,7 @@ import os
 from morphman.automated_landmarking.automated_landmarking_tools import *
 
 
-def landmarking_bogunovic(centerline, base_path, approximation_method, algorithm, resampling_step, smooth_line, nknots,
+def landmarking_bogunovic(centerline, base_path, approximation_method, resampling_step, smooth_line, nknots,
                           smoothing_factor, iterations, coronal_axis):
     """
     Perform landmarking of an input centerline to
@@ -24,7 +24,6 @@ def landmarking_bogunovic(centerline, base_path, approximation_method, algorithm
         centerline (vtkPolyData): Centerline data points.
         base_path (str): Location of case to landmark.
         approximation_method (str): Method used for computing curvature.
-        algorithm (str): Name of landmarking algorithm.
         resampling_step (float): Resampling step. Is None if no resampling.
         smooth_line (bool): Smooths centerline with VMTK if True.
         nknots (int): Number of knots for B-splines.
@@ -158,7 +157,7 @@ def landmarking_bogunovic(centerline, base_path, approximation_method, algorithm
         landmarks[k] = line.GetPoint(int(v))
 
     # Map landmarks to initial centerline
-    landmarks = map_landmarks(landmarks, centerline, algorithm)
+    landmarks = map_landmarks(landmarks, centerline, "bogunovic")
 
     # Save landmarks
     print("-- Case was successfully landmarked.")
@@ -170,6 +169,6 @@ def landmarking_bogunovic(centerline, base_path, approximation_method, algorithm
 
     if landmarks is not None:
         write_parameters(landmarks, base_path)
-        create_particles(base_path, algorithm, approximation_method)
+        create_particles(base_path, "bogunovic", approximation_method)
 
     return landmarks

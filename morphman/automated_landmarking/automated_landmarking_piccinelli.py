@@ -11,9 +11,8 @@ import os
 from morphman.automated_landmarking.automated_landmarking_tools import *
 
 
-def landmarking_piccinelli(centerline, base_path, approximation_method, algorithm, resampling_step,
-                           smooth_line, nknots, smoothing_factor_curv, smoothing_factor_torsion,
-                           iterations):
+def landmarking_piccinelli(centerline, base_path, approximation_method, resampling_step, smooth_line, nknots,
+                           smoothing_factor_curv, smoothing_factor_torsion, iterations):
     """
     Perform landmarking of an input centerline to
     identify different segments along the vessel.
@@ -29,7 +28,6 @@ def landmarking_piccinelli(centerline, base_path, approximation_method, algorith
         centerline (vtkPolyData): Centerline data points.
         base_path (str): Location of case to landmark.
         approximation_method (str): Method used for computing curvature.
-        algorithm (str): Name of landmarking algorithm.
         resampling_step (float): Resampling step. Is None if no resampling.
         smooth_line (bool): Smooths centerline with VMTK if True.
         nknots (int): Number of knots for B-splines.
@@ -138,7 +136,7 @@ def landmarking_piccinelli(centerline, base_path, approximation_method, algorith
         landmarks[k] = line.GetPoints().GetPoint(int(v))
 
     # Map landmarks to initial centerline
-    landmarks = map_landmarks(landmarks, centerline, algorithm)
+    landmarks = map_landmarks(landmarks, centerline, "piccinelli")
 
     # Save landmarks
     print("-- Case was successfully landmarked.")
@@ -149,6 +147,6 @@ def landmarking_piccinelli(centerline, base_path, approximation_method, algorith
         pass
     if landmarks is not None:
         write_parameters(landmarks, base_path)
-        create_particles(base_path, algorithm, approximation_method)
+        create_particles(base_path, "piccinelli", approximation_method)
 
     return landmarks

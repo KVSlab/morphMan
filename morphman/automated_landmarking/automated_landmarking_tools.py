@@ -193,13 +193,14 @@ def map_landmarks(landmarks, centerline, algorithm):
         landmark = landmarks[key]
         landmark_id = locator.FindClosestPoint(landmark)
 
-        if algorithm in "piccinelli":
+        if algorithm in ["piccinelli", "kjeldsberg"]:
+            key = "C%s" if algorithm == "kjeldsberg" else "bend%s"
             if landmark_id in landmark_ids:
                 continue  # Skip for duplicate landmarking point
             else:
                 landmark_ids.append(landmark_id)
                 landmark_mapped = centerline.GetPoint(landmark_id)
-                mapped_landmarks["bend%s" % k] = landmark_mapped
+                mapped_landmarks[key % k] = landmark_mapped
                 k += 1
 
         if algorithm == "bogunovic":
@@ -242,4 +243,107 @@ def create_particles(base_path, algorithm, method):
                 point = "%s %s %s" % (p[0], p[1], p[2])
                 output_all.write(point + "\n")
 
+        elif algorithm == "kjeldsberg":
+            if key[0] == "C":
+                p = landmarked_points[key]
+                point = "%s %s %s" % (p[0], p[1], p[2])
+                output_all.write(point + "\n")
+
     output_all.close()
+
+
+def mark_diverging_arteries(centerline_complete, ica_centerline):
+    print("\nPlease select the diverging arteries in the render window.")
+
+    first = True
+    while True:
+        if not first:
+            print("Please provide only one or no points, try again")
+
+        # Select point on surface
+        seed_selector = vmtkPickPointSeedSelector()
+        seed_selector.NoPointSelection = True
+        seed_selector.SetSurface(centerline_complete)
+        seed_selector.text = "Press space to select a point along the centerline, corresponding " + \
+                             "to the Ophthalmic Artery OR press 'q' to skip. Press 'u' to undo.\n"
+
+        seed_selector.Execute()
+        ophthalmic_id = seed_selector.GetTargetSeedIds()
+        first = False
+        if ophthalmic_id.GetNumberOfIds() in [0, 1]:
+            break
+
+    first = True
+    while True:
+        if not first:
+            print("Please provide only one or no points, try again")
+
+        # Select point on surface
+        seed_selector = vmtkPickPointSeedSelector()
+        seed_selector.NoPointSelection = True
+        seed_selector.SetSurface(centerline_complete)
+        seed_selector.text = "Press space to select a point along the centerline, corresponding " + \
+                             "to the Posterior Communicating Artery OR press 'q' to skip. Press 'u' to undo.\n"
+
+        seed_selector.Execute()
+        p_com_id = seed_selector.GetTargetSeedIds()
+        first = False
+        if p_com_id.GetNumberOfIds() in [0, 1]:
+            break
+
+    tol = 4 * get_centerline_tolerance(ica_centerline)
+
+    if ophthalmic_id.GetNumberOfIds() == 1:
+        ophthalmic = centerline_complete.GetPoint(ophthalmic_id.GetId(0))
+        ophthalmic_line = get_closest_line(ophthalmic, centerline_complete)
+        ophthalmic_div_id = get_diverging_point_id(ophthalmic_line, ica_centerline, tol)
+    else:
+        ophthalmic_div_id = None
+
+    if p_com_id.GetNumberOfIds() == 1:
+        p_com = centerline_complete.GetPoint(p_com_id.GetId(0))
+        p_com_line = get_closest_line(p_com, centerline_complete)
+        p_com_div_id = get_diverging_point_id(p_com_line, ica_centerline, tol)
+    else:
+        p_com_div_id = None
+
+    classify_with_diverging_arteries = True if ophthalmic_div_id or p_com_div_id is not None else False
+
+    return classify_with_diverging_arteries, ophthalmic_div_id, p_com_div_id
+
+
+def get_closest_line(reference_point, centerline_complete):
+    closest_line = None
+    dist = 1E9
+    for i in range(centerline_complete.GetNumberOfLines()):
+        tmp_line = extract_single_line(centerline_complete, i)
+        locator = get_vtk_point_locator(tmp_line)
+        point_id = locator.FindClosestPoint(reference_point)
+        point = tmp_line.GetPoint(point_id)
+
+        tmp_dist = la.norm(np.asarray(point) - np.asarray(reference_point))
+        if tmp_dist < dist:
+            dist = tmp_dist
+            closest_line = tmp_line
+
+    return closest_line
+
+
+def check_for_diverging_centerlines(centerline_complete, line):
+    classify_using_diverging_centerlines = False
+    region_points = [np.asarray(line.GetPoint(0)), np.asarray(line.GetPoint(line.GetNumberOfPoints() - 5))]
+    centerline_diverging = get_region_of_interest_and_diverging_centerlines(centerline_complete, region_points)
+
+    p_com_a_id = None
+    ophthalmic_id = None
+
+    if len(centerline_diverging[-1]) >= 2:
+        diverging_ids = sorted(centerline_diverging[-1])
+        ophthamlic = line.GetPoint(diverging_ids[0])
+        p_com_a = line.GetPoint(diverging_ids[1])
+        ica_locator = get_vtk_point_locator(line)
+        ophthalmic_id = ica_locator.FindClosestPoint(ophthamlic)
+        p_com_a_id = ica_locator.FindClosestPoint(p_com_a)
+        classify_using_diverging_centerlines = True
+
+    return classify_using_diverging_centerlines, ophthalmic_id, p_com_a_id
