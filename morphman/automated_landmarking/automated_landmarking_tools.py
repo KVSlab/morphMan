@@ -359,7 +359,7 @@ def visualize_landmarks(landmarks, centerline, algorithm):
         centerline (vtkPolyData): Centerline which has been landmarked
         algorithm (string): Name of landmarking algorithm
     """
-    vtk_points = vtk.vtkPoints()
+    vtkPoints = vtk.vtkPoints()
     polydatas = []
     for key, point in landmarks.items():
         sphere = vtk.vtkSphereSource()
@@ -367,12 +367,12 @@ def visualize_landmarks(landmarks, centerline, algorithm):
         sphere.SetCenter(point[0], point[1], point[2])
         sphere.Update()
         polydatas.append(sphere.GetOutput())
-        vtk_points.InsertNextPoint(point)
+        vtkPoints.InsertNextPoint(point)
 
     merged_polydata = vtk_merge_polydata(polydatas + [centerline])
 
-    names = vtk.vtkStringArray()
-    names.SetNumberOfValues(7)
+    vtkNameArray = vtk.vtkStringArray()
+    vtkNameArray.SetNumberOfValues(7)
 
     if algorithm == "piccinelli":
         start = len(landmarks) - 1
@@ -395,18 +395,18 @@ def visualize_landmarks(landmarks, centerline, algorithm):
     for i in range(start, stop, -1):
         if i == 0:
             if algorithm == "kjeldsberg":
-                names.SetValue(i, 'C1 (Start)')
+                vtkNameArray.SetValue(i, 'C1 (Start)')
             elif algorithm == "piccinelli":
-                names.SetValue(i, 'Bend 1 (Start)')
+                vtkNameArray.SetValue(i, 'Bend 1 (Start)')
             elif algorithm == "bogunovic":
-                names.SetValue(i, interfaces[0])
+                vtkNameArray.SetValue(i, interfaces[0])
         else:
-            names.SetValue(i, interfaces[i])
+            vtkNameArray.SetValue(i, interfaces[i])
 
     # Create the dataset with landmarking points
-    labelPolydata = vtk.vtkPolyData()
-    labelPolydata.SetPoints(vtk_points)
-    labelPolydata.GetPointData().AddArray(names)
+    labeledPolydata = vtk.vtkPolyData()
+    labeledPolydata.SetPoints(vtkPoints)
+    labeledPolydata.GetPointData().AddArray(vtkNameArray)
 
     surfaceMapper = vtk.vtkPolyDataMapper()
     surfaceMapper.SetInputData(merged_polydata)
@@ -416,7 +416,7 @@ def visualize_landmarks(landmarks, centerline, algorithm):
     surfaceActor.GetProperty().SetLineWidth(10)
 
     labelsMapper = vtk.vtkLabeledDataMapper()
-    labelsMapper.SetInputData(labelPolydata)
+    labelsMapper.SetInputData(labeledPolydata)
     labelsMapper.SetLabelModeToLabelFieldData()
     labelsMapper.GetLabelTextProperty().SetColor(1, 1, 1)
     labelsMapper.GetLabelTextProperty().SetFontSize(35)
