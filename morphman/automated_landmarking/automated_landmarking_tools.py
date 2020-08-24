@@ -7,6 +7,7 @@
 
 from scipy.ndimage.filters import gaussian_filter
 from scipy.signal import argrelextrema
+from vmtk import vmtkrenderer
 
 # Local import
 from morphman.common import *
@@ -211,7 +212,7 @@ def map_landmarks(landmarks, centerline, algorithm):
     return mapped_landmarks
 
 
-def create_particles(base_path, algorithm, method):
+def create_particles(base_path, algorithm, method, step=1):
     """
     Create a file with points where bends are located and
     remove points from manifest
@@ -223,7 +224,7 @@ def create_particles(base_path, algorithm, method):
     """
 
     info_filepath = base_path + "_info.json"
-    filename_all_landmarks = base_path + "_landmark_%s_%s.particles" % (algorithm, method)
+    filename_all_landmarks = base_path + "_landmark_%s_%s_step%s.particles" % (algorithm, method, step)
     print("Saving all landmarks to: %s" % filename_all_landmarks)
 
     output_all = open(filename_all_landmarks, "w")
@@ -347,3 +348,85 @@ def check_for_diverging_centerlines(centerline_complete, line):
         classify_using_diverging_centerlines = True
 
     return classify_using_diverging_centerlines, ophthalmic_id, p_com_a_id
+
+
+def visualize_landmarks(landmarks, centerline, algorithm):
+    """
+    Visualize the interfaces between the resulting landmarks (points)
+
+    Args:
+        landmarks (ndarray): Points defining landmarks / interfaces between segments
+        centerline (vtkPolyData): Centerline which has been landmarked
+        algorithm (string): Name of landmarking algorithm
+    """
+    vtk_points = vtk.vtkPoints()
+    polydatas = []
+    for key, point in landmarks.items():
+        sphere = vtk.vtkSphereSource()
+        sphere.SetRadius(1)
+        sphere.SetCenter(point[0], point[1], point[2])
+        sphere.Update()
+        polydatas.append(sphere.GetOutput())
+        vtk_points.InsertNextPoint(point)
+
+    merged_polydata = vtk_merge_polydata(polydatas + [centerline])
+
+    names = vtk.vtkStringArray()
+    names.SetNumberOfValues(7)
+
+    if algorithm == "piccinelli":
+        start = len(landmarks) - 1
+        stop = -1
+        interfaces = ["Bend %s-%s" % (i, i + 1) for i in range(len(landmarks))]
+    elif algorithm == "bogunovic":
+        start = 3
+        stop = -1
+        interfaces = [
+            "Anterior-Posterior",
+            "Posterior-Inferior",
+            "Inferior (Start)",
+            "Superior-Anterior",
+        ]
+    elif algorithm == "kjeldsberg":
+        start = 6
+        stop = 7 - len(landmarks) - 1
+        interfaces = ["C%s-C%s" % (i - 1, i) for i in range(1, len(landmarks) + 1)]
+
+    for i in range(start, stop, -1):
+        if i == 0:
+            if algorithm == "kjeldsberg":
+                names.SetValue(i, 'C1 (Start)')
+            elif algorithm == "piccinelli":
+                names.SetValue(i, 'Bend 1 (Start)')
+            elif algorithm == "bogunovic":
+                names.SetValue(i, interfaces[0])
+        else:
+            names.SetValue(i, interfaces[i])
+
+    # Create the dataset with landmarking points
+    labelPolydata = vtk.vtkPolyData()
+    labelPolydata.SetPoints(vtk_points)
+    labelPolydata.GetPointData().AddArray(names)
+
+    surfaceMapper = vtk.vtkPolyDataMapper()
+    surfaceMapper.SetInputData(merged_polydata)
+    surfaceMapper.ScalarVisibilityOff()
+    surfaceActor = vtk.vtkActor()
+    surfaceActor.SetMapper(surfaceMapper)
+    surfaceActor.GetProperty().SetLineWidth(10)
+
+    labelsMapper = vtk.vtkLabeledDataMapper()
+    labelsMapper.SetInputData(labelPolydata)
+    labelsMapper.SetLabelModeToLabelFieldData()
+    labelsMapper.GetLabelTextProperty().SetColor(1, 1, 1)
+    labelsMapper.GetLabelTextProperty().SetFontSize(35)
+    labelsMapper.GetLabelTextProperty().ItalicOff()
+
+    labelsActor = vtk.vtkActor2D()
+    labelsActor.SetMapper(labelsMapper)
+
+    vmtkRenderer = vmtkrenderer.vmtkRenderer()
+    vmtkRenderer.Initialize()
+    vmtkRenderer.Renderer.AddActor(surfaceActor)
+    vmtkRenderer.Renderer.AddActor(labelsActor)
+    vmtkRenderer.Render()
