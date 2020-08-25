@@ -59,7 +59,7 @@ def automated_landmarking(input_filepath, approximation_method, resampling_step,
                                            resampling_step, coronal_axis, mark_diverging_arteries)
 
     if visualize:
-        visualize_landmarks(landmarks, ica_centerline, algorithm)
+        visualize_landmarks(landmarks, ica_centerline, algorithm, input_filepath)
 
 
 def read_command_line():

@@ -350,26 +350,32 @@ def check_for_diverging_centerlines(centerline_complete, line):
     return classify_using_diverging_centerlines, ophthalmic_id, p_com_a_id
 
 
-def visualize_landmarks(landmarks, centerline, algorithm):
+def visualize_landmarks(landmarks, centerline, algorithm, surface_path):
     """
     Visualize the interfaces between the resulting landmarks (points)
 
     Args:
         landmarks (ndarray): Points defining landmarks / interfaces between segments
         centerline (vtkPolyData): Centerline which has been landmarked
-        algorithm (string): Name of landmarking algorithm
+        algorithm (str): Name of landmarking algorithm
+        surface_path (str): Location of surface model
     """
+
     vtkPoints = vtk.vtkPoints()
-    polydatas = []
+    landmarkSpheres = []
     for key, point in landmarks.items():
         sphere = vtk.vtkSphereSource()
         sphere.SetRadius(1)
         sphere.SetCenter(point[0], point[1], point[2])
         sphere.Update()
-        polydatas.append(sphere.GetOutput())
+        landmarkSpheres.append(sphere.GetOutput())
         vtkPoints.InsertNextPoint(point)
 
-    merged_polydata = vtk_merge_polydata(polydatas + [centerline])
+    landmarkData = vtk_merge_polydata(landmarkSpheres)
+
+    surface = None
+    if path.exists(surface_path):
+        surface = read_polydata(surface_path)
 
     vtkNameArray = vtk.vtkStringArray()
     vtkNameArray.SetNumberOfValues(7)
@@ -408,12 +414,17 @@ def visualize_landmarks(landmarks, centerline, algorithm):
     labeledPolydata.SetPoints(vtkPoints)
     labeledPolydata.GetPointData().AddArray(vtkNameArray)
 
-    surfaceMapper = vtk.vtkPolyDataMapper()
-    surfaceMapper.SetInputData(merged_polydata)
-    surfaceMapper.ScalarVisibilityOff()
-    surfaceActor = vtk.vtkActor()
-    surfaceActor.SetMapper(surfaceMapper)
-    surfaceActor.GetProperty().SetLineWidth(10)
+    centerlineMapper = vtk.vtkPolyDataMapper()
+    centerlineMapper.SetInputData(centerline)
+    centerlineActor = vtk.vtkActor()
+    centerlineActor.SetMapper(centerlineMapper)
+    centerlineActor.GetProperty().SetLineWidth(10)
+    centerlineActor.GetProperty().SetColor(1, 0, 0)
+
+    landmarkMapper = vtk.vtkPolyDataMapper()
+    landmarkMapper.SetInputData(landmarkData)
+    landmarkActor = vtk.vtkActor()
+    landmarkActor.SetMapper(landmarkMapper)
 
     labelsMapper = vtk.vtkLabeledDataMapper()
     labelsMapper.SetInputData(labeledPolydata)
@@ -427,6 +438,16 @@ def visualize_landmarks(landmarks, centerline, algorithm):
 
     vmtkRenderer = vmtkrenderer.vmtkRenderer()
     vmtkRenderer.Initialize()
-    vmtkRenderer.Renderer.AddActor(surfaceActor)
+    vmtkRenderer.Renderer.AddActor(centerlineActor)
     vmtkRenderer.Renderer.AddActor(labelsActor)
+    vmtkRenderer.Renderer.AddActor(landmarkActor)
+
+    if surface is not None:
+        surfaceMapper = vtk.vtkPolyDataMapper()
+        surfaceMapper.SetInputData(surface)
+        surfaceActor = vtk.vtkActor()
+        surfaceActor.SetMapper(surfaceMapper)
+        surfaceActor.GetProperty().SetOpacity(0.3)
+        vmtkRenderer.Renderer.AddActor(surfaceActor)
+
     vmtkRenderer.Render()
