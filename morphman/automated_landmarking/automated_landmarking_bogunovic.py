@@ -65,7 +65,7 @@ def landmarking_bogunovic(centerline, base_path, approximation_method, algorithm
         min_point_ids = list(argrelextrema(curvature, np.less)[0])
         get_k1k2_basis(curvature, line)
 
-    length = get_curvilinear_coordinate(line)
+    curvilinear_coordinates = get_curvilinear_coordinate(line)
     k1 = get_point_data_array("k1", line)
     k2 = get_point_data_array("k2", line)
 
@@ -78,6 +78,7 @@ def landmarking_bogunovic(centerline, base_path, approximation_method, algorithm
                 if j in max_point_ids:
                     max_point_ids.remove(j)
 
+    # Find local curvature max in the k1-k2 space, and compute angle between the points
     k1_points = k1[max_point_ids]
     k2_points = k2[max_point_ids]
     k_points = np.zeros((k1_points.shape[0], 2))
@@ -91,64 +92,32 @@ def landmarking_bogunovic(centerline, base_path, approximation_method, algorithm
         theta[i] = theta[i] * 180 / math.pi
 
     # Tolerance parameters from Bogunovic et al. (2012)
-    tol_ant_post = 60
-    tol_sup_ant = 45
-    tol_post_inf = 45
-    tol_inf_end = 110
+    tol_anterior_posterior = 60
+    tol_superior_anterior = 45
+    tol_posterior_inferior = 45
+    tol_inferior_end = 110
 
     # Find coronal coordinate and maximum (within anterior bend)
-    coordinates = get_centerline_coordinates(line, length)
+    coordinates = get_centerline_coordinates(line, curvilinear_coordinates)
     coronal_coordinate = coordinates[coronal_axis]
-    max_coronal_coordinate_id = get_maximum_coronal_coordinate(coronal_coordinate, length)
-
-    def find_interface(start, direction, tol, part):
-        stop = direction if direction == -1 else theta.shape[0]
-        success = False
-        for i in range(start - 1, stop, direction):
-            if theta[i] > tol:
-                success = True
-                break
-
-        if success:
-            start = max_point_ids[i]
-            stop = max_point_ids[i + 1]
-            index = ((min_point_ids > start) * (min_point_ids < stop)).nonzero()[0].max()
-            min_point = (min_point_ids[index])
-            interfaces[part] = min_point
-
-        elif not success and part == "sup_ant":
-            print("-- Where not able to identify the interface between the " +
-                  "anterior and superior bend. Check the coronal coordinates")
-            return None
-
-        elif not success and part != "inf_end":
-            print("-- The geometry is to short to be classified with superior" +
-                  ", anterior, posterior and inferior.")
-            return None
-
-        elif not success and part == "inf_end":
-            interfaces["inf_end"] = np.array([0])
-            i = 0
-            print("-- End of inferior is at the end of the geometry, this might" +
-                  "affect the geometry stats")
-        else:
-            print("-- Something happened, idea: some bend ended at the last point")
-            return None
-
-        return i
+    max_coronal_coordinate_id = get_maximum_coronal_coordinate(coronal_coordinate, curvilinear_coordinates)
 
     interfaces = {}
     min_point_ids = np.array(min_point_ids)
 
+    # Find interfaces between bends based on angles between curvature vectors and tolerance parameters
     index = np.array((max_coronal_coordinate_id > max_point_ids).nonzero()[0]).max()
-    start = find_interface(index, -1, tol_ant_post, "ant_post")
+    start = find_interface(index, -1, tol_anterior_posterior, "anterior_posterior", theta, max_point_ids, min_point_ids,
+                           interfaces)
     if start is None:
         return None
-    start = find_interface(start, -1, tol_post_inf, "post_inf")
+    start = find_interface(start, -1, tol_posterior_inferior, "posterior_inferior", theta, max_point_ids, min_point_ids,
+                           interfaces)
     if start is None:
         return None
-    find_interface(start, -1, tol_inf_end, "inf_end")
-    start = find_interface(index + 1, 1, tol_sup_ant, "sup_ant")
+    find_interface(start, -1, tol_inferior_end, "inferior_end", theta, max_point_ids, min_point_ids, interfaces)
+    start = find_interface(index + 1, 1, tol_superior_anterior, "superior_anterior", theta, max_point_ids,
+                           min_point_ids, interfaces)
     if start is None:
         return None
 
@@ -165,7 +134,7 @@ def landmarking_bogunovic(centerline, base_path, approximation_method, algorithm
     print("-- Number of landmarks (Segments): %s" % len(landmarks))
     try:
         os.remove(base_path + "_landmark_bogunovic_%s.particles" % approximation_method)
-    except:
+    except FileNotFoundError:
         pass
 
     if landmarks is not None:
@@ -173,3 +142,58 @@ def landmarking_bogunovic(centerline, base_path, approximation_method, algorithm
         create_particles(base_path, algorithm, approximation_method)
 
     return landmarks
+
+
+def find_interface(start, direction, tol, part, theta, max_point_ids, min_point_ids, interfaces):
+    """
+    Find landmark interfaces according to Bogunovic.
+    Based on local curvature extrema computed in the k1-k2 space.
+    Angles between curvature vectors determine interfaces based on a pre-defined tolerance.
+
+    Args:
+        start (int): Index where search for curvature max starts
+        direction (int): Direction to search (1 or -1)
+        tol (double): Tolerance on angle between curvature vectors
+        part (str): Name of interface
+        theta (ndarray): Array of angles between curvature vectors
+        max_point_ids (ndarray): Local curvature maximum
+        min_point_ids (ndarray): Local curvature minimum
+        interfaces (dict): Dictionary of landmarks/interfaces and coresponding points
+
+    Returns:
+        i (int): Index of curvature maximum in bend of interest
+    """
+    stop = direction if direction == -1 else theta.shape[0]
+    success = False
+    for i in range(start - 1, stop, direction):
+        if theta[i] > tol:
+            success = True
+            break
+
+    if success:
+        start = max_point_ids[i]
+        stop = max_point_ids[i + 1]
+        index = ((min_point_ids > start) * (min_point_ids < stop)).nonzero()[0].max()
+        min_point = (min_point_ids[index])
+        interfaces[part] = min_point
+
+    elif not success and part == "superior_anterior":
+        print("-- Where not able to identify the interface between the " +
+              "anterior and superior bend. Check the coronal coordinates")
+        return None
+
+    elif not success and part != "inferior_end":
+        print("-- The geometry is to short to be classified with superior" +
+              ", anterior, posterior and inferior.")
+        return None
+
+    elif not success and part == "inferior_end":
+        interfaces["inf_end"] = np.array([0])
+        i = 0
+        print("-- End of inferior is at the end of the geometry, this might" +
+              "affect the geometry stats")
+    else:
+        print("-- Something happened, idea: some bend ended at the last point")
+        return None
+
+    return i

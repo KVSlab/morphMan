@@ -45,7 +45,7 @@ def landmarking_piccinelli(centerline, base_path, approximation_method, algorith
         centerline = vmtk_resample_centerline(centerline, resampling_step)
 
     if approximation_method == "spline":
-        line, max_point_ids, _ = spline_centerline_and_compute_geometric_features(centerline, smooth_line, nknots)
+        line, max_point_curv_ids, _ = spline_centerline_and_compute_geometric_features(centerline, smooth_line, nknots)
 
         # Get curvature and torsion, find peaks
         curvature = get_point_data_array("Curvature", line)
@@ -65,7 +65,9 @@ def landmarking_piccinelli(centerline, base_path, approximation_method, algorith
 
         # Smooth torsion curve to remove noise
         torsion_smooth = gaussian_filter(torsion, 25)
-        max_point_ids = list(argrelextrema(curvature, np.greater)[0])
+
+        # Find maximum curvature and torsion
+        max_point_curv_ids = list(argrelextrema(curvature, np.greater)[0])
         max_point_tor_ids = list(argrelextrema(abs(torsion_smooth), np.greater)[0])
 
     else:
@@ -76,29 +78,31 @@ def landmarking_piccinelli(centerline, base_path, approximation_method, algorith
     length = get_curvilinear_coordinate(line)
 
     # Ignore points close to the ends of the siphon
-    for i in max_point_ids:
+    for i in max_point_curv_ids:
         if length[i] in length[-10:] or length[i] in length[:10]:
-            max_point_ids.remove(i)
+            max_point_curv_ids.remove(i)
 
     # Remove curvature and torsion peaks too close to each other
     tolerance = 70
     dist = []
     dist_tor = []
-    for i in range(len(max_point_ids) - 1):
-        dist.append(max_point_ids[i + 1] - max_point_ids[i])
+    for i in range(len(max_point_curv_ids) - 1):
+        dist.append(max_point_curv_ids[i + 1] - max_point_curv_ids[i])
     for i in range(len(max_point_tor_ids) - 1):
         dist_tor.append(max_point_tor_ids[i + 1] - max_point_tor_ids[i])
 
+    # Remove curvature maxima which are saddle points within a bend
     curv_remove_ids = []
     for i, dx in enumerate(dist):
         if dx < tolerance:
-            curv1 = curvature[max_point_ids[i]]
-            curv2 = curvature[max_point_ids[i + 1]]
+            curv1 = curvature[max_point_curv_ids[i]]
+            curv2 = curvature[max_point_curv_ids[i + 1]]
             if curv1 > curv2:
-                curv_remove_ids.append(max_point_ids[i + 1])
+                curv_remove_ids.append(max_point_curv_ids[i + 1])
             else:
-                curv_remove_ids.append(max_point_ids[i])
+                curv_remove_ids.append(max_point_curv_ids[i])
 
+    # Remove torsion maxima which are saddle points within a bend
     tor_remove_ids = []
     for i, dx in enumerate(dist_tor):
         if dx < tolerance:
@@ -109,30 +113,12 @@ def landmarking_piccinelli(centerline, base_path, approximation_method, algorith
             else:
                 tor_remove_ids.append(max_point_tor_ids[i])
 
-    max_point_ids = [ID for ID in max_point_ids if ID not in curv_remove_ids]
+    # Filter out curvature and torsion maxima saddle points
+    max_point_curv_ids = [ID for ID in max_point_curv_ids if ID not in curv_remove_ids]
     max_point_tor_ids = [ID for ID in max_point_tor_ids if ID not in tor_remove_ids]
 
-    # Define bend interfaces based on Piccinelli et al.
-    def find_interface():
-        found = False
-        interface = {}
-        k = 0
-        start_id = 0
-        for c in max_point_ids:
-            for i in range(start_id, len(max_point_tor_ids) - 1):
-                if max_point_tor_ids[i] < c < max_point_tor_ids[i + 1] and not found:
-                    interface["bend%s" % (k + 1)] = np.array([max_point_tor_ids[i]])
-                    k += 1
-                    interface["bend%s" % (k + 1)] = np.array([max_point_tor_ids[i + 1]])
-                    k += 1
-                    start_id = i + 1
-                    found = True
-            found = False
-
-        return interface
-
     # Compute and extract interface points
-    interfaces = find_interface()
+    interfaces = find_interface(max_point_curv_ids, max_point_tor_ids)
     landmarks = {}
     for k, v in interfaces.items():
         landmarks[k] = line.GetPoints().GetPoint(int(v))
@@ -145,10 +131,41 @@ def landmarking_piccinelli(centerline, base_path, approximation_method, algorith
     print("-- Number of landmarks (Segments): %s" % len(landmarks))
     try:
         os.remove(base_path + "_landmark_piccinelli_%s.particles" % approximation_method)
-    except:
+    except FileNotFoundError:
         pass
     if landmarks is not None:
         write_parameters(landmarks, base_path)
         create_particles(base_path, algorithm, approximation_method)
 
     return landmarks
+
+
+def find_interface(max_point_curv_ids, max_point_tor_ids):
+    """
+    Find interfaces between bends as defined by Piccinelli et al.
+    A bend is defined by a curvature maximum
+    bounded by two enclosing torsion maxima.
+
+    Args:
+        max_point_curv_ids (ndarray): Array of curvature maximum
+        max_point_tor_ids (ndarray): Array of torsion maximum
+
+    Returns:
+        interface (dict): Dictionary of interfaces between bends
+    """
+    found = False
+    interface = {}
+    k = 0
+    start_id = 0
+    for c in max_point_curv_ids:
+        for i in range(start_id, len(max_point_tor_ids) - 1):
+            if max_point_tor_ids[i] < c < max_point_tor_ids[i + 1] and not found:
+                interface["bend%s" % (k + 1)] = np.array([max_point_tor_ids[i]])
+                k += 1
+                interface["bend%s" % (k + 1)] = np.array([max_point_tor_ids[i + 1]])
+                k += 1
+                start_id = i + 1
+                found = True
+        found = False
+
+    return interface
