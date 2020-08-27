@@ -7,7 +7,7 @@ Tutorial: Manipulate branch
 ===========================
 
 The goal of ``manipulate_branch.py`` is to manipulate a specific branch of a
-vascular model, either through pure tranlsation and rotation, or by completely removing it, as depicted in Figure 1.
+vascular model, either through pure translation and rotation, or by completely removing it, as depicted in Figure 1.
 In particular, we have defined a branch as any branch branching out of the longest tubular structure,
 defined by the physical length of the tube.
 The manipulation can be achieved by running ``morphman-branch`` in the terminal, followed by the
@@ -35,43 +35,43 @@ When using ``morphman-branch``, there are five main settings which can be provid
  * ``remove_branch``: Either `True` or `False`, determining whether or not to remove the selected branch.
  * ``translation_method``: Flag which determines which method of translation to use. If `no_translation` is selected, the algorithm will only perform rotation.
 
-Shown in Figure 2 is the result of moving the opthalmic artery of the vascular model to another part of the surface.
+Shown in Figure 2 is the result of moving the ophthalmic artery of the vascular model to another part of the surface.
 
 .. figure:: branch_moved.png
 
   Figure 2: Translation and rotation of the opthamlic artery,
-  causing it to appear elsewhere on the vasular surface model.
+  causing it to appear elsewhere on the vascular surface model.
 
-To reproduce the surface model where the opthalmic artey has been moved, as shown in Figure 2, run::
+To reproduce the surface model where the ophthalmic artery has been moved, as shown in Figure 2, run::
 
     morphman-branch --ifile C0002/surface/model.vtp --ofile C0002/surface/moved_branch.vtp --branch-number 1 --branch-location 21.7 18.1 25.9 --translation-method commandline --poly-ball-size 250 250 250
 
 As explained earlier, setting the `branch-number` equal to 1 corresponds to the first branch out of the main tube,
-in this case the opthalmic artery of the ICA model.
+in this case the ophthalmic artery of the ICA model.
 
-Shown in Figure 3 is the result of moving the opthalmic artery of the vascular model to another part of the surface,
+Shown in Figure 3 is the result of moving the ophthalmic artery of the vascular model to another part of the surface,
 including a second azimuthal rotation around the new surface normal vector, which ranges :math:`\phi \in [0, 2 \pi ]`.
 
 .. figure:: branch_move_and_rotate.png
 
-  Figure 3: Translation and rotation of the opthamlic artery, followed by azimuthal rotation around the new surface normal vector.
+  Figure 3: Translation and rotation of the ophthalmic artery, followed by azimuthal rotation around the new surface normal vector.
 
-To reproduce the surface model where the opthalmic artey has been moved and rotated, as shown in Figure 3, run::
+To reproduce the surface model where the ophthalmic artery has been moved and rotated, as shown in Figure 3, run::
 
     morphman-branch --ifile C0002/surface/model.vtp --ofile C0002/surface/moved_and_rotated_branch.vtp --azimuth-angle 180 --branch-number 1 --branch-location 21.7 18.1 25.9 --translation-method commandline --poly-ball-size 250 250 250
 
 Notice how the `azimuth-angle` setting is given in degrees, although converted to radians in the main algorithm.
 
-The model can alternativly undergo pure rotation at the original position of the branch to be manipulated, by setting the
+The model can alternatively undergo pure rotation at the original position of the branch to be manipulated, by setting the
 ``--translation-method`` flag to ``no_translation`` and providing any :math:`\theta > 0` or :math:`\phi > 0`.
 We have provided an example of pure azimuthal rotation around the base of the branch in Figure 4, where the
-opthalmic artery has been rotated 120 degrees from its initial angle, :math:`\phi = 120`.
+ophthalmic artery has been rotated 120 degrees from its initial angle, :math:`\phi = 120`.
 
 .. figure:: branch_rotate.png
 
   Figure 4: Azimuthal rotation of the opthamlic artery, around its initial position.
 
-To reproduce the surface model where the opthalmic artey has been rotated, as shown in Figure 4, run::
+To reproduce the surface model where the ophthalmic artery has been rotated, as shown in Figure 4, run::
 
     morphman-branch --ifile C0002/surface/model.vtp --ofile C0002/surface/azimuth_rotated_branch.vtp --translation-method no_translation --azimuth-angle 120 --branch-number 1  --poly-ball-size 250 250 250
 

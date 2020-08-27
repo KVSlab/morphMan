@@ -6,7 +6,7 @@
 Tutorial: Manipulate surface roughness
 ======================================
 The goal with ``morphman-surface`` is to control level of high-frequent noise on 
-the surface, or surface roughness if you like, see Figure 1. To achive this we
+the surface, or surface roughness if you like, see Figure 1. To achieve this we
 either remove or add points to the Voronoi diagram. An advantage of this, compared
 to more classical smoothing methods, is that the change in surface is purely local,
 and does not effect the cross-sectional area.

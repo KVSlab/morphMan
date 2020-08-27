@@ -9,22 +9,28 @@ Miscellaneous
 
 Landmarking of the internal carotid artery
 ==========================================
-The internal carotid artery can be classified, or landmarked, into segments.
-For an *objective* and *reproducible* manipulation of the segment
-historically referred to as the carotid siphon, we have implemented two
-previously published methods for landmarking: Piccinelli et al.
-(2011) [1]_, and Bogunović et al. (2014) [2]_ (``--algorithm``).
+The internal carotid artery (ICA) can be classified, or landmarked, into segments.
+For an *objective* and *reproducible* manipulation of the ICA,
+we have implemented two previously published methods for landmarking: Piccinelli et al.
+(2011) [1]_, and Bogunović et al. (2012) [2]_.
+The algorithms can also be applied to arbitrary tubular
+structures for automated subdivision into bends.
 
-Although the algorithms are well described in both articles, neither state
-how the centerlines are computed, or how the curvature and torsion is derived.
-Both algorithms are very sensitive to the input curvature and torsion, and
-are therefore not directly reproducible. In Kjeldsberg 2018 [3]_ there is a
-a thorough comparison between landmarking algorithms, input parameters,
-and centerline smoothing methods which can help you to choose the correct
+Although the two algorithms are well described in both articles,
+there is lacking information on the input parameters used to
+estimate curvature and torsion, which both algorithms rely on.
+In Kjeldsberg 2018 [3]_ there is a
+a thorough comparison between the landmarking algorithms, input parameters,
+and centerline smoothing methods which can help you choose the correct
 options for your application.
 
-The script ``automated_landmarking.py`` has three methods for computing
-the discrete derivatives of the centerline curve, set with
+The script ``automated_landmarking.py`` includes the two following options for
+automated landmarking, selected by the ``--algorithm`` flag.
+ 1. Algorithm by Piccinelli et al. (``piccinelli``)
+ 2. Algorithm by Bogunović (``bogunovic``)
+
+Furthermore, the script includes three methods for computing
+the geometric properties (curvature and torsion) of the centerline, set with
 ``--approximation-method``.
 
  1. B-Splines (``spine``)

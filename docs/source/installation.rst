@@ -39,17 +39,21 @@ Alternatively you can use one of the six main methods of manipulation directly t
 
 followed by the command line arguments for the selected method. A detailed explanation for usage of morphMan is described in :ref:`getting_started`.
 
-.. WARNING:: The VMTK version 1.4, the one currently distributed with Anaconda, has a Python3 bug in `vmtkcenterlines`. As a workaround you have to change this file. To find out where it is located please execute::
+.. WARNING:: The VMTK version 1.4, the one currently distributed with Anaconda, has a Python3 bug in `vmtkcenterlines` and `vmtksurfacecurvature`. As a workaround you have to change these files. To find out where it is located please execute::
   
     $ which vmtkcenterlines
     /Users/[Name]/anaconda3/envs/[your_environment]/bin/vmtkcenterlines
     $ python -V
     Python 3.6.2 :: Continuum Analytics, Inc.
   
-  Now copy the path up until ``[your_environment]`` and add ``lib/python3.6/site-packages/vmtk/vmtkcenterlines.py``. Please change the path seperation symbol to match your operating system and change ``python3.6`` to the python version you are using. If using you are using Miniconda, replace `anaconda3` with `miniconda3`. Using this path you can run the two following lines::
+  Now copy the path up until ``[your_environment]`` and add ``lib/python3.6/site-packages/vmtk/vmtkcenterlines.py``. Please change the path separation symbol to match your operating system and change ``python3.6`` to the python version you are using. If you are using Miniconda, replace `anaconda3` with `miniconda3`. Using this path you can run the two following lines::
 
     $ sed -i -e 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' /Users/[Name]/anaconda3/envs/[your_environment]/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
     $ sed -i -e 's/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g' /Users/[Name]/anaconda3/envs/[your_environment]/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
+
+  Similarly, for `vmtksurfacecurvature.py`, run the following command::
+
+    $ sed -i -e 's/(len(values) - 1)\/2/\(len\(values\) - 1\)\/\/2/g' /Users/[Name]/anaconda3/envs/[your_environment]/lib/python3.6/site-packages/vmtk/vmtksurfacecurvature.py
 
 
 Development version
@@ -75,3 +79,4 @@ file will be located. First, make sure that all dependencies are installed. Then
 can be performed by simply running the following command from the terminal window::
 
     $ python setup.py install
+

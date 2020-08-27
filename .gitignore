@@ -7,6 +7,9 @@
 *.swp
 *~
 
+# OS Specific
+.DS_Store
+
 # IDE files
 .idea
 .idea/workspace.xml

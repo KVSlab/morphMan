@@ -85,10 +85,10 @@ def test_least_squares_plane():
     assert np.linalg.norm(n) == 1.0
 
     # Assert on normal vector of plane
-    assert n[0] == 0.0
-    assert n[1] == 0.0
-    assert n[2] == 1.0
-
+    tol = 1E-14
+    assert n[0] < tol
+    assert n[1] < tol
+    assert abs(n[2] - 1.0) < tol
 
 def test_rotation_matrix():
     u = [0, 0, 1]

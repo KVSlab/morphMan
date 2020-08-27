@@ -11,7 +11,7 @@ import pytest
 from .fixtures import surface_paths
 from morphman.common.common import get_path_names
 from morphman.common.surface_operations import extract_ica_centerline
-from morphman.misc import landmarking_bogunovic, landmarking_piccinelli
+from morphman.automated_landmarking import landmarking_bogunovic, landmarking_piccinelli
 
 
 @pytest.mark.parametrize("algorithm", ["bogunovic", "piccinelli"])

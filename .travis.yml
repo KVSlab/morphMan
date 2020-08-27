@@ -29,7 +29,7 @@ install:
   - conda config --add channels morphman
 
   # Set up environment
-  - conda create -n morphman_env morphman pytest
+  - conda create -n morphman_env morphman pytest llvm=3.3
 
   # Activate environment
   - source activate morphman_env
