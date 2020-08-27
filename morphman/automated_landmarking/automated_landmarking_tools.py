@@ -8,37 +8,53 @@
 from scipy.ndimage.filters import gaussian_filter
 from scipy.signal import argrelextrema
 from vmtk import vmtkrenderer
+from vtk.numpy_interface import dataset_adapter as dsa
 
 # Local import
 from morphman.common import *
 
 
-def get_maximum_coronal_coordinate(coronal_coordinate, length):
+def get_maximum_coronal_coordinate(coronal_coordinate, curvilinear_coordinates):
+    """
+    Find the maximum coronal coordinate and return its ID along the centerline
+
+    Args:
+        coronal_coordinate (ndarray): Coronal coordinates along the centerline
+        curvilinear_coordinates (ndarray): Curvilinear coordinates along the centerline
+
+    Returns:
+        max_coronal_coordinate_id (int): ID representing the maximum coronal coordinate along the centerline
+    """
     value_index = coronal_coordinate[argrelextrema(coronal_coordinate, np.less_equal)[0]].min()
     max_coronal_coordinate_id = np.array(coronal_coordinate.tolist().index(value_index))
     search_tolerance = 30
 
-    if abs(length[max_coronal_coordinate_id] - length[-1]) > search_tolerance:
+    if abs(curvilinear_coordinates[max_coronal_coordinate_id] - curvilinear_coordinates[-1]) > search_tolerance:
         print("-- Sanity check failed, checking for maximums")
 
         value_index = coronal_coordinate[argrelextrema(coronal_coordinate, np.greater_equal)[0]].max()
         max_coronal_coordinate_id = np.array(coronal_coordinate.tolist().index(value_index))
-        if abs(length[max_coronal_coordinate_id] - length[-1]) > search_tolerance:
+        if abs(curvilinear_coordinates[max_coronal_coordinate_id] - curvilinear_coordinates[-1]) > search_tolerance:
             print("-- Sanity check failed, no anterior bend in model. Exiting.")
             sys.exit(1)
+
     return max_coronal_coordinate_id
 
 
-def get_centerline_coordinates(line, length):
-    x = np.zeros(length.shape[0])
-    y = np.zeros(length.shape[0])
-    z = np.zeros(length.shape[0])
-    for i in range(z.shape[0]):
-        x[i] = line.GetPoints().GetPoint(i)[0]
-        y[i] = line.GetPoints().GetPoint(i)[1]
-        z[i] = line.GetPoints().GetPoint(i)[2]
+def get_centerline_coordinates(line, curvilinear_coordinates):
+    """
+    Get coordinates along the centerline from the curvilinear coordinates
 
-    return {"x": x, "y": y, "z": z}
+    Args:
+        line (vtkPolyData): Centerline
+        curvilinear_coordinates (ndarray): Curvilinear coordinates
+
+    Returns:
+        (dict): Dictionary containing centerline coordinates
+    """
+    x, y, z = dsa.WrapDataObject(line).GetPoints()[:curvilinear_coordinates.shape[0]].T
+
+    return dict(x=x, y=y, z=z)
 
 
 def orient_centerline(ica_centerline):
@@ -52,16 +68,14 @@ def orient_centerline(ica_centerline):
     Returns:
         ica_centerline (vtkPolyData): Centerline, possibly reversed
     """
-    length = get_curvilinear_coordinate(ica_centerline)
-    coordinates = get_centerline_coordinates(ica_centerline, length)
+    curvilinear_coordinates = get_curvilinear_coordinate(ica_centerline)
+    coordinates = get_centerline_coordinates(ica_centerline, curvilinear_coordinates)
 
     # Iterate through coordinates and find axial coordinate
     for _, coordinate in coordinates.items():
         coordinate = gaussian_filter(coordinate, 25)
-        min_c = min(coordinate)
-        max_c = max(coordinate)
-        id0 = coordinate.tolist().index(min_c)
-        id1 = coordinate.tolist().index(max_c)
+        id0 = np.where(coordinate == np.min(coordinate))[0][0]
+        id1 = np.where(coordinate == np.max(coordinate))[0][0]
         if id0 == 0 and id1 == (len(coordinate) - 1):
             return ica_centerline
 
@@ -88,12 +102,8 @@ def spline_centerline_and_compute_geometric_features(line, smooth, nknots):
     Returns:
         min_point_ids (ndarray): Array of min curvature values
     """
-    data = np.zeros((line.GetNumberOfPoints(), 3))
+    data = dsa.WrapDataObject(line).GetPoints()
     curv_coor = get_curvilinear_coordinate(line)
-
-    # Collect data from centerline
-    for i in range(data.shape[0]):
-        data[i, :] = line.GetPoints().GetPoint(i)
 
     t = np.linspace(curv_coor[0], curv_coor[-1], nknots + 2)[1:-1]
 
@@ -101,14 +111,9 @@ def spline_centerline_and_compute_geometric_features(line, smooth, nknots):
     fy = splrep(curv_coor, data[:, 1], k=4, t=t)
     fz = splrep(curv_coor, data[:, 2], k=4, t=t)
 
-    fx_ = splev(curv_coor, fx)
-    fy_ = splev(curv_coor, fy)
-    fz_ = splev(curv_coor, fz)
-
-    data = np.zeros((len(curv_coor), 3))
-    data[:, 0] = fx_
-    data[:, 1] = fy_
-    data[:, 2] = fz_
+    data[:, 0] = splev(curv_coor, fx)
+    data[:, 1] = splev(curv_coor, fy)
+    data[:, 2] = splev(curv_coor, fz)
 
     header = ["X", "Y", "Z"]
     line = convert_numpy_data_to_polydata(data, header)
@@ -139,8 +144,8 @@ def spline_centerline_and_compute_geometric_features(line, smooth, nknots):
 
     locator = get_vtk_point_locator(line)
 
-    min_points = [[fx_[i], fy_[i], fz_[i]] for i in min_point_ids]
-    max_points = [[fx_[i], fy_[i], fz_[i]] for i in max_point_ids]
+    min_points = [[data[:, 0][i], data[:, 1][i], data[:, 2][i]] for i in min_point_ids]
+    max_points = [[data[:, 0][i], data[:, 1][i], data[:, 2][i]] for i in max_point_ids]
     min_point_ids = []
     max_point_ids = []
 
@@ -233,7 +238,7 @@ def create_particles(base_path, algorithm, method, step=1):
 
     for key in landmarked_points:
         if algorithm == "bogunovic":
-            if key in ["ant_post", "post_inf", "inf_end", "sup_ant"]:
+            if key in ["anterior_posterior", "posterior_inferior", "inferior_end", "superior_anterior"]:
                 p = landmarked_points[key]
                 point = "%s %s %s" % (p[0], p[1], p[2])
                 output_all.write(point + "\n")

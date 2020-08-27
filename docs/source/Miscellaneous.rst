@@ -47,11 +47,13 @@ To landmark the surface model, run the following command::
     python automated_landmarking.py --ifile C0001/surface/model.vtp --algorithm bogunovic --approximation-method spline --nknots 8
 
 The command will output a file ``C0001/surface/landmark_[ALGORITHM]_[APPROXIMATION_METHOD].particles``
-which contains four points defining the interfaces between the segments of the vessel.
+which contains points defining the interfaces between the segments of the vessel.
+To visualize the resulting interfaces, the user may supply the argument ``--viz True``.
+In Figure 1 we show the resulting landmarks for both algorithms for case C0001.
 
 .. figure:: landmarking.png
 
-  Figure 1: Landmarked geometry, with interfaces shown as red spheres along the white centerline.
+  Figure 1: Landmarked geometry, with interfaces shown as white spheres along the red centerline. To the left using ``piccinelli``, to the right using ``bogunovic``.
 
 
 .. _compute_alpha_beta:
