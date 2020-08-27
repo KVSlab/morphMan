@@ -15,7 +15,7 @@ def landmarking_kjeldsberg(centerline, base_path, smoothing_factor, iterations, 
                            coronal_axis, mark_diverging_arteries_manually):
     """
     Perform automated classification of the internal carotid artery into seven segments
-    C1 to C7. If model is too short, a minumum of four (C7 - C4) segments are located, adjusted accordingly.
+    C1 to C7. If model is too short, a minimum of four (C7 - C4) segments are located, adjusted accordingly.
 
     Interfaces between bends are mainly detected using the curvature profile of the centerline, and adjusted
     according to angles between normal vector planes at interfaces.
@@ -40,27 +40,28 @@ def landmarking_kjeldsberg(centerline, base_path, smoothing_factor, iterations, 
         centerline = vmtk_resample_centerline(centerline, length=resampling_step)
         centerline_complete = vmtk_resample_centerline(centerline_complete, length=resampling_step)
 
+    # Compute geometric properties from a smoothed representation of the centerline
     line = vmtk_compute_centerline_attributes(centerline)
     line = vmtk_compute_geometric_features(line, smooth_line, factor=smoothing_factor, iterations=iterations)
     curvature = get_point_data_array("Curvature", line)
     tangent = get_point_data_array("FrenetTangent", line, k=3)
-    length = get_curvilinear_coordinate(line)
+    curvilinear_coordinates = get_curvilinear_coordinate(line)
 
     # Find diverging arteries if they exist
     if mark_diverging_arteries_manually:
         classify_with_diverging_arteries, ophthalmic_id, p_com_a_id = mark_diverging_arteries(centerline_complete, line)
     else:
-        classify_with_diverging_arteries, ophthalmic_id, p_com_a_id = check_for_diverging_centerlines(
-            centerline_complete, line)
+        classify_with_diverging_arteries, ophthalmic_id, p_com_a_id = find_diverging_centerlines(centerline_complete,
+                                                                                                 line)
 
     # Remove additional noise
     curvature = gaussian_filter(curvature, 15)
 
     # Set coronal coordinate and find C4-C5 interface
-    coordinates = get_centerline_coordinates(line, length)
+    coordinates = get_centerline_coordinates(line, curvilinear_coordinates)
     coronal_coordinates = coordinates[coronal_axis]
 
-    c4_c5 = find_c4_c5_interface(length, coronal_coordinates)
+    c4_c5 = find_c4_c5_interface(curvilinear_coordinates, coronal_coordinates)
 
     # Find max and min curvature
     min_point_ids = list(argrelextrema(curvature, np.less)[0])
@@ -71,8 +72,8 @@ def landmarking_kjeldsberg(centerline, base_path, smoothing_factor, iterations, 
 
     # Find interface C2-C3
     if not very_short_model:
-        c1_c2, c2_c3, short_model, start = find_c2_c3_interface(max_point_ids, min_point_ids, short_model, start,
-                                                                very_short_model)
+        c2_c3, short_model, start = find_c2_c3_interface(max_point_ids, min_point_ids, start, short_model,
+                                                         very_short_model)
     else:
         short_model = True
 
@@ -98,13 +99,13 @@ def landmarking_kjeldsberg(centerline, base_path, smoothing_factor, iterations, 
     c5_c6 = find_c5_c6_interface(c4_c5, tangent)
 
     # Find interface C6-C7
-    c6_c7 = find_c6_c7_interface(c5_c6, max_point_ids, length)
+    c6_c7 = find_c6_c7_interface(c5_c6, max_point_ids, curvilinear_coordinates)
 
     # Adjust C5-C6 interface: length of C5 < 2/3 * C6
-    c5_c6 = adjust_c5_c6_interface(c4_c5, c5_c6, c6_c7, length)
+    c5_c6 = adjust_c5_c6_interface(c4_c5, c5_c6, c6_c7, curvilinear_coordinates)
 
     # Adjust C6-C7 interface: length of C7 < C6
-    c6_c7 = adjust_c6_c7_interface(c5_c6, c6_c7, length)
+    c6_c7 = adjust_c6_c7_interface(c5_c6, c6_c7, curvilinear_coordinates)
 
     if classify_with_diverging_arteries:
         c5_length = c5_c6 - c4_c5
@@ -151,38 +152,82 @@ def landmarking_kjeldsberg(centerline, base_path, smoothing_factor, iterations, 
     return landmarks
 
 
-def adjust_c5_c6_interface(c4_c5, c5_c6, c6_c7, length):
-    len_c6 = la.norm(length[c6_c7] - length[c5_c6])
-    len_c5 = la.norm(length[c5_c6] - length[c4_c5])
+def adjust_c5_c6_interface(c4_c5, c5_c6, c6_c7, curvilinear_coordinates):
+    """
+    Adjust C5/C6 interface based on length requirement
+
+    Args:
+        c4_c5 (int): ID of C4/C5 interface
+        c5_c6 (int): ID of C5/C6 interface
+        c6_c7 (int): ID of C6/C7 interface
+        curvilinear_coordinates (ndarray): Array of curvilinear coordinates
+
+    Returns:
+        c5_c6 (int): Adjusted C5/C6 interface
+    """
+    len_c6 = la.norm(curvilinear_coordinates[c6_c7] - curvilinear_coordinates[c5_c6])
+    len_c5 = la.norm(curvilinear_coordinates[c5_c6] - curvilinear_coordinates[c4_c5])
     while len_c6 * 2 / 3 < len_c5:
         dx = c5_c6 - c4_c5
         c5_c6 -= int(0.1 * dx)
-        len_c5 = la.norm(length[c5_c6] - length[c4_c5])
-        len_c6 = la.norm(length[c6_c7] - length[c5_c6])
+        len_c5 = la.norm(curvilinear_coordinates[c5_c6] - curvilinear_coordinates[c4_c5])
+        len_c6 = la.norm(curvilinear_coordinates[c6_c7] - curvilinear_coordinates[c5_c6])
     return c5_c6
 
 
-def adjust_c6_c7_interface(c5_c6, c6_c7, length):
-    len_c6 = la.norm(length[c6_c7] - length[c5_c6])
-    len_c7 = la.norm(length[-1] - length[c6_c7])
+def adjust_c6_c7_interface(c5_c6, c6_c7, curvilinear_coordinates):
+    """
+    Adjust C6/C7 interface based on length requirement
+
+    Args:
+        c5_c6 (int): ID of C5/C6 interface
+        c6_c7 (int): ID of C6/C7 interface
+        curvilinear_coordinates (ndarray): Array of curvilinear coordinates
+
+    Returns:
+        c6_c7 (int): Adjusted C6/C7 interface
+    """
+    len_c6 = la.norm(curvilinear_coordinates[c6_c7] - curvilinear_coordinates[c5_c6])
+    len_c7 = la.norm(curvilinear_coordinates[-1] - curvilinear_coordinates[c6_c7])
     while len_c6 < len_c7:
         dx = c6_c7 - c5_c6
         c6_c7 += int(0.1 * dx)
-        len_c6 = la.norm(length[c6_c7] - length[c5_c6])
-        len_c7 = la.norm(length[-1] - length[c6_c7])
+        len_c6 = la.norm(curvilinear_coordinates[c6_c7] - curvilinear_coordinates[c5_c6])
+        len_c7 = la.norm(curvilinear_coordinates[-1] - curvilinear_coordinates[c6_c7])
     return c6_c7
 
 
-def find_c6_c7_interface(c5_c6, max_point_ids, length):
+def find_c6_c7_interface(c5_c6, max_point_ids, curvilinear_coordinates):
+    """
+    Find C6/C7 interface based on curvature maximum
+
+    Args:
+        c5_c6 (int): ID of C5/C6 interface
+        max_point_ids (ndarray): Array with curvature maxima
+        curvilinear_coordinates (ndarray): Array of curvilinear coordinates
+
+    Returns:
+        c6_c7 (int): C6/C7 interface
+    """
     c6_c7_curvature_index = (max_point_ids > c5_c6).nonzero()[0]
     if c6_c7_curvature_index.size > 0:
         c6_c7 = max_point_ids[c6_c7_curvature_index.max()]
     else:
-        c6_c7 = int((len(length) + c5_c6) * 0.5)
+        c6_c7 = int((len(curvilinear_coordinates) + c5_c6) * 0.5)
     return c6_c7
 
 
 def find_c5_c6_interface(c4_c5, tangent):
+    """
+    Find C5/C6 interface based on angle requirement (>30 degrees)
+
+    Args:
+        c4_c5 (int): ID of C4/C5 interface
+        tangent (ndarray): Array of tangent vectors along centerline
+
+    Returns:
+        c5_c6 (int): C5/C6 interface
+    """
     t45 = tangent[c4_c5]
     c5_c6 = np.asarray(int(c4_c5 * 1.02))
     t56 = tangent[c5_c6]
@@ -196,6 +241,18 @@ def find_c5_c6_interface(c4_c5, tangent):
 
 
 def adjust_c1_c2_interface(c1_c2, c2_c3, tangent):
+    """
+    Adjust C1/C2 interface based on angle requirement (>60 degrees)
+
+    Args:
+        c1_c2 (int): ID of C1/C2 interface
+        c2_c3 (int): ID of C2/C3 interface
+        tangent (ndarray): Array of tangent vectors along centerline
+
+    Returns:
+        c1_c2 (int): Adjusted C1/C2 interface
+    """
+
     t12 = tangent[c1_c2]
     t23 = tangent[c2_c3]
     alpha = np.arccos(abs(np.dot(t12, t23)) / (la.norm(t12) * la.norm(t23))) * 180 / np.pi
@@ -211,6 +268,17 @@ def adjust_c1_c2_interface(c1_c2, c2_c3, tangent):
 
 
 def find_c1_c2_interface(max_point_ids, min_point_ids, start):
+    """
+    Find C1/C2 interface based on curvature minimum
+
+    Args:
+        max_point_ids (ndarray): Array with curvature maxima
+        min_point_ids (ndarray): Array with curvature mimuma
+        start (int): ID to start searching from
+
+    Returns:
+        c1_c2 (int): C1/C2 interface
+    """
     stop = start
     start_ids = (max_point_ids < stop).nonzero()[0]
     if start_ids.size > 0:
@@ -223,6 +291,17 @@ def find_c1_c2_interface(max_point_ids, min_point_ids, start):
 
 
 def adjust_c2_c3_interface(c2_c3, c3_c4, tangent):
+    """
+    Adjust C2/C3 based on vertical interface criteria relative to C3/C4
+
+    Args:
+        c2_c3 (int): ID of C2/C3 interface
+        c3_c4 (int): ID of C3/C4 interface
+        tangent (ndarray): Array of tangent vectors along centerline
+
+    Returns:
+        c2_c3 (int): Adjusted C2/C3 interface
+    """
     t23 = tangent[c2_c3]
     t34 = tangent[c3_c4]
     alpha = np.arccos(abs(np.dot(t23, t34)) / (la.norm(t23) * la.norm(t34))) * 180 / np.pi
@@ -234,9 +313,23 @@ def adjust_c2_c3_interface(c2_c3, c3_c4, tangent):
     return c2_c3
 
 
-def find_c2_c3_interface(max_point_ids, min_point_ids, short_model, start, very_short_model):
+def find_c2_c3_interface(max_point_ids, min_point_ids, start, short_model, very_short_model):
+    """
+    Find C2/C3 based on curvature minimum.
+
+    Args:
+        max_point_ids (ndarray): Array with curvature maxima
+        min_point_ids (ndarray): Array with curvature mimuma
+        start (int): ID to start searching from
+        short_model (boolean): True if model does not contain C1 or C2
+        very_short_model (boolean): True if model does not contain C1, C2 or C3
+
+    Returns:
+        c2_c3 (int): C2/C3 interface
+        short_model (boolean): True if model does not contain C1 or C2
+        start (int): ID to start searching from
+    """
     stop = start
-    c1_c2 = None
 
     if not very_short_model and (max_point_ids < stop).nonzero()[0].size > 0:
         start = max_point_ids[(max_point_ids < stop).nonzero()[0][-1]]
@@ -245,10 +338,24 @@ def find_c2_c3_interface(max_point_ids, min_point_ids, short_model, start, very_
     else:
         short_model = True
         c2_c3 = 0
-    return c1_c2, c2_c3, short_model, start
+    return c2_c3, short_model, start
 
 
 def find_c3_c4_interface(c4_c5, max_point_ids, min_point_ids, very_short_model):
+    """
+    Find C3/C4 based on curvature minimum between two local maxima.
+
+    Args:
+        c4_c5 (int): ID at C4/C5 interface
+        max_point_ids (ndarray): Array with curvature maxima
+        min_point_ids (ndarray): Array with curvature mimuma
+        very_short_model (boolean): True if model does not contain C1, C2 or C3
+
+    Returns:
+        c3_c4 (int): C3/C4 interface
+        start (int): ID to start searching from
+        very_short_model (boolean): True if model does not contain C1, C2 or C3
+    """
     anterior_bend_peak_id = max_point_ids[(max_point_ids <= c4_c5).nonzero()[0].max()]
     region_points = (max_point_ids < anterior_bend_peak_id).nonzero()[0]
     if region_points.size > 1:
@@ -271,16 +378,25 @@ def find_c3_c4_interface(c4_c5, max_point_ids, min_point_ids, very_short_model):
     return c3_c4, start, very_short_model
 
 
-def find_c4_c5_interface(length, z):
-    value_index = z[argrelextrema(z, np.less_equal)[0]].min()
-    max_coronal_bend_id = np.array(z.tolist().index(value_index))
-    search_tolerance = length[-1] * 3 / 4
-    if abs(length[max_coronal_bend_id] - length[-1]) > search_tolerance:
+def find_c4_c5_interface(curvilinear_coordinates, coronal_coordinates):
+    """
+    Find C4/C5 at the maximum coronal coordinate along the centerline.
+
+    Args:
+        curvilinear_coordinates (ndarray): Array of curvilinear coordinates
+        coronal_coordinates (str): Array of coronal coordinates
+    Returns:
+        c4_c5 (int): C4/C5 interface
+    """
+    value_index = coronal_coordinates[argrelextrema(coronal_coordinates, np.less_equal)[0]].min()
+    max_coronal_bend_id = np.array(coronal_coordinates.tolist().index(value_index))
+    search_tolerance = curvilinear_coordinates[-1] * 3 / 4
+    if abs(curvilinear_coordinates[max_coronal_bend_id] - curvilinear_coordinates[-1]) > search_tolerance:
         print("-- Sanity check failed, checking for maximums")
 
-        value_index = z[argrelextrema(z, np.greater_equal)[0]].max()
-        max_coronal_bend_id = np.array(z.tolist().index(value_index))
-        if abs(length[max_coronal_bend_id] - length[-1]) > search_tolerance:
+        value_index = coronal_coordinates[argrelextrema(coronal_coordinates, np.greater_equal)[0]].max()
+        max_coronal_bend_id = np.array(coronal_coordinates.tolist().index(value_index))
+        if abs(curvilinear_coordinates[max_coronal_bend_id] - curvilinear_coordinates[-1]) > search_tolerance:
             print("-- Sanity check failed, no anterior bend in model")
             sys.exit(1)
 

@@ -259,6 +259,20 @@ def create_particles(base_path, algorithm, method, step=1):
 
 
 def mark_diverging_arteries(centerline_complete, ica_centerline):
+    """
+    Manually mark diverging arteries branching out of the ICA.
+    User may select one, two or zero diverging arteries.
+
+    Args:
+        centerline_complete (vtkPolyData): Set of all centerlines in model
+        ica_centerline (vtkPolyData): Main centerline (ICA)
+
+    Returns:
+       classify_using_diverging_centerlines (boolean): True if two diverging centerlines are discovered
+       ophthalmic_id (int): ID of first diverging centerline
+       p_com_a_id (int): ID of second diverging centerline
+
+    """
     print("\nPlease select the diverging arteries in the render window.")
 
     first = True
@@ -300,15 +314,15 @@ def mark_diverging_arteries(centerline_complete, ica_centerline):
     tol = 4 * get_centerline_tolerance(ica_centerline)
 
     if ophthalmic_id.GetNumberOfIds() == 1:
-        ophthalmic = centerline_complete.GetPoint(ophthalmic_id.GetId(0))
-        ophthalmic_line = get_closest_line(ophthalmic, centerline_complete)
+        ophthalmic_pick_point = centerline_complete.GetPoint(ophthalmic_id.GetId(0))
+        ophthalmic_line = get_closest_line(ophthalmic_pick_point, centerline_complete)
         ophthalmic_div_id = get_diverging_point_id(ophthalmic_line, ica_centerline, tol)
     else:
         ophthalmic_div_id = None
 
     if p_com_id.GetNumberOfIds() == 1:
-        p_com = centerline_complete.GetPoint(p_com_id.GetId(0))
-        p_com_line = get_closest_line(p_com, centerline_complete)
+        p_com_pic_point = centerline_complete.GetPoint(p_com_id.GetId(0))
+        p_com_line = get_closest_line(p_com_pic_point, centerline_complete)
         p_com_div_id = get_diverging_point_id(p_com_line, ica_centerline, tol)
     else:
         p_com_div_id = None
@@ -319,6 +333,16 @@ def mark_diverging_arteries(centerline_complete, ica_centerline):
 
 
 def get_closest_line(reference_point, centerline_complete):
+    """
+    Find closest centerline relative to a point in space.
+
+    Args:
+        reference_point (ndarray): Point used to find closest line
+        centerline_complete (vtkPolyData): Set of all centerlines
+
+    Returns:
+        closest_lin (vtkPolyData): Line closest to the reference_point
+    """
     closest_line = None
     dist = 1E9
     for i in range(centerline_complete.GetNumberOfLines()):
@@ -335,7 +359,20 @@ def get_closest_line(reference_point, centerline_complete):
     return closest_line
 
 
-def check_for_diverging_centerlines(centerline_complete, line):
+def find_diverging_centerlines(centerline_complete, line):
+    """
+    Check for diverging centerlines along a single centerline,
+    and finds corresponding IDs at diverging points.
+
+    Args:
+        centerline_complete (vtkPolyData): Set of all centerlines in model
+        line (vtkPolyData): Single line to check along
+
+    Returns:
+       classify_using_diverging_centerlines (boolean): True if two diverging centerlines are discovered
+       ophthalmic_id (int): ID of first diverging centerline
+       p_com_a_id (int): ID of second diverging centerline
+    """
     classify_using_diverging_centerlines = False
     region_points = [np.asarray(line.GetPoint(0)), np.asarray(line.GetPoint(line.GetNumberOfPoints() - 5))]
     centerline_diverging = get_region_of_interest_and_diverging_centerlines(centerline_complete, region_points)
@@ -365,7 +402,6 @@ def visualize_landmarks(landmarks, centerline, algorithm, surface_path):
         algorithm (str): Name of landmarking algorithm
         surface_path (str): Location of surface model
     """
-
     vtkPoints = vtk.vtkPoints()
     landmarkSpheres = []
     for key, point in landmarks.items():
@@ -410,7 +446,7 @@ def visualize_landmarks(landmarks, centerline, algorithm, surface_path):
             elif algorithm == "piccinelli":
                 vtkNameArray.SetValue(i, 'Bend 1 (Start)')
             elif algorithm == "bogunovic":
-                vtkNameArray.SetValue(i, interfaces[0])
+                vtkNameArray.SetValue(i, interfaces[i])
         else:
             vtkNameArray.SetValue(i, interfaces[i])
 
