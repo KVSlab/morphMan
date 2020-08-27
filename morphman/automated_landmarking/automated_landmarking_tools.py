@@ -7,6 +7,7 @@
 
 from scipy.ndimage.filters import gaussian_filter
 from scipy.signal import argrelextrema
+from vmtk import vmtkrenderer
 from vtk.numpy_interface import dataset_adapter as dsa
 
 # Local import
@@ -248,3 +249,99 @@ def create_particles(base_path, algorithm, method):
                 output_all.write(point + "\n")
 
     output_all.close()
+
+
+def visualize_landmarks(landmarks, centerline, algorithm, surface_path):
+    """
+    Visualize the interfaces between the resulting landmarks (points)
+
+    Args:
+        landmarks (ndarray): Points defining landmarks / interfaces between segments
+        centerline (vtkPolyData): Centerline which has been landmarked
+        algorithm (str): Name of landmarking algorithm
+        surface_path (str): Location of surface model
+    """
+    vtkPoints = vtk.vtkPoints()
+    landmarkSpheres = []
+    for key, point in landmarks.items():
+        sphere = vtk.vtkSphereSource()
+        sphere.SetRadius(1)
+        sphere.SetCenter(point[0], point[1], point[2])
+        sphere.Update()
+        landmarkSpheres.append(sphere.GetOutput())
+        vtkPoints.InsertNextPoint(point)
+
+    landmarkData = vtk_merge_polydata(landmarkSpheres)
+
+    surface = None
+    if path.exists(surface_path):
+        surface = read_polydata(surface_path)
+
+    vtkNameArray = vtk.vtkStringArray()
+    vtkNameArray.SetNumberOfValues(7)
+
+    if algorithm == "piccinelli":
+        start = len(landmarks) - 1
+        stop = -1
+        interfaces = ["Bend %s-%s" % (i, i + 1) for i in range(len(landmarks))]
+    elif algorithm == "bogunovic":
+        start = 3
+        stop = -1
+        interfaces = [
+            "Anterior-Posterior",
+            "Posterior-Inferior",
+            "Inferior (Start)",
+            "Superior-Anterior",
+        ]
+
+    for i in range(start, stop, -1):
+        if i == 0:
+            if algorithm == "piccinelli":
+                vtkNameArray.SetValue(i, 'Bend 1 (Start)')
+            elif algorithm == "bogunovic":
+                vtkNameArray.SetValue(i, interfaces[i])
+        else:
+            vtkNameArray.SetValue(i, interfaces[i])
+
+    # Create the dataset with landmarking points
+    labeledPolydata = vtk.vtkPolyData()
+    labeledPolydata.SetPoints(vtkPoints)
+    labeledPolydata.GetPointData().AddArray(vtkNameArray)
+
+    centerlineMapper = vtk.vtkPolyDataMapper()
+    centerlineMapper.SetInputData(centerline)
+    centerlineActor = vtk.vtkActor()
+    centerlineActor.SetMapper(centerlineMapper)
+    centerlineActor.GetProperty().SetLineWidth(10)
+    centerlineActor.GetProperty().SetColor(1, 0, 0)
+
+    landmarkMapper = vtk.vtkPolyDataMapper()
+    landmarkMapper.SetInputData(landmarkData)
+    landmarkActor = vtk.vtkActor()
+    landmarkActor.SetMapper(landmarkMapper)
+
+    labelsMapper = vtk.vtkLabeledDataMapper()
+    labelsMapper.SetInputData(labeledPolydata)
+    labelsMapper.SetLabelModeToLabelFieldData()
+    labelsMapper.GetLabelTextProperty().SetColor(1, 1, 1)
+    labelsMapper.GetLabelTextProperty().SetFontSize(35)
+    labelsMapper.GetLabelTextProperty().ItalicOff()
+
+    labelsActor = vtk.vtkActor2D()
+    labelsActor.SetMapper(labelsMapper)
+
+    vmtkRenderer = vmtkrenderer.vmtkRenderer()
+    vmtkRenderer.Initialize()
+    vmtkRenderer.Renderer.AddActor(centerlineActor)
+    vmtkRenderer.Renderer.AddActor(labelsActor)
+    vmtkRenderer.Renderer.AddActor(landmarkActor)
+
+    if surface is not None:
+        surfaceMapper = vtk.vtkPolyDataMapper()
+        surfaceMapper.SetInputData(surface)
+        surfaceActor = vtk.vtkActor()
+        surfaceActor.SetMapper(surfaceMapper)
+        surfaceActor.GetProperty().SetOpacity(0.3)
+        vmtkRenderer.Renderer.AddActor(surfaceActor)
+
+    vmtkRenderer.Render()
