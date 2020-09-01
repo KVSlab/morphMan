@@ -302,14 +302,19 @@ def adjust_c2_c3_interface(c2_c3, c3_c4, tangent):
     Returns:
         c2_c3 (int): Adjusted C2/C3 interface
     """
+    start = c2_c3
     t23 = tangent[c2_c3]
     t34 = tangent[c3_c4]
     alpha = np.arccos(abs(np.dot(t23, t34)) / (la.norm(t23) * la.norm(t34))) * 180 / np.pi
     alpha_tolerance = 60
-    while alpha < alpha_tolerance:
+    while alpha < alpha_tolerance and c2_c3 > 0:
+        print(alpha)
         c2_c3 = np.array(int(c2_c3 * 0.95))
         t23 = tangent[c2_c3]
         alpha = np.arccos(abs(np.dot(t23, t34)) / (la.norm(t23) * la.norm(t34))) * 180 / np.pi
+    if c2_c3 == 0:
+        c2_c3 = start
+
     return c2_c3
 
 
@@ -388,13 +393,15 @@ def find_c4_c5_interface(curvilinear_coordinates, coronal_coordinates):
     Returns:
         c4_c5 (int): C4/C5 interface
     """
-    value_index = coronal_coordinates[argrelextrema(coronal_coordinates, np.less_equal)[0]].min()
+    extrema = argrelextrema(coronal_coordinates, np.less_equal)[0]
+    value_index = coronal_coordinates[extrema[np.argwhere(extrema > 0)]].min()
     max_coronal_bend_id = np.array(coronal_coordinates.tolist().index(value_index))
     search_tolerance = curvilinear_coordinates[-1] * 3 / 4
     if abs(curvilinear_coordinates[max_coronal_bend_id] - curvilinear_coordinates[-1]) > search_tolerance:
         print("-- Sanity check failed, checking for maximums")
 
-        value_index = coronal_coordinates[argrelextrema(coronal_coordinates, np.greater_equal)[0]].max()
+        extrema = argrelextrema(coronal_coordinates, np.greater_equal())[0]
+        value_index = coronal_coordinates[extrema[np.argwhere(extrema > 0)]].max()
         max_coronal_bend_id = np.array(coronal_coordinates.tolist().index(value_index))
         if abs(curvilinear_coordinates[max_coronal_bend_id] - curvilinear_coordinates[-1]) > search_tolerance:
             print("-- Sanity check failed, no anterior bend in model")
