@@ -11,8 +11,8 @@ import os
 from morphman.automated_landmarking.automated_landmarking_tools import *
 
 
-def landmarking_kjeldsberg(centerline, base_path, smoothing_factor, iterations, smooth_line, resampling_step,
-                           coronal_axis, mark_diverging_arteries_manually):
+def landmarking_bouthillier(centerline, base_path, smoothing_factor, iterations, smooth_line, resampling_step,
+                            coronal_axis, mark_diverging_arteries_manually):
     """
     Perform automated classification of the internal carotid artery into seven segments
     C1 to C7. If model is too short, a minimum of four (C7 - C4) segments are located, adjusted accordingly.
@@ -135,19 +135,19 @@ def landmarking_kjeldsberg(centerline, base_path, smoothing_factor, iterations, 
         landmarks[k] = line.GetPoint(int(v))
 
     # Map landmarks to initial centerline
-    landmarks = map_landmarks(landmarks, centerline, algorithm="kjeldsberg")
+    landmarks = map_landmarks(landmarks, centerline, algorithm="bouthillier")
 
     # Save landmarks
     print("-- Case was successfully landmarked.")
     print("-- Number of landmarks (Segments): %s" % len(landmarks))
     try:
-        os.remove(base_path + "_landmark_kjeldsberg_vmtk.particles")
-    except:
+        os.remove(base_path + "_landmark_bouthillier_vmtk.particles")
+    except FileNotFoundError:
         pass
 
     if landmarks is not None:
         write_parameters(landmarks, base_path)
-        create_particles(base_path, algorithm="kjeldsberg", method="vmtk")
+        create_particles(base_path, algorithm="bouthillier", method="vmtk")
 
     return landmarks
 

@@ -9,12 +9,12 @@
 import pytest
 
 from .fixtures import surface_paths
-from morphman.automated_landmarking import landmarking_bogunovic, landmarking_piccinelli, landmarking_kjeldsberg
+from morphman.automated_landmarking import landmarking_bogunovic, landmarking_piccinelli, landmarking_bouthillier
 from morphman.common.common import get_path_names
 from morphman.common.surface_operations import extract_ica_centerline
 
 
-@pytest.mark.parametrize("algorithm", ["bogunovic", "piccinelli", "kjeldsberg"])
+@pytest.mark.parametrize("algorithm", ["bogunovic", "piccinelli", "bouthillier"])
 def test_automated_landmarking(surface_paths, algorithm):
     # Get region points
     base_path = get_path_names(surface_paths[0])
@@ -35,9 +35,9 @@ def test_automated_landmarking(surface_paths, algorithm):
         landmarks = landmarking_piccinelli(**landmark_input)
         assert len(landmarks) > 0
 
-    if algorithm == "kjeldsberg":
+    if algorithm == "bouthillier":
         landmark_input.update(mark_diverging_arteries_manually=False, smoothing_factor=1.2, coronal_axis='z')
         landmark_input.pop('approximation_method', None)
         landmark_input.pop('nknots', None)
-        landmarks = landmarking_kjeldsberg(**landmark_input)
+        landmarks = landmarking_bouthillier(**landmark_input)
         assert len(landmarks) > 0

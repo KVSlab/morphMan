@@ -54,9 +54,9 @@ def automated_landmarking(input_filepath, approximation_method, resampling_step,
                                            smooth_line,
                                            nknots, smoothing_factor_curv, smoothing_factor_torsion, iterations)
 
-    elif algorithm == "kjeldsberg":
-        landmarks = landmarking_kjeldsberg(ica_centerline, base_path, smoothing_factor_curv, iterations, smooth_line,
-                                           resampling_step, coronal_axis, mark_diverging_arteries)
+    elif algorithm == "bouthillier":
+        landmarks = landmarking_bouthillier(ica_centerline, base_path, smoothing_factor_curv, iterations, smooth_line,
+                                            resampling_step, coronal_axis, mark_diverging_arteries)
 
     if visualize:
         visualize_landmarks(landmarks, ica_centerline, algorithm, input_filepath)
@@ -82,10 +82,10 @@ def read_command_line():
     parser.add_argument('-m', '--approximation-method', type=str, default="vmtk",
                         help="Choose which method used for computing curvature and torsion. Default is 'vmtk'.",
                         choices=['spline', 'vmtk', 'disc'])
-    parser.add_argument('-a', '--algorithm', type=str, default="kjeldsberg",
+    parser.add_argument('-a', '--algorithm', type=str, default="bouthillier",
                         help="Choose which landmarking algorithm to use: " +
-                             "'bogunovic', 'piccinelli', 'kjeldsberg'. Default is 'kjeldsberg'.",
-                        choices=['bogunovic', 'piccinelli', 'kjeldsberg'])
+                             "'bogunovic', 'piccinelli', 'bouthillier'. Default is 'bouthillier'.",
+                        choices=['bogunovic', 'piccinelli', 'bouthillier'])
     parser.add_argument('-ca', '--coronal-axis', type=str, default="z",
                         help="Axis describing coronal coordinate. Default is 'z'.",
                         choices=['x', 'y', 'z'])
