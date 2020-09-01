@@ -15,7 +15,7 @@ we have implemented two previously published methods for landmarking: Piccinelli
 (2011) [1]_, and Bogunović et al. (2012) [2]_.
 The algorithms can also be applied to arbitrary tubular
 structures for automated subdivision into bends.
-A third algorithm (Kjeldsberg) has been develop to subdivide the ICA according
+A third algorithm (Bouthillier) has been develop to subdivide the ICA according
 to the Bouthillier classification [4]_.
 
 Although the two algorithms are well described in both articles,
@@ -30,7 +30,7 @@ The script ``automated_landmarking.py`` includes the three following options for
 automated landmarking, selected by the ``--algorithm`` flag.
  1. Algorithm by Piccinelli et al. (``piccinelli``)
  2. Algorithm by Bogunović et al. (``bogunovic``)
- 3. Algorithm by Kjeldsberg et al. (``kjeldsberg``)
+ 3. Algorithm based on Bouthillier et al. (``bouthillier``)
 
 Furthermore, the script includes three methods for computing
 the geometric properties (curvature and torsion) of the centerline, set with

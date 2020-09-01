@@ -20,7 +20,7 @@ def automated_landmarking(input_filepath, approximation_method, resampling_step,
     The following landmarking algorithms are available:
     - Piccinelli et al. (2011)
     - Bogunović et al. (2012)
-    - Kjeldsberg (2020)
+    - Bouthillier et al. (1996)
 
     Args:
         input_filepath (str): Location of surface model to landmark.

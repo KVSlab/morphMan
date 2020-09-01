@@ -199,8 +199,8 @@ def map_landmarks(landmarks, centerline, algorithm):
         landmark = landmarks[key]
         landmark_id = locator.FindClosestPoint(landmark)
 
-        if algorithm in ["piccinelli", "kjeldsberg"]:
-            key = "C%s" if algorithm == "kjeldsberg" else "bend%s"
+        if algorithm in ["piccinelli", "bouthillier"]:
+            key = "C%s" if algorithm == "bouthillier" else "bend%s"
             if landmark_id in landmark_ids:
                 continue  # Skip for duplicate landmarking point
             else:
@@ -249,7 +249,7 @@ def create_particles(base_path, algorithm, method, step=1):
                 point = "%s %s %s" % (p[0], p[1], p[2])
                 output_all.write(point + "\n")
 
-        elif algorithm == "kjeldsberg":
+        elif algorithm == "bouthillier":
             if key[0] == "C":
                 p = landmarked_points[key]
                 point = "%s %s %s" % (p[0], p[1], p[2])
@@ -434,14 +434,14 @@ def visualize_landmarks(landmarks, centerline, algorithm, surface_path):
             "Inferior (Start)",
             "Superior-Anterior",
         ]
-    elif algorithm == "kjeldsberg":
+    elif algorithm == "bouthillier":
         start = 6
         stop = 7 - len(landmarks) - 1
         interfaces = ["C%s-C%s" % (i - 1, i) for i in range(1, len(landmarks) + 1)]
 
     for i in range(start, stop, -1):
         if i == 0:
-            if algorithm == "kjeldsberg":
+            if algorithm == "bouthillier":
                 vtkNameArray.SetValue(i, 'C1 (Start)')
             elif algorithm == "piccinelli":
                 vtkNameArray.SetValue(i, 'Bend 1 (Start)')
