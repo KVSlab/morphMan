@@ -148,6 +148,7 @@ def vmtk_compute_geometric_features(centerlines, smooth, outputsmoothed=False, f
     geometry.FrenetBinormalArrayName = "FernetBiNormal"
     geometry.CurvatureArrayName = "Curvature"
     geometry.TorsionArrayName = "Torsion"
+    geometry.TortuosityArrayName = "Tortuosity"
     geometry.Execute()
 
     return geometry.Centerlines
