@@ -1,8 +1,7 @@
-.. vmtktools_docs documentation master file, created by
-   sphinx-quickstart on Wed Jul  4 12:51:57 2018.
+.. morphman documentation master file, created by
+   sphinx-quickstart on Wed Nov  3 18:15:28 2021.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
-
 
 .. title:: morphMan
 
@@ -25,3 +24,4 @@ Documentation for `morphMan <https://github.com/KVSlab/morphMan>`_.
    manipulate_surface
    Miscellaneous
    scripts
+
