@@ -26,6 +26,7 @@ options for your application.
 
 The script ``automated_landmarking.py`` includes the two following options for
 automated landmarking, selected by the ``--algorithm`` flag.
+
  1. Algorithm by Piccinelli et al. (``piccinelli``)
  2. Algorithm by Bogunović et al. (``bogunovic``)
 
