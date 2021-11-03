@@ -56,6 +56,15 @@ followed by the command line arguments for the selected method. A detailed expla
     $ sed -i -e 's/(len(values) - 1)\/2/\(len\(values\) - 1\)\/\/2/g' /Users/[Name]/anaconda3/envs/[your_environment]/lib/python3.6/site-packages/vmtk/vmtksurfacecurvature.py
 
 
+.. WARNING:: Some users may experience the following Python compatibility issue::
+
+    ModuleNotFoundError: No module named 'vtkRenderingOpenGL2Python'
+
+  To fix this issue, a temporary solution is the install the ``llvm`` library directly in the virtual environment, using the following commands::
+
+    $ conda config --set restore_free_channel true
+    $ conda install llvm=3.3
+
 Development version
 ===================
 
