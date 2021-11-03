@@ -37,7 +37,7 @@ Licence
 morphMan is licensed under the GNU GPL, version 3 or (at your option) any
 later version.
 
-morphMan is Copyright (2016-2020) by the authors.
+morphMan is Copyright (2016-2021) by the authors.
 
 Documentation
 -------------
