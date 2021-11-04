@@ -15,8 +15,8 @@ matrix:
 
 install:
   # Install conda
-  - wget "https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh" -O miniconda.sh;
-  - bash miniconda.sh -b -p $HOME/miniconda
+  - wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
+  - bash ~/miniconda.sh -b -p $HOME/miniconda
 
   # Export path
   - export PATH="$HOME/miniconda/bin:$PATH"
@@ -29,18 +29,18 @@ install:
   - conda config --add channels morphman
 
   # Set up environment
-  - conda create -n morphman_env morphman pytest llvm=3.3
+  - conda create -n morphmanEnv morphman pytest llvm=3.3
 
   # Activate environment
-  - source activate morphman_env
+  - source activate morphmanEnv
 
   # Useful for debugging any issues with conda
   - conda info -a
 
   # / -> // in vmtkcenterlines.py and vmtksurfacecurvature.py
-  - sed -i -e 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' ../../../miniconda/envs/morphman_env/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
-  - sed -i -e 's/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g' ../../../miniconda/envs/morphman_env/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
-  - sed -i -e 's/(len(values) - 1)\/2/\(len\(values\) - 1\)\/\/2/g' ../../../miniconda/envs/morphman_env/lib/python3.6/site-packages/vmtk/vmtksurfacecurvature.py
+  - sed -i -e 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' ../../../miniconda/envs/morphmanEnv/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
+  - sed -i -e 's/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g' ../../../miniconda/envs/morphmanEnv/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
+  - sed -i -e 's/(len(values) - 1)\/2/\(len\(values\) - 1\)\/\/2/g' ../../../miniconda/envs/morphmanEnv/lib/python3.6/site-packages/vmtk/vmtksurfacecurvature.py
 
   # Dependencies for code coverage
   - pip install pytest-cov codecov
@@ -52,4 +52,4 @@ script:
 
 # Push the results back to codecov
 after_success:
-  - codecov
+  - bash <(curl -s https://codecov.io/bash)
