@@ -1,7 +1,7 @@
 ## [morphMan - Morphological Manipulation](https://morphman.readthedocs.io)
 
 [![Documentation Status](https://readthedocs.org/projects/morphman/badge/?version=latest)](https://morphman.readthedocs.io/en/latest/?badge=latest)
-[![Build Status](https://travis-ci.org/KVSlab/morphMan.svg?branch=master)](https://travis-ci.org/KVSlab/morphMan)
+[![CircleCI](https://circleci.com/gh/KVSlab/morphMan/tree/master.svg?style=svg)](https://circleci.com/gh/KVSlab/morphMan/tree/master)
 [![Build status](https://ci.appveyor.com/api/projects/status/2k6q32hqg6g5oopc?svg=true)](https://ci.appveyor.com/project/hkjeldsberg/morphman-s1s38)
 [![DOI](http://joss.theoj.org/papers/10.21105/joss.01065/status.svg)](https://doi.org/10.21105/joss.01065)
 [![codecov](https://codecov.io/gh/KVSlab/morphMan/branch/master/graph/badge.svg)](https://codecov.io/gh/KVSlab/morphMan)
