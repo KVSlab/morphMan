@@ -9,7 +9,7 @@ import operator
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 from scipy import interpolate
-from scipy.ndimage.filters import gaussian_filter
+from scipy.ndimage import gaussian_filter
 from scipy.signal import argrelextrema
 
 # Local import

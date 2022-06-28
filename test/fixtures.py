@@ -5,23 +5,19 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
 ##      PURPOSE.  See the above copyright notices for more information.
 
-from os import system, path
+from os import system, path, makedirs
 from sys import platform
 
 import pytest
 
-from morphman.common import  get_inlet_and_outlet_centers, get_path_names, compute_centerlines, prepare_surface
+from morphman.common import get_inlet_and_outlet_centers, get_path_names, compute_centerlines, prepare_surface
 
 
 def download_testdata(test_path, outputfile):
     if platform == "darwin":
-        system("curl {} --output {}".format(test_path, outputfile))
-        system("tar -zxvf {}".format(outputfile))
-        system("rm {}".format(outputfile))
+        system("curl -L {} --output {}".format(test_path, outputfile))
     elif platform == "linux" or platform == "linux2":
         system("wget {}".format(test_path))
-        system("tar -zxvf {}".format(outputfile))
-        system("rm {}".format(outputfile))
     elif platform == "win32":
         system("bitsadmin /transfer download_model /download /priority high {} {}".format(test_path, outputfile))
         system("tar -zxvf {}".format(outputfile))
@@ -33,12 +29,13 @@ def surface_paths():
     abs_path = path.dirname(path.abspath(__file__))
 
     # Path to test data
-    test_path = "http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0001/C0001_models.tar.gz"
-    outputfile = path.join(abs_path, "C0001_models.tar.gz")
+    test_path = "https://github.com/hkjeldsberg/AneuriskDatabase/raw/master/models/C0001/surface/model.vtp"
+    outputfile = path.join(abs_path, "C0001", "surface", "model.vtp")
 
     # Download test data if necessary
-    if not path.exists(path.join(abs_path, "C0001")):
+    if not path.exists(path.join(abs_path, "C0001", "surface", "model.vtp")):
         try:
+            makedirs(path.join(abs_path, "C0001", "surface"))
             download_testdata(test_path, outputfile)
         except Exception:
             raise Exception("Problem downloading the testdata, please do it manually from "

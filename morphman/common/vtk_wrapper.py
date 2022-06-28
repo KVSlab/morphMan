@@ -156,7 +156,7 @@ def read_polydata(filename, datatype=None):
     elif fileType == "vti":
         reader = vtk.vtkXMLImageDataReader()
     elif fileType == "np" and datatype == "vtkIdList":
-        result = np.load(filename).astype(np.int)
+        result = np.load(filename, allow_pickle=True).astype(int)
         id_list = vtk.vtkIdList()
         id_list.SetNumberOfIds(result.shape[0])
         for i in range(result.shape[0]):
@@ -446,11 +446,12 @@ def vtk_compute_threshold(surface, name, lower=0, upper=1, threshold_type="betwe
     vtk_threshold = vtk.vtkThreshold()
     vtk_threshold.SetInputData(surface)
     if threshold_type == "between":
-        vtk_threshold.ThresholdBetween(lower, upper)
+        vtk_threshold.SetLowerThreshold(lower)
+        vtk_threshold.SetUpperThreshold(upper)
     elif threshold_type == "lower":
-        vtk_threshold.ThresholdByLower(lower)
+        vtk_threshold.SetLowerThreshold(lower)
     elif threshold_type == "upper":
-        vtk_threshold.ThresholdByUpper(upper)
+        vtk_threshold.SetUpperThreshold(upper)
     else:
         print((("%s is not a threshold type. Pleace chose from: upper, lower" +
                 ", or between") % threshold_type))
