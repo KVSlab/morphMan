@@ -17,11 +17,9 @@ def download_testdata(test_path, outputfile):
     if platform == "darwin":
         system("curl -L {} --output {}".format(test_path, outputfile))
     elif platform == "linux" or platform == "linux2":
-        system("wget {}".format(test_path))
+        system("wget -O {} {}".format(outputfile, test_path))
     elif platform == "win32":
         system("bitsadmin /transfer download_model /download /priority high {} {}".format(test_path, outputfile))
-        system("tar -zxvf {}".format(outputfile))
-        system("del /f {}".format(outputfile))
 
 
 @pytest.fixture(scope="module")
@@ -29,13 +27,16 @@ def surface_paths():
     abs_path = path.dirname(path.abspath(__file__))
 
     # Path to test data
+    # TODO: Replace with official Aneurisk database when available
     test_path = "https://github.com/hkjeldsberg/AneuriskDatabase/raw/master/models/C0001/surface/model.vtp"
     outputfile = path.join(abs_path, "C0001", "surface", "model.vtp")
 
     # Download test data if necessary
+    if not path.exists(path.join(abs_path, "C0001", "surface")):
+        makedirs(path.join(abs_path, "C0001", "surface"))
+
     if not path.exists(path.join(abs_path, "C0001", "surface", "model.vtp")):
         try:
-            makedirs(path.join(abs_path, "C0001", "surface"))
             download_testdata(test_path, outputfile)
         except Exception:
             raise Exception("Problem downloading the testdata, please do it manually from "

@@ -9,6 +9,43 @@ from .fixtures import surface_paths
 from morphman.common.surface_operations import *
 from morphman.common.vtk_wrapper import *
 import os
+import sys
+import pytest 
+
+@pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
+def test_compute_gradients(surface_paths):
+    input_filepath = surface_paths[0]
+    surface = read_polydata(input_filepath)
+
+    cell_normals = vtk_compute_polydata_normals(surface, compute_cell_normals=True)
+    gradients = vtk_compute_normal_gradients(cell_normals)
+
+    assert gradients.GetNumberOfCells() > 0
+
+
+def test_vtk_threshold(surface_paths):
+    input_filepath = surface_paths[0]
+    surface = read_polydata(input_filepath)
+
+    cell_normals = vtk_compute_polydata_normals(surface, compute_cell_normals=True)
+    normals_threshold = vtk_compute_threshold(cell_normals, "Normals")
+
+    assert normals_threshold.GetNumberOfCells() < cell_normals.GetNumberOfCells()
+
+
+def test_get_cell_data_array(surface_paths):
+    input_filepath = surface_paths[0]
+    surface = read_polydata(input_filepath)
+    dim = 3
+
+    cell_normals = vtk_compute_polydata_normals(surface, compute_cell_normals=True)
+    normals_array = get_cell_data_array("Normals", cell_normals, k=dim)
+
+    assert type(normals_array) == np.ndarray
+
+    assert len(normals_array) == surface.GetNumberOfCells()
+
+    assert len(normals_array.T) == dim
 
 
 def test_read_polydata(surface_paths):
@@ -76,30 +113,6 @@ def test_compute_normals(surface_paths):
     assert cell_normals.GetNumberOfCells() > 0
 
 
-def test_compute_gradients(surface_paths):
-    input_filepath = surface_paths[0]
-    surface = read_polydata(input_filepath)
-
-    cell_normals = vtk_compute_polydata_normals(surface, compute_cell_normals=True)
-    gradients = vtk_compute_normal_gradients(cell_normals)
-
-    assert gradients.GetNumberOfCells() > 0
-
-
-def test_get_cell_data_array(surface_paths):
-    input_filepath = surface_paths[0]
-    surface = read_polydata(input_filepath)
-
-    cell_normals = vtk_compute_polydata_normals(surface, compute_cell_normals=True)
-    gradients = vtk_compute_normal_gradients(cell_normals)
-
-    gradient_array = get_cell_data_array("Gradients", gradients, k=9)
-
-    assert type(gradient_array) == np.ndarray
-
-    assert len(gradient_array) == gradients.GetNumberOfCells()
-
-
 def test_get_point_data_array(surface_paths):
     input_filepath = surface_paths[0]
     base_path = get_path_names(input_filepath)
@@ -127,18 +140,6 @@ def test_surface_connectivity(surface_paths):
     connected_surface = vtk_compute_connectivity(surface, mode="Largest")
 
     assert connected_surface.GetNumberOfCells() == surface.GetNumberOfCells()
-
-
-def test_vtk_threshold(surface_paths):
-    input_filepath = surface_paths[0]
-    surface = read_polydata(input_filepath)
-
-    cell_normals = vtk_compute_polydata_normals(surface, compute_cell_normals=True)
-    gradients = vtk_compute_normal_gradients(cell_normals)
-
-    gradients_threshold = vtk_compute_threshold(gradients, "Gradients")
-
-    assert gradients_threshold.GetNumberOfCells() < gradients.GetNumberOfCells()
 
 
 def test_get_boundary_edges(surface_paths):

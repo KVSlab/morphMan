@@ -17,19 +17,12 @@ environment:
     CONDA_INSTALL_LOCN: "C:\\Miniconda-x64"
 
   matrix:
-    - PYTHON: "C:\\Python35_64"
-      PYTHON_VERSION: "3.5"
+    - PYTHON: "C:\\Python39_64"
+      PYTHON_VERSION: "3.9"
       PYTHON_ARCH: "64"
-      CONDA_PY: "35"
+      CONDA_PY: "39"
       CONDA_NPY: "18"
-      APP_CONDA_PY: "3.5.1"
-
-    - PYTHON: "C:\\Python36_64"
-      PYTHON_VERSION: "3.6"
-      PYTHON_ARCH: "64"
-      CONDA_PY: "36"
-      CONDA_NPY: "18"
-      APP_CONDA_PY: "3.6.1"
+      APP_CONDA_PY: "3.9.1"
 
 platform:
   - x64
@@ -43,33 +36,21 @@ install:
   - cmd: conda config --set always_yes yes
   - cmd: conda update --quiet conda
   - cmd: conda install --quiet jinja2 conda-build=3.10.5 anaconda-client
-  - cmd: conda config --set restore_free_channel true
 
   # Add custom channels
-  - cmd: conda config --add channels vmtk
+  - cmd: conda config --add channels conda-forge
   - cmd: conda config --add channels morphman
 
-  # Install dependencies
-  - cmd: conda install pytest scipy vtk vmtk python=3.6
-
   # Set up environment
-  - cmd: conda create -n morphman_env morphman
+  - cmd: conda create -n morphman morphman pytest
 
 build: false
 
 test_script:
   # Activate environment
   - cmd: conda init cmd.exe
-  - cmd: conda activate morphman_env
-
-  # Search and replace in vmtkcenterlines.py for / to //
-  - cmd: sed -i "s/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g" %CONDA_INSTALL_LOCN%\\Lib\\site-packages\\vmtk\\vmtkcenterlines.py
-  - cmd: sed -i "s/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g" %CONDA_INSTALL_LOCN%\\Lib\\site-packages\\vmtk\\vmtkcenterlines.py
-  - cmd: sed -i -e "s/(len(values) - 1)\/2/\(len\(values\) - 1\)\/\/2/g" %CONDA_INSTALL_LOCN%\\Lib\\site-packages\\vmtk\\vmtksurfacecurvature.py
+  - cmd: conda activate morphman
 
   # Start testing
   - cd .\\test
-  - ps: Start-FileDownload 'http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0001/C0001_models.tar.gz'
-  - tar --force-local -zxvf C0001_models.tar.gz
-  - del /f C0001_models.tar.gz
   - pytest .
