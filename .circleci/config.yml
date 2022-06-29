@@ -7,7 +7,7 @@ workflows:
 jobs:
   install-and-test:
     docker:
-      - image: cimg/python:3.6
+      - image: cimg/python:3.10
     working_directory: ~/repo
     steps:
       - checkout
@@ -27,11 +27,11 @@ jobs:
             # Set conda parameters
             conda config --set restore_free_channel true
             conda config --set always_yes yes --set changeps1 no
-            conda config --add channels vmtk
+            conda config --add channels conda-forge
             conda config --add channels morphman
 
             # Set up environment
-            conda create -n morphman morphman pytest llvm=3.3
+            conda create -n morphman morphman 
 
             # Activate environment
             source activate morphman
@@ -41,11 +41,6 @@ jobs:
 
             # Dependencies for code coverage
             pip install pytest-cov codecov
-
-            # Edit VMTK files
-            sed -i -e 's/len(self.SourcePoints)\/3/len\(self.SourcePoints\)\/\/3/g' $HOME/miniconda/envs/morphman/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
-            sed -i -e 's/len(self.TargetPoints)\/3/len\(self.TargetPoints\)\/\/3/g' $HOME/miniconda/envs/morphman/lib/python3.6/site-packages/vmtk/vmtkcenterlines.py
-            sed -i -e 's/(len(values) - 1)\/2/\(len\(values\) - 1\)\/\/2/g' $HOME/miniconda/envs/morphman/lib/python3.6/site-packages/vmtk/vmtksurfacecurvature.py
 
             # Run tests
             cd test

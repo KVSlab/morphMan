@@ -5,7 +5,7 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 ##      PURPOSE.  See the above copyright notices for more information.
 
-from scipy.ndimage.filters import gaussian_filter
+from scipy.ndimage import gaussian_filter
 from scipy.signal import argrelextrema
 from vmtk import vmtkrenderer
 from vtk.numpy_interface import dataset_adapter as dsa

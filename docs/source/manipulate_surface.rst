@@ -11,14 +11,12 @@ either remove or add points to the Voronoi diagram. An advantage of this, compar
 to more classical smoothing methods, is that the change in surface is purely local,
 and does not effect the cross-sectional area.
 
-The algorithm builds on previous work of Ford et al. [1]_
-
 .. figure:: Surface_illustration.png
 
     Figure 1: An illustration of the goal of ``morphman-surface``.
 
 In this tutorial, we are using the model with
-`ID C0005 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0005/C0005_models.tar.gz>`_
+`ID C0005 <https://github.com/hkjeldsberg/AneuriskDatabase/tree/master/models/C0005>`_
 from the Aneurisk database. For the commands below we assume that there
 is a file `./C0005/surface/model.vtp`, relative to where you execute the command.
 Performing the manipulation can be achieved by running ``morphman-surface`` in the terminal, followed by the
@@ -50,5 +48,3 @@ You can reproduce the results in Figure 3 by running the following command::
 For additional information, beyond this tutorial, on the script and
 input parameters, please run ``morphman-surface -h`` or confer with
 the :meth:`manipulate_surface`.
-
-.. [1] Ford, M.D., Hoi, Y., Piccinelli, M., Antiga, L. and Steinman, D.A., 2009. An objective approach to digital removal of saccular aneurysms: technique and applications. The British Journal of Radiology, 82(special_issue_1), pp.S55-S61.

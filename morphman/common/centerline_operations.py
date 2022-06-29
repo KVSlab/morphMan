@@ -458,7 +458,7 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
 
     # Find diverging ids
     diverging_ids = []
-    main_line = extract_single_line(centerline, 0)
+    main_line = extract_single_line(centerline, cl_id)
     id_start = 0
     for line in diverging_centerlines:
         id_end = min([line.GetNumberOfPoints(), main_line.GetNumberOfPoints()])

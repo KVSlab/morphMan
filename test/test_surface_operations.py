@@ -7,6 +7,19 @@
 
 from .fixtures import surface_paths
 from morphman.common.surface_operations import *
+import sys
+import pytest
+
+@pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
+def test_uncapp_surface(surface_paths):
+    input_filepath = surface_paths[0]
+    surface = read_polydata(input_filepath)
+    capped = vmtk_cap_polydata(surface)
+
+    uncapped = get_uncapped_surface(capped)
+
+    is_capped, _ = is_surface_capped(uncapped)
+    assert not is_capped
 
 
 def test_relevant_outlets(surface_paths):
@@ -60,17 +73,6 @@ def test_capped_surface(surface_paths):
     assert is_capped
 
     assert number_outlets == 7
-
-
-def test_uncapp_surface(surface_paths):
-    input_filepath = surface_paths[0]
-    surface = read_polydata(input_filepath)
-    capped = vmtk_cap_polydata(surface)
-
-    uncapped = get_uncapped_surface(capped)
-
-    is_capped, _ = is_surface_capped(uncapped)
-    assert not is_capped
 
 
 def test_if_surface_is_merged(surface_paths):

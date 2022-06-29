@@ -155,8 +155,8 @@ def get_centerline_for_splitting_voronoi(centerlines, starting_point, base_path,
     outlet = list(lines[0].GetPoint(lines[0].GetNumberOfPoints()-1) + lines[0].GetPoint(0))
     reversed_cl, _, _ = compute_centerlines(inlet, outlet,
                                             base_path + "_outlet_to_branch.vtp",
-                                            capped_surface, voronoi=voronoi,
-                                            pole_ids=pole_ids, resampling=resampling_step,
+                                            capped_surface,
+                                            resampling=resampling_step,
                                             smooth=False)
     # Extract each line
     reversed_cl_main = extract_single_line(reversed_cl, 1)

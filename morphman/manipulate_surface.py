@@ -390,7 +390,7 @@ def read_command_line_surface(input_path=None, output_path=None):
     else:
         args = parser.parse_args(["-i" + input_path, "-o" + output_path])
 
-    if args.region_of_interest == "commandline" and "region_points" is not None:
+    if args.region_of_interest == "commandline" and args.region_points is not None:
         raise ArgumentTypeError("When setting region of interest to commandline you have to" +
                                 " provide the points through the argument '--regions-points'")
 

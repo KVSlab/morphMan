@@ -18,7 +18,7 @@ The algorithm builds on previous work of Ford et al. [1]_
     Figure 1: An illustration of the goal of ``morphman-bifurcation``.
 
 In this tutorial, we are using the model with
-`ID C0005 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0005/C0005_models.tar.gz>`_
+`ID C0005 <https://github.com/hkjeldsberg/AneuriskDatabase/tree/master/models/C0005>`_
 from the Aneurisk database. For the commands below we assume that there
 is a file `./C0005/surface/model.vtp`, relative to where you execute the command.
 Performing the manipulation can be achieved by running ``morphman-bifurcation`` in the terminal, followed by the
@@ -62,7 +62,7 @@ The default is to rotate both branches, but if either ``--keep-fixed-1`` or
 fixed, respectively. Furthermore, if both parameters are set to **True**
 then the algorithm can be used to remove an aneurysm (a balloon-shaped bleb
 on the artery), see Figure 4. To this specific tutorial, we have used the model
-with `ID C0066 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0066/C0066_models.tar.gz>`_
+with `ID C0066 <https://github.com/hkjeldsberg/AneuriskDatabase/tree/master/models/C0066>`_
 , which harbors an aneurysm located at the terminal bifurcation in the internal carotid artery.
 
 .. figure:: remove_aneurysm.png
