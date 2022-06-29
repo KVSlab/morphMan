@@ -1,13 +1,13 @@
 .. title:: Installation
-.. highlight:: console
 
 ============
 Installation
 ============
+.. highlight:: console
 
 morphMan (morphological manipulation) is a collection of scripts to objectively manipulate
 morphological features of patient-specific vascular geometries. The project is accessible through
-`GitHub <https://github.com/KVSlab/morphMan/>`_ and `Anaconda.org <https://anaconda.org/morphman/morphman>`_.
+`GitHub <https://github.com/KVSlab/morphMan/>`_ and `Anaconda <https://anaconda.org/morphman/morphman>`_.
 
 
 Compatibility and Dependencies
@@ -31,7 +31,7 @@ Then execute the following command in a terminal window to create a Conda enviro
 .. note::
     Replace ``your_environment`` with the environment name.
 
-You can then activate your environment by running ``source activate your_environment``.
+You can then activate your environment by running ``conda activate your_environment`` or ``source activate your_environment``.
 Now you are all set, and can start using morphMan. morphMan can be accessed by opening a Python console
 and typing::
 
