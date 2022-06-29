@@ -5,30 +5,26 @@
 ##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
 ##      PURPOSE.  See the above copyright notices for more information.
 
-from os import system, path
+from os import system, path, makedirs
 from sys import platform
 
 
 def download_case(case):
     abs_path = path.dirname(path.abspath(__file__))
-    output_file = path.join(abs_path, "{}_models.tar.gz".format(case))
-    url = "http://ecm2.mathcs.emory.edu/aneuriskdata/download/{}/{}_models.tar.gz".format(case, case)
+    output_file = path.join(abs_path, case, "surface", "model.vtp")
+    url = "https://github.com/hkjeldsberg/AneuriskDatabase/raw/master/models/{}/surface/model.vtp".format(case)
+
+    # Create test data folders
+    if not path.exists(path.join(abs_path, case, "surface")):
+        makedirs(path.join(abs_path, case, "surface"))
 
     try:
         if platform == "darwin":
-            system("curl {} --output {}".format(url, output_file))
-            system("tar -zxvf {}".format(output_file))
-            system("rm {}".format(output_file))
-
+            system("curl -L {} --output {}".format(url, output_file))
         elif platform == "linux" or platform == "linux2":
-            system("wget {}".format(url))
-            system("tar -zxvf {}".format(output_file))
-            system("rm {}".format(output_file))
-
+            system("wget -O {} {}".format(output_file, url))
         elif platform == "win32":
             system("bitsadmin /transfer download_model /download /priority high {} {}".format(url, output_file))
-            system("tar -zxvf {}".format(output_file))
-            system("del /f {}".format(output_file))
 
     except:
         raise RuntimeError("Problem downloading the testdata, please do it manually from "
