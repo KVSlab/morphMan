@@ -38,7 +38,7 @@ the geometric properties (curvature and torsion) of the centerline, set with
  2. Discrete derivatives (``disc``)
  3. VMTK (``vmtk``)
 
-To perform landmarking, we will be using the model with `ID C0001 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0001/C0001_models.tar.gz>`_
+To perform landmarking, we will be using the model with `ID C0001 <https://github.com/hkjeldsberg/AneuriskDatabase/tree/master/models/C0001>`_
 from the Aneurisk database. For the commands below we assume that there is a file `./C0001/surface/model.vtp`, relative to where you execute the command.
 To landmark the surface model, run the following command::
 
@@ -71,7 +71,7 @@ manipulates only the centerline for a range of ``--alpha`` and
 ``--beta`` values. The resulting 2D data can be fitted to a surface through cubic spline interpolation, from
 which one can easily collect appropriate values for ``--alpha`` and ``--beta``.
 
-To estimate :math:`\alpha` and :math:`\beta`, we will be using the model with `ID C0005 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0005/C0005_models.tar.gz>`_
+To estimate :math:`\alpha` and :math:`\beta`, we will be using the model with `ID C0005 <https://github.com/hkjeldsberg/AneuriskDatabase/tree/master/models/C0005>`_
 from the Aneurisk database. For the commands below we assume that there is a file `./C0005/surface/model.vtp`, relative to where you execute the command.
 
 Imagine we are interested in changing the bend angle by :math:`\pm 10^{\circ}`.

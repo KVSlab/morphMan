@@ -13,7 +13,7 @@ demo folder where we show how to run this tutorial from a Python script, please 
 run the demos.
 
 In this tutorial, we are using the model with
-`ID C0002 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0002/C0002_models.tar.gz>`_
+`ID C0002 <https://github.com/hkjeldsberg/AneuriskDatabase/tree/master/models/C0002>`_
 from the Aneurisk database. For the commands below we assume that there is a file `./C0002/surface/model.vtp`, relative to where you execute the command.
 
 For changing the area you first need to define which segment you want to alter. For ``morphman-area`` there are

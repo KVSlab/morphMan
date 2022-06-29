@@ -19,7 +19,7 @@ run the demos.
   Figure 1: An illustration of the desired output from the method.
 
 In this tutorial, we are using the model with
-`ID C0005 <http://ecm2.mathcs.emory.edu/aneuriskdata/download/C0005/C0005_models.tar.gz>`_
+`ID C0005 <https://github.com/hkjeldsberg/AneuriskDatabase/tree/master/models/C0005>`_
 from the Aneurisk database. For the commands below we assume that there is a
 file `./C0005/surface/model.vtp`, relative to where you execute the command.
 

@@ -28,13 +28,13 @@ sys.path.insert(0, os.path.join(morphman_root, "misc"))
 # -- Project information -----------------------------------------------------
 
 project = 'morphman'
-copyright = '2021, Aslak W. Bergersen & Henrik A. Kjeldsberg'
+copyright = '2022, Aslak W. Bergersen & Henrik A. Kjeldsberg'
 author = 'Aslak W. Bergersen & Henrik A. Kjeldsberg'
 
 # The short X.Y version.
-version = '1.1'
+version = '1.2'
 # The full version, including alpha/beta/rc tags
-release = '1.1'
+release = '1.2'
 
 # -- General configuration ---------------------------------------------------
 
