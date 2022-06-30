@@ -17,19 +17,18 @@ build:
     - morphman-curvature=morphman.manipulate_curvature:main_curvature
     - morphman-branch=morphman.manipulate_branch:main_branch
     - morphman-surface=morphman.manipulate_surface:main_surface
-  noarch: python
   script: {{ PYTHON }} -m pip install . -vv
 
 requirements:
   host:
     - pip
-    - python >=3.8
+    - python {{ python }}
   run:
     - numpy
     - scipy
     - vtk
     - vmtk
-    - python >=3.8
+    - python {{ python }}
 
 test:
   imports:
