@@ -1,35 +1,62 @@
+{% set name = "morphMan" %}
+{% set version = "1.2" %}
+
 package:
-  name: "morphman"
-  version: "1.2"
+  name: {{ name|lower }}
+  version: {{ version }}
 
 source:
   path: ../
 
 build:
   number: 1
+  entry_points:
+    - morphman-area=morphman.manipulate_area:main_area
+    - morphman-bend=morphman.manipulate_bend:main_bend
+    - morphman-bifurcation=morphman.manipulate_bifurcation:main_bifurcation
+    - morphman-curvature=morphman.manipulate_curvature:main_curvature
+    - morphman-branch=morphman.manipulate_branch:main_branch
+    - morphman-surface=morphman.manipulate_surface:main_surface
+  noarch: python
+  script: {{ PYTHON }} -m pip install . -vv
 
 requirements:
-  build:
-    - python
-    - setuptools  # [win]
-
+  host:
+    - pip
+    - python >=3.8
   run:
-    - python {{ python }}
+    - numpy
     - scipy
-    - numpy {{ numpy }}
-    - vtk {{ vtk }}
+    - vtk
     - vmtk
+    - python >=3.8
 
 test:
+  imports:
+    - morphman
   requires:
+    - pip
     - pytest
+  commands:
+    - pip check
+    - morphman-area --help
+    - morphman-bend --help
+    - morphman-bifurcation --help
+    - morphman-curvature --help
+    - morphman-branch --help
+    - morphman-surface --help
   source_files:
     - ./test
 
 
 about:
-  home: https://github.com/KVSlab/morphMan
-  summary: 'morphMan - morphological manipulation'
-  license: GNU GPL 3.0
+  home: https://github.com/KVSlab/morphMan.git
+  doc_url: https://morphman.readthedocs.io/
+  summary: A Python-based framework for manipulation of morphological features in patient-specific geometries.
+  license: GPL-3.0-or-later
+  license_family: GPL3
   license_file: LICENSE
-  doc_url: https://morphman.readthedocs.io
+
+extra:
+  recipe-maintainers:
+    - hkjeldsberg
