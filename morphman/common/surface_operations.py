@@ -132,7 +132,7 @@ def provide_inlet(surface):
         surface (vtkPolyData): Surface model.
 
     Returns:
-        points (list): List of inlet ID outlet IDs
+        points (list): Point located on the inlet, as list
 
     """
     print("-- Please select the boundary representing the inlet in the interactive window.")
