@@ -126,7 +126,7 @@ def compute_centers(polydata, case_path=None, select_inlet=False):
 
 def provide_inlet(surface):
     """
-    Get inet from user selected point on an input surface
+    Get inlet from user selected point on an input surface
 
     Args:
         surface (vtkPolyData): Surface model.
