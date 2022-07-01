@@ -246,7 +246,7 @@ def write_polydata(input_data, filename, datatype=None, file_type="ascii"):
 def vtk_merge_polydata(inputs):
     """
     Appends one or more polygonal
-    datates together into a single
+    datasets together into a single
     polygonal dataset.
 
     Args:
@@ -569,7 +569,7 @@ def create_vtk_array(values, name, k=1):
 
 
 def move_past_sphere(centerline, center, r, start, step=-1, stop=0, scale_factor=0.8):
-    """Moves a point along the centerline until it as outside the a sphere with radius (r)
+    """Moves a point along the centerline until it as outside the sphere with radius (r)
     and a center (center).
 
     Args:

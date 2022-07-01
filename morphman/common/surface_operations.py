@@ -42,14 +42,15 @@ def get_relevant_outlets(surface, base_path):
     return relevant_outlets
 
 
-def compute_centers(polydata, case_path=None):
+def compute_centers(polydata, case_path=None, select_inlet=False):
     """
     Compute the center of all the openings in the surface. The inlet is chosen based on
     the largest area.
 
     Args:
-        polydata (vtkPolyData): centers of the openings
-        case_path (str): path to case directory.
+        polydata (vtkPolyData): Centers of the openings
+        case_path (str): Path to case directory.
+        select_inlet (bool): Let user select inlet manually
 
     Returns:
         inlet (list): A list of points.
@@ -90,12 +91,18 @@ def compute_centers(polydata, case_path=None):
         delaunay.SetInputData(boundary_points)
         delaunay.Update()
 
-        # Add quanteties
+        # Add quantities
         area.append(vtk_compute_mass_properties(delaunay.GetOutput()))
         center.append(np.mean(tmp_points, axis=0))
 
+    # Select inlet manually or based on area
+    if select_inlet:
+        inlet_point = provide_inlet(vmtk_cap_polydata(polydata))
+        inlet_ind = np.argmin([get_distance(inlet_point, p) for p in center])
+    else:
+        inlet_ind = area.index(max(area))
+
     # Store the center and area
-    inlet_ind = area.index(max(area))
     if case_path is not None:
         info = {"inlet": center[inlet_ind].tolist(), "inlet_area": area[inlet_ind]}
         p = 0
@@ -117,10 +124,34 @@ def compute_centers(polydata, case_path=None):
     return inlet_center, center_
 
 
+def provide_inlet(surface):
+    """
+    Get inet from user selected point on an input surface
+
+    Args:
+        surface (vtkPolyData): Surface model.
+
+    Returns:
+        points (list): List of inlet ID outlet IDs
+
+    """
+    print("-- Please select the boundary representing the inlet in the interactive window.")
+    seed_selector = vmtkPickPointSeedSelector()
+    seed_selector.SetSurface(surface)
+    seed_selector.text = "Please select the inlet, \'u\' to undo\n"
+    seed_selector.Execute()
+
+    point_seed_ids = seed_selector.GetTargetSeedIds()
+    get_point = surface.GetPoints().GetPoint
+    inlet_point = list(get_point(point_seed_ids.GetId(0)))
+
+    return inlet_point
+
+
 def provide_relevant_outlets(surface, dir_path=None):
     """
     Get relevant outlets from user
-    selected points on a input surface.
+    selected points on an input surface.
 
     Args:
         surface (vtkPolyData): Surface model.
@@ -154,13 +185,14 @@ def provide_relevant_outlets(surface, dir_path=None):
     return points
 
 
-def get_inlet_and_outlet_centers(surface, base_path, flowext=False):
+def get_inlet_and_outlet_centers(surface, base_path, flowext=False, select_inlet=False):
     """Get the centers of the inlet and outlets.
 
     Args:
         surface (vtkPolyData): An open surface.
         base_path (str): Path to the case file.
         flowext (bool): Turn on/off flow extension.
+        select_inlet (bool): Let user manually select inlet if true
 
     Returns:
         inlet (list): A flatt list with the point of the inlet
@@ -168,7 +200,7 @@ def get_inlet_and_outlet_centers(surface, base_path, flowext=False):
     """
     # Check if info exists
     if flowext or not path.isfile(base_path + "_info.json"):
-        compute_centers(surface, base_path)
+        compute_centers(surface, base_path, select_inlet)
 
     # Open info
     parameters = get_parameters(base_path)
@@ -187,7 +219,7 @@ def get_inlet_and_outlet_centers(surface, base_path, flowext=False):
             outlets += parameters["outlet%d" % i]
 
     if inlet == [] and outlets == []:
-        inlet, outlets = compute_centers(surface, base_path)
+        inlet, outlets = compute_centers(surface, base_path, select_inlet)
 
     return inlet, outlets
 
@@ -401,7 +433,7 @@ def check_if_surface_is_merged(surface, centerlines, output_filepath):
     for i in range(centerlines.GetNumberOfLines()):
         line_to_compare = vmtk_resample_centerline(lines_to_compare[i], length=0.1)
         line_to_check = vmtk_resample_centerline(extract_single_line(lines_to_check, i), length=0.1)
-        # Compare distance between points along both centerliens
+        # Compare distance between points along both centerlines
         n = min([line_to_check.GetNumberOfPoints(), line_to_compare.GetNumberOfPoints()])
         tolerance = get_centerline_tolerance(line_to_compare) * 500
         for j in range(n):
@@ -417,16 +449,15 @@ def check_if_surface_is_merged(surface, centerlines, output_filepath):
                                     " poly_ball_size.").format(tmp_path))
 
 
-def prepare_output_surface(surface, original_surface, new_centerline, output_filepath,
-                           test_merge=False, changed=False, old_centerline=None,
-                           removed=[[1e9, 1e9, 1e9]]):
-    """After manipulation preparing the surface for output. This method clipps the
-    outlets, slightly smooths the surface, and (potentially) tests if the surface is is
+def prepare_output_surface(surface, original_surface, new_centerline, output_filepath, test_merge=False, changed=False,
+                           old_centerline=None, removed=[[1e9, 1e9, 1e9]]):
+    """After manipulation preparing the surface for output. This method clips the
+    outlets, slightly smooths the surface, and (potentially) tests if the surface is
     merged.
 
     Args:
         surface (vtkPolyData): The new surface after manipulation.
-        original_surface (vtkPolyData): The original surface inputed for manipulation.
+        original_surface (vtkPolyData): The original surface input for manipulation.
         new_centerline (vtkPolyData): The centerline after manipulation.
         output_filepath (str): The user-defined path to the output.
         test_merge (bool): Turn on/off testing if the surface is merged.
@@ -553,7 +584,7 @@ def prepare_output_surface(surface, original_surface, new_centerline, output_fil
 
 
 def attach_clipped_regions_to_surface(surface, clipped, center):
-    """Check the connectivty of a clipped surface, and attach all sections which are not
+    """Check the connectivity of a clipped surface, and attach all sections which are not
     closest to the center of the clipping plane.
 
     Args:
@@ -588,12 +619,12 @@ def attach_clipped_regions_to_surface(surface, clipped, center):
 
 
 def prepare_voronoi_diagram(capped_surface, centerlines, base_path, smooth, smooth_factor, no_smooth, no_smooth_point,
-                            voronoi, pole_ids, resampling_length, absolute=False, upper=None):
+                            voronoi, pole_ids, resampling_length):
     """
     Compute and smooth voronoi diagram of surface model.
 
     Args:
-        capped_surface (polydata): Cappedsurface model to create a Voronoi diagram of.
+        capped_surface (polydata): Capped surface model to create a Voronoi diagram of.
         base_path (str): Absolute path to surface model path.
         voronoi (vtkPolyData): Voronoi diagram.
         pole_ids (vtkIDList): Pole ids of Voronoi diagram.
@@ -601,10 +632,8 @@ def prepare_voronoi_diagram(capped_surface, centerlines, base_path, smooth, smoo
         smooth_factor (float): Smoothing factor for voronoi smoothing.
         centerlines (vtkPolyData): Centerlines throughout geometry.
         no_smooth (bool): Part of Voronoi is not smoothed.
-        no_smooth_point (vtkPolyData): Point which defines unsmoothed area.
+        no_smooth_point (vtkPolyData): Point which defines un-smoothed area.
         resampling_length (float): Length of resampling the centerline.
-        absolute (bool): Turn on/off absolute values for the smoothing. Default is off.
-        upper (int): Set an upper limit for the smoothing factor. Default is None.
 
     Returns:
         voronoi (vtkPolyData): Voronoi diagram of surface.
@@ -694,7 +723,7 @@ def compute_centerlines(inlet, outlet, filepath, surface, resampling=1.0, smooth
 def prepare_surface(base_path, surface_path):
     """
     Clean and check connectivity of surface.
-    Capps or uncapps surface at inlet and outlets.
+    Caps or uncaps surface at inlet and outlets.
 
     Args:
         base_path (str): Absolute path to base folder.
@@ -810,13 +839,13 @@ def get_no_smooth_cl(capped_surface, centerlines, base_path, smooth, no_smooth, 
     """
     Extract a section where the Voronoi should not be smoothed
      Args:
-        capped_surface (polydata): Cappedsurface model to create a Voronoi diagram of.
+        capped_surface (polydata): Capped surface model to create a Voronoi diagram of.
         centerlines (vtkPolyData): Centerlines throughout geometry.
         base_path (str): Absolute path to surface model path.
         smooth (bool): Voronoi is smoothed if True.
         no_smooth (bool): Part of Voronoi is not smoothed.
         voronoi (vtkPolyData): Voronoi diagram.
-        no_smooth_point (vtkPolyData): Point which defines unsmoothed area.
+        no_smooth_point (vtkPolyData): Point which defines un-smoothed area.
         pole_ids (vtkIDList): Pole ids of Voronoi diagram.
         resampling_length (float): Length of resampling the centerline.
         region_points (list): Flatten list with the region points
@@ -896,7 +925,5 @@ def get_no_smooth_cl(capped_surface, centerlines, base_path, smooth, no_smooth, 
 
     no_smooth_cl = vtk_merge_polydata(no_smooth_segments)
     write_polydata(no_smooth_cl, no_smooth_path)
-    # else:
-    #    no_smooth_cl = read_polydata(no_smooth_path)
 
     return no_smooth_cl

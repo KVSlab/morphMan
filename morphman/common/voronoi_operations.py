@@ -62,8 +62,8 @@ def smooth_voronoi_diagram(voronoi, centerlines, smoothing_factor, no_smooth_cl=
                            absolute=False):
     """
     Smooth voronoi diagram based on a given
-    smoothingfactor. Each voronoi point
-    that has a radius less then MISR*(1-smoothingFactor)
+    smoothing factor. Each voronoi point
+    that has a radius less than MISR*(1-smoothingFactor)
     at the closest centerline point is removed.
 
     Args:
@@ -199,8 +199,8 @@ def get_split_voronoi_diagram(voronoi, centerlines):
 
     Args:
         voronoi (vtkPolyData): Input Voronoi diagram
-        centerlines (list): A list of centerlines (vtkPolyData). An entery could
-                            alternativly be None as well, the corresponding voronoi
+        centerlines (list): A list of centerlines (vtkPolyData). An entry could
+                            alternatively be None as well, the corresponding voronoi
                             diagram would then be None as well.
 
     Returns

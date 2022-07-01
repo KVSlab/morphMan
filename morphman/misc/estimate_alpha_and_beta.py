@@ -17,8 +17,7 @@ from morphman.common import *
 
 
 def estimate_alpha_and_beta(input_filepath, quantity_to_compute, boundary, radius, grid_size, value_change,
-                            method_angle,
-                            method_curv, region_of_interest, region_points):
+                            method_angle, method_curv, region_of_interest, region_points):
     """
     Imports a matrix of parameter values corresponding
     to a (alpha,beta) point and perform spline interpolation
@@ -202,7 +201,7 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
     # Centerline path
     centerline_path = base_path + "_centerline.vtp"
 
-    # Clean and capp / uncapp surface
+    # Clean and cap / uncap surface
     surface, capped_surface = prepare_surface(base_path, input_filepath)
 
     # Extract old centerline
@@ -284,7 +283,7 @@ def compute_angle(input_filepath, alpha, beta, method, new_centerlines,
         siphon.GetPointData().AddArray(misr_array)
         moved_siphon.GetPointData().AddArray(newmisr_array)
 
-    # Get direction to the point furthest away (dx)
+    # Get direction to the point the furthest away (dx)
     direction = "vertical"
     clipping_points_vtk = vtk.vtkPoints()
     for point in [p1, p2]:
@@ -491,7 +490,7 @@ def compute_curvature(input_filepath, alpha, beta, method, new_centerlines, comp
         new_centerlines (vtkPolyData): New centerline.
         compute_original (bool): Computes old curvature value if True.
         region_of_interest (str): Method for setting the region of interest ['manual' | 'commandline' | 'landmarking']
-        region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint
+        region_points (list): If region_of_interest is 'commandline', this is a flattened list of the start and endpoint
 
     Returns:
         new_maxcurv (float): Maximum curvature within the manipulated region of interest.
@@ -642,7 +641,7 @@ def get_new_centerlines(centerlines, region_points, alpha, beta, p1, p2):
 
 def odr_line(id1, id2, line, curvature, limit):
     """
-    Computes the othogonal distance regression
+    Computes the orthogonal distance regression
     of points along the centerline selected from
     1) All points until a cumulative limit is reached
     or

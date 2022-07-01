@@ -99,11 +99,11 @@ def vmtk_compute_centerline_sections(surface, centerlines):
     Wrapper for vmtk centerline sections.
 
     Args:
-        surface (vtkPolyData): Surface to meassure area.
+        surface (vtkPolyData): Surface to measure area.
         centerlines (vtkPolyData): centerline to measure along.
 
     Returns:
-        line (vtkPolyData): centerline with the attributes
+        line (vtkPolyData): centerline with the attributes'
         centerline_sections_area (vtkPolyData): sections along the centerline
     """
     centerline_sections = vtkvmtk.vtkvmtkPolyDataCenterlineSections()
@@ -122,13 +122,13 @@ def vmtk_compute_centerline_sections(surface, centerlines):
     return line, centerlines_sections_area
 
 
-def vmtk_compute_geometric_features(centerlines, smooth, outputsmoothed=False, factor=1.0, iterations=100):
+def vmtk_compute_geometric_features(centerlines, smooth, output_smoothed=False, factor=1.0, iterations=100):
     """Wrapper for vmtk centerline geometry.
 
     Args:
         centerlines (vtkPolyData): Line to compute centerline geometry from.
         smooth (bool): Turn on and off smoothing before computing the geometric features.
-        outputsmoothed (bool): Turn on and off the smoothed centerline.
+        output_smoothed (bool): Turn on and off the smoothed centerline.
         factor (float): Smoothing factor.
         iterations (int): Number of iterations.
 
@@ -140,7 +140,7 @@ def vmtk_compute_geometric_features(centerlines, smooth, outputsmoothed=False, f
 
     if smooth:
         geometry.LineSmoothing = 1
-        geometry.OutputSmoothedLines = outputsmoothed
+        geometry.OutputSmoothedLines = output_smoothed
         geometry.SmoothingFactor = factor
         geometry.NumberOfSmoothingIterations = iterations
     geometry.FernetTangentArrayName = "FernetTangent"
@@ -161,7 +161,7 @@ def vmtk_compute_centerline_attributes(centerlines):
         centerlines (vtkPolyData): Line to investigate.
 
     Returns:
-        line (vtkPolyData): Line with centerline atributes.
+        line (vtkPolyData): Line with centerline attributes.
     """
     attributes = vmtkscripts.vmtkCenterlineAttributes()
     attributes.Centerlines = centerlines
@@ -198,8 +198,8 @@ def vmtk_cap_polydata(surface, boundary_ids=None, displacement=0.0, in_plane_dis
     Close holes in a surface model.
 
     Args:
-        in_plane_displacement (float): Displacement of boundary baricenters, at section plane relative to the radius
-        displacement (float):  Displacement of boundary baricenters along boundary normals relative to the radius.
+        in_plane_displacement (float): Displacement of boundary barycenter, at section plane relative to the radius
+        displacement (float):  Displacement of boundary barycenter along boundary normals relative to the radius.
         boundary_ids (ndarray): Set ids of the boundaries to cap.
         surface (vtkPolyData): Surface to be capped.
 
@@ -260,7 +260,7 @@ def vmtk_compute_voronoi_diagram(surface, filename, simplify_voronoi=False, cap_
                                  check_non_manifold=False, delaunay_tolerance=0.001, subresolution_factor=1.0):
     """
     Wrapper for vmtkDelanayVoronoi. Creates a surface model's
-    coresponding voronoi diagram.
+    corresponding voronoi diagram.
 
     Args:
         subresolution_factor (float): Factor for removal of subresolution tetrahedra
@@ -334,7 +334,7 @@ def vmtk_surface_connectivity(surface, method="largest", clean_output=True, clos
         closest_point (ndarray): Coordinates of the closest point
 
     Returns:
-        vmtkSurfaceConnectivity: Filter for extracting largest connected region
+        vmtkSurfaceConnectivity: Filter for extracting the largest connected region
     """
     connector = vmtkscripts.vmtkSurfaceConnectivity()
     connector.Surface = surface
@@ -472,7 +472,7 @@ def vmtk_surface_curvature(surface, curvature_type="mean", absolute=False,
     Args:
         surface (vtkPolyData): The input surface
         curvature_type (str): The type of surface curvature to compute (mean | gaussian | maximum | minimum)
-        absolute (bool): Output the avsolute value of the curvature
+        absolute (bool): Output the absolute value of the curvature
         median_filtering (bool): Output curvature after median filtering to suppress numerical noise speckles
         curvature_on_boundaries (bool): Turn on/off curvature on boundaries
         bounded_reciporcal (bool): Output bounded reciprocal of the curvature
@@ -513,7 +513,7 @@ def vmtk_surface_distance(surface1, surface2, distance_array_name="Distance",
                           distance_vectors_array_name="",
                           signed_distance_array_name="", flip_normals=False):
     """
-    Compute the pointwise minimum distance of the input surface from a reference surface
+    Compute the point-wise minimum distance of the input surface from a reference surface
 
     Args:
         surface1 (vtkPolyData): Input surface

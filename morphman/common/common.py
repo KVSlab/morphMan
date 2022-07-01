@@ -82,7 +82,7 @@ def get_parameters(folder):
     Returns:
         data (dict): The data in the info file.
     """
-    # If info.json does not exists, return an empty dict
+    # If info.json does not exist, return an empty dict
     if not path.isfile(folder + "_info.json"):
         return {}
 
@@ -121,7 +121,7 @@ def convert_numpy_data_to_polydata(data, header, TNB=None, PT=None):
         PT (numpy.ndarray): Data array.
 
     Returns:
-        line (vtkPolyData): Line couple with all the new data.
+        line (vtkPolyData): Line-couple with all the new data.
     """
     line = vtk.vtkPolyData()
     cell_array = vtk.vtkCellArray()
@@ -504,15 +504,15 @@ def get_rotation_matrix(u, angle):
         angle (float): Angle to rotate in radians
 
     Returns:
-        R (ndarray): Rotation matrix
+        rotation_matrix (ndarray): Rotation matrix
     """
     u_cross_matrix = np.asarray([[0, -u[2], u[1]],
                                  [u[2], 0, -u[0]],
                                  [-u[1], u[0], 0]])
     u_outer = np.outer(u, u)
-    R = np.cos(angle) * np.eye(3) + np.sin(angle) * u_cross_matrix + (1 - np.cos(angle)) * u_outer
+    rotation_matrix = np.cos(angle) * np.eye(3) + np.sin(angle) * u_cross_matrix + (1 - np.cos(angle)) * u_outer
 
-    return R
+    return rotation_matrix
 
 
 def get_angle(a, b):
