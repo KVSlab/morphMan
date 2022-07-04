@@ -7,7 +7,7 @@ Installation
 
 morphMan (morphological manipulation) is a collection of scripts to objectively manipulate
 morphological features of patient-specific vascular geometries. The project is accessible through
-`GitHub <https://github.com/KVSlab/morphMan/>`_ and `Anaconda <https://anaconda.org/morphman/morphman>`_.
+`GitHub <https://github.com/KVSlab/morphMan/>`_, `Anaconda <https://anaconda.org/morphman/morphman>`_, and `conda-forge <https://github.com/conda-forge/morphman-feedstock/>`_ .
 
 
 Compatibility and Dependencies
@@ -22,11 +22,16 @@ The general dependencies of morphMan are
 
 Basic Installation
 ==================
-We recommend that you can install morphMan through Anaconda.
+We recommend that you can install morphMan through `conda-forge`.
 First, install `Anaconda <https://www.anaconda.com/products/distribution>`_ or `Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_.
-Then execute the following command in a terminal window to create a Conda environment with morphMan installed::
+Then execute the following command in a terminal window to add the `conda-forge` channel::
 
-  $ conda create -n your_environment -c conda-forge -c morphman morphman
+    $ conda config --add channels conda-forge
+    $ conda config --set channel_priority strict
+
+Once the `conda-forge` channel has been added, you can create a `conda` environment with `morphman` installed with::
+
+    $ conda create -n your_environment morphman
 
 .. note::
     Replace ``your_environment`` with the environment name.
@@ -67,8 +72,9 @@ In order to build and install morphMan, navigate into the ``morphMan`` folder, w
 file will be located. First, make sure that all dependencies are installed. Then, building and installation of morphMan
 can be performed with ``pip`` by running the following command::
 
-    $ python -m pip install .
+    $ python -m pip install --editable .
 
+The ``--editable`` flag installs the project in editable mode meaning that any changes to the original package will be reflected directly in your environment.
 Alternatively, morphMan can be installed using Python directly (deprecated)::
 
     $ python setup.py install

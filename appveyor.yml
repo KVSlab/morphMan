@@ -39,7 +39,7 @@ install:
 
   # Add custom channels
   - cmd: conda config --add channels conda-forge
-  - cmd: conda config --add channels morphman
+  - cmd: conda config --set channel_priority strict
 
   # Set up environment
   - cmd: conda create -n morphman morphman pytest
