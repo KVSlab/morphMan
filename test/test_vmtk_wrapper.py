@@ -16,7 +16,7 @@ def test_compute_geometric_features(surface_paths):
     base_path = get_path_names(input_filepath)
     centerline = extract_single_line(read_polydata(base_path + "_centerline.vtp"), 0)
 
-    centerline = vmtk_compute_geometric_features(centerline, False, outputsmoothed=False, factor=1.0, iterations=100)
+    centerline = vmtk_compute_geometric_features(centerline, False, output_smoothed=False, factor=1.0, iterations=100)
 
     features = get_number_of_arrays(centerline)[1]
 

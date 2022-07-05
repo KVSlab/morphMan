@@ -15,7 +15,7 @@ from morphman.common.vessel_reconstruction_tools import *
 
 def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_factor, angle, keep_fixed_1, keep_fixed_2,
                            bif, lower, no_smooth, no_smooth_point, poly_ball_size, cylinder_factor, resampling_step,
-                           region_of_interest, region_points, tension, continuity):
+                           region_of_interest, region_points, tension, continuity, select_inlet):
     """
     Objective rotation of daughter branches, by rotating
     centerlines and Voronoi diagram about the bifurcation center.
@@ -42,8 +42,9 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
         no_smooth (bool): True of part of the model is not to be smoothed.
         no_smooth_point (ndarray): Point which is untouched by smoothing.
         region_of_interest (str): Method for setting the region of interest ['manual' | 'commandline' ]
-        region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint
+        region_points (list): If region_of_interest is 'commandline', this is a flattened list of the start and endpoint
         poly_ball_size (list): Resolution of polyballs used to create surface.
+        select_inlet (bool): Lets user manually select inlet if True
     """
     # Filenames
     base_path = get_path_names(input_filepath)
@@ -76,7 +77,7 @@ def manipulate_bifurcation(input_filepath, output_filepath, smooth, smooth_facto
     surface, capped_surface = prepare_surface(base_path, input_filepath)
 
     # Get inlet and outlets
-    inlet, outlets = get_inlet_and_outlet_centers(surface, base_path)
+    inlet, outlets = get_inlet_and_outlet_centers(surface, base_path, select_inlet=select_inlet)
     if region_of_interest == "manual":
         outlet1, outlet2 = get_relevant_outlets(capped_surface, base_path)
     else:
@@ -623,6 +624,9 @@ def read_command_line_bifurcation(input_path=None, output_path=None):
                              " is lower than the other bif line.")
     parser.add_argument("--cylinder-factor", type=float, default=7.0,
                         help="Factor for choosing the smaller cylinder")
+    parser.add_argument("--select-inlet", type=str2bool, default=False,
+                        help="Manually select inlet instead of default automated option, " +
+                             "chosen as the boundary with the largest cross sectional area.")
 
     # Output file argument
     if required:
@@ -638,14 +642,12 @@ def read_command_line_bifurcation(input_path=None, output_path=None):
         raise ValueError("Tension has to be between -1 and 1, not {}".format(args.continuity))
 
     return dict(input_filepath=args.ifile, smooth=args.smooth, output_filepath=args.ofile,
-                smooth_factor=args.smooth_factor, angle=ang_,
-                keep_fixed_1=args.keep_fixed_1, keep_fixed_2=args.keep_fixed_2,
-                bif=args.bif, lower=args.lower, cylinder_factor=args.cylinder_factor,
-                resampling_step=args.resampling_step, no_smooth=args.no_smooth,
-                no_smooth_point=args.no_smooth_point, poly_ball_size=args.poly_ball_size,
-                region_of_interest=args.region_of_interest,
-                region_points=args.region_points,
-                tension=args.tension, continuity=args.continuity)
+                smooth_factor=args.smooth_factor, angle=ang_, keep_fixed_1=args.keep_fixed_1,
+                keep_fixed_2=args.keep_fixed_2, bif=args.bif, lower=args.lower, cylinder_factor=args.cylinder_factor,
+                resampling_step=args.resampling_step, no_smooth=args.no_smooth, no_smooth_point=args.no_smooth_point,
+                poly_ball_size=args.poly_ball_size, region_of_interest=args.region_of_interest,
+                region_points=args.region_points, tension=args.tension, continuity=args.continuity,
+                select_inlet=args.select_inlet)
 
 
 def main_bifurcation():

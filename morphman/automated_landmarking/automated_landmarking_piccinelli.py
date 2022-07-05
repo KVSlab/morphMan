@@ -55,9 +55,9 @@ def landmarking_piccinelli(centerline, base_path, approximation_method, algorith
 
     elif approximation_method == "vmtk":
         line = centerline
-        line_curv = vmtk_compute_geometric_features(centerline, True, outputsmoothed=False,
+        line_curv = vmtk_compute_geometric_features(centerline, True, output_smoothed=False,
                                                     factor=smoothing_factor_curv, iterations=iterations)
-        line_tor = vmtk_compute_geometric_features(centerline, True, outputsmoothed=False,
+        line_tor = vmtk_compute_geometric_features(centerline, True, output_smoothed=False,
                                                    factor=smoothing_factor_torsion, iterations=iterations)
         # Get curvature and torsion, find peaks
         curvature = get_point_data_array("Curvature", line_curv)

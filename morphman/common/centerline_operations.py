@@ -36,7 +36,7 @@ def get_bifurcating_and_diverging_point_data(centerline, centerline_bif, tol):
     cl1 = extract_single_line(centerline, 0)
     cl2 = extract_single_line(centerline, 1)
 
-    # Declear dictionary to hold results
+    # Declare dictionary to hold results
     data = {"bif": {}, 0: {}, 1: {}}
 
     # Find lower clipping point
@@ -117,11 +117,11 @@ def get_manipulated_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_ce
         locator = get_vtk_point_locator(line)
         id1 = locator.FindClosestPoint(p1)
         if diverging_id is not None and i == (number_of_cells - 1):
-            # Note: Reuse id2 and idmid from previous loop
+            # Note: Reuse id2 and id_mid from previous loop
             pass
         else:
             id2 = locator.FindClosestPoint(p2)
-            idmid = int((id1 + id2) * 0.5)
+            id_mid = int((id1 + id2) * 0.5)
 
         for p in range(line.GetNumberOfPoints()):
             point = line.GetPoint(p)
@@ -129,14 +129,14 @@ def get_manipulated_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_ce
 
             if direction == "horizont":
                 if diverging_id is not None and i == (number_of_cells - 1) and diverging_id < cl_id:
-                    dist = -dx * (diverging_id - idmid) ** 0.5 / (diverging_id - idmid) ** 0.5
+                    dist = -dx * (diverging_id - id_mid) ** 0.5 / (diverging_id - id_mid) ** 0.5
                 else:
                     if cl_id < id1:
                         dist = dx
-                    elif id1 <= cl_id < idmid:
-                        dist = dx * (idmid ** 2 - cl_id ** 2) / (idmid ** 2 - id1 ** 2)
-                    elif idmid <= cl_id < (id2 - 1):
-                        dist = -dx * (cl_id - idmid) ** 0.5 / (id2 - idmid) ** 0.5
+                    elif id1 <= cl_id < id_mid:
+                        dist = dx * (id_mid ** 2 - cl_id ** 2) / (id_mid ** 2 - id1 ** 2)
+                    elif id_mid <= cl_id < (id2 - 1):
+                        dist = -dx * (cl_id - id_mid) ** 0.5 / (id2 - id_mid) ** 0.5
                     else:
                         dist = -dx
 
@@ -222,15 +222,15 @@ def get_curvilinear_coordinate(line):
         line (vtkPolyData): Input centerline
 
     Returns:
-        curv_coor (ndarray): Array of abscissa points.
+        curvilinear_coordinate (ndarray): Array of abscissa points.
     """
-    curv_coor = np.zeros(line.GetNumberOfPoints())
+    curvilinear_coordinate = np.zeros(line.GetNumberOfPoints())
     for i in range(line.GetNumberOfPoints() - 1):
         pnt1 = np.asarray(line.GetPoints().GetPoint(i))
         pnt2 = np.asarray(line.GetPoints().GetPoint(i + 1))
-        curv_coor[i + 1] = np.sqrt(np.sum((pnt1 - pnt2) ** 2)) + curv_coor[i]
+        curvilinear_coordinate[i + 1] = np.sqrt(np.sum((pnt1 - pnt2) ** 2)) + curvilinear_coordinate[i]
 
-    return curv_coor
+    return curvilinear_coordinate
 
 
 def get_centerline_tolerance(centerline, n=50):
@@ -255,15 +255,15 @@ def get_centerline_tolerance(centerline, n=50):
 
 def get_clipped_diverging_centerline(centerline, clip_start_point, clip_end_id):
     """
-    Clip the opthamlic artery if present.
+    Clip the ophthalmic artery if present.
 
     Args:
-        centerline (vtkPolyData): Line representing the opthalmic artery centerline.
-        clip_start_point (tuple): Point at entrance of opthalmic artery.
-        clip_end_id (int): ID of point at end of opthalmic artery.
+        centerline (vtkPolyData): Line representing the ophthalmic artery centerline.
+        clip_start_point (tuple): Point at entrance of ophthalmic artery.
+        clip_end_id (int): ID of point at end of ophthalmic artery.
 
     Returns:
-        patch_eye (vtkPolyData): Voronoi diagram representing opthalmic artery.
+        patch_eye (vtkPolyData): Voronoi diagram representing ophthalmic artery.
     """
     points = [clip_start_point, centerline.GetPoint(clip_end_id)]
     div_points = vtk.vtkPoints()
@@ -286,7 +286,7 @@ def get_line_to_change(surface, centerline, region_of_interest, method, region_p
         centerline (vtkPolyData): Centerline in geometry.
         region_of_interest (str): Method for setting the region of interest ['manual' | 'commandline' | 'first_line']
         method (str): Determines which kind of manipulation is performed.
-        region_points (list): If region_of_interest is 'commandline', this a flatten list of the start and endpoint.
+        region_points (list): If region_of_interest is 'commandline', a flattened list of the start and endpoint.
         stenosis_length (float): Multiplier used to determine the length of the stenosis-affected area.
 
     Returns:
@@ -488,7 +488,7 @@ def get_region_of_interest_and_diverging_centerlines(centerlines_complete, regio
         region_points (ndarray): Two points determining the region of interest.
 
     Returns:
-        centerlines (vtkPolyData): Centerlines excluding divering lines.
+        centerlines (vtkPolyData): Centerlines excluding diverging lines.
         diverging_centerlines (vtkPolyData): Centerlines diverging from the region of interest.
         region_points (ndarray): Sorted region points.
         region_points_vtk (vtkPoints): Sorted region points as vtkData.
@@ -548,7 +548,7 @@ def compute_discrete_derivatives(line, neigh=10):
 
     Args:
         line (vtkPolyData): Line to compute geometry from.
-        neigh (int): Number of naboring points.
+        neigh (int): Number of neighboring points.
 
     Returns:
         line (vtkPolyData): Output line with geometrical parameters.
@@ -689,7 +689,7 @@ def get_k1k2_basis(curvature, line):
         E1[i, :] = V[:, 1]
         E2[i, :] = V[:, 2]
 
-    # Compute k_1, k_2 furfilling T' = curv(s)*N(s) = k_1(s)*E_1(s) + k_2(s)*E_2(s).
+    # Compute k_1, k_2 fulfilling T' = curv(s)*N(s) = k_1(s)*E_1(s) + k_2(s)*E_2(s).
     # This is simply a change of basis for the curvature vector N. The room
     # of k_1 and k_2 can be used to express both the curvature and the
     # torsion.
@@ -717,11 +717,11 @@ def compute_splined_centerline(line, get_curv=False, isline=False, nknots=50, ge
         get_curv (bool): Computes curvature profile if True.
         isline (bool): Determines if centerline object is a line or points.
         nknots (int): Number of knots.
-        get_stats (bool): Determines if curve attribuites are computed or not.
+        get_stats (bool): Determines if curve attributes are computed or not.
         get_misr (bool): Determines if MISR values are computed or not.
 
     Returns:
-        line (vtkPolyData): Splined centerline data.
+        line (vtkPolyData): Spline of centerline data.
     Returns:
         curv (ndarray): Curvature profile.
     """
