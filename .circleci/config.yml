@@ -25,10 +25,9 @@ jobs:
             hash -r
 
             # Set conda parameters
-            conda config --set restore_free_channel true
             conda config --set always_yes yes --set changeps1 no
             conda config --add channels conda-forge
-            conda config --add channels morphman
+            conda config --set channel_priority strict
 
             # Set up environment
             conda create -n morphman morphman 

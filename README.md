@@ -5,6 +5,7 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/2k6q32hqg6g5oopc?svg=true)](https://ci.appveyor.com/project/hkjeldsberg/morphman-s1s38)
 [![DOI](http://joss.theoj.org/papers/10.21105/joss.01065/status.svg)](https://doi.org/10.21105/joss.01065)
 [![codecov](https://codecov.io/gh/KVSlab/morphMan/branch/master/graph/badge.svg)](https://codecov.io/gh/KVSlab/morphMan)
+[![Conda Version](https://img.shields.io/conda/vn/conda-forge/morphman.svg)](https://anaconda.org/conda-forge/morphman)
 
 <p align="center">
     <img src="https://raw.githubusercontent.com/KVSlab/morphMan/master/docs/source/make_stenosis.png" width="640 height="280" alt="Create a stenois"/>
@@ -54,15 +55,34 @@ Kjeldsberg et al., (2019). morphMan: Automated manipulation of vascular geometri
 Installation
 ------------
 
-For reference, morphMan requires the following dependencies: VTK > 8.1, Numpy <= 1.13, SciPy > 1.0.0, and VMTK 1.4.
-If you are on Windows, macOS or Linux you can install all the general dependencies through anaconda.
-First install Anaconda or Miniconda (preferably the Python 3.10 version).
-Then execute the following command
+For reference, morphMan requires the following dependencies: VTK 9.1, Numpy 1.23, SciPy 1.8.1, and VMTK 1.5.
+If you are on Windows, macOS or Linux you can install all the general dependencies through `conda-forge`.
+First install Anaconda or Miniconda, then add `conda-forge` to your channels with:
+```
+conda config --add channels conda-forge
+conda config --set channel_priority strict
+```
 
-        conda create -n your_environment -c vmtk -c morphman morphman
+Once the `conda-forge` channel has been enabled, `morphman` can be installed with `conda`:
 
-You can then activate your environment by running ``source activate your_environment``.
+```
+conda create -n your_environment morphman
+```
+
+or with `mamba`:
+
+```
+mamba create -n your_environment morphman
+```
+
+You can then activate your environment with `morphman` by running 
+
+```
+source activate your_environment
+```
+
 You are now all set, and can start manipulating your geometries.
+To get started, we have created some [tutorials](https://morphman.readthedocs.io/en/latest/getting_started.html) for the different modules within morphMan. 
 
 Contact
 -------
