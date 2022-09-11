@@ -108,6 +108,8 @@ def get_manipulated_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_ce
     radius_array = get_vtk_array(radiusArrayName, 1, number_of_points)
 
     count = 0
+    early_branch = False  # Handle branches before clipping points
+    tol = get_centerline_tolerance(patch_cl)
     for i in range(number_of_cells):
         line = extract_single_line(patch_cl, i)
         centerline_cell_array.InsertNextCell(line.GetNumberOfPoints())
@@ -126,19 +128,23 @@ def get_manipulated_centerlines(patch_cl, dx, p1, p2, diverging_id, diverging_ce
         for p in range(line.GetNumberOfPoints()):
             point = line.GetPoint(p)
             cl_id = locator.FindClosestPoint(point)
-
             if direction == "horizont":
                 if diverging_id is not None and i == (number_of_cells - 1) and diverging_id < cl_id:
-                    dist = -dx * (diverging_id - id_mid) ** 0.5 / (diverging_id - id_mid) ** 0.5
+                    dist = -dx * np.sign(diverging_id - id_mid)
                 else:
+                    if i == (number_of_cells - 1) and id1 == cl_id and get_distance(p1, point) > 5 * tol:
+                        early_branch = True
                     if cl_id < id1:
                         dist = dx
-                    elif id1 <= cl_id < id_mid:
+                    elif id1 <= cl_id < id_mid and not early_branch:
                         dist = dx * (id_mid ** 2 - cl_id ** 2) / (id_mid ** 2 - id1 ** 2)
-                    elif id_mid <= cl_id < (id2 - 1):
+                    elif id_mid <= cl_id < (id2 - 1) and not early_branch:
                         dist = -dx * (cl_id - id_mid) ** 0.5 / (id2 - id_mid) ** 0.5
                     else:
-                        dist = -dx
+                        if diverging_id is not None and i == (number_of_cells - 1):
+                            dist = -dx * np.sign(diverging_id - id_mid)
+                        else:
+                            dist = -dx
 
             elif direction == "vertical":
                 if diverging_id is not None and i == (number_of_cells - 1) and diverging_id < cl_id:
@@ -499,7 +505,7 @@ def get_region_of_interest_and_diverging_centerlines(centerlines_complete, regio
     p1 = region_points[0]
     p2 = region_points[1]
 
-    # Search for divering centerlines
+    # Search for diverging centerlines
     tol = get_centerline_tolerance(centerlines_complete) * 4
     for i in range(centerlines_complete.GetNumberOfLines()):
         line = extract_single_line(centerlines_complete, i)
