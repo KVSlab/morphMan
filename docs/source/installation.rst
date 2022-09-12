@@ -49,6 +49,19 @@ Alternatively you can use one of the six main methods of manipulation directly t
 
 followed by the command line arguments for the selected method. A detailed explanation for usage of morphMan is described in :ref:`getting_started`.
 
+.. warning::
+    Windows users may experience import errors from VMTK such as::
+
+        ImportError: DLL load failed while importing vtkvmtkSegmentationPython: The specified module could not be found.
+
+    A temporary fix is to **comment out** the following lines in the script ``vtkvmtk.py``, commonly located in
+    ``C:\Miniconda-x64\envs\your_environment\lib\site-packages\vmtk\vtkvmtk.py``::
+
+        from .vtkvmtkSegmentationPython import *
+        from .vtkvmtkITKPython import *
+
+    or to use `Dependency Walker <https://www.dependencywalker.com/>`_ to locate missing DLL files as suggested `here <https://bytemeta.vip/repo/vmtk/vmtk/issues/379>`_.
+
 Development version
 ===================
 
