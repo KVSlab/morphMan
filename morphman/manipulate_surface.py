@@ -8,8 +8,6 @@
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 # Local import
-from IPython import embed
-
 from morphman.common.argparse_common import *
 from morphman.common.surface_operations import *
 from morphman.common.vessel_reconstruction_tools import *
