@@ -78,7 +78,7 @@ def manipulate_surface(input_filepath, output_filepath, smooth, smooth_factor, n
 
     # Split the Voronoi diagram
     if centerline_diverging is not None:
-        centerline_remaining = vtk_merge_polydata([centerline_diverging] + centerline_remaining)
+        centerline_remaining = vtk_merge_polydata(centerline_diverging + [centerline_remaining])
         write_polydata(centerline_remaining, centerline_remaining_path)
 
     centerline_regions = [centerline_splined, centerline_remaining]
