@@ -8,6 +8,8 @@
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 # Local import
+from IPython import embed
+
 from morphman.common.argparse_common import *
 from morphman.common.surface_operations import *
 from morphman.common.vessel_reconstruction_tools import *
@@ -78,7 +80,7 @@ def manipulate_surface(input_filepath, output_filepath, smooth, smooth_factor, n
 
     # Split the Voronoi diagram
     if centerline_diverging is not None:
-        centerline_remaining = vtk_merge_polydata([centerline_diverging] + centerline_remaining)
+        centerline_remaining = vtk_merge_polydata(centerline_diverging + [centerline_remaining])
         write_polydata(centerline_remaining, centerline_remaining_path)
 
     centerline_regions = [centerline_splined, centerline_remaining]
