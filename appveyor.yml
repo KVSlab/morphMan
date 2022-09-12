@@ -51,6 +51,10 @@ test_script:
   - cmd: conda init cmd.exe
   - cmd: conda activate morphman
 
+  # Ignore unused vtkVmtk imports [Win]
+  - cmd: sed -i "s/from .vtkvmtkITK/#from .vtkvmtkITK/g" C:\Miniconda-x64\envs\morphman\lib\site-packages\vmtk\vtkvmtk.py
+  - cmd: sed -i "s/from .vtkvmtkSeg/#from .vtkvmtkSeg/g" C:\Miniconda-x64\envs\morphman\lib\site-packages\vmtk\vtkvmtk.py
+
   # Start testing
   - cd .\\test
   - pytest .
