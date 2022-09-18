@@ -239,22 +239,21 @@ def get_curvilinear_coordinate(line):
     return curvilinear_coordinate
 
 
-def get_centerline_tolerance(centerline, n=50):
+def get_centerline_tolerance(centerline):
     """
     Finds tolerance based on
-    average length between first N points
+    average length between points
     along the input centerline.
 
     Args:
         centerline (vtkPolyData): Centerline data.
-        n (int): Number of points
 
     Returns:
         tolerance (float): Tolerance value.
     """
     line = extract_single_line(centerline, 0)
     length = get_curvilinear_coordinate(line)
-    tolerance = np.mean(length[1:n] - length[:n - 1]) / 2.0
+    tolerance = np.mean(length[1:] - length[:-1]) / 2.0
 
     return tolerance
 
