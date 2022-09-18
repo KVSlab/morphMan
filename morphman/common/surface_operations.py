@@ -56,6 +56,9 @@ def compute_centers(polydata, case_path=None, select_inlet=False):
         inlet (list): A list of points.
         outlet (list): A flattened list with all the outlets.
     """
+    # Perform a 'light' smoothing to obtain a more uniform boundary
+    polydata = vmtk_smooth_surface(polydata, method="laplace", iterations=100)
+
     # Get cells which are open
     cells = vtk_extract_feature_edges(polydata)
 
