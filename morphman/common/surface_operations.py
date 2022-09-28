@@ -503,7 +503,7 @@ def prepare_output_surface(surface, original_surface, new_centerline, output_fil
         # Get relevant points
         tmp_points = points[region_id == i]
 
-        # Get normal
+        # Get slightly downscaled normal
         tmp_normal = np.cross(tmp_points[0] - tmp_points[-1],
                               tmp_points[0] - tmp_points[tmp_points.shape[0] // 2])
         normal = tmp_normal / np.sqrt(np.sum(tmp_normal ** 2) * 1.02)
