@@ -506,7 +506,7 @@ def prepare_output_surface(surface, original_surface, new_centerline, output_fil
         # Get normal
         tmp_normal = np.cross(tmp_points[0] - tmp_points[-1],
                               tmp_points[0] - tmp_points[tmp_points.shape[0] // 2])
-        normal = tmp_normal / np.sqrt(np.sum(tmp_normal ** 2))
+        normal = tmp_normal / np.sqrt(np.sum(tmp_normal ** 2) * 1.02)
 
         # Get Center
         center = np.mean(tmp_points, axis=0)
@@ -532,7 +532,7 @@ def prepare_output_surface(surface, original_surface, new_centerline, output_fil
             in_dir = np.array(line.GetPoint(line.GetNumberOfPoints() - 5)) - \
                      np.array(line.GetPoint(line.GetNumberOfPoints() - 1))
 
-        in_dir = in_dir / np.sqrt(np.sum(in_dir ** 2))
+        in_dir = in_dir / np.sqrt(np.sum(in_dir ** 2) * 1.02)
         angle = np.arccos(np.dot(in_dir, normal)) * 180 / np.pi
         normal = -normal if 90 < angle < 270 else normal
 
