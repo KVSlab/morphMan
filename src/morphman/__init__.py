@@ -2,6 +2,7 @@
 
 from importlib.metadata import metadata
 
+from .landmark_atrium import *
 from .manipulate_area import *
 from .manipulate_bend import *
 from .manipulate_bifurcation import *

@@ -1,7 +1,0 @@
-scipy
-
-[test]
-isort
-black
-flake8
-pytest
