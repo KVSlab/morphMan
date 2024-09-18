@@ -209,6 +209,30 @@ def provide_inlet(surface):
     return inlet_point
 
 
+def provide_point(surface):
+    """
+    Get inlet from user selected point on an input surface
+
+    Args:
+        surface (vtkPolyData): Surface model.
+
+    Returns:
+        points (list): Point located on the inlet, as list
+
+    """
+    print("-- Please a point on the surface representing the region apex.")
+    seed_selector = vmtkPickPointSeedSelector()
+    seed_selector.SetSurface(surface)
+    seed_selector.text = "Please select a point on the surface, 'u' to undo\n"
+    seed_selector.Execute()
+
+    point_seed_ids = seed_selector.GetTargetSeedIds()
+    get_point = surface.GetPoints().GetPoint
+    inlet_point = list(get_point(point_seed_ids.GetId(0)))
+
+    return inlet_point
+
+
 def provide_relevant_outlets(surface, dir_path=None):
     """
     Get relevant outlets from user

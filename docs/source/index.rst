@@ -22,6 +22,7 @@ Documentation for `morphMan <https://github.com/KVSlab/morphMan>`_.
    manipulate_branch
    manipulate_curvature
    manipulate_surface
+   landmark_atrium
    Miscellaneous
    scripts
 
