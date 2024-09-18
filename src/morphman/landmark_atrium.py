@@ -6,6 +6,13 @@ from morphman.common import *
 
 
 def landmark_atrium(input_path, resampling_step):
+    """
+    Perform landmarking of the left atrium and left atrial appendage.
+
+    Args:
+        input_path (str): Path to folder containing the model files.
+        resampling_step (float): The step size for centerline resampling.
+    """
     print("-- Extracting left atrium and the left atrial appendage")
     extract_left_atrium_and_appendage(input_path, resampling_step)
 
@@ -46,22 +53,8 @@ def extract_left_atrium_and_appendage(input_path, resampling_step):
     for i in range(N_PVs):
         print(f"--- Clipping PV ({i + 1})")
         la_centerline_i = extract_single_line(la_centerlines, i)
-        start = int(la_centerline_i.GetNumberOfPoints() * 0.5)
-        stop = int(la_centerline_i.GetNumberOfPoints() * 0.95)
 
-        line = extract_single_line(la_centerline_i, 0, start_id=start, end_id=stop)
-        la_l = get_curvilinear_coordinate(line)
-        step = 5 * np.mean(la_l[1:] - la_l[:-1])
-        line = vmtk_resample_centerline(line, step)
-        line = compute_splined_centerline(line, nknots=10, isline=True)
-        area, sections = vmtk_compute_centerline_sections(capped_surface, line)
-
-        # Get arrays
-        a = get_point_data_array("CenterlineSectionArea", area)
-        n = get_point_data_array("FrenetTangent", area, k=3)
-
-        # Compute 'derivative' of the area
-        dAdX = np.gradient(a.T[0], step)
+        dAdX, n, area = compute_area_and_derivative(la_centerline_i, capped_surface)
 
         # Find the largest change in cross-sectional area
         lim = -50
@@ -98,21 +91,8 @@ def extract_left_atrium_and_appendage(input_path, resampling_step):
     print("--- Clipping MV")
     # Compute 'derivative' of the area
     la_centerline_0 = extract_single_line(la_centerlines, 0)
-    start = 0
-    stop = int(la_centerline_0.GetNumberOfPoints() * 0.5)
 
-    line = extract_single_line(la_centerline_0, 0, start_id=start, end_id=stop)
-    la_l = get_curvilinear_coordinate(line)
-    step = 5 * np.mean(la_l[1:] - la_l[:-1])
-    line = vmtk_resample_centerline(line, step)
-    line = compute_splined_centerline(line, nknots=10, isline=True)
-    area, sections = vmtk_compute_centerline_sections(capped_surface, line)
-
-    # Get arrays
-    a = get_point_data_array("CenterlineSectionArea", area)
-    n = get_point_data_array("FrenetTangent", area, k=3)
-
-    dAdX = np.gradient(a.T[0], step)
+    dAdX, n, area = compute_area_and_derivative(la_centerline_0, capped_surface, 0, 0.5)
 
     # Find the largest change in cross-sectional area
     lim = 50
@@ -243,8 +223,43 @@ def separate_left_atrium_and_appendage(input_path, resampling_step):
     write_polydata(la_surface, la_model_path)
 
 
+def compute_area_and_derivative(centerline, capped_surface, start_frac=0.5, stop_frac=0.95):
+    """
+    Compute the area and its derivative along a centerline.
+
+    Args:
+       centerline (vtkPolyData): The centerline of the geometry.
+       capped_surface (vtkPolyData): The capped surface of the model.
+       start_frac (float): Starting fraction of the centerline to use (default is 0.5).
+       stop_frac (float): Ending fraction of the centerline to use (default is 0.95).
+
+    Returns:
+       tuple: A tuple containing:
+           - dAdX (numpy.ndarray): The derivative of the area along the centerline.
+           - n (numpy.ndarray): Frenet tangent array along the centerline.
+           - area (vtkPolyData): The computed cross-sectional area.
+    """
+    start = int(centerline.GetNumberOfPoints() * start_frac)
+    stop = int(centerline.GetNumberOfPoints() * stop_frac)
+
+    line = extract_single_line(centerline, 0, start_id=start, end_id=stop)
+    la_l = get_curvilinear_coordinate(line)
+    step = 5 * np.mean(la_l[1:] - la_l[:-1])
+    line = vmtk_resample_centerline(line, step)
+    line = compute_splined_centerline(line, nknots=10, isline=True)
+    area, sections = vmtk_compute_centerline_sections(capped_surface, line)
+
+    # Get arrays
+    a = get_point_data_array("CenterlineSectionArea", area)
+    n = get_point_data_array("FrenetTangent", area, k=3)
+
+    dAdX = np.gradient(a.T[0], step)
+
+    return dAdX, n, area
+
+
 def get_surface_closest_to_point(clipped, point):
-    """Check the connectivty of a clipped surface, and attach all sections which are not
+    """Check the connectivty of a clipped surface, and attach all sections that are not
     closest to the center of the clipping plane.
 
     Args:
