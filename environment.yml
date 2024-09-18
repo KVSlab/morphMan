@@ -1,0 +1,9 @@
+name: vampy
+
+channels:
+  - vmtk
+  - conda-forge
+
+dependencies:
+  - vmtk
+  - python==3.10

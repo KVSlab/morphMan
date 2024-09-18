@@ -1,9 +1,8 @@
 ##   Copyright (c) Aslak W. Bergersen, Henrik A. Kjeldsberg. All rights reserved.
 ##   See LICENSE file for details.
-
-##      This software is distributed WITHOUT ANY WARRANTY; without even 
-##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-##      PURPOSE.  See the above copyright notices for more information.
+## This software is distributed WITHOUT ANY WARRANTY; without even
+## the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+## PURPOSE.  See the above copyright notices for more information.
 
 
 # This demo is the equivalent of executing the following in a terminal:
@@ -26,9 +25,14 @@
 # and a more detailed explenation could be found here:
 # https://morphman.readthedocs.io/en/latest/manipulate_bifurcation.html#tutorial-manipulate-bifurcation
 
-from morphman import manipulate_bifurcation, main_bifurcation, read_command_line_bifurcation
 from os import path
+
 from get_test_data import download_case
+
+from morphman.manipulate_bifurcation import (
+    manipulate_bifurcation,
+    read_command_line_bifurcation,
+)
 
 # Set absolute path to the demo folder
 absolute_path = path.dirname(path.abspath(__file__))
@@ -58,7 +62,6 @@ default_values["poly_ball_size"] = [250, 250, 250]
 # Run manipulation
 manipulate_bifurcation(**default_values)
 
-
 ### Negative angle
 # Method spesific parameters - rotate the daughter branches appart
 default_values["angle"] = -20
@@ -68,7 +71,6 @@ output_filepath = path.join(absolute_path, case, "surface", "rotate_minus.vtp")
 
 # Run manipulation
 manipulate_bifurcation(**default_values)
-
 
 ### No-noch
 # Method spesific parameters - improved rebuilding of the bifurcation
@@ -81,11 +83,14 @@ output_filepath = path.join(absolute_path, case, "surface", "no_noch.vtp")
 # Run manipulation
 manipulate_bifurcation(**default_values)
 
-
 ### Remove an aneurysm
 case = "C0066"
-default_values["input_filepath"] = path.join(absolute_path, case, "surface", "model.vtp")
-default_values["output_filepath"] = path.join(absolute_path, case, "surface", "rotate_plus.vtp")
+default_values["input_filepath"] = path.join(
+    absolute_path, case, "surface", "model.vtp"
+)
+default_values["output_filepath"] = path.join(
+    absolute_path, case, "surface", "rotate_plus.vtp"
+)
 
 # Download case from the Aneurisk web for this demo
 if not path.exists(path.join(default_values["input_filepath"])):

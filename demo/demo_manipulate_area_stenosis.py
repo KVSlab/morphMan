@@ -1,9 +1,8 @@
 ##   Copyright (c) Aslak W. Bergersen, Henrik A. Kjeldsberg. All rights reserved.
 ##   See LICENSE file for details.
-
-##      This software is distributed WITHOUT ANY WARRANTY; without even 
-##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-##      PURPOSE.  See the above copyright notices for more information.
+## This software is distributed WITHOUT ANY WARRANTY; without even
+## the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+## PURPOSE.  See the above copyright notices for more information.
 
 
 # This demo is the equivalent of executing the following in a terminal:
@@ -17,9 +16,11 @@
 # and a more detailed explenation could be found here:
 # https://morphman.readthedocs.io/en/latest/manipulate_area.html#create-remove-a-stenosis
 
-from morphman import manipulate_area, main_area, read_command_line_area
 from os import path
+
 from get_test_data import download_case
+
+from morphman.manipulate_area import manipulate_area, read_command_line_area
 
 # Set absolute path to the demo folder
 absolute_path = path.dirname(path.abspath(__file__))

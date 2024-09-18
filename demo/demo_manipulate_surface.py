@@ -1,9 +1,8 @@
 ##   Copyright (c) Aslak W. Bergersen, Henrik A. Kjeldsberg. All rights reserved.
 ##   See LICENSE file for details.
-
-##      This software is distributed WITHOUT ANY WARRANTY; without even 
-##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-##      PURPOSE.  See the above copyright notices for more information.
+## This software is distributed WITHOUT ANY WARRANTY; without even
+## the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+## PURPOSE.  See the above copyright notices for more information.
 
 
 # This demo is the equivalent of executing the following in a terminal:
@@ -17,9 +16,11 @@
 # and a more detailed explenation could be found here:
 # https://morphman.readthedocs.io/en/latest/manipulate_surface.html#tutorial-manipulate-surface-roughness
 
-from morphman import manipulate_surface, main_surface, read_command_line_surface
 from os import path
+
 from get_test_data import download_case
+
+from morphman.manipulate_surface import manipulate_surface, read_command_line_surface
 
 # Set absolute path to the demo folder
 absolute_path = path.dirname(path.abspath(__file__))
@@ -38,7 +39,11 @@ default_values = read_command_line_surface(input_filepath, output_filepath)
 
 # Problem specific parameters
 default_values["no_smooth"] = True
-default_values["no_smooth_point"] = [54.7310791015625, 46.95508575439453, 41.97511291503906]
+default_values["no_smooth_point"] = [
+    54.7310791015625,
+    46.95508575439453,
+    41.97511291503906,
+]
 
 # Parameters for reconstructing the surface
 default_values["poly_ball_size"] = [250, 250, 250]
@@ -48,7 +53,9 @@ manipulate_surface(**default_values)
 
 ### Add noise to the surface
 # Output file path
-default_values["output_filepath"] = path.join(absolute_path, case, "surface", "surface_noise.vtp")
+default_values["output_filepath"] = path.join(
+    absolute_path, case, "surface", "surface_noise.vtp"
+)
 
 # Method specific paramters
 default_values["smooth"] = False

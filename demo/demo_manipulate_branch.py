@@ -1,9 +1,8 @@
 ##   Copyright (c) Aslak W. Bergersen, Henrik A. Kjeldsberg. All rights reserved.
 ##   See LICENSE file for details.
-
-##      This software is distributed WITHOUT ANY WARRANTY; without even
-##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-##      PURPOSE.  See the above copyright notices for more information.
+## This software is distributed WITHOUT ANY WARRANTY; without even
+## the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+## PURPOSE.  See the above copyright notices for more information.
 
 
 # This demo is the equivalent of executing the following in a terminal:
@@ -30,8 +29,10 @@
 # https://morphman.readthedocs.io/en/latest/manipulate_branch.html
 
 from os import path
+
 from get_test_data import download_case
-from morphman import manipulate_branch, main_branch, read_command_line_branch
+
+from morphman.manipulate_branch import manipulate_branch, read_command_line_branch
 
 # Set absolute path to the demo folder
 absolute_path = path.dirname(path.abspath(__file__))
@@ -68,11 +69,12 @@ manipulate_branch(**default_values)
 default_values["azimuth_angle"] = 180
 
 # Set new output path
-default_values["output_filepath"] = path.join(absolute_path, case, "surface", "moved_and_rotated_branch.vtp")
+default_values["output_filepath"] = path.join(
+    absolute_path, case, "surface", "moved_and_rotated_branch.vtp"
+)
 
 # Run manipulation
 manipulate_branch(**default_values)
-
 
 ### Rotation around branch base
 # Method spesific parameters - rotation only
@@ -80,7 +82,9 @@ default_values["azimuth_angle"] = 120
 default_values["translation_method"] = "no_translation"
 
 # Set new output path
-default_values["output_filepath"] = path.join(absolute_path, case, "surface", "azimuth_rotated_branch.vtp")
+default_values["output_filepath"] = path.join(
+    absolute_path, case, "surface", "azimuth_rotated_branch.vtp"
+)
 
 # Run manipulation
 manipulate_branch(**default_values)
@@ -91,14 +95,18 @@ default_values["azimuth_angle"] = 0
 default_values["polar_angle"] = 20
 
 # Set new output path
-default_values["output_filepath"] = path.join(absolute_path, case, "surface", "polar_rotated_branch_up.vtp")
+default_values["output_filepath"] = path.join(
+    absolute_path, case, "surface", "polar_rotated_branch_up.vtp"
+)
 
 ### Rotation around surface tangent
 # Method spesific parameters - rotation only
 default_values["polar_angle"] = -20
 
 # Set new output path
-default_values["output_filepath"] = path.join(absolute_path, case, "surface", "polar_rotated_branch_down.vtp")
+default_values["output_filepath"] = path.join(
+    absolute_path, case, "surface", "polar_rotated_branch_down.vtp"
+)
 
 # Run manipulation
 manipulate_branch(**default_values)
@@ -113,11 +121,12 @@ default_values["branch_location"] = [27.75, 29.75, 24.61]
 default_values["clamp_branch"] = True
 
 # Set new output path
-default_values["output_filepath"] = path.join(absolute_path, case, "surface", "clamped_branch.vtp")
+default_values["output_filepath"] = path.join(
+    absolute_path, case, "surface", "clamped_branch.vtp"
+)
 
 # Run manipulation
 manipulate_branch(**default_values)
-
 
 ### Branch removal
 # Method spesific parameters
@@ -125,7 +134,9 @@ default_values["branch_to_manipulate_number"] = 4
 default_values["remove_branch"] = True
 
 # Set new output path
-default_values["output_filepath"] = path.join(absolute_path, case, "surface", "removed_branch.vtp")
+default_values["output_filepath"] = path.join(
+    absolute_path, case, "surface", "removed_branch.vtp"
+)
 
 # Run manipulation
 manipulate_branch(**default_values)
