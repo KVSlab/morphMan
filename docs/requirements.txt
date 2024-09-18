@@ -1,1 +1,2 @@
+sphinx==5
 docutils<0.18
