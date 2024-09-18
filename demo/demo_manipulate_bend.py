@@ -1,9 +1,8 @@
 ##   Copyright (c) Aslak W. Bergersen, Henrik A. Kjeldsberg. All rights reserved.
 ##   See LICENSE file for details.
-
-##      This software is distributed WITHOUT ANY WARRANTY; without even 
-##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-##      PURPOSE.  See the above copyright notices for more information.
+## This software is distributed WITHOUT ANY WARRANTY; without even
+## the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+## PURPOSE.  See the above copyright notices for more information.
 
 
 # This demo is the equivalent of executing the following in a terminal:
@@ -31,9 +30,11 @@
 # and a more detailed explenation could be found here:
 # https://morphman.readthedocs.io/en/latest/manipulate_bend.html#tutorial-manipulate-bend
 
-from morphman import manipulate_bend, main_bend, read_command_line_bend
 from os import path
+
 from get_test_data import download_case
+
+from morphman.manipulate_bend import manipulate_bend, read_command_line_bend
 
 # Set absolute path to the demo folder
 absolute_path = path.dirname(path.abspath(__file__))
@@ -57,8 +58,14 @@ default_values["region_points"] = [49.8, 49.7, 36.6, 53.1, 41.8, 38.3]
 # Method spesific parameters
 beta = [0, 0, 0.4, -0.4, 0.4, -0.4]
 alpha = [0.4, -0.4, 0, 0, 0.4, -0.4]
-names = ["bend_vertical_plus", "bend_vertical_minus", "bend_horizonal_plus",
-         "bend_horizontal_plus", "bend_plus", "bend_minus"]
+names = [
+    "bend_vertical_plus",
+    "bend_vertical_minus",
+    "bend_horizonal_plus",
+    "bend_horizontal_plus",
+    "bend_plus",
+    "bend_minus",
+]
 
 # Parameters for reconstructing the surface
 default_values["poly_ball_size"] = [250, 250, 250]

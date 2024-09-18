@@ -1,9 +1,8 @@
 ##   Copyright (c) Aslak W. Bergersen, Henrik A. Kjeldsberg. All rights reserved.
 ##   See LICENSE file for details.
-
-##      This software is distributed WITHOUT ANY WARRANTY; without even 
-##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-##      PURPOSE.  See the above copyright notices for more information.
+## This software is distributed WITHOUT ANY WARRANTY; without even
+## the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+## PURPOSE.  See the above copyright notices for more information.
 
 
 # This demo is the equivalent of executing the following in a terminal:
@@ -18,9 +17,14 @@
 # and a more detailed explenation could be found here:
 # https://morphman.readthedocs.io/en/latest/manipulate_curvature.html#tutorial-manipulate-curvature
 
-from morphman import manipulate_curvature, main_curvature, read_command_line_curvature
 from os import path
+
 from get_test_data import download_case
+
+from morphman.manipulate_curvature import (
+    manipulate_curvature,
+    read_command_line_curvature,
+)
 
 # Set absolute path to the demo folder
 absolute_path = path.dirname(path.abspath(__file__))
@@ -50,7 +54,6 @@ default_values["poly_ball_size"] = [250, 250, 250]
 
 # Run manipulation
 manipulate_curvature(**default_values)
-
 
 ### Increase the curvature
 # Method specific paramters

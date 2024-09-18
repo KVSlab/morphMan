@@ -1,18 +1,19 @@
 ##   Copyright (c) Aslak W. Bergersen, Henrik A. Kjeldsberg. All rights reserved.
 ##   See LICENSE file for details.
+## This software is distributed WITHOUT ANY WARRANTY; without even
+## the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+## PURPOSE.  See the above copyright notices for more information.
 
-##      This software is distributed WITHOUT ANY WARRANTY; without even 
-##      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-##      PURPOSE.  See the above copyright notices for more information.
-
-from os import system, path, makedirs
+from os import makedirs, path, system
 from sys import platform
 
 
 def download_case(case):
     abs_path = path.dirname(path.abspath(__file__))
     output_file = path.join(abs_path, case, "surface", "model.vtp")
-    url = "https://github.com/hkjeldsberg/AneuriskDatabase/raw/master/models/{}/surface/model.vtp".format(case)
+    url = "https://github.com/hkjeldsberg/AneuriskDatabase/raw/master/models/{}/surface/model.vtp".format(
+        case
+    )
 
     # Create test data folders
     if not path.exists(path.join(abs_path, case, "surface")):
@@ -24,12 +25,19 @@ def download_case(case):
         elif platform == "linux" or platform == "linux2":
             system("wget -O {} {}".format(output_file, url))
         elif platform == "win32":
-            system("bitsadmin /transfer download_model /download /priority high {} {}".format(url, output_file))
+            system(
+                "bitsadmin /transfer download_model /download /priority high {} {}".format(
+                    url, output_file
+                )
+            )
 
-    except:
-        raise RuntimeError("Problem downloading the testdata, please do it manually from "
-                           + url + " and extract the compressed tarball in the"
-                           + " test folder")
+    except Exception:
+        raise RuntimeError(
+            "Problem downloading the testdata, please do it manually from "
+            + url
+            + " and extract the compressed tarball in the"
+            + " test folder"
+        )
 
 
 if __name__ == "__main__":
