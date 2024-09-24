@@ -82,7 +82,13 @@ Example:
 
 ::
 
-    python landmark_atrium.py --input_path /models/model.vtp
+    python landmark_atrium.py --input-path /models/model.vtp
+
+or
+
+::
+
+    morphman-landmark --input-path /models/model.vtp
 
 This will output two files in the same folder:
 
