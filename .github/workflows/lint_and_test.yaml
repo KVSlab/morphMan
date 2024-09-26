@@ -85,7 +85,6 @@ jobs:
 
       - name: Run tests
         run: |
-          mamba install libitk==5.3 
           python -m pytest tests
 
       - name: Upload coverage report to Codecov
