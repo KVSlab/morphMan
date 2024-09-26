@@ -63,16 +63,6 @@ jobs:
           init-shell: bash
           cache-environment: true
 
-#
-#      - uses: conda-incubator/setup-miniconda@v3
-#        with:
-#          mamba-version: '*'
-#          channels: conda-forge,vmtk
-#          channel-priority: flexible
-#          activate-environment: morphman-env
-#          environment-file: environment.yml
-#          python-version: '3.10'
-
       - uses: actions/cache@v3
         with:
           path: ${{ matrix.prefix }}
