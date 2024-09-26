@@ -11,7 +11,7 @@ on:
     - cron: '0 8 * * *'
 
 env:
-  CACHE_NUMBER: 1 # Increase to reset cache
+  CACHE_NUMBER: 2 # Increase to reset cache
 
 jobs:
   check-code:
@@ -57,14 +57,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: mamba-org/setup-micromamba@v1
         with:
-          mamba-version: '*'
-          channels: conda-forge,vmtk
-          channel-priority: flexible
-          activate-environment: morphman-env
           environment-file: environment.yml
-          python-version: '3.10'
+          init-shell: bash
+          cache-environment: true
 
       - uses: actions/cache@v3
         with:
@@ -78,7 +75,6 @@ jobs:
 
       - name: Run tests
         run: |
-          mamba install libitk==5.3 
           python -m pytest tests
 
       - name: Upload coverage report to Codecov
